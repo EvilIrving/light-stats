@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import os.log
 
 // MARK: - Responsibility Framework
 
@@ -116,21 +117,35 @@ final class ProcessService: ProcessServiceProtocol {
                 let task = Process()
                 task.executableURL = URL(fileURLWithPath: "/usr/bin/top")
                 task.arguments = ["-l", "1", "-o", "mem", "-n", "\(count)", "-stats", "pid,command,mem"]
-                
+
                 let pipe = Pipe()
                 task.standardOutput = pipe
                 task.standardError = FileHandle.nullDevice
-                
+
                 do {
                     try task.run()
                     task.waitUntilExit()
-                    
+
+                    guard task.terminationStatus == 0 else {
+                        os_log("top command failed with termination status: %{public}d", 
+                               log: OSLog.default, type: .error, task.terminationStatus)
+                        continuation.resume(returning: [])
+                        return
+                    }
+
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8) ?? ""
-                    
+                    guard let output = String(data: data, encoding: .utf8) else {
+                        os_log("Failed to decode top command output to UTF-8 string", 
+                               log: OSLog.default, type: .error)
+                        continuation.resume(returning: [])
+                        return
+                    }
+
                     let processes = self.parseTopOutput(output)
                     continuation.resume(returning: processes)
                 } catch {
+                    os_log("top command execution error: %{public}@", 
+                           log: OSLog.default, type: .error, error.localizedDescription)
                     continuation.resume(returning: [])
                 }
             }

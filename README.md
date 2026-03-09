@@ -1,114 +1,122 @@
 # Light Stats
 
-## 一、 产品概述
+A macOS menu bar app that monitors CPU, GPU, memory, disk, and network usage. Click any item to see details in a popover. Includes memory cleanup.
 
-Light Stats 监控 macOS 系统的 CPU、GPU、内存、磁盘和网络指标，直接显示在菜单栏。点击弹出详情面板，支持内存清理。
-
-### 1. 设计原则
-
-- **信息常驻**：菜单栏实时显示，无需额外窗口。
-- **防止抖动**：采用固定布局和宽度。
-- **功能聚焦**：监控为主，清理为辅。
-- **模块化**：协议与依赖注入便于测试和扩展。
+> 中文版请查看 [README.zh.md](README.zh.md)
 
 ---
 
-## 二、 核心功能与页面
+## What it does
 
-### 1. 状态栏 (Status Bar)
+Light Stats lives in your menu bar, showing real-time system metrics. No extra windows cluttering your screen.
 
-- **形态**：菜单栏中的 Logo 和监控项。
-- **布局**：双行结构。
-  - 上：数值（如 `62%`、`99 GB`），11pt 等宽字体。
-  - 下：标签（如 `CPU`、`DISK`），8pt、浅色。
-  - 网络项：上为上传速度 ↑，下为下载速度 ↓，10pt 等宽字体。
-- **固定宽度**：防止数值变化导致抖动（CPU 26pt，Disk 46pt）。
-- **可配置显示**：设置中可开关各项（Logo、CPU、GPU、MEM、Disk、Net、Fan）。
+**Design choices:**
 
-### 2. 弹窗面板
-
-点击菜单栏项弹出，含两个标签页：
-
-- **概览**：环形进度条（CPU、GPU、内存）、核心使用率列表（含颜色渐变）、网络速度、磁盘和风扇信息。
-- **清理**：内存压力概览、App 列表（按内存降序）、支持正常关闭和强制退出（二次确认）。
-
-### 3. 设置
-
-- 菜单栏监控项开关
-- 刷新频率：低 (5s)、中 (2s)、高 (1s)
-- 单位：温度 (℃/℉)、网速 (自动/KB/s/MB/s)
-- 语言：简体中文、English、日本語、跟随系统
+- Info stays visible in the menu bar
+- Fixed widths prevent the UI from jumping as numbers change
+- Focus on monitoring first, cleanup second
+- Protocols and dependency injection for testability
 
 ---
 
-## 三、 架构设计与技术栈
+## Features
 
-### 1. 技术栈
+### Status Bar
+
+Two-line layout in the menu bar:
+
+- Top row: values (`62%`, `99 GB`) in 11pt monospace
+- Bottom row: labels (`CPU`, `DISK`) in 8pt, lighter color
+- Network: upload ↑ on top, download ↓ below, 10pt monospace
+
+Fixed widths keep things stable (CPU: 26pt, Disk: 46pt). Toggle each item on/off in Settings (Logo, CPU, GPU, MEM, Disk, Net, Fan).
+
+### Popover
+
+Click a menu bar item to open a popover with two tabs:
+
+**Overview:** Ring progress bars for CPU, GPU, and memory. Core usage list with color gradients. Network speed, disk info, and fan status.
+
+**Memory:** Memory pressure overview. App list sorted by usage (descending). Close apps normally or force quit (with confirmation).
+
+### Settings
+
+- Toggle which items show in the menu bar
+- Refresh rate: Low (5s), Medium (2s), High (1s)
+- Units: Temperature (℃/℉), Network speed (Auto/KB/s/MB/s)
+- Language: 简体中文, English, 日本語, or follow system
+
+---
+
+## Tech Stack
 
 - Swift 5.9+
-- SwiftUI (弹窗/设置) + AppKit (菜单栏/绘制)
+- SwiftUI for popover and settings, AppKit for menu bar and custom drawing
 - Combine + Swift Concurrency
 - macOS 14+
-- Mach API、IOKit、SMC、getifaddrs
+- Mach API, IOKit, SMC, getifaddrs for system metrics
 
-### 2. 架构
+### Architecture
 
-- **Module & Reader**：每个监控维度有独立的读取器和管理类。
-- **协议抽象**：`ProcessService`、`SettingsManaging` 等通过协议解耦实现。
-- **依赖注入**：通过构造函数或字段注入提升可测试性。
-- **全局配置**：`AppConfig` 集中管理常量。
+Each metric has its own reader and manager class. Protocols like `ProcessService` and `SettingsManaging` decouple implementations. Dependency injection via constructors or properties makes testing easier. Global constants live in `AppConfig`.
 
 ---
 
-## 四、 实现状态追踪 (Updated: 2026-01-16)
+## Implementation Status (Updated: 2026-01-16)
 
-### 1. 状态栏
+### Status Bar
 
-| 功能 | 状态 |
-|------|------|
-| NSStatusItem 框架 | ✅ 已完成 |
-| 双行布局 | ✅ 已完成 |
-| 固定宽度 | ✅ 已完成 |
-| 显示项开关 | ✅ 已完成 |
-| 最少显示校验 | ✅ 已完成 |
-| 风扇动画 | ❌ 未实现 |
+| Feature | Status |
+|---------|--------|
+| NSStatusItem framework | ✅ Done |
+| Two-line layout | ✅ Done |
+| Fixed widths | ✅ Done |
+| Item toggles | ✅ Done |
+| Minimum display validation | ✅ Done |
+| Fan animation | ❌ Not implemented |
 
-### 2. Popover 弹窗
+### Popover
 
-| 功能 | 状态 |
-|------|------|
-| 双标签页 | ✅ 已完成 |
-| 环形进度条 | ✅ 已完成 |
-| 核心使用率列表 | ✅ 已完成 |
-| 进程排序 | ✅ 已完成 |
-| 强制退出 | ✅ 已完成 |
-| 自动关闭 | ❌ 未实现 |
+| Feature | Status |
+|---------|--------|
+| Two tabs | ✅ Done |
+| Ring progress bars | ✅ Done |
+| Core usage list | ✅ Done |
+| Process sorting | ✅ Done |
+| Force quit | ✅ Done |
+| Auto-close | ❌ Not implemented |
 
-### 3. 全局特性
+### Global Features
 
-| 功能 | 状态 |
-|------|------|
-| 多语言 | ✅ 已完成 |
-| 依赖注入 | ✅ 已完成 |
-| 全局配置 | ✅ 已完成 |
-| 温度单位 | ✅ 已完成 |
+| Feature | Status |
+|---------|--------|
+| Multi-language | ✅ Done |
+| Dependency injection | ✅ Done |
+| Global config | ✅ Done |
+| Temperature units | ✅ Done |
 
 ---
 
-## 五、 文件结构参考
+## File Structure
 
-- `Models/`: 基础数据结构（CPUInfo, DiskInfo 等）。
-- `Services/`: 系统级数据采集（ProcessService, SMCInfo）。
-- `ViewModels/`: 业务逻辑与状态管理（SystemMonitor, AppMemoryManager, SettingsManager）。
+- `Models/`: Data structures (CPUInfo, DiskInfo, etc.)
+- `Services/`: System data collection (ProcessService, SMCInfo)
+- `ViewModels/`: Business logic and state (SystemMonitor, AppMemoryManager, SettingsManager)
 - `Views/`:
-  - `StatusBar/`: 状态栏绘图逻辑。
-  - `Popover/`: 弹窗面板组件与 Tab 视图。
-  - `Settings/`: 设置页面 UI。
-- `Resources/`: 国际化资源文件 (`Localizable.strings`)。
-- `Utilities/`: 格式化工具与通用辅助方法。
+  - `StatusBar/`: Menu bar rendering
+  - `Popover/`: Popover components and tabs
+  - `Settings/`: Settings UI
+- `Resources/`: Localization files (`Localizable.strings`)
+- `Utilities/`: Formatters and helpers
 
 ---
 
-## 六、 总结
+## What's Next
 
-Light Stats 从原型演进为完整的系统监控工具。支持协议抽象、依赖注入、多语言和主题切换。未来重点：动画优化、自动关闭逻辑、更多监控指标。
+Light Stats started as a prototype and grew into a full system monitor. The basics work: protocols, DI, multi-language support.
+
+Still on the list:
+
+- Fan animation
+- Auto-close logic for the popover
+- More metrics

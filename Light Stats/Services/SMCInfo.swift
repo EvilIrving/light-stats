@@ -15,9 +15,31 @@ enum SMCInfo {
     // SMC connection
     private static var conn: io_connect_t = 0
 
-    // Temperature cache for stability
-    private static var cachedTemperature: Double? = nil
+    // Temperature cache for stability (with thread safety)
+    private static let temperatureLock = NSLock()
+    private static var _cachedTemperature: Double? = nil
+    private static var _cacheTimestamp: Date? = nil
     private static let maxCacheAge: TimeInterval = 10  // 10 seconds
+
+    /// Thread-safe cached temperature with automatic expiration
+    private static var cachedTemperature: Double? {
+        get {
+            temperatureLock.withLock {
+                if let timestamp = _cacheTimestamp,
+                   Date().timeIntervalSince(timestamp) > maxCacheAge {
+                    _cachedTemperature = nil
+                    _cacheTimestamp = nil
+                }
+                return _cachedTemperature
+            }
+        }
+        set {
+            temperatureLock.withLock {
+                _cachedTemperature = newValue
+                _cacheTimestamp = Date()
+            }
+        }
+    }
 
     // MARK: - SMC Selectors
     private static let kSMCReadKey: UInt8 = 5
@@ -25,100 +47,87 @@ enum SMCInfo {
 
     // MARK: - Public API
 
-    /// Debug function to test SMC access
-    static func debugSMC() {
-        var log = "[SMC Debug] Testing SMC access...\n"
-        log += "[SMC Debug] SMCParamStruct size: \(MemoryLayout<SMCParamStruct>.size) bytes\n"
-        log += "[SMC Debug] SMCParamStruct stride: \(MemoryLayout<SMCParamStruct>.stride) bytes\n"
-
-        guard open() else {
-            log += "[SMC Debug] Failed to open SMC connection\n"
-            writeDebugLog(log)
-            return
-        }
-        defer { close() }
-        log += "[SMC Debug] SMC connection opened successfully\n"
-
-        // Test reading some keys
-        let testKeys = ["Tc0a", "Tc0b", "Tp01", "Tp09", "TC0P", "FNum", "F0Ac"]
-        for key in testKeys {
-            if let data = readKey(key) {
-                let hexStr = data.map { String(format: "%02X", $0) }.joined(separator: " ")
-                log += "[SMC Debug] Key '\(key)': \(hexStr)\n"
-            } else {
-                log += "[SMC Debug] Key '\(key)': not found\n"
-            }
-        }
-
-        writeDebugLog(log)
-    }
-
     private static func writeDebugLog(_ content: String) {
         let path = "/tmp/light-stats-smc-debug.log"
         try? content.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
     static func getCPUTemperature() -> Double? {
-        var debugLog = "[Temperature Debug] Starting...\n"
+        // Hold lock for entire read/compute/update. Use only _cachedTemperature/_cacheTimestamp
+        // inside the block—never the cachedTemperature property—to avoid reentrant deadlock (NSLock is non-reentrant).
+        return temperatureLock.withLock {
+            var debugLog = "[Temperature Debug] Starting...\n"
 
-        guard open() else {
-            debugLog += "[Temperature Debug] Failed to open SMC connection\n"
-            writeDebugLog(debugLog)
-            return cachedTemperature
-        }
-        defer { close() }
+            guard open() else {
+                debugLog += "[Temperature Debug] Failed to open SMC connection\n"
+                writeDebugLog(debugLog)
+                return readCachedTemperatureIfValid()
+            }
+            defer { close() }
 
-        debugLog += "[Temperature Debug] SMC connection opened\n"
+            debugLog += "[Temperature Debug] SMC connection opened\n"
 
-        let cpuTempKeys = [
-            // Apple Silicon SOC 温度
-            "Te05",
-            // Apple Silicon CPU Package
-            "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0Y", "Tp0b", "Tp0e",
-            // 风扇区域温度
-            "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0E",
-        ]
+            let cpuTempKeys = [
+                // Apple Silicon SOC 温度
+                "Te05",
+                // Apple Silicon CPU Package
+                "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0Y", "Tp0b", "Tp0e",
+                // 风扇区域温度
+                "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0E",
+            ]
 
-        var temperatures: [Double] = []
-        for key in cpuTempKeys {
-            let result = readTemperatureDebug(key: key)
-            debugLog += result.log
+            var temperatures: [Double] = []
+            for key in cpuTempKeys {
+                let result = readTemperatureDebug(key: key)
+                debugLog += result.log
 
-            if let temp = result.temp {
-                // 放宽范围先收集数据: 5-115°C
-                if temp > 5 && temp < 115 {
-                    temperatures.append(temp)
-                    debugLog += "  -> ACCEPTED\n"
-                } else {
-                    debugLog += "  -> REJECTED (out of range 5-115)\n"
+                if let temp = result.temp {
+                    // 放宽范围先收集数据: 5-115°C
+                    if temp > 5 && temp < 115 {
+                        temperatures.append(temp)
+                        debugLog += "  -> ACCEPTED\n"
+                    } else {
+                        debugLog += "  -> REJECTED (out of range 5-115)\n"
+                    }
                 }
             }
-        }
 
-        debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
-        debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
+            debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
+            debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
 
-        guard !temperatures.isEmpty else {
-            debugLog += "[Temperature Debug] No valid temperatures, returning cache: \(String(describing: cachedTemperature))\n"
+            guard !temperatures.isEmpty else {
+                debugLog += "[Temperature Debug] No valid temperatures, returning cache: \(String(describing: _cachedTemperature))\n"
+                writeDebugLog(debugLog)
+                return readCachedTemperatureIfValid()
+            }
+
+            let avgTemp = temperatures.reduce(0, +) / Double(temperatures.count)
+            debugLog += "[Temperature Debug] Average: \(avgTemp)\n"
+
+            let smoothedTemp: Double
+            if let cached = _cachedTemperature {
+                smoothedTemp = avgTemp * 0.7 + cached * 0.3
+            } else {
+                smoothedTemp = avgTemp
+            }
+
+            _cachedTemperature = smoothedTemp
+            _cacheTimestamp = Date()
+            debugLog += "[Temperature Debug] Final: \(smoothedTemp)\n"
             writeDebugLog(debugLog)
-            return cachedTemperature
+
+            return smoothedTemp
         }
+    }
 
-        let avgTemp = temperatures.reduce(0, +) / Double(temperatures.count)
-        debugLog += "[Temperature Debug] Average: \(avgTemp)\n"
-
-        let smoothedTemp: Double
-        if let cached = cachedTemperature {
-            smoothedTemp = avgTemp * 0.7 + cached * 0.3
-        } else {
-            smoothedTemp = avgTemp
+    /// Call only while holding temperatureLock. Returns cache if not expired; otherwise nil.
+    private static func readCachedTemperatureIfValid() -> Double? {
+        if let timestamp = _cacheTimestamp,
+           Date().timeIntervalSince(timestamp) <= maxCacheAge,
+           let value = _cachedTemperature {
+            return value
         }
-
-        cachedTemperature = smoothedTemp
-        debugLog += "[Temperature Debug] Final: \(smoothedTemp)\n"
-        writeDebugLog(debugLog)
-
-        return smoothedTemp
+        return nil
     }
 
     static func getFanSpeed() -> Int? {

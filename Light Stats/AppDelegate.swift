@@ -67,9 +67,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Monitoring
 
     private func startMonitoring() {
-        // Debug SMC access
-        SMCInfo.debugSMC()
-
         monitor.startMonitoring(interval: settings.refreshRate.interval)
 
         // 监听刷新频率变化，重新启动监控

@@ -102,7 +102,7 @@ struct AppCardView: View {
         .onAppear {
             updateChildProcesses()
         }
-        .onChange(of: app.allPids) { _ in
+        .onChange(of: app.allPids) { _, _ in
             updateChildProcesses()
         }
     }
