@@ -10,7 +10,7 @@ import Combine
 
 enum AppConfig {
     static let topCPUProcessCount: Int = 5
-    static let topMemoryProcessCount: Int = 150
+    static let topMemoryProcessCount: Int = 300
     static let appMemoryRefreshInterval: TimeInterval = 5.0
 }
 

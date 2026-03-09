@@ -83,7 +83,7 @@ let systemAppWatchList: [String] = [
     "com.apple.BluetoothFileExchange",     // 蓝牙文件交换
     "com.apple.print.PrinterProxy",        // 打印机代理
     "com.apple.ScriptEditor2",             // 脚本编辑器
-    "com.apple.Automator",                 // 自动操作
+//    "com.apple.Automator",                 // 自动操作
     // "com.apple.MigrateAssistant",          // 迁移助理
     // "com.apple.bootcampassistant",         // 启动转换助理
     
@@ -93,7 +93,7 @@ let systemAppWatchList: [String] = [
     "com.apple.iWork.Keynote",             // Keynote
     
     // ===== 辅助功能 =====
-    "com.apple.VoiceOver",                 // 旁白
+//    "com.apple.VoiceOver",                 // 旁白
     // "com.apple.accessibility.*",           // 辅助功能相关
     
     // ===== 后台服务 =====
@@ -103,6 +103,18 @@ let systemAppWatchList: [String] = [
     // "com.apple.cfprefsd",                  // 偏好设置服务
     // "com.apple.sharingd",                  // 共享服务
     // "com.apple.iCloudNotificationAgent",   // iCloud 通知
+]
+
+// MARK: - Hidden Process / Bundle Rules
+
+/// 进程名包含以下任一项（不区分大小写）时不显示
+let hiddenProcessNameSubstrings: [String] = [
+    "watchman",
+]
+
+/// Bundle ID 包含以下任一项（不区分大小写）时不显示
+let hiddenBundleIdSubstrings: [String] = [
+    "inputmethod",  // 输入法相关
 ]
 
 // MARK: - Filter Functions
@@ -134,9 +146,41 @@ func isSystemAppInWatchList(_ bundleId: String?) -> Bool {
 /// - 第三方应用：默认显示
 /// - 系统服务/应用：只有在观察名单中才显示
 /// - 应用扩展（.appex）：默认不显示
-func shouldShowProcess(_ bundleInfo: ProcessBundleInfo) -> Bool {
+/// - XPC 服务（.xpc）：默认不显示
+/// - kernel_task：默认不显示
+/// - Parameter bundleInfo: Bundle 信息
+/// - Parameter processName: 可选的进程名（用于过滤 kernel_task 等特殊进程）
+func shouldShowProcess(_ bundleInfo: ProcessBundleInfo, processName: String? = nil) -> Bool {
+    // 过滤 kernel_task（内核任务）
+    if let name = processName, name == "kernel_task" {
+        return false
+    }
+    // 过滤隐藏进程名（如 watchman）
+    if let name = processName, !name.isEmpty {
+        let lower = name.lowercased()
+        if hiddenProcessNameSubstrings.contains(where: { lower.contains($0.lowercased()) }) {
+            return false
+        }
+    }
+    // 过滤隐藏 Bundle ID（如输入法）
+    if let bundleId = bundleInfo.bundleId, !bundleId.isEmpty {
+        let lower = bundleId.lowercased()
+        if hiddenBundleIdSubstrings.contains(where: { lower.contains($0.lowercased()) }) {
+            return false
+        }
+    }
+    // 如果 execPath 为 nil 且 bundleId 为 nil，可能是 kernel_task
+    if bundleInfo.execPath == nil && bundleInfo.bundleId == nil {
+        return false
+    }
+    
     // 过滤应用扩展（Widget、通知扩展等 .appex）
     if let execPath = bundleInfo.execPath, execPath.contains(".appex/") {
+        return false
+    }
+    
+    // 过滤 XPC 服务（.xpc）
+    if let execPath = bundleInfo.execPath, execPath.contains(".xpc/") {
         return false
     }
     

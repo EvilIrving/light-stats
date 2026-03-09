@@ -58,25 +58,25 @@ struct CleanupTabView: View {
             .padding(.top, 4)
 
             // Simplified Metrics Grid
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                // Available
-                BentoCard(title: "cleanup.availableMemory".localized, icon: "checkmark.circle.fill") {
-                    Text(ByteFormatter.format(appManager.totalMemory - appManager.totalMemoryUsed))
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.green)
-                }
+            // LazyVGrid(columns: [
+            //     GridItem(.flexible(), spacing: 12),
+            //     GridItem(.flexible(), spacing: 12)
+            // ], spacing: 12) {
+            //     // Available
+            //     BentoCard(title: "cleanup.availableMemory".localized, icon: "checkmark.circle.fill") {
+            //         Text(ByteFormatter.format(appManager.totalMemory - appManager.totalMemoryUsed))
+            //             .font(.system(size: 18, weight: .bold, design: .rounded))
+            //             .foregroundColor(.green)
+            //     }
                 
-                // App Used
-                BentoCard(title: "cleanup.appUsed".localized, icon: "app.dashed") {
-                    Text(ByteFormatter.format(appManager.totalMemoryUsed))
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding(.horizontal, 16)
+            //     // App Used
+            //     BentoCard(title: "cleanup.appUsed".localized, icon: "app.dashed") {
+            //         Text(ByteFormatter.format(appManager.totalMemoryUsed))
+            //             .font(.system(size: 18, weight: .bold, design: .rounded))
+            //             .foregroundColor(.blue)
+            //     }
+            // }
+            // .padding(.horizontal, 16)
 
             // App List Header
             HStack {
@@ -100,7 +100,8 @@ struct CleanupTabView: View {
                         ForEach(appManager.runningApps) { app in
                             AppCardView(
                                 app: app,
-                                isTerminating: terminatingApps.contains(app.id)
+                                isTerminating: terminatingApps.contains(app.id),
+                                appManager: appManager
                             ) {
                                 terminateApp(app)
                             }

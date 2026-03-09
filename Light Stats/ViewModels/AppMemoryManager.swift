@@ -14,16 +14,19 @@ import Combine
 /// Manages user application information and memory usage
 @MainActor
 final class AppMemoryManager: ObservableObject {
-    
+
     @Published var runningApps: [AppGroup] = []
     @Published var totalMemoryUsed: UInt64 = 0
     @Published var totalMemory: UInt64 = 0
     @Published var appCount: Int = 0
-    
+
     // Detailed memory info
     @Published var detailedMemory: MemoryInfo.DetailedInfo?
     @Published var memoryPressure: MemoryPressureLevel = .normal
-    
+
+    // 存储所有 top 进程信息，用于子进程查询
+    private var allTopProcesses: [TopProcessInfo] = []
+
     private var timer: Timer?
     
     static let shared = AppMemoryManager()
@@ -102,11 +105,13 @@ final class AppMemoryManager: ObservableObject {
             let responsiblePid = responsibility_get_pid_responsible_for_pid(process.pid)
             // Use the responsible PID, fallback to self if 0
             let groupPid = responsiblePid > 0 ? responsiblePid : process.pid
+            
             groupedByResponsible[groupPid, default: []].append(process)
             
             // Cache bundle info for each process
             if pidToBundleInfo[process.pid] == nil {
-                pidToBundleInfo[process.pid] = processService.getBundleInfo(for: process.pid)
+                let bundleInfo = processService.getBundleInfo(for: process.pid)
+                pidToBundleInfo[process.pid] = bundleInfo
             }
         }
         
@@ -149,9 +154,11 @@ final class AppMemoryManager: ObservableObject {
                     }
                     mergedByBundleId[bundleId] = existing
                 } else {
+                    // Create new merged group
                     mergedByBundleId[bundleId] = (mainPid: responsiblePid, processes: data.processes, bundleInfo: data.bundleInfo)
                 }
             } else {
+                // No bundleId found - goes to ungrouped
                 ungroupedGroups.append((pid: responsiblePid, processes: data.processes, bundleInfo: data.bundleInfo))
             }
         }
@@ -163,8 +170,9 @@ final class AppMemoryManager: ObservableObject {
         for (bundleId, data) in mergedByBundleId {
             let bundleInfo = data.bundleInfo
             
-            // 过滤规则
-            if !shouldShowProcess(bundleInfo) {
+            // 过滤规则（传入进程名用于过滤 kernel_task 等特殊进程）
+            let processName = data.processes.first?.command
+            if !shouldShowProcess(bundleInfo, processName: processName) {
                 continue
             }
             
@@ -172,6 +180,7 @@ final class AppMemoryManager: ObservableObject {
             let allPids = data.processes.map { $0.pid }
             
             let guiApp = guiAppByBundleId[bundleId] ?? guiAppByPid[data.mainPid]
+            
             let name: String
             let icon: NSImage
             let bundlePath: String?
@@ -183,7 +192,16 @@ final class AppMemoryManager: ObservableObject {
                 bundlePath = app.bundleURL?.path ?? bundleInfo.bundlePath
                 execPath = app.executableURL?.path ?? bundleInfo.execPath
             } else {
-                name = processService.getProcessName(for: data.mainPid) ?? data.processes.first?.command ?? "Unknown"
+                // Try to get app name from bundle first (if bundlePath exists)
+                var bundleAppName: String?
+                if let bundlePathStr = bundleInfo.bundlePath, let bundle = Bundle(path: bundlePathStr) {
+                    bundleAppName = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                        ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+                }
+                
+                let processNameResult = processService.getProcessName(for: data.mainPid)
+                let fallbackName = processNameResult ?? data.processes.first?.command ?? "Unknown"
+                name = bundleAppName ?? fallbackName
                 icon = defaultGearIcon
                 bundlePath = bundleInfo.bundlePath
                 execPath = bundleInfo.execPath
@@ -200,6 +218,7 @@ final class AppMemoryManager: ObservableObject {
                 bundlePath: bundlePath,
                 execPath: execPath
             )
+            
             appGroups.append(group)
         }
         
@@ -207,7 +226,9 @@ final class AppMemoryManager: ObservableObject {
         for data in ungroupedGroups {
             let bundleInfo = data.bundleInfo
             
-            if !shouldShowProcess(bundleInfo) {
+            // 过滤规则（传入进程名用于过滤 kernel_task 等特殊进程）
+            let processName = data.processes.first?.command
+            if !shouldShowProcess(bundleInfo, processName: processName) {
                 continue
             }
             
@@ -251,8 +272,9 @@ final class AppMemoryManager: ObservableObject {
         
         // Step 7: Sort by total memory usage (descending)
         let sortedGroups = appGroups.sorted { $0.totalMemoryBytes > $1.totalMemoryBytes }
-        
+
         runningApps = sortedGroups
+        allTopProcesses = topProcesses
         appCount = sortedGroups.count
         
         // Update detailed memory info
@@ -292,5 +314,13 @@ final class AppMemoryManager: ObservableObject {
     /// Check if a process is still running
     func isProcessAlive(_ pid: pid_t) -> Bool {
         processService.isProcessAlive(pid)
+    }
+
+    /// Get child processes for an app group (excluding the main process)
+    /// - Parameter app: The app group
+    /// - Returns: Array of TopProcessInfo for child processes
+    func childProcesses(for app: AppGroup) -> [TopProcessInfo] {
+        return allTopProcesses.filter { app.allPids.contains($0.pid) && $0.pid != app.id }
+            .sorted { $0.memoryBytes > $1.memoryBytes }
     }
 }

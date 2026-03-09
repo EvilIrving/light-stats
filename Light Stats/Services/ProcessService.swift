@@ -282,6 +282,7 @@ final class ProcessService: ProcessServiceProtocol {
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
         if let mainApp = NSRunningApplication(processIdentifier: app.id) {
             let terminated = mainApp.terminate()
+            
             if terminated {
                 try? await Task.sleep(for: .milliseconds(300))
                 
