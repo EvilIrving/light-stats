@@ -1,0 +1,27 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(512, 512)">
+    <!-- Background: Warm clay earth tone -->
+    <rect x="-435" y="-435" width="870" height="870" rx="180" fill="#C4A58A"/>
+    
+    <!-- Main gauge/speedometer arc (representing monitoring) -->
+    <path d="M -260 20 A 220 220 0 1 1 260 20" 
+          stroke="#FFFFFF" 
+          stroke-width="48" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Gauge needle (pointing to ~70% - active monitoring) -->
+    <line x1="0" y1="-100" x2="155" y2="-255" 
+          stroke="#FFFFFF" 
+          stroke-width="32" 
+          stroke-linecap="round"/>
+    
+    <!-- Center dot -->
+    <circle cx="0" cy="-100" r="28" fill="#FFFFFF"/>
+    
+    <!-- Three data bars (representing CPU/GPU/Memory metrics) -->
+    <rect x="-140" y="100" width="60" height="140" rx="12" fill="#FFFFFF" opacity="0.9"/>
+    <rect x="-20" y="60" width="60" height="180" rx="12" fill="#FFFFFF" opacity="0.75"/>
+    <rect x="100" y="120" width="60" height="120" rx="12" fill="#FFFFFF" opacity="0.6"/>
+  </g>
+</svg>

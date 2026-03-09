@@ -52,7 +52,6 @@ playground.xcworkspace
 *.swo
 *~
 
-
-.agents/
 .qwen/
 .claude/
+.cursor/
