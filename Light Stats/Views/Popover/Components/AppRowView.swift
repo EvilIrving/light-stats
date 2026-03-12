@@ -129,7 +129,7 @@ struct AppCardView: View {
                 ChildProcessRowView(
                     command: process.command,
                     memoryBytes: process.memoryBytes,
-                    indentation: 20
+                    indentation: 12
                 )
 
                 if process.pid != childProcesses.last?.pid {

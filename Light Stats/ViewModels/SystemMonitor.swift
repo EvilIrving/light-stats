@@ -8,6 +8,91 @@
 import Foundation
 import Combine
 
+private struct SystemSnapshot {
+    let cpuUsage: Double
+    let cpuUserUsage: Double
+    let cpuSystemUsage: Double
+    let coreUsages: [Double]
+    let coreTopology: CoreTopology
+    let loadAverage: LoadAverage
+    let topCPUProcesses: [TopProcess]
+    let gpuUsage: Double?
+    let memoryUsage: Double
+    let memoryUsed: UInt64
+    let memoryTotal: UInt64
+    let diskUsed: UInt64
+    let diskTotal: UInt64
+    let diskAvailable: UInt64
+    let networkUpload: Double
+    let networkDownload: Double
+    let cpuTemperature: Double?
+    let fanSpeed: Int?
+}
+
+private actor MonitorSampler {
+    private var cpuInfo: CPUInfo?
+    private var networkInfo: NetworkInfo?
+
+    private func getCPUInfo() async -> CPUInfo {
+        if let cpuInfo {
+            return cpuInfo
+        }
+        let info = await MainActor.run { CPUInfo() }
+        await info.warmup()
+        cpuInfo = info
+        return info
+    }
+
+    private func getNetworkInfo() async -> NetworkInfo {
+        if let networkInfo {
+            return networkInfo
+        }
+        let info = await MainActor.run { NetworkInfo() }
+        networkInfo = info
+        return info
+    }
+
+    func collect(topProcessCount: Int) async -> SystemSnapshot {
+        let cpuInfo = await getCPUInfo()
+        let networkInfo = await getNetworkInfo()
+
+        let cpuUsage = await cpuInfo.getCPUUsage()
+        let coreUsages = await cpuInfo.getPerCoreUsage()
+        let loadAverage = await CPUInfo.getLoadAverage()
+        let coreTopology = await cpuInfo.getCoreTopology()
+
+        let memoryInfo = await MemoryInfo.getMemoryInfo()
+        let diskInfo = await DiskInfo.getDiskInfo()
+        let networkStats = await networkInfo.getNetworkStats()
+        let gpuUsage = await GPUInfo.getGPUUsage()
+        let cpuTemperature = await SMCInfo.getCPUTemperature()
+        let fanSpeed = await SMCInfo.getFanSpeed()
+
+        async let topProcesses = ProcessStats.getTopCPUProcesses(count: topProcessCount)
+
+        return SystemSnapshot(
+            cpuUsage: cpuUsage.total,
+            cpuUserUsage: cpuUsage.user,
+            cpuSystemUsage: cpuUsage.system,
+            coreUsages: coreUsages,
+            coreTopology: coreTopology,
+            loadAverage: loadAverage,
+            topCPUProcesses: await topProcesses,
+            gpuUsage: gpuUsage,
+            memoryUsage: memoryInfo.usagePercent,
+            memoryUsed: memoryInfo.used,
+            memoryTotal: memoryInfo.total,
+            diskUsed: diskInfo.used,
+            diskTotal: diskInfo.total,
+            diskAvailable: diskInfo.available,
+            networkUpload: networkStats.uploadSpeed,
+            networkDownload: networkStats.downloadSpeed,
+            cpuTemperature: cpuTemperature,
+            fanSpeed: fanSpeed
+        )
+    }
+}
+
 /// Main class for monitoring system statistics
 @MainActor
 final class SystemMonitor: ObservableObject {
@@ -47,18 +132,16 @@ final class SystemMonitor: ObservableObject {
     // MARK: - Private Properties
 
     private var timer: Timer?
-    private var cpuInfo = CPUInfo()
-    private var networkInfo = NetworkInfo()
+    private let sampler = MonitorSampler()
+    private var updateTask: Task<Void, Never>?
+    private var pendingUpdate = false
 
     // MARK: - Singleton
 
     static let shared = SystemMonitor()
 
     private init() {
-        // Perform warmup to avoid initial data distortion
-        cpuInfo.warmup()
-        // Get initial core topology (cached)
-        coreTopology = cpuInfo.getCoreTopology()
+        // Warmup is done by MonitorSampler.
     }
 
     // MARK: - Public Methods
@@ -66,15 +149,13 @@ final class SystemMonitor: ObservableObject {
     func startMonitoring(interval: TimeInterval = 2.0) {
         stopMonitoring()
 
-        // Initial update
-        Task {
-            await updateAllStats()
-        }
+        requestUpdate()
 
         // Periodic updates
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.updateAllStats()
+            guard let self else { return }
+            MainActor.assumeIsolated {
+                self.requestUpdate()
             }
         }
     }
@@ -82,64 +163,49 @@ final class SystemMonitor: ObservableObject {
     func stopMonitoring() {
         timer?.invalidate()
         timer = nil
+        updateTask?.cancel()
+        updateTask = nil
+        pendingUpdate = false
     }
 
     // MARK: - Private Methods
 
-    private func updateAllStats() async {
-        updateCPU()
-        updateMemory()
-        updateDisk()
-        updateNetwork()
-        updateGPU()
-        updateTemperatureAndFan()
-        await updateTopProcesses()
+    private func requestUpdate() {
+        pendingUpdate = true
+
+        guard updateTask == nil else { return }
+        updateTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            while self.pendingUpdate && !Task.isCancelled {
+                self.pendingUpdate = false
+                let snapshot = await self.sampler.collect(topProcessCount: AppConfig.topCPUProcessCount)
+                guard !Task.isCancelled else { break }
+                self.applySnapshot(snapshot)
+            }
+
+            self.updateTask = nil
+        }
     }
 
-    private func updateCPU() {
-        let usage = cpuInfo.getCPUUsage()
-        cpuUsage = usage.total
-        cpuUserUsage = usage.user
-        cpuSystemUsage = usage.system
-        coreUsages = cpuInfo.getPerCoreUsage()
-        
-        // Update load average
-        loadAverage = CPUInfo.getLoadAverage()
-        
-        // Update core topology (cached, only refreshes after TTL)
-        coreTopology = cpuInfo.getCoreTopology()
-    }
-
-    private func updateMemory() {
-        let info = MemoryInfo.getMemoryInfo()
-        memoryTotal = info.total
-        memoryUsed = info.used
-        memoryUsage = info.usagePercent
-    }
-
-    private func updateDisk() {
-        let info = DiskInfo.getDiskInfo()
-        diskTotal = info.total
-        diskUsed = info.used
-        diskAvailable = info.available
-    }
-
-    private func updateNetwork() {
-        let stats = networkInfo.getNetworkStats()
-        networkUpload = stats.uploadSpeed
-        networkDownload = stats.downloadSpeed
-    }
-
-    private func updateGPU() {
-        gpuUsage = GPUInfo.getGPUUsage()
-    }
-
-    private func updateTemperatureAndFan() {
-        cpuTemperature = SMCInfo.getCPUTemperature()
-        fanSpeed = SMCInfo.getFanSpeed()
-    }
-    
-    private func updateTopProcesses() async {
-        topCPUProcesses = await ProcessStats.getTopCPUProcesses(count: AppConfig.topCPUProcessCount)
+    private func applySnapshot(_ snapshot: SystemSnapshot) {
+        cpuUsage = snapshot.cpuUsage
+        cpuUserUsage = snapshot.cpuUserUsage
+        cpuSystemUsage = snapshot.cpuSystemUsage
+        coreUsages = snapshot.coreUsages
+        coreTopology = snapshot.coreTopology
+        loadAverage = snapshot.loadAverage
+        topCPUProcesses = snapshot.topCPUProcesses
+        gpuUsage = snapshot.gpuUsage
+        memoryUsage = snapshot.memoryUsage
+        memoryUsed = snapshot.memoryUsed
+        memoryTotal = snapshot.memoryTotal
+        diskUsed = snapshot.diskUsed
+        diskTotal = snapshot.diskTotal
+        diskAvailable = snapshot.diskAvailable
+        networkUpload = snapshot.networkUpload
+        networkDownload = snapshot.networkDownload
+        cpuTemperature = snapshot.cpuTemperature
+        fanSpeed = snapshot.fanSpeed
     }
 }

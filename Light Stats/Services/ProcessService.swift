@@ -36,6 +36,8 @@ final class ProcessService: ProcessServiceProtocol {
     
     /// Bundle ID 缓存（避免重复读取 Info.plist）
     private var bundleIdCache: [String: String?] = [:]
+    private let memoryCleanupLock = NSLock()
+    private var isMemoryCleanupRunning = false
     
     private init() {}
     
@@ -109,42 +111,75 @@ final class ProcessService: ProcessServiceProtocol {
     
     // MARK: - Top Command Execution
     
-    /// Get top N memory-consuming processes using top command
-    /// Command: /usr/bin/top -l 1 -o mem -n N -stats pid,command,mem
+    /// Get memory usage for processes.
+    /// Uses `ps` for full-process coverage, then sorts by RSS descending.
     func getTopMemoryProcesses(count: Int) async -> [TopProcessInfo] {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/usr/bin/top")
-                task.arguments = ["-l", "1", "-o", "mem", "-n", "\(count)", "-stats", "pid,command,mem"]
+                task.executableURL = URL(fileURLWithPath: "/bin/ps")
+                task.arguments = ["-axo", "pid=,rss=,comm="]
 
-                let pipe = Pipe()
-                task.standardOutput = pipe
-                task.standardError = FileHandle.nullDevice
+                let outputPipe = Pipe()
+                let errorPipe = Pipe()
+                task.standardOutput = outputPipe
+                task.standardError = errorPipe
 
                 do {
                     try task.run()
+                    // Read output before waiting to avoid pipe backpressure deadlock on large `ps` output.
+                    let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
+                    let stderrData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                     task.waitUntilExit()
 
                     guard task.terminationStatus == 0 else {
-                        os_log("top command failed with termination status: %{public}d", 
-                               log: OSLog.default, type: .error, task.terminationStatus)
+                        let stderrText = String(data: stderrData, encoding: .utf8)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let stderrText, !stderrText.isEmpty {
+                            os_log(
+                                "ps command failed with termination status: %{public}d, stderr: %{public}@",
+                                log: OSLog.default,
+                                type: .error,
+                                task.terminationStatus,
+                                stderrText
+                            )
+                        } else {
+                            os_log(
+                                "ps command failed with termination status: %{public}d",
+                                log: OSLog.default,
+                                type: .error,
+                                task.terminationStatus
+                            )
+                        }
                         continuation.resume(returning: [])
                         return
                     }
 
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     guard let output = String(data: data, encoding: .utf8) else {
-                        os_log("Failed to decode top command output to UTF-8 string", 
+                        os_log("Failed to decode ps command output to UTF-8 string",
                                log: OSLog.default, type: .error)
                         continuation.resume(returning: [])
                         return
                     }
 
-                    let processes = self.parseTopOutput(output)
+                    let processes = self.parseProcessMemoryOutput(output, maxCount: count)
+                    if processes.isEmpty {
+                        let stderrText = String(data: stderrData, encoding: .utf8)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let stderrText, !stderrText.isEmpty {
+                            os_log(
+                                "ps command returned no processes, stderr: %{public}@",
+                                log: OSLog.default,
+                                type: .error,
+                                stderrText
+                            )
+                        } else {
+                            os_log("ps command returned no processes", log: OSLog.default, type: .error)
+                        }
+                    }
                     continuation.resume(returning: processes)
                 } catch {
-                    os_log("top command execution error: %{public}@", 
+                    os_log("ps command execution error: %{public}@", 
                            log: OSLog.default, type: .error, error.localizedDescription)
                     continuation.resume(returning: [])
                 }
@@ -152,47 +187,24 @@ final class ProcessService: ProcessServiceProtocol {
         }
     }
     
-    /// Parse top command output
-    /// Format: PID COMMAND MEM
-    /// MEM can be in bytes, K, M, G, or with +/- suffix
-    private func parseTopOutput(_ output: String) -> [TopProcessInfo] {
+    /// Parse `ps -axo pid=,rss=,comm=` output.
+    /// RSS is reported in KB.
+    private func parseProcessMemoryOutput(_ output: String, maxCount: Int) -> [TopProcessInfo] {
         var processes: [TopProcessInfo] = []
         let lines = output.components(separatedBy: "\n")
-        
-        // Find the line that starts with "PID" to skip header
-        var dataStarted = false
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            
-            // Skip empty lines
             guard !trimmed.isEmpty else { continue }
-            
-            // Check for header line
-            if trimmed.hasPrefix("PID") {
-                dataStarted = true
-                continue
-            }
-            
-            // Skip lines before data section
-            guard dataStarted else { continue }
-            
-            // Parse data line: PID COMMAND MEM
-            // Use regex to handle varying whitespace
+
             let components = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-            
-            // Need at least 3 components: pid, command, mem
             guard components.count >= 3 else { continue }
-            
             guard let pid = pid_t(components[0]) else { continue }
-            
-            // Memory is the last column
-            let memString = components.last ?? "0"
-            let memBytes = parseMemoryString(memString)
-            
-            // Command is everything between pid and mem
-            let command = components[1..<(components.count - 1)].joined(separator: " ")
-            
+
+            let rssKB = UInt64(components[1]) ?? 0
+            let memBytes = rssKB * 1024
+            let command = components[2...].joined(separator: " ")
+
             let processInfo = TopProcessInfo(
                 pid: pid,
                 command: command,
@@ -200,47 +212,18 @@ final class ProcessService: ProcessServiceProtocol {
             )
             processes.append(processInfo)
         }
-        
+
+        processes.sort { lhs, rhs in
+            if lhs.memoryBytes == rhs.memoryBytes {
+                return lhs.pid < rhs.pid
+            }
+            return lhs.memoryBytes > rhs.memoryBytes
+        }
+
+        if maxCount > 0 {
+            return Array(processes.prefix(maxCount))
+        }
         return processes
-    }
-    
-    /// Parse memory string with unit suffix (K, M, G, B)
-    /// Examples: "100M", "1.5G", "512K", "1024B", "100M+", "50M-"
-    private func parseMemoryString(_ memString: String) -> UInt64 {
-        var str = memString.uppercased()
-        
-        // Remove +/- suffix if present
-        if str.hasSuffix("+") || str.hasSuffix("-") {
-            str = String(str.dropLast())
-        }
-        
-        // Check for unit suffix
-        let multiplier: UInt64
-        var numericPart = str
-        
-        if str.hasSuffix("G") {
-            multiplier = 1024 * 1024 * 1024
-            numericPart = String(str.dropLast())
-        } else if str.hasSuffix("M") {
-            multiplier = 1024 * 1024
-            numericPart = String(str.dropLast())
-        } else if str.hasSuffix("K") {
-            multiplier = 1024
-            numericPart = String(str.dropLast())
-        } else if str.hasSuffix("B") {
-            multiplier = 1
-            numericPart = String(str.dropLast())
-        } else {
-            // Assume bytes if no suffix
-            multiplier = 1
-        }
-        
-        // Parse numeric value (handle decimal)
-        if let value = Double(numericPart) {
-            return UInt64(value * Double(multiplier))
-        }
-        
-        return 0
     }
     
     // MARK: - Process Control
@@ -332,26 +315,45 @@ final class ProcessService: ProcessServiceProtocol {
     /// Trigger system memory cleanup
     /// Uses memory pressure simulation to encourage system to release purgeable memory
     func triggerMemoryCleanup() async {
-        // Method 1: Allocate and release memory to trigger system cleanup
-        // This is a safer approach than running 'purge' command which requires sudo
-        let chunkSize = 100 * 1024 * 1024  // 100 MB chunks
-        var chunks: [UnsafeMutableRawPointer] = []
-        
-        // Allocate memory to create pressure
-        for _ in 0..<5 {
-            if let chunk = malloc(chunkSize) {
-                memset(chunk, 0, chunkSize)  // Touch the memory
-                chunks.append(chunk)
+        guard beginMemoryCleanup() else { return }
+        defer { endMemoryCleanup() }
+
+        await Task.detached(priority: .utility) {
+            // Method 1: Allocate and release memory to trigger system cleanup
+            // This is a safer approach than running 'purge' command which requires sudo
+            let chunkSize = 100 * 1024 * 1024  // 100 MB chunks
+            var chunks: [UnsafeMutableRawPointer] = []
+
+            // Allocate memory to create pressure
+            for _ in 0..<5 {
+                if let chunk = malloc(chunkSize) {
+                    memset(chunk, 0, chunkSize)  // Touch the memory
+                    chunks.append(chunk)
+                }
             }
-        }
-        
-        // Small delay
-        try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
-        
-        // Free the allocated memory
-        for chunk in chunks {
-            free(chunk)
-        }
+
+            // Small delay
+            try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
+
+            // Free the allocated memory
+            for chunk in chunks {
+                free(chunk)
+            }
+        }.value
+    }
+
+    private func beginMemoryCleanup() -> Bool {
+        memoryCleanupLock.lock()
+        defer { memoryCleanupLock.unlock() }
+        guard !isMemoryCleanupRunning else { return false }
+        isMemoryCleanupRunning = true
+        return true
+    }
+
+    private func endMemoryCleanup() {
+        memoryCleanupLock.lock()
+        isMemoryCleanupRunning = false
+        memoryCleanupLock.unlock()
     }
     
     /// Terminate an app group (handles single and multi-process apps)

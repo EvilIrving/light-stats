@@ -54,12 +54,15 @@ struct PopoverContentView: View {
 
             // Content Area
             ZStack {
-                OverviewTabView()
-                    .opacity(selectedTab == 0 ? 1 : 0)
-                
-                CleanupTabView()
-                    .opacity(selectedTab == 1 ? 1 : 0)
+                if selectedTab == 0 {
+                    OverviewTabView()
+                        .transition(.opacity)
+                } else {
+                    CleanupTabView()
+                        .transition(.opacity)
+                }
             }
+            .animation(.easeInOut(duration: 0.16), value: selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())

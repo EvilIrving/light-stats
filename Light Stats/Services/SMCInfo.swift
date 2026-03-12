@@ -47,25 +47,30 @@ enum SMCInfo {
 
     // MARK: - Public API
 
+    private static let smcDebugEnabled: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["LIGHT_STATS_SMC_DEBUG"] == "1"
+        #else
+        return false
+        #endif
+    }()
+
     private static func writeDebugLog(_ content: String) {
+        guard smcDebugEnabled else { return }
+        #if DEBUG
         let path = "/tmp/light-stats-smc-debug.log"
         try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        #endif
     }
 
     static func getCPUTemperature() -> Double? {
         // Hold lock for entire read/compute/update. Use only _cachedTemperature/_cacheTimestamp
         // inside the block—never the cachedTemperature property—to avoid reentrant deadlock (NSLock is non-reentrant).
         return temperatureLock.withLock {
-            var debugLog = "[Temperature Debug] Starting...\n"
-
             guard open() else {
-                debugLog += "[Temperature Debug] Failed to open SMC connection\n"
-                writeDebugLog(debugLog)
                 return readCachedTemperatureIfValid()
             }
             defer { close() }
-
-            debugLog += "[Temperature Debug] SMC connection opened\n"
 
             let cpuTempKeys = [
                 // Apple Silicon SOC 温度
@@ -77,33 +82,39 @@ enum SMCInfo {
             ]
 
             var temperatures: [Double] = []
-            for key in cpuTempKeys {
-                let result = readTemperatureDebug(key: key)
-                debugLog += result.log
 
-                if let temp = result.temp {
-                    // 放宽范围先收集数据: 5-115°C
-                    if temp > 5 && temp < 115 {
+            if smcDebugEnabled {
+                var debugLog = "[Temperature Debug] Starting...\n"
+                debugLog += "[Temperature Debug] SMC connection opened\n"
+
+                for key in cpuTempKeys {
+                    let result = readTemperatureDebug(key: key)
+                    debugLog += result.log
+
+                    if let temp = result.temp, temp > 5 && temp < 115 {
                         temperatures.append(temp)
                         debugLog += "  -> ACCEPTED\n"
                     } else {
                         debugLog += "  -> REJECTED (out of range 5-115)\n"
                     }
                 }
+
+                debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
+                debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
+                writeDebugLog(debugLog)
+            } else {
+                for key in cpuTempKeys {
+                    if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
+                        temperatures.append(temp)
+                    }
+                }
             }
 
-            debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
-            debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
-
             guard !temperatures.isEmpty else {
-                debugLog += "[Temperature Debug] No valid temperatures, returning cache: \(String(describing: _cachedTemperature))\n"
-                writeDebugLog(debugLog)
                 return readCachedTemperatureIfValid()
             }
 
             let avgTemp = temperatures.reduce(0, +) / Double(temperatures.count)
-            debugLog += "[Temperature Debug] Average: \(avgTemp)\n"
-
             let smoothedTemp: Double
             if let cached = _cachedTemperature {
                 smoothedTemp = avgTemp * 0.7 + cached * 0.3
@@ -113,9 +124,6 @@ enum SMCInfo {
 
             _cachedTemperature = smoothedTemp
             _cacheTimestamp = Date()
-            debugLog += "[Temperature Debug] Final: \(smoothedTemp)\n"
-            writeDebugLog(debugLog)
-
             return smoothedTemp
         }
     }
@@ -304,6 +312,70 @@ enum SMCInfo {
         log += "parsed=nil\n"
 
         return (nil, log)
+    }
+
+    private static func readTemperature(key: String) -> Double? {
+        guard key.count == 4 else { return nil }
+
+        let keyCode = fourCharCode(key)
+        var inputStruct = SMCParamStruct()
+        var outputStruct = SMCParamStruct()
+
+        inputStruct.key = keyCode
+        inputStruct.data8 = kSMCGetKeyInfo
+
+        var outputSize = MemoryLayout<SMCParamStruct>.size
+        var result = IOConnectCallStructMethod(
+            conn,
+            2,
+            &inputStruct,
+            MemoryLayout<SMCParamStruct>.size,
+            &outputStruct,
+            &outputSize
+        )
+
+        guard result == kIOReturnSuccess, outputStruct.result == 0 else {
+            return nil
+        }
+
+        let dataSize = Int(outputStruct.keyInfo.dataSize)
+        guard dataSize > 0 && dataSize <= 32 else { return nil }
+
+        let dataType = outputStruct.keyInfo.dataType
+        let typeStr = String(format: "%c%c%c%c",
+                             (dataType >> 24) & 0xFF,
+                             (dataType >> 16) & 0xFF,
+                             (dataType >> 8) & 0xFF,
+                             dataType & 0xFF)
+
+        inputStruct = SMCParamStruct()
+        inputStruct.key = keyCode
+        inputStruct.keyInfo.dataSize = outputStruct.keyInfo.dataSize
+        inputStruct.data8 = kSMCReadKey
+
+        outputStruct = SMCParamStruct()
+        outputSize = MemoryLayout<SMCParamStruct>.size
+        result = IOConnectCallStructMethod(
+            conn,
+            2,
+            &inputStruct,
+            MemoryLayout<SMCParamStruct>.size,
+            &outputStruct,
+            &outputSize
+        )
+
+        guard result == kIOReturnSuccess, outputStruct.result == 0 else {
+            return nil
+        }
+
+        var bytes = [UInt8]()
+        withUnsafeBytes(of: outputStruct.bytes) { ptr in
+            for i in 0..<dataSize {
+                bytes.append(ptr[i])
+            }
+        }
+
+        return parseTemperatureValue(bytes: bytes, typeStr: typeStr)
     }
 
     /// 根据类型字符串解析温度

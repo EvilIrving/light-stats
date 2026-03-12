@@ -23,6 +23,7 @@ struct ChildProcessRowView: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+                .help(command)
 
             Spacer()
 
@@ -31,7 +32,7 @@ struct ChildProcessRowView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(.secondary.opacity(0.8))
         }
-        .padding(.leading, 12)
+        .padding(.leading, 8)
         .padding(.vertical, 6)
     }
 

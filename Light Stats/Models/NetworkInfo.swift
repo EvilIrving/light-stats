@@ -35,7 +35,8 @@ final class NetworkInfo: @unchecked Sendable {
             let isLoopback = (flags & IFF_LOOPBACK) != 0
 
             if isUp && !isLoopback {
-                if ptr.pointee.ifa_addr.pointee.sa_family == UInt8(AF_LINK) {
+                if let ifaAddr = ptr.pointee.ifa_addr,
+                   ifaAddr.pointee.sa_family == UInt8(AF_LINK) {
                     if let data = ptr.pointee.ifa_data {
                         let networkData = data.assumingMemoryBound(to: if_data.self).pointee
                         totalSent += UInt64(networkData.ifi_obytes)

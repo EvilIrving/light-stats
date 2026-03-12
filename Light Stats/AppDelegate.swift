@@ -18,10 +18,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private let settings: SettingsManager
     private let monitor: SystemMonitor
+    private let appMemoryManager: AppMemoryManager
     
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared
+        self.appMemoryManager = AppMemoryManager.shared
         super.init()
     }
 
@@ -56,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupPopover() {
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 360, height: 480)
+        popover?.contentSize = NSSize(width: 360, height: 520)
         popover?.behavior = .transient
         popover?.contentViewController = NSHostingController(
             rootView: PopoverContentView()
@@ -68,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
+        appMemoryManager.startMonitoring()
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
@@ -146,9 +149,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-
-            // Activate app to ensure popover receives focus
-            NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        monitor.stopMonitoring()
+        appMemoryManager.stopMonitoring()
     }
 }

@@ -112,25 +112,6 @@ struct CleanupTabView: View {
                 }
             }
         }
-        .onAppear {
-            appManager.startMonitoring()
-            
-            // DEBUG: 打印所有进程信息
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                print("\n========== DEBUG: 所有运行中的应用 ==========")
-                for app in appManager.runningApps {
-                    print("[应用] \(app.name)")
-                    print("  - bundleId: \(app.bundleIdentifier ?? "nil")")
-                    print("  - execPath: \(app.execPath ?? "nil")")
-                    print("  - bundlePath: \(app.bundlePath ?? "nil")")
-                    print("  - memory: \(app.memoryFormatted)")
-                    print("  - isSystemApp: \(app.isSystemApp)")
-                    print("  - isAppleApp: \(app.isAppleApp)")
-                    print("")
-                }
-                print("========== END DEBUG ==========")
-            }
-        }
         .alert("cleanup.appNotResponding".localized, isPresented: $showForceTerminateAlert) {
             Button("cleanup.forceQuit".localized, role: .destructive) {
                 if let app = appToTerminate {
