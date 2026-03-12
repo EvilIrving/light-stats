@@ -12,7 +12,7 @@ import Combine
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
+    private var panel: NSPanel?
     private var cancellables = Set<AnyCancellable>()
     private var statusBarView: StatusBarView?
     
@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
-        setupPopover()
+        setupPanel()
         startMonitoring()
     }
 
@@ -49,21 +49,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             view.frame = button.bounds
             view.autoresizingMask = [.width, .height]
 
-            button.action = #selector(togglePopover)
+            button.action = #selector(togglePanel)
             button.target = self
         }
     }
 
-    // MARK: - Popover Setup
+    // MARK: - Panel Setup
 
-    private func setupPopover() {
-        popover = NSPopover()
-        popover?.contentSize = NSSize(width: 360, height: 520)
-        popover?.behavior = .transient
-        popover?.contentViewController = NSHostingController(
+    private func setupPanel() {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 520),
+            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = true
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isReleasedWhenClosed = false
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(monitor)
         )
+
+        self.panel = panel
     }
 
     // MARK: - Monitoring
@@ -142,14 +160,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Actions
 
-    @objc private func togglePopover() {
-        guard let popover = popover, let button = statusItem?.button else { return }
+    @objc private func togglePanel() {
+        guard let panel = panel, let button = statusItem?.button else { return }
 
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if panel.isVisible {
+            panel.orderOut(nil)
+            return
         }
+
+        guard let buttonWindow = button.window else { return }
+
+        let buttonRectInWindow = button.convert(button.bounds, to: nil)
+        let buttonRectOnScreen = buttonWindow.convertToScreen(buttonRectInWindow)
+
+        let panelSize = panel.frame.size
+        let panelOrigin = NSPoint(
+            x: buttonRectOnScreen.midX - (panelSize.width / 2),
+            y: buttonRectOnScreen.minY - panelSize.height - 6
+        )
+
+        panel.setFrameOrigin(panelOrigin)
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

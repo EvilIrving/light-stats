@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-
 struct PopoverContentView: View {
     @State private var selectedTab: Int = 0
     @Namespace private var animation
@@ -40,17 +39,27 @@ struct PopoverContentView: View {
                 // Settings Button
                 SettingsLink {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.secondary)
-                        .padding(8)
-                        .background(Circle().fill(Color.primary.opacity(0.03)))
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Circle()
+                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
+                .labelsHidden()
+                .focusable(false)
+                .focusEffectDisabled()
                 .help("tab.settings".localized)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
 
             // Content Area
             ZStack {
@@ -65,6 +74,7 @@ struct PopoverContentView: View {
             .animation(.easeInOut(duration: 0.16), value: selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .ignoresSafeArea(.container, edges: .top)
         .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())
         .frame(width: 360, height: 520)
         .id(localization.currentLanguage) // Force refresh when language changes
