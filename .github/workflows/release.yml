@@ -10,19 +10,14 @@ permissions:
 
 jobs:
   release:
-    name: Build and Release
+    name: Build, Sign, Notarize & Release
     runs-on: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 获取完整历史，用于生成 changelog
-
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+          fetch-depth: 0
 
       - name: Get version from tag
         id: version
@@ -30,36 +25,54 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          echo "📦 Building version: $VERSION"
+          echo "📦 Version: $VERSION"
 
-      - name: Build App
+      - name: Import Code Signing Certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -k "$KEYCHAIN_PATH" -P "$P12_PASSWORD" \
+            -A -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/\"//g')
+
+      - name: Build, Sign & Notarize
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
         run: |
           chmod +x build.sh
           ./build.sh
 
-      - name: Generate Changelog
-        id: changelog
+      - name: Verify Notarization
         run: |
-          # 获取上一个 tag
+          spctl --assess --verbose=1 --type install build/output/*.dmg
+          xcrun stapler validate build/output/*.dmg
+
+      - name: Generate Changelog
+        run: |
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
           echo "## What's Changed" > CHANGELOG.md
           echo "" >> CHANGELOG.md
-          
           if [ -n "$PREV_TAG" ]; then
-            echo "Changes since $PREV_TAG:" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
             git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges >> CHANGELOG.md
           else
-            echo "Initial release" >> CHANGELOG.md
             git log --pretty=format:"- %s" --no-merges -20 >> CHANGELOG.md
           fi
-          
           echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "---" >> CHANGELOG.md
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.version.outputs.tag }}" >> CHANGELOG.md
 
       - name: Create Release
@@ -67,8 +80,6 @@ jobs:
         with:
           name: Light Stats ${{ steps.version.outputs.tag }}
           body_path: CHANGELOG.md
-          draft: false
-          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') }}
           files: |
             build/output/*.dmg
         env:
