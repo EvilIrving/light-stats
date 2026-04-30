@@ -73,12 +73,9 @@ final class LocalizationManager: ObservableObject {
     func setLanguage(_ language: AppLanguage) {
         currentLanguage = language
         currentLocale = LocalizationManager.resolveLocale(for: language)
-        
+
         // Persist the setting
         UserDefaults.standard.set(language.rawValue, forKey: userDefaultsKey)
-        
-        // Notify the app to update
-        objectWillChange.send()
     }
     
     /// Get localized string for a key

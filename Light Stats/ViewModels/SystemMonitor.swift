@@ -189,23 +189,26 @@ final class SystemMonitor: ObservableObject {
     }
 
     private func applySnapshot(_ snapshot: SystemSnapshot) {
-        cpuUsage = snapshot.cpuUsage
-        cpuUserUsage = snapshot.cpuUserUsage
-        cpuSystemUsage = snapshot.cpuSystemUsage
-        coreUsages = snapshot.coreUsages
-        coreTopology = snapshot.coreTopology
-        loadAverage = snapshot.loadAverage
-        topCPUProcesses = snapshot.topCPUProcesses
-        gpuUsage = snapshot.gpuUsage
-        memoryUsage = snapshot.memoryUsage
-        memoryUsed = snapshot.memoryUsed
-        memoryTotal = snapshot.memoryTotal
-        diskUsed = snapshot.diskUsed
-        diskTotal = snapshot.diskTotal
-        diskAvailable = snapshot.diskAvailable
-        networkUpload = snapshot.networkUpload
-        networkDownload = snapshot.networkDownload
-        cpuTemperature = snapshot.cpuTemperature
-        fanSpeed = snapshot.fanSpeed
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+            self.cpuUsage = snapshot.cpuUsage
+            self.cpuUserUsage = snapshot.cpuUserUsage
+            self.cpuSystemUsage = snapshot.cpuSystemUsage
+            self.coreUsages = snapshot.coreUsages
+            self.coreTopology = snapshot.coreTopology
+            self.loadAverage = snapshot.loadAverage
+            self.topCPUProcesses = snapshot.topCPUProcesses
+            self.gpuUsage = snapshot.gpuUsage
+            self.memoryUsage = snapshot.memoryUsage
+            self.memoryUsed = snapshot.memoryUsed
+            self.memoryTotal = snapshot.memoryTotal
+            self.diskUsed = snapshot.diskUsed
+            self.diskTotal = snapshot.diskTotal
+            self.diskAvailable = snapshot.diskAvailable
+            self.networkUpload = snapshot.networkUpload
+            self.networkDownload = snapshot.networkDownload
+            self.cpuTemperature = snapshot.cpuTemperature
+            self.fanSpeed = snapshot.fanSpeed
+        }
     }
 }

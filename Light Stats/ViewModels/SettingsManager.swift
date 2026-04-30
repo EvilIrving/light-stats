@@ -70,7 +70,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var appLanguage: AppLanguage {
         didSet {
             save(appLanguage.rawValue, for: .appLanguage)
-            LocalizationManager.shared.setLanguage(appLanguage)
+            Task { @MainActor in
+                LocalizationManager.shared.setLanguage(appLanguage)
+            }
         }
     }
     
