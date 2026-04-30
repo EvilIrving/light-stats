@@ -59,17 +59,17 @@ struct AboutView: View {
                 LinkButton(
                     icon: "github-mark",
                     title: "GitHub",
-                    url: "https://github.com/EvilIrving/menus-stats"
+                    url: "https://github.com/EvilIrving/light-stats"
                 )
                 LinkButton(
                     icon: "globe",
                     title: "Website",
-                    url: "https://xxxxxxxxxxxx"
+                    url: "https://evilirving.github.io/light-stats/"
                 )
                 LinkButton(
                     icon: "questionmark.circle",
                     title: "Support",
-                    url: "https://xxxxxxxxxxxx"
+                    url: "https://evilirving.github.io/light-stats/#support"
                 )
             }
 
