@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem?
     private var panel: NSPanel?
+    private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
     private var statusBarView: StatusBarView?
     
@@ -31,6 +32,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupPanel()
         startMonitoring()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleShowAbout),
+            name: .showAbout,
+            object: nil
+        )
+    }
+
+    @objc private func handleShowAbout() {
+        showAbout()
     }
 
     // MARK: - Status Item Setup
@@ -59,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPanel() {
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 520),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -67,8 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = true
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -159,6 +169,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Actions
+
+    func closePanel() {
+        panel?.orderOut(nil)
+    }
+
+    // MARK: - About Window
+
+    @objc func showAbout() {
+        if let existing = aboutWindow {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 330),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.contentViewController = NSHostingController(
+            rootView: AboutView()
+        )
+
+        aboutWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
 
     @objc private func togglePanel() {
         guard let panel = panel, let button = statusItem?.button else { return }

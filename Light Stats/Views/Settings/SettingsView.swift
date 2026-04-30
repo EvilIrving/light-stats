@@ -69,7 +69,6 @@ struct SettingsView: View {
                                 }
                             }
                             .pickerStyle(.segmented)
-                            .frame(width: 120)
                             .labelsHidden()
                         }
                         
@@ -84,7 +83,6 @@ struct SettingsView: View {
                                 }
                             }
                             .pickerStyle(.segmented)
-                            .frame(width: 120)
                             .labelsHidden()
                         }
                     }
@@ -92,13 +90,12 @@ struct SettingsView: View {
             }
             .padding(16)
         }
-        .scrollIndicators(.hidden)
         .frame(width: 380, height: 520)
-        .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())
+        .background(Color(nsColor: .windowBackgroundColor))
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
-        .id(localization.currentLanguage) // Force refresh when language changes
+        .id(localization.currentLanguage)
     }
     
     private func validateMinimumItems() {

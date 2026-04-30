@@ -10,6 +10,8 @@ struct PopoverContentView: View {
     @State private var selectedTab: Int = 0
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
+    @State private var hoveredIcon: String? = nil
+    @Environment(\.openSettings) private var openSettingsAction
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +23,7 @@ struct PopoverContentView: View {
                             selectedTab = 0
                         }
                     }
-                    
+
                     TabButton(title: "tab.cleanup".localized, isSelected: selectedTab == 1, namespace: animation) {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                             selectedTab = 1
@@ -36,26 +38,35 @@ struct PopoverContentView: View {
 
                 Spacer()
 
-                // Settings Button
-                SettingsLink {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 34, height: 34)
-                        .background(
-                            Circle()
-                                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.72))
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
-                        )
+                // Icons: Settings, About, Quit
+                HStack(spacing: 4) {
+                    Image(systemName: "gear.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(hoveredIcon == "settings" ? .secondary : .secondary.opacity(0.5))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("tab.settings".localized)
+                        .onHover { hoveredIcon = $0 ? "settings" : nil }
+                        .onTapGesture { openSettings() }
+
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(hoveredIcon == "about" ? .secondary : .secondary.opacity(0.5))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("About")
+                        .onHover { hoveredIcon = $0 ? "about" : nil }
+                        .onTapGesture { openAbout() }
+
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(hoveredIcon == "quit" ? .secondary : .secondary.opacity(0.5))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("Quit")
+                        .onHover { hoveredIcon = $0 ? "quit" : nil }
+                        .onTapGesture { NSApp.terminate(nil) }
                 }
-                .buttonStyle(.plain)
-                .labelsHidden()
-                .focusable(false)
-                .focusEffectDisabled()
-                .help("tab.settings".localized)
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -77,8 +88,33 @@ struct PopoverContentView: View {
         .ignoresSafeArea(.container, edges: .top)
         .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())
         .frame(width: 360, height: 520)
+        .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes
     }
+
+    // MARK: - Actions
+
+    private func openSettings() {
+        closePanel()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            openSettingsAction()
+        }
+    }
+
+    private func openAbout() {
+        closePanel()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NotificationCenter.default.post(name: .showAbout, object: nil)
+        }
+    }
+
+    private func closePanel() {
+        (NSApp.delegate as? AppDelegate)?.closePanel()
+    }
+}
+
+extension Notification.Name {
+    static let showAbout = Notification.Name("showAbout")
 }
 
 #Preview {

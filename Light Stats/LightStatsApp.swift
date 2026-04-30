@@ -13,7 +13,7 @@ struct LightStatsApp: App {
     
     var body: some Scene {
         Settings {
-            SettingsView()  // macOS 自动处理窗口生命周期
+            SettingsView()
         }
     }
 }
