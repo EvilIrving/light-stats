@@ -1,6 +1,6 @@
 # Light Stats
 
-A macOS menu bar app that monitors CPU, GPU, memory, disk, and network usage. Click any item to see details in a popover. Includes memory cleanup.
+A macOS menu bar app that monitors CPU, GPU, memory, disk, and network usage. Click any item to see details in a floating panel. Includes memory cleanup.
 
 > 中文版请查看 [README.zh.md](README.zh.md)
 
@@ -31,13 +31,13 @@ Two-line layout in the menu bar:
 
 Fixed widths keep things stable (CPU: 26pt, Disk: 46pt). Toggle each item on/off in Settings (Logo, CPU, GPU, MEM, Disk, Net, Fan).
 
-### Popover
+### Floating Panel
 
-Click a menu bar item to open a popover with two tabs:
+Click a menu bar item to open an NSPanel (360×520) with two tabs:
 
-**Overview:** Ring progress bars for CPU, GPU, and memory. Core usage list with color gradients. Network speed, disk info, and fan status.
+**Overview:** CPU, GPU, memory value cards. Load average. Temperature / fan / disk status strip. Network speed. Top CPU processes. P/E core usage bar charts.
 
-**Memory:** Memory pressure overview. App list sorted by usage (descending). Close apps normally or force quit (with confirmation).
+**Cleanup:** Memory pressure overview with swap warning. App list sorted by usage (descending). Close apps normally or force quit (with confirmation). Expand to view child processes.
 
 ### Settings
 
@@ -51,7 +51,7 @@ Click a menu bar item to open a popover with two tabs:
 ## Tech Stack
 
 - Swift 5.9+
-- SwiftUI for popover and settings, AppKit for menu bar and custom drawing
+- SwiftUI for panel and settings, AppKit for menu bar and custom drawing
 - Combine + Swift Concurrency
 - macOS 14+
 - Mach API, IOKit, SMC, getifaddrs for system metrics
@@ -75,16 +75,16 @@ Each metric has its own reader and manager class. Protocols like `ProcessService
 | Minimum display validation | ✅ Done |
 | Fan animation | ❌ Not implemented |
 
-### Popover
+### Panel
 
 | Feature | Status |
 |---------|--------|
 | Two tabs | ✅ Done |
-| Ring progress bars | ✅ Done |
-| Core usage list | ✅ Done |
+| Value cards | ✅ Done |
+| Core usage bar charts | ✅ Done |
 | Process sorting | ✅ Done |
 | Force quit | ✅ Done |
-| Auto-close | ❌ Not implemented |
+| Auto-close | ✅ Done |
 
 ### Global Features
 
@@ -93,7 +93,8 @@ Each metric has its own reader and manager class. Protocols like `ProcessService
 | Multi-language | ✅ Done |
 | Dependency injection | ✅ Done |
 | Global config | ✅ Done |
-| Temperature units | ✅ Done |
+| Temperature units | ⚠️ Configurable, not wired to views |
+| Network speed units | ⚠️ Configurable, not wired to views |
 
 ---
 
@@ -104,8 +105,9 @@ Each metric has its own reader and manager class. Protocols like `ProcessService
 - `ViewModels/`: Business logic and state (SystemMonitor, AppMemoryManager, SettingsManager)
 - `Views/`:
   - `StatusBar/`: Menu bar rendering
-  - `Popover/`: Popover components and tabs
+  - `Popover/`: Panel components and tabs
   - `Settings/`: Settings UI
+  - `About/`: Custom About window
 - `Resources/`: Localization files (`Localizable.strings`)
 - `Utilities/`: Formatters and helpers
 
@@ -117,6 +119,6 @@ Light Stats started as a prototype and grew into a full system monitor. The basi
 
 Still on the list:
 
+- Wire temperature and network speed unit settings into views
 - Fan animation
-- Auto-close logic for the popover
 - More metrics
