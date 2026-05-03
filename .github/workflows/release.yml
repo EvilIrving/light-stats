@@ -53,7 +53,12 @@ jobs:
 
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/\"//g')
           security find-identity -v -p codesigning
-          security find-identity -v -p codesigning | grep "Developer ID Application"
+          if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "Developer ID Application"; then
+            echo "::error::未在 keychain 中发现「Developer ID Application」签名身份。"
+            echo "当前 P12 若是「Apple Development」，无法用于 GitHub Release 的 DMG 签名与公证。"
+            echo "请在 developer.apple.com 创建并导出 Developer ID Application 证书（含私钥）为 .p12，更新 BUILD_CERTIFICATE_BASE64 / P12_PASSWORD。"
+            exit 1
+          fi
 
       - name: Build, Sign & Notarize
         id: build
