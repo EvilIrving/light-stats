@@ -143,6 +143,8 @@ struct SettingsGridItem: View {
     }
 }
     
+#if DEBUG
 #Preview {
     SettingsView()
 }
+#endif

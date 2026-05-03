@@ -154,6 +154,7 @@ struct AppCardView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     let icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil) ?? NSImage()
 
@@ -193,3 +194,4 @@ struct AppCardView: View {
     }
     .padding()
 }
+#endif

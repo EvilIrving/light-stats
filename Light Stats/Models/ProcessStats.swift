@@ -47,9 +47,10 @@ enum ProcessStats {
                 
                 do {
                     try task.run()
-                    task.waitUntilExit()
-                    
+
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    task.waitUntilExit()
+
                     let output = String(data: data, encoding: .utf8) ?? ""
                     
                     let processes = parseProcessOutput(output, maxCount: count)

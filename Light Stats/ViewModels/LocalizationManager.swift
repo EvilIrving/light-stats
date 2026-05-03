@@ -19,7 +19,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     
     /// Display name for the language (always in native language)
-    var displayName: String {
+    nonisolated var displayName: String {
         switch self {
         case .system: return String(localized: "language.system")
         case .zhHans: return "简体中文"
@@ -29,7 +29,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
     
     /// Get the actual locale identifier
-    var localeIdentifier: String? {
+    nonisolated var localeIdentifier: String? {
         switch self {
         case .system: return nil
         case .zhHans: return "zh-Hans"
@@ -78,24 +78,35 @@ final class LocalizationManager: ObservableObject {
         UserDefaults.standard.set(language.rawValue, forKey: userDefaultsKey)
     }
     
-    /// Get localized string for a key
-    func localizedString(_ key: String) -> String {
-        guard let localeIdentifier = currentLanguage.localeIdentifier else {
-            // System language - use default bundle
+    /// Get localized string for a key. Thread-safe: reads language from UserDefaults.
+    nonisolated func localizedString(_ key: String) -> String {
+        Self.localizedString(key)
+    }
+
+    /// Get localized string with format arguments
+    nonisolated func localizedString(_ key: String, _ args: CVarArg...) -> String {
+        Self.localizedString(key, args)
+    }
+
+    /// Get localized string for a key without touching MainActor state.
+    nonisolated static func localizedString(_ key: String) -> String {
+        let savedLanguage = UserDefaults.standard.string(forKey: "settings.appLanguage") ?? AppLanguage.system.rawValue
+        let language = AppLanguage(rawValue: savedLanguage) ?? .system
+
+        guard let localeIdentifier = language.localeIdentifier else {
             return NSLocalizedString(key, comment: "")
         }
-        
-        // Get the bundle for the specific language
+
         guard let path = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj"),
               let bundle = Bundle(path: path) else {
             return NSLocalizedString(key, comment: "")
         }
-        
+
         return bundle.localizedString(forKey: key, value: nil, table: nil)
     }
-    
-    /// Get localized string with format arguments
-    func localizedString(_ key: String, _ args: CVarArg...) -> String {
+
+    /// Get localized string with format arguments without touching MainActor state.
+    nonisolated static func localizedString(_ key: String, _ args: CVarArg...) -> String {
         let format = localizedString(key)
         return String(format: format, arguments: args)
     }
@@ -119,7 +130,7 @@ final class LocalizationManager: ObservableObject {
 // MARK: - SwiftUI Environment Key
 
 private struct LocalizationManagerKey: EnvironmentKey {
-    static let defaultValue = LocalizationManager.shared
+    nonisolated static let defaultValue: LocalizationManager = MainActor.assumeIsolated { LocalizationManager.shared }
 }
 
 extension EnvironmentValues {
@@ -133,13 +144,13 @@ extension EnvironmentValues {
 
 extension String {
     /// Get localized string using LocalizationManager
-    var localized: String {
-        LocalizationManager.shared.localizedString(self)
+    nonisolated var localized: String {
+        LocalizationManager.localizedString(self)
     }
-    
+
     /// Get localized string with format arguments
-    func localized(_ args: CVarArg...) -> String {
-        let format = LocalizationManager.shared.localizedString(self)
+    nonisolated func localized(_ args: CVarArg...) -> String {
+        let format = LocalizationManager.localizedString(self)
         return String(format: format, arguments: args)
     }
 }
@@ -148,6 +159,7 @@ extension String {
 
 extension View {
     /// Apply the current locale from LocalizationManager
+    @MainActor
     func withLocalization() -> some View {
         self.environment(\.locale, LocalizationManager.shared.currentLocale)
     }

@@ -15,6 +15,7 @@ enum AppConfig {
 }
 
 /// User settings for the menu stats app
+@MainActor
 protocol SettingsManaging: ObservableObject {
     var showLogo: Bool { get set }
     var showCPU: Bool { get set }

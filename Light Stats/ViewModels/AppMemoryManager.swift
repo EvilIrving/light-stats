@@ -127,15 +127,13 @@ final class AppMemoryManager: ObservableObject {
         let appGroups = buildAppGroups(guiApps: guiApps, topProcesses: topProcesses)
         let detailedInfo = MemoryInfo.getDetailedMemoryInfo()
 
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-            self.runningApps = appGroups
-            self.allTopProcesses = topProcesses
-            self.appCount = appGroups.count
-            self.detailedMemory = detailedInfo
-            self.totalMemoryUsed = detailedInfo.used
-            self.memoryPressure = detailedInfo.pressureLevel
-        }
+        objectWillChange.send()
+        runningApps = appGroups
+        allTopProcesses = topProcesses
+        appCount = appGroups.count
+        detailedMemory = detailedInfo
+        totalMemoryUsed = detailedInfo.used
+        memoryPressure = detailedInfo.pressureLevel
     }
     
     // MARK: - App Control

@@ -41,6 +41,7 @@ struct ChildProcessRowView: View {
     }
 }
 
+#if DEBUG
 #Preview {
     VStack(spacing: 4) {
         ChildProcessRowView(
@@ -56,3 +57,4 @@ struct ChildProcessRowView: View {
     }
     .padding()
 }
+#endif

@@ -12,6 +12,7 @@ jobs:
   release:
     name: Build, Sign, Notarize & Release
     runs-on: macos-latest
+    environment: APPLE
 
     steps:
       - name: Checkout code
@@ -29,10 +30,15 @@ jobs:
 
       - name: Import Code Signing Certificate
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 || secrets.CSC_LINK }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD || secrets.CSC_KEY_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          if [ -z "$BUILD_CERTIFICATE_BASE64" ] || [ -z "$P12_PASSWORD" ] || [ -z "$KEYCHAIN_PASSWORD" ]; then
+            echo "Missing signing secrets: BUILD_CERTIFICATE_BASE64/CSC_LINK, P12_PASSWORD/CSC_KEY_PASSWORD, or KEYCHAIN_PASSWORD"
+            exit 1
+          fi
+
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
@@ -46,8 +52,11 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/\"//g')
+          security find-identity -v -p codesigning
+          security find-identity -v -p codesigning | grep "Developer ID Application"
 
       - name: Build, Sign & Notarize
+        id: build
         env:
           VERSION: ${{ steps.version.outputs.version }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -56,6 +65,14 @@ jobs:
         run: |
           chmod +x build.sh
           ./build.sh
+
+      - name: Upload xcodebuild log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
 
       - name: Verify Notarization
         run: |

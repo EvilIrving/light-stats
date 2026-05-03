@@ -117,6 +117,8 @@ extension Notification.Name {
     static let showAbout = Notification.Name("showAbout")
 }
 
+#if DEBUG
 #Preview {
     PopoverContentView()
 }
+#endif
