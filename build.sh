@@ -20,6 +20,8 @@ BUILD_DIR="build"
 OUTPUT_DIR="$BUILD_DIR/output"
 DMG_DIR="$BUILD_DIR/dmg_temp"
 DMG_FILE="$OUTPUT_DIR/${APP_NAME}-${VERSION}.dmg"
+DMG_BACKGROUND="packaging/dmg-background.png"
+DMG_RW_FILE="$BUILD_DIR/${APP_NAME}-${VERSION}-rw.dmg"
 ENTITLEMENTS="Light Stats/LightStats.entitlements"
 NOTARIZATION_ENABLED=0
 if [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER_ID:-}" ] && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
@@ -115,8 +117,39 @@ rm -rf "$DMG_DIR"
 mkdir -p "$DMG_DIR"
 cp -R "$APP_PATH" "$DMG_DIR/"
 ln -s /Applications "$DMG_DIR/Applications"
-hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_DIR" -ov -format UDZO "$DMG_FILE" -quiet
+mkdir -p "$DMG_DIR/.background"
+cp "$DMG_BACKGROUND" "$DMG_DIR/.background/background.png"
+rm -f "$DMG_RW_FILE" "$DMG_FILE"
+hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_DIR" -ov -format UDRW "$DMG_RW_FILE" -quiet
+
+MOUNT_DIR="$(mktemp -d "/tmp/${APP_NAME// /_}.XXXXXX")"
+hdiutil attach "$DMG_RW_FILE" -mountpoint "$MOUNT_DIR" -nobrowse -quiet
+osascript <<EOF
+tell application "Finder"
+  tell disk "$APP_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {200, 120, 860, 540}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 96
+    set background picture of viewOptions to file ".background:background.png"
+    set position of item "$APP_NAME.app" of container window to {180, 210}
+    set position of item "Applications" of container window to {480, 210}
+    close
+    open
+    update without registering applications
+    delay 1
+  end tell
+end tell
+EOF
+hdiutil detach "$MOUNT_DIR" -quiet
+rmdir "$MOUNT_DIR"
+hdiutil convert "$DMG_RW_FILE" -format UDZO -imagekey zlib-level=9 -o "$DMG_FILE" -quiet
 rm -rf "$DMG_DIR"
+rm -f "$DMG_RW_FILE"
 
 # 签名 DMG
 if [ -n "${DEVELOPER_ID:-}" ]; then
