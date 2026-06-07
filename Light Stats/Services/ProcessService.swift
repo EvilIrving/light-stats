@@ -323,17 +323,31 @@ final class ProcessService: ProcessServiceProtocol {
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
         if let mainApp = NSRunningApplication(processIdentifier: app.id) {
             let terminated = mainApp.terminate()
-            
+
             if terminated {
                 try? await Task.sleep(for: .milliseconds(300))
-                
+
                 if !isProcessAlive(app.id) {
+                    await terminateSurvivingTerminableChildren(app)
                     return true
                 }
             }
         }
-        
-        return await killProcessGracefully(pid: app.id)
+
+        let success = await killProcessGracefully(pid: app.id)
+        await terminateSurvivingTerminableChildren(app)
+        return success
+    }
+
+    /// Clean up child processes that outlived the owning app.
+    /// Only PIDs the attribution layer marked safe to kill with the app are touched;
+    /// loosely-attributed (parent-chain) processes are intentionally left alone.
+    private func terminateSurvivingTerminableChildren(_ app: AppGroup) async {
+        for pid in app.terminablePids where pid != app.id {
+            if isProcessAlive(pid) {
+                _ = await killProcessGracefully(pid: pid)
+            }
+        }
     }
     
     /// Trigger system memory cleanup
