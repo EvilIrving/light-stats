@@ -7,6 +7,15 @@
 
 import Foundation
 
+/// 磁盘读/写速率（MB/s）。差值法采集，见 `DiskIOService`。
+/// 纯数据模型标 `nonisolated` + `Sendable`：跨采集 actor → 主线程安全。
+nonisolated struct DiskIOStats: Sendable, Equatable {
+    var readMBs: Double
+    var writeMBs: Double
+
+    static let zero = DiskIOStats(readMBs: 0, writeMBs: 0)
+}
+
 enum DiskInfo {
 
     struct Info {

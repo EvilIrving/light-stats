@@ -75,30 +75,57 @@ struct OverviewTabView: View {
                     }
                 }
                 
+                // Battery Card: 电量 + 状态 + 剩余时间 + 循环/健康/功耗/温度
+                BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit)
+
                 // Status Strip
                 BentoCard(padding: 10) {
-                    HStack {
-                        // Temp
-                        HStack(spacing: 4) {
-                            Image(systemName: "thermometer.medium")
-                            Text(monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "N/A")
+                    VStack(spacing: 8) {
+                        HStack {
+                            // Temp
+                            HStack(spacing: 4) {
+                                Image(systemName: "thermometer.medium")
+                                Text(monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "N/A")
+                            }
+
+                            Spacer()
+
+                            // Fan（图标按转速旋转，封顶避免过快）
+                            HStack(spacing: 4) {
+                                SpinningFanIcon(rpm: monitor.fanSpeed)
+                                Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "N/A")
+                            }
+
+                            Spacer()
+
+                            // Disk
+                            HStack(spacing: 4) {
+                                Image(systemName: "internaldrive.fill")
+                                Text(ByteFormatter.formatDisk(monitor.diskAvailable))
+                            }
                         }
-                        
-                        Spacer()
-                        
-                        // Fan
-                        HStack(spacing: 4) {
-                            Image(systemName: "fanblades.fill")
-                            Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "N/A")
+
+                        Divider()
+
+                        // Disk I/O 读/写速率
+                        HStack {
+                            Text("overview.diskIO".localized)
+
+                            Spacer()
+
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.down")
+                                Text(formatMBs(monitor.diskIO.readMBs))
+                            }
+
+                            Spacer()
+
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up")
+                                Text(formatMBs(monitor.diskIO.writeMBs))
+                            }
                         }
-                        
-                        Spacer()
-                        
-                        // Disk
-                        HStack(spacing: 4) {
-                            Image(systemName: "internaldrive.fill")
-                            Text(ByteFormatter.formatDisk(monitor.diskAvailable))
-                        }
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
                     }
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
@@ -268,6 +295,11 @@ struct OverviewTabView: View {
         }
     }
 
+    /// 磁盘 IO 速率文案：MB/s，固定一位小数。
+    private func formatMBs(_ mbs: Double) -> String {
+        String(format: "%.1f MB/s", mbs)
+    }
+
     // MARK: - Network Helpers
 
     /// 出口行内容：随设置开关与探测结果切换三态。
@@ -328,6 +360,172 @@ struct OverviewTabView: View {
         case .direct: return .green
         case .proxied: return .yellow
         case .unknown: return .gray
+        }
+    }
+}
+
+// MARK: - Spinning Fan Icon
+
+/// 风扇图标：按当前转速持续旋转。转速越高转得越快，但封顶到 `maxRevPerSecond`，
+/// 避免高转速时「转的飞起」糊成一团。转速为 0 / 未知时静止。
+///
+/// 用 `TimelineView(.animation)` 逐帧累积角度（而非 repeatForever 动画），
+/// 这样转速随 RPM 变化时平滑过渡、无跳变；面板隐藏时 timeline 自动停摆，不耗电。
+private struct SpinningFanIcon: View {
+    let rpm: Int?
+
+    /// 视觉封顶：最快每秒 1.5 圈。
+    private let maxRevPerSecond: Double = 1.5
+    /// 达到该转速即封顶（典型笔记本满速约 5000–6000 RPM）。
+    private let rpmAtMaxSpeed: Double = 5000
+
+    @State private var angle: Double = 0
+    @State private var lastDate: Date = .now
+
+    var body: some View {
+        if degreesPerSecond > 0 {
+            TimelineView(.animation) { context in
+                fanImage
+                    .rotationEffect(.degrees(angle))
+                    .onChange(of: context.date) { _, now in
+                        advance(to: now)
+                    }
+            }
+            .onAppear { lastDate = .now }
+        } else {
+            fanImage
+        }
+    }
+
+    private var fanImage: some View {
+        Image(systemName: "fanblades.fill")
+    }
+
+    /// 当前角速度（度/秒）：RPM 线性映射并封顶。
+    private var degreesPerSecond: Double {
+        guard let rpm, rpm > 0 else { return 0 }
+        let revPerSec = min(Double(rpm) / rpmAtMaxSpeed, 1.0) * maxRevPerSecond
+        return revPerSec * 360.0
+    }
+
+    /// 按帧间隔累积角度。跳过异常间隔（面板重新显示等）避免突跳。
+    private func advance(to now: Date) {
+        let dt = now.timeIntervalSince(lastDate)
+        lastDate = now
+        guard dt > 0, dt < 1 else { return }
+        angle = (angle + degreesPerSecond * dt).truncatingRemainder(dividingBy: 360)
+    }
+}
+
+// MARK: - Battery Card
+
+/// 电池概览卡：电量百分比（大字+上色）、状态、剩余时间；副行循环/健康/功耗/温度。
+/// 无电池机型（台式 Mac）优雅显示 N/A。
+private struct BatteryCard: View {
+    let battery: BatteryInfo
+    let temperatureUnit: SettingsManager.TemperatureUnit
+
+    var body: some View {
+        BentoCard(title: "battery.title".localized, icon: batteryIcon) {
+            if battery.state == .noBattery {
+                Text("battery.na".localized)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    // 主行：电量大字 + 状态 + 剩余时间
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Text(String(format: "%.0f", battery.percent))
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundColor(batteryColor)
+                        Text("%")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(stateText)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 4)
+
+                        Spacer()
+
+                        if let time = timeRemainingText {
+                            Text(time)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Divider()
+
+                    // 副行：循环 / 健康 / 功耗 / 温度
+                    HStack {
+                        SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
+                        Spacer()
+                        SubStat(label: "battery.health".localized, value: battery.healthPercent.map { "\($0)%" })
+                        Spacer()
+                        SubStat(label: "battery.power".localized, value: battery.powerWatts.map { String(format: "%.1fW", $0) })
+                        Spacer()
+                        SubStat(label: "battery.temp".localized, value: battery.temperature.map { temperatureUnit.format($0) })
+                    }
+                }
+            }
+        }
+    }
+
+    private var batteryIcon: String {
+        switch battery.state {
+        case .charging, .charged: return "battery.100.bolt"
+        case .noBattery: return "battery.0"
+        case .discharging:
+            if battery.percent <= 20 { return "battery.25" }
+            if battery.percent <= 60 { return "battery.50" }
+            return "battery.100"
+        }
+    }
+
+    private var batteryColor: Color {
+        if battery.state == .charging || battery.state == .charged { return .green }
+        if battery.percent <= 20 { return .red }
+        if battery.percent <= 40 { return .yellow }
+        return .green
+    }
+
+    private var stateText: String {
+        switch battery.state {
+        case .charging: return "battery.state.charging".localized
+        case .discharging: return "battery.state.discharging".localized
+        case .charged: return "battery.state.charged".localized
+        case .noBattery: return ""
+        }
+    }
+
+    /// 剩余/充满时间文案。计算中或已充满则不显示。
+    private var timeRemainingText: String? {
+        guard battery.state != .charged, let minutes = battery.timeRemaining, minutes > 0 else {
+            return nil
+        }
+        let h = minutes / 60
+        let m = minutes % 60
+        let hm = h > 0 ? "\(h)h \(m)m" : "\(m)m"
+        let key = battery.state == .charging ? "battery.timeToFull" : "battery.timeLeft"
+        return String(format: key.localized, hm)
+    }
+}
+
+/// 电池副行的小统计项：值在上、标签在下；缺值显示「—」。
+private struct SubStat: View {
+    let label: String
+    let value: String?
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value ?? "—")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
         }
     }
 }

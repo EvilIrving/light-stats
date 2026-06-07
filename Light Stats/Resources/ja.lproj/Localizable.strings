@@ -17,6 +17,7 @@
 "settings.disk" = "ディスク";
 "settings.network" = "ネットワーク";
 "settings.fan" = "ファン";
+"settings.battery" = "バッテリー";
 "settings.refreshRate" = "更新頻度";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
@@ -45,6 +46,20 @@
 "overview.loading" = "読み込み中...";
 "overview.coreUsage" = "コア使用率";
 "overview.processes" = "プロセス";
+"overview.diskIO" = "ディスク I/O";
+
+// MARK: - Battery
+"battery.title" = "バッテリー";
+"battery.na" = "なし";
+"battery.cycles" = "充放電回数";
+"battery.health" = "状態";
+"battery.power" = "電力";
+"battery.temp" = "温度";
+"battery.timeLeft" = "残り %@";
+"battery.timeToFull" = "満充電まで %@";
+"battery.state.charging" = "充電中";
+"battery.state.discharging" = "バッテリー駆動";
+"battery.state.charged" = "充電完了";
 
 // MARK: - Cleanup Tab
 "cleanup.memoryUsage" = "メモリ使用量";

@@ -8,12 +8,15 @@
 import Foundation
 import Combine
 
-enum AppConfig {
+/// 标 `nonisolated`：纯常量，供采集 actor / 服务直接读取（如电池缓存 TTL）。
+nonisolated enum AppConfig {
     static let topCPUProcessCount: Int = 5
     static let topMemoryProcessCount: Int = 300
     static let appMemoryRefreshInterval: TimeInterval = 5.0
     /// 出口节点探测缓存有效期：TTL 内不重复发外部请求。
     static let exitNodeCacheTTL: TimeInterval = 60
+    /// 电池慢变量（循环/健康/功耗/温度）缓存有效期：TTL 内不重复读 IORegistry。
+    static let batteryHealthCacheTTL: TimeInterval = 30
 }
 
 /// User settings for the menu stats app
@@ -26,6 +29,7 @@ protocol SettingsManaging: ObservableObject {
     var showDisk: Bool { get set }
     var showNetwork: Bool { get set }
     var showFan: Bool { get set }
+    var showBattery: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
@@ -59,7 +63,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var showFan: Bool {
         didSet { save(showFan, for: .showFan) }
     }
-    
+    @Published var showBattery: Bool {
+        didSet { save(showBattery, for: .showBattery) }
+    }
+
     // MARK: - Other Settings
     
     @Published var refreshRate: RefreshRate {
@@ -177,6 +184,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showDisk = "settings.showDisk"
         case showNetwork = "settings.showNetwork"
         case showFan = "settings.showFan"
+        case showBattery = "settings.showBattery"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
@@ -198,6 +206,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         showDisk = defaults.object(forKey: Key.showDisk.rawValue) as? Bool ?? false
         showNetwork = defaults.object(forKey: Key.showNetwork.rawValue) as? Bool ?? false
         showFan = defaults.object(forKey: Key.showFan.rawValue) as? Bool ?? false
+        // 电池：菜单栏默认关闭（沿用 disk/fan 的 toggle 模式）。
+        showBattery = defaults.object(forKey: Key.showBattery.rawValue) as? Bool ?? false
         
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue
@@ -222,7 +232,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     
     /// Returns true if at least one status bar item is enabled
     var hasAtLeastOneItem: Bool {
-        showLogo || showCPU || showGPU || showMemory || showDisk || showNetwork || showFan
+        showLogo || showCPU || showGPU || showMemory || showDisk || showNetwork || showFan || showBattery
     }
     
     /// Ensures at least one item is shown; if all are off, enable CPU

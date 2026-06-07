@@ -27,6 +27,9 @@ private struct SystemSnapshot {
     let networkDownload: Double
     let cpuTemperature: Double?
     let fanSpeed: Int?
+    // Phase 2: 电池/功耗 + 磁盘 IO
+    let battery: BatteryInfo
+    let diskIO: DiskIOStats
     // Phase 1: 网络 / 代理 / 出口节点
     let proxyConfig: ProxyConfig
     let primaryIP: String?
@@ -38,6 +41,8 @@ private actor MonitorSampler {
     private var cpuInfo: CPUInfo?
     private var networkInfo: NetworkInfo?
     private let exitNodeService = ExitNodeService()
+    private let powerService = PowerService()
+    private let diskIOService = DiskIOService()
 
     private func getCPUInfo() async -> CPUInfo {
         if let cpuInfo {
@@ -70,6 +75,8 @@ private actor MonitorSampler {
         async let exitNodeResult: ExitNode? = exitDetectionEnabled
             ? exitNodeService.fetch(provider: exitProvider, cacheTTL: exitCacheTTL)
             : nil
+        // 电池采集走 actor，与其它采集并行。
+        async let batteryResult = powerService.current()
 
         let cpuUsage = await cpuInfo.getCPUUsage()
         let coreUsages = await cpuInfo.getPerCoreUsage()
@@ -83,11 +90,15 @@ private actor MonitorSampler {
         let cpuTemperature = await SMCInfo.getCPUTemperature()
         let fanSpeed = await SMCInfo.getFanSpeed()
 
+        // 磁盘 IO 是 nonisolated 纯 syscall（差值法），在采集 actor 上同步执行。
+        let diskIO = diskIOService.sample()
+
         // 本地代理探测与主接口 IP 都是 nonisolated 纯 syscall，在采集 actor 上同步执行（不占主线程）。
         let proxyConfig = ProxyDetector.shared.currentProxyConfig()
         let primaryIP = networkInfo.primaryInterface()?.ip
         let exitNode = await exitNodeResult
         let route = classifyRoute(proxy: proxyConfig, exit: exitNode)
+        let battery = await batteryResult
 
         return SystemSnapshot(
             cpuUsage: cpuUsage.total,
@@ -108,6 +119,8 @@ private actor MonitorSampler {
             networkDownload: networkStats.downloadSpeed,
             cpuTemperature: cpuTemperature,
             fanSpeed: fanSpeed,
+            battery: battery,
+            diskIO: diskIO,
             proxyConfig: proxyConfig,
             primaryIP: primaryIP,
             exitNode: exitNode,
@@ -151,6 +164,10 @@ final class SystemMonitor: ObservableObject {
 
     @Published var cpuTemperature: Double? = nil
     @Published var fanSpeed: Int? = nil
+
+    // Phase 2: 电池/功耗 + 磁盘 IO
+    @Published var battery: BatteryInfo = .noBattery
+    @Published var diskIO: DiskIOStats = .zero
 
     // Phase 1: 网络 / 代理 / 出口节点
     @Published var proxyConfig: ProxyConfig = .none
@@ -243,6 +260,8 @@ final class SystemMonitor: ObservableObject {
         networkDownload = snapshot.networkDownload
         cpuTemperature = snapshot.cpuTemperature
         fanSpeed = snapshot.fanSpeed
+        battery = snapshot.battery
+        diskIO = snapshot.diskIO
         proxyConfig = snapshot.proxyConfig
         primaryIP = snapshot.primaryIP
         exitNode = snapshot.exitNode

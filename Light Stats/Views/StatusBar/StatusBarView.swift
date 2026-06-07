@@ -17,6 +17,7 @@ final class StatusBarView: NSView {
         static let diskItemWidth: CGFloat = 46     // DISK (e.g., "999 GB")
         static let networkItemWidth: CGFloat = 56  // NET (e.g., "↑0.0 KB/s" / "↓0.0 KB/s")
         static let fanItemWidth: CGFloat = 50      // FAN (e.g., "9999 RPM")
+        static let batteryItemWidth: CGFloat = 34  // BAT (e.g., "⚡100%")
         static let separatorWidth: CGFloat = 2
         static let itemHeight: CGFloat = 22
         static let arrowWidth: CGFloat = 8         // 箭头固定宽度
@@ -66,6 +67,7 @@ final class StatusBarView: NSView {
         upload: Double,
         download: Double,
         fan: Int?,
+        battery: BatteryInfo,
         settings: any SettingsManaging
     ) {
         displayItems.removeAll()
@@ -143,6 +145,25 @@ final class StatusBarView: NSView {
             ))
         }
 
+        // Battery（充电/已充满前缀闪电；无电池显示 N/A）
+        if settings.showBattery {
+            let batteryText: String
+            switch battery.state {
+            case .noBattery:
+                batteryText = "N/A"
+            case .charging, .charged:
+                batteryText = "⚡\(Int(battery.percent.rounded()))%"
+            case .discharging:
+                batteryText = "\(Int(battery.percent.rounded()))%"
+            }
+            displayItems.append(DisplayItem(
+                value: batteryText,
+                label: "BAT",
+                width: Layout.batteryItemWidth,
+                isLogo: false
+            ))
+        }
+
         needsDisplay = true
     }
 
@@ -176,6 +197,10 @@ final class StatusBarView: NSView {
         }
         if settings.showFan {
             width += Layout.fanItemWidth
+            itemCount += 1
+        }
+        if settings.showBattery {
+            width += Layout.batteryItemWidth
             itemCount += 1
         }
 

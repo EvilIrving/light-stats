@@ -30,6 +30,7 @@ struct SettingsView: View {
                         SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") { validateMinimumItems() }
                         SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") { validateMinimumItems() }
                         SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") { validateMinimumItems() }
+                        SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") { validateMinimumItems() }
                     }
                     .padding(.vertical, 4)
                 }

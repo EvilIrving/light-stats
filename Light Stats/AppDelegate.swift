@@ -159,7 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         download: Double,
         fan: Int?
     ) {
-        // Update status bar view
+        // Update status bar view（电池随每周期刷新，直接从 monitor 取最新值）
         statusBarView?.updateValues(
             cpu: cpu,
             gpu: gpu,
@@ -168,6 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             upload: upload,
             download: download,
             fan: fan,
+            battery: monitor.battery,
             settings: settings
         )
 

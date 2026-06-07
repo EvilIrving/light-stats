@@ -17,6 +17,7 @@
 "settings.disk" = "Disk";
 "settings.network" = "Network";
 "settings.fan" = "Fan";
+"settings.battery" = "Battery";
 "settings.refreshRate" = "Refresh Rate";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
@@ -45,6 +46,20 @@
 "overview.loading" = "Loading...";
 "overview.coreUsage" = "Core Usage";
 "overview.processes" = "Processes";
+"overview.diskIO" = "Disk I/O";
+
+// MARK: - Battery
+"battery.title" = "Battery";
+"battery.na" = "N/A";
+"battery.cycles" = "Cycles";
+"battery.health" = "Health";
+"battery.power" = "Power";
+"battery.temp" = "Temp";
+"battery.timeLeft" = "%@ left";
+"battery.timeToFull" = "%@ to full";
+"battery.state.charging" = "Charging";
+"battery.state.discharging" = "On battery";
+"battery.state.charged" = "Charged";
 
 // MARK: - Cleanup Tab
 "cleanup.memoryUsage" = "Memory Usage";
