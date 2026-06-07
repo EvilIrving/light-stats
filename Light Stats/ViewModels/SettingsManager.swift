@@ -12,6 +12,8 @@ enum AppConfig {
     static let topCPUProcessCount: Int = 5
     static let topMemoryProcessCount: Int = 300
     static let appMemoryRefreshInterval: TimeInterval = 5.0
+    /// 出口节点探测缓存有效期：TTL 内不重复发外部请求。
+    static let exitNodeCacheTTL: TimeInterval = 60
 }
 
 /// User settings for the menu stats app
@@ -27,6 +29,8 @@ protocol SettingsManaging: ObservableObject {
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
+    var exitNodeDetectionEnabled: Bool { get set }
+    var exitNodeProvider: ExitNodeProvider { get set }
 }
 
 @MainActor
@@ -75,6 +79,17 @@ final class SettingsManager: ObservableObject, SettingsManaging {
                 LocalizationManager.shared.setLanguage(appLanguage)
             }
         }
+    }
+
+    // MARK: - Network / Exit Node Settings
+
+    /// 出口节点探测开关。隐私红线：默认关闭，需用户主动开启。
+    @Published var exitNodeDetectionEnabled: Bool {
+        didSet { save(exitNodeDetectionEnabled, for: .exitNodeDetectionEnabled) }
+    }
+    /// 出口探测使用的 geo-IP 服务。
+    @Published var exitNodeProvider: ExitNodeProvider {
+        didSet { save(exitNodeProvider.rawValue, for: .exitNodeProvider) }
     }
     
     // MARK: - Singleton
@@ -166,6 +181,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
         case appLanguage = "settings.appLanguage"
+        case exitNodeDetectionEnabled = "settings.exitNodeDetectionEnabled"
+        case exitNodeProvider = "settings.exitNodeProvider"
     }
     
     // MARK: - Init
@@ -194,6 +211,11 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         
         let langStr = defaults.string(forKey: Key.appLanguage.rawValue) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: langStr) ?? .system
+
+        // 出口探测默认关闭（隐私红线），provider 默认 ip.sb。
+        exitNodeDetectionEnabled = defaults.object(forKey: Key.exitNodeDetectionEnabled.rawValue) as? Bool ?? false
+        let providerStr = defaults.string(forKey: Key.exitNodeProvider.rawValue) ?? ExitNodeProvider.ipsb.rawValue
+        exitNodeProvider = ExitNodeProvider(rawValue: providerStr) ?? .ipsb
     }
     
     // MARK: - Validation

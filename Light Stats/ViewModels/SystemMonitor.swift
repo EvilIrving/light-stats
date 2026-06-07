@@ -27,11 +27,17 @@ private struct SystemSnapshot {
     let networkDownload: Double
     let cpuTemperature: Double?
     let fanSpeed: Int?
+    // Phase 1: 网络 / 代理 / 出口节点
+    let proxyConfig: ProxyConfig
+    let primaryIP: String?
+    let exitNode: ExitNode?
+    let route: NetworkRoute
 }
 
 private actor MonitorSampler {
     private var cpuInfo: CPUInfo?
     private var networkInfo: NetworkInfo?
+    private let exitNodeService = ExitNodeService()
 
     private func getCPUInfo() async -> CPUInfo {
         if let cpuInfo {
@@ -52,9 +58,18 @@ private actor MonitorSampler {
         return info
     }
 
-    func collect(topProcessCount: Int) async -> SystemSnapshot {
+    func collect(topProcessCount: Int,
+                 exitDetectionEnabled: Bool,
+                 exitProvider: ExitNodeProvider,
+                 exitCacheTTL: TimeInterval) async -> SystemSnapshot {
         let cpuInfo = await getCPUInfo()
         let networkInfo = await getNetworkInfo()
+
+        // 出口探测可能走网络，尽早起 async let 让它与其它采集并行；关闭时直接为 nil。
+        async let topProcesses = ProcessStats.getTopCPUProcesses(count: topProcessCount)
+        async let exitNodeResult: ExitNode? = exitDetectionEnabled
+            ? exitNodeService.fetch(provider: exitProvider, cacheTTL: exitCacheTTL)
+            : nil
 
         let cpuUsage = await cpuInfo.getCPUUsage()
         let coreUsages = await cpuInfo.getPerCoreUsage()
@@ -68,7 +83,11 @@ private actor MonitorSampler {
         let cpuTemperature = await SMCInfo.getCPUTemperature()
         let fanSpeed = await SMCInfo.getFanSpeed()
 
-        async let topProcesses = ProcessStats.getTopCPUProcesses(count: topProcessCount)
+        // 本地代理探测与主接口 IP 都是 nonisolated 纯 syscall，在采集 actor 上同步执行（不占主线程）。
+        let proxyConfig = ProxyDetector.shared.currentProxyConfig()
+        let primaryIP = networkInfo.primaryInterface()?.ip
+        let exitNode = await exitNodeResult
+        let route = classifyRoute(proxy: proxyConfig, exit: exitNode)
 
         return SystemSnapshot(
             cpuUsage: cpuUsage.total,
@@ -88,7 +107,11 @@ private actor MonitorSampler {
             networkUpload: networkStats.uploadSpeed,
             networkDownload: networkStats.downloadSpeed,
             cpuTemperature: cpuTemperature,
-            fanSpeed: fanSpeed
+            fanSpeed: fanSpeed,
+            proxyConfig: proxyConfig,
+            primaryIP: primaryIP,
+            exitNode: exitNode,
+            route: route
         )
     }
 }
@@ -128,6 +151,12 @@ final class SystemMonitor: ObservableObject {
 
     @Published var cpuTemperature: Double? = nil
     @Published var fanSpeed: Int? = nil
+
+    // Phase 1: 网络 / 代理 / 出口节点
+    @Published var proxyConfig: ProxyConfig = .none
+    @Published var primaryIP: String? = nil
+    @Published var exitNode: ExitNode? = nil
+    @Published var route: NetworkRoute = .unknown
 
     // MARK: - Private Properties
 
@@ -179,7 +208,13 @@ final class SystemMonitor: ObservableObject {
 
             while self.pendingUpdate && !Task.isCancelled {
                 self.pendingUpdate = false
-                let snapshot = await self.sampler.collect(topProcessCount: AppConfig.topCPUProcessCount)
+                let settings = SettingsManager.shared
+                let snapshot = await self.sampler.collect(
+                    topProcessCount: AppConfig.topCPUProcessCount,
+                    exitDetectionEnabled: settings.exitNodeDetectionEnabled,
+                    exitProvider: settings.exitNodeProvider,
+                    exitCacheTTL: AppConfig.exitNodeCacheTTL
+                )
                 guard !Task.isCancelled else { break }
                 self.applySnapshot(snapshot)
             }
@@ -208,5 +243,9 @@ final class SystemMonitor: ObservableObject {
         networkDownload = snapshot.networkDownload
         cpuTemperature = snapshot.cpuTemperature
         fanSpeed = snapshot.fanSpeed
+        proxyConfig = snapshot.proxyConfig
+        primaryIP = snapshot.primaryIP
+        exitNode = snapshot.exitNode
+        route = snapshot.route
     }
 }

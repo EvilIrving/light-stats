@@ -11,6 +11,7 @@ struct SettingsView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @ObservedObject private var localization = LocalizationManager.shared
     @State private var showMinimumItemAlert = false
+    @State private var showExitPrivacyAlert = false
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -87,6 +88,49 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                // Exit Node Card
+                BentoCard(title: "settings.exitNode.section".localized, icon: "globe") {
+                    VStack(spacing: 12) {
+                        Toggle(isOn: Binding(
+                            get: { settings.exitNodeDetectionEnabled },
+                            set: { newValue in
+                                // 开启前先弹隐私说明；关闭直接生效。
+                                if newValue {
+                                    showExitPrivacyAlert = true
+                                } else {
+                                    settings.exitNodeDetectionEnabled = false
+                                }
+                            }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("settings.exitNode.toggle".localized)
+                                    .font(.system(size: 12))
+                                Text("settings.exitNode.toggleHint".localized)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        if settings.exitNodeDetectionEnabled {
+                            HStack {
+                                Text("settings.exitNode.provider".localized)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Picker("", selection: $settings.exitNodeProvider) {
+                                    ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
+                                        Text(provider.displayName).tag(provider)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .frame(width: 140)
+                            }
+                        }
+                    }
+                }
             }
             .padding(16)
         }
@@ -94,6 +138,14 @@ struct SettingsView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
+        }
+        .alert("settings.exitNode.privacyTitle".localized, isPresented: $showExitPrivacyAlert) {
+            Button("settings.exitNode.cancel".localized, role: .cancel) {}
+            Button("settings.exitNode.enable".localized) {
+                settings.exitNodeDetectionEnabled = true
+            }
+        } message: {
+            Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
     }

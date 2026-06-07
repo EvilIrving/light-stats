@@ -60,3 +60,24 @@
 
 // MARK: - Core Topology
 "core.suffix" = "コア";
+
+// MARK: - Network / Proxy / Exit Node
+"network.proxy.title" = "ローカルプロキシ";
+"network.proxy.none" = "プロキシなし";
+"network.proxy.tun" = "トンネルを検出";
+"network.exit.title" = "出口ノード";
+"network.exit.disabled" = "出口検出はオフ — 設定で有効化";
+"network.exit.failed" = "検出失敗";
+"network.route.direct" = "直接接続";
+"network.route.proxied" = "プロキシ経由";
+"network.route.unknown" = "不明";
+
+// MARK: - Settings: Exit Node
+"settings.exitNode.section" = "ネットワーク";
+"settings.exitNode.toggle" = "出口ノードを表示";
+"settings.exitNode.toggleHint" = "公開IPをオンラインで照会します";
+"settings.exitNode.provider" = "サービス";
+"settings.exitNode.privacyTitle" = "出口ノード検出について";
+"settings.exitNode.privacyMessage" = "有効にすると、Light Stats は選択したサービスにリクエストを送信し、公開IPとその所在地を照会します。この機能がオンの間のみ実行されます。続行しますか？";
+"settings.exitNode.enable" = "有効化";
+"settings.exitNode.cancel" = "キャンセル";

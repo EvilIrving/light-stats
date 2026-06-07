@@ -9,6 +9,7 @@ import SwiftUI
 
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
+    @ObservedObject private var settings = SettingsManager.shared
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -103,21 +104,51 @@ struct OverviewTabView: View {
                     .foregroundColor(.secondary)
                 }
                 
-                // Network Card
+                // Network Card: 速率 + 本地代理 + 出口节点
                 BentoCard(title: "overview.network".localized, icon: "network") {
-                    HStack {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up")
-                            Text(ByteFormatter.formatSpeed(monitor.networkUpload))
+                    VStack(alignment: .leading, spacing: 8) {
+                        // ① 速率行
+                        HStack {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up")
+                                Text(ByteFormatter.formatSpeed(monitor.networkUpload))
+                            }
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.down")
+                                Text(ByteFormatter.formatSpeed(monitor.networkDownload))
+                            }
                         }
-                        Spacer()
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.cyan)
+
+                        Divider()
+
+                        // ② 本地代理行
                         HStack(spacing: 4) {
-                            Image(systemName: "arrow.down")
-                            Text(ByteFormatter.formatSpeed(monitor.networkDownload))
+                            Image(systemName: "lock.shield")
+                                .foregroundColor(.secondary)
+                            Text("network.proxy.title".localized)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(proxyText(monitor.proxyConfig))
+                                .foregroundColor(monitor.proxyConfig.isEnabled ? .primary : .secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
+                        .font(.system(size: 11, design: .monospaced))
+
+                        // ③ 出口行
+                        HStack(spacing: 4) {
+                            Image(systemName: "globe")
+                                .foregroundColor(.secondary)
+                            Text("network.exit.title".localized)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            exitValueView
+                        }
+                        .font(.system(size: 11, design: .monospaced))
                     }
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.cyan)
                 }
                 
                 // Top Processes Section
@@ -234,6 +265,69 @@ struct OverviewTabView: View {
             return .yellow
         } else {
             return .red
+        }
+    }
+
+    // MARK: - Network Helpers
+
+    /// 出口行内容：随设置开关与探测结果切换三态。
+    @ViewBuilder
+    private var exitValueView: some View {
+        if !settings.exitNodeDetectionEnabled {
+            Text("network.exit.disabled".localized)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } else if let exit = monitor.exitNode {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(routeColor(monitor.route))
+                    .frame(width: 6, height: 6)
+                Text(exitText(exit))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+        } else {
+            Text("network.exit.failed".localized)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    /// 本地代理行文案。
+    private func proxyText(_ proxy: ProxyConfig) -> String {
+        guard proxy.isEnabled else { return "network.proxy.none".localized }
+        switch proxy.kind {
+        case .tun:
+            return "network.proxy.tun".localized
+        case .http:
+            return "HTTP \(proxy.host ?? "")"
+        case .https:
+            return "HTTPS \(proxy.host ?? "")"
+        case .socks:
+            return "SOCKS \(proxy.host ?? "")"
+        case .pac:
+            return "PAC \(proxy.host ?? "")"
+        case .none:
+            return "network.proxy.none".localized
+        }
+    }
+
+    /// 出口节点摘要：`ip · city, country · ASN`，缺失字段自动省略。
+    private func exitText(_ exit: ExitNode) -> String {
+        var parts: [String] = [exit.ip]
+        let locality = [exit.city, exit.country].compactMap { $0 }.joined(separator: ", ")
+        if !locality.isEmpty { parts.append(locality) }
+        if let asn = exit.asn { parts.append(asn) }
+        return parts.joined(separator: " · ")
+    }
+
+    /// 一致性结论上色：proxied 黄、direct 绿、unknown 灰。
+    private func routeColor(_ route: NetworkRoute) -> Color {
+        switch route {
+        case .direct: return .green
+        case .proxied: return .yellow
+        case .unknown: return .gray
         }
     }
 }

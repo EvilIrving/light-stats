@@ -60,3 +60,24 @@
 
 // MARK: - Core Topology
 "core.suffix" = "核";
+
+// MARK: - Network / Proxy / Exit Node
+"network.proxy.title" = "本地代理";
+"network.proxy.none" = "未走代理";
+"network.proxy.tun" = "检测到隧道";
+"network.exit.title" = "出口节点";
+"network.exit.disabled" = "出口探测已关闭，可在设置开启";
+"network.exit.failed" = "探测失败";
+"network.route.direct" = "直连";
+"network.route.proxied" = "经代理";
+"network.route.unknown" = "未知";
+
+// MARK: - Settings: Exit Node
+"settings.exitNode.section" = "网络";
+"settings.exitNode.toggle" = "显示出口节点";
+"settings.exitNode.toggleHint" = "需联网查询公网 IP";
+"settings.exitNode.provider" = "服务商";
+"settings.exitNode.privacyTitle" = "关于出口节点探测";
+"settings.exitNode.privacyMessage" = "开启后，Light Stats 会向所选服务发送请求以查询你的公网 IP 及归属地。仅在该功能开启时发生。是否继续？";
+"settings.exitNode.enable" = "开启";
+"settings.exitNode.cancel" = "取消";

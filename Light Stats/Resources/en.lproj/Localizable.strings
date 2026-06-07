@@ -60,3 +60,24 @@
 
 // MARK: - Core Topology
 "core.suffix" = " cores";
+
+// MARK: - Network / Proxy / Exit Node
+"network.proxy.title" = "Local Proxy";
+"network.proxy.none" = "No proxy";
+"network.proxy.tun" = "Tunnel detected";
+"network.exit.title" = "Exit Node";
+"network.exit.disabled" = "Exit detection off — enable in Settings";
+"network.exit.failed" = "Probe failed";
+"network.route.direct" = "Direct";
+"network.route.proxied" = "Proxied";
+"network.route.unknown" = "Unknown";
+
+// MARK: - Settings: Exit Node
+"settings.exitNode.section" = "Network";
+"settings.exitNode.toggle" = "Show exit node";
+"settings.exitNode.toggleHint" = "Queries your public IP online";
+"settings.exitNode.provider" = "Service";
+"settings.exitNode.privacyTitle" = "About Exit Node Detection";
+"settings.exitNode.privacyMessage" = "When enabled, Light Stats sends a request to the selected service to look up your public IP and its location. This only happens while the feature is on. Continue?";
+"settings.exitNode.enable" = "Enable";
+"settings.exitNode.cancel" = "Cancel";

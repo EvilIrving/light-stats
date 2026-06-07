@@ -9,6 +9,14 @@ import AppKit
 import SwiftUI
 import Combine
 
+/// 无标题栏的浮动面板默认 `canBecomeKey` 返回 false，导致 `makeKeyAndOrderFront`
+/// 无法设为 key window（控制台报 makeKeyWindow 警告），且配合 `hidesOnDeactivate`
+/// 会在激活时立刻被隐藏。重写这两个属性以允许面板成为 key/main window。
+final class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -70,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Panel Setup
 
     private func setupPanel() {
-        let panel = NSPanel(
+        let panel = KeyablePanel(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 520),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
