@@ -18,6 +18,7 @@
 "settings.network" = "ネットワーク";
 "settings.fan" = "ファン";
 "settings.battery" = "バッテリー";
+"settings.health" = "健康度";
 "settings.refreshRate" = "更新頻度";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
@@ -61,6 +62,25 @@
 "battery.state.discharging" = "バッテリー駆動";
 "battery.state.charged" = "充電完了";
 
+// MARK: - Health
+"health.title" = "健康度";
+"health.grade.excellent" = "非常に良好";
+"health.grade.good" = "良好";
+"health.grade.fair" = "普通";
+"health.grade.poor" = "低下";
+"health.grade.critical" = "危険";
+"health.dimension.cpu" = "CPU";
+"health.dimension.memory" = "メモリ";
+"health.dimension.disk" = "ディスク";
+"health.dimension.temperature" = "温度";
+"health.dimension.diskIO" = "I/O";
+"health.level.low" = "低";
+"health.level.medium" = "中";
+"health.level.high" = "高";
+"health.level.normal" = "正常";
+"health.level.warm" = "高め";
+"health.level.hot" = "過熱";
+
 // MARK: - Cleanup Tab
 "cleanup.memoryUsage" = "メモリ使用量";
 "cleanup.availableMemory" = "空きメモリ";
@@ -78,8 +98,8 @@
 "core.suffix" = "コア";
 
 // MARK: - Network / Proxy / Exit Node
-"network.proxy.title" = "ローカルプロキシ";
-"network.proxy.none" = "プロキシなし";
+"network.proxy.title" = "プロキシ";
+"network.proxy.none" = "未設定";
 "network.proxy.tun" = "トンネルを検出";
 "network.exit.title" = "出口ノード";
 "network.exit.disabled" = "出口検出はオフ — 設定で有効化";

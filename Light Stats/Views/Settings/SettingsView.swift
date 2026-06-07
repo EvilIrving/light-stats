@@ -31,6 +31,7 @@ struct SettingsView: View {
                         SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") { validateMinimumItems() }
                         SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") { validateMinimumItems() }
                         SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") { validateMinimumItems() }
+                        SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") { validateMinimumItems() }
                     }
                     .padding(.vertical, 4)
                 }

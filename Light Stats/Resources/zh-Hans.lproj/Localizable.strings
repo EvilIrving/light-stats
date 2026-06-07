@@ -18,6 +18,7 @@
 "settings.network" = "网络";
 "settings.fan" = "风扇";
 "settings.battery" = "电池";
+"settings.health" = "健康分";
 "settings.refreshRate" = "刷新频率";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
@@ -61,6 +62,25 @@
 "battery.state.discharging" = "使用电池";
 "battery.state.charged" = "已充满";
 
+// MARK: - Health
+"health.title" = "健康";
+"health.grade.excellent" = "极佳";
+"health.grade.good" = "良好";
+"health.grade.fair" = "一般";
+"health.grade.poor" = "较差";
+"health.grade.critical" = "危险";
+"health.dimension.cpu" = "CPU";
+"health.dimension.memory" = "内存";
+"health.dimension.disk" = "磁盘";
+"health.dimension.temperature" = "温度";
+"health.dimension.diskIO" = "I/O";
+"health.level.low" = "低";
+"health.level.medium" = "中";
+"health.level.high" = "高";
+"health.level.normal" = "正常";
+"health.level.warm" = "偏热";
+"health.level.hot" = "过热";
+
 // MARK: - Cleanup Tab
 "cleanup.memoryUsage" = "内存使用";
 "cleanup.availableMemory" = "可用内存";
@@ -78,8 +98,8 @@
 "core.suffix" = "核";
 
 // MARK: - Network / Proxy / Exit Node
-"network.proxy.title" = "本地代理";
-"network.proxy.none" = "未走代理";
+"network.proxy.title" = "代理";
+"network.proxy.none" = "未配置";
 "network.proxy.tun" = "检测到隧道";
 "network.exit.title" = "出口节点";
 "network.exit.disabled" = "出口探测已关闭，可在设置开启";

@@ -15,7 +15,8 @@ private struct SystemSnapshot {
     let coreUsages: [Double]
     let coreTopology: CoreTopology
     let loadAverage: LoadAverage
-    let topCPUProcesses: [TopProcess]
+    /// nil 表示本轮未采集进程榜（弹窗关闭或未到节流间隔），应保留上一次的值。
+    let topCPUProcesses: [TopProcess]?
     let gpuUsage: Double?
     let memoryUsage: Double
     let memoryUsed: UInt64
@@ -27,6 +28,7 @@ private struct SystemSnapshot {
     let networkDownload: Double
     let cpuTemperature: Double?
     let fanSpeed: Int?
+    let health: HealthScore
     // Phase 2: 电池/功耗 + 磁盘 IO
     let battery: BatteryInfo
     let diskIO: DiskIOStats
@@ -43,6 +45,7 @@ private actor MonitorSampler {
     private let exitNodeService = ExitNodeService()
     private let powerService = PowerService()
     private let diskIOService = DiskIOService()
+    private var previousHealth: HealthScore?
 
     private func getCPUInfo() async -> CPUInfo {
         if let cpuInfo {
@@ -64,14 +67,18 @@ private actor MonitorSampler {
     }
 
     func collect(topProcessCount: Int,
+                 collectTopProcesses: Bool,
                  exitDetectionEnabled: Bool,
                  exitProvider: ExitNodeProvider,
                  exitCacheTTL: TimeInterval) async -> SystemSnapshot {
         let cpuInfo = await getCPUInfo()
         let networkInfo = await getNetworkInfo()
 
+        // 进程榜仅在弹窗打开且到达节流间隔时采集；否则跳过 `ps -A`，本轮置 nil 保留旧值。
+        async let topProcesses: [TopProcess]? = collectTopProcesses
+            ? ProcessStats.getTopCPUProcesses(count: topProcessCount)
+            : nil
         // 出口探测可能走网络，尽早起 async let 让它与其它采集并行；关闭时直接为 nil。
-        async let topProcesses = ProcessStats.getTopCPUProcesses(count: topProcessCount)
         async let exitNodeResult: ExitNode? = exitDetectionEnabled
             ? exitNodeService.fetch(provider: exitProvider, cacheTTL: exitCacheTTL)
             : nil
@@ -99,6 +106,16 @@ private actor MonitorSampler {
         let exitNode = await exitNodeResult
         let route = classifyRoute(proxy: proxyConfig, exit: exitNode)
         let battery = await batteryResult
+        let diskUsage = diskInfo.total > 0 ? Double(diskInfo.used) / Double(diskInfo.total) * 100 : 0
+        let rawHealth = HealthScoreService.compute(
+            cpu: cpuUsage.total,
+            mem: memoryInfo.usagePercent,
+            disk: diskUsage,
+            temp: cpuTemperature,
+            diskIO: diskIO.readMBs + diskIO.writeMBs
+        )
+        let health = HealthScoreService.smooth(current: rawHealth, previous: previousHealth)
+        previousHealth = health
 
         return SystemSnapshot(
             cpuUsage: cpuUsage.total,
@@ -119,6 +136,7 @@ private actor MonitorSampler {
             networkDownload: networkStats.downloadSpeed,
             cpuTemperature: cpuTemperature,
             fanSpeed: fanSpeed,
+            health: health,
             battery: battery,
             diskIO: diskIO,
             proxyConfig: proxyConfig,
@@ -164,6 +182,7 @@ final class SystemMonitor: ObservableObject {
 
     @Published var cpuTemperature: Double? = nil
     @Published var fanSpeed: Int? = nil
+    @Published var health: HealthScore = .perfect
 
     // Phase 2: 电池/功耗 + 磁盘 IO
     @Published var battery: BatteryInfo = .noBattery
@@ -181,6 +200,11 @@ final class SystemMonitor: ObservableObject {
     private let sampler = MonitorSampler()
     private var updateTask: Task<Void, Never>?
     private var pendingUpdate = false
+
+    /// 弹窗是否可见：进程榜只在弹窗内展示，关闭时不采集。
+    private var popoverVisible = false
+    /// 上次采集进程榜的时间，用于按 `topProcessRefreshInterval` 节流。
+    private var lastTopProcessSampleAt: Date = .distantPast
 
     // MARK: - Singleton
 
@@ -214,6 +238,17 @@ final class SystemMonitor: ObservableObject {
         pendingUpdate = false
     }
 
+    /// 弹窗显示/隐藏时由 AppDelegate 调用。打开时立即触发一次采样，
+    /// 让进程榜尽快填充（重置节流计时，绕过 5 秒间隔）。
+    func setPopoverVisible(_ visible: Bool) {
+        guard popoverVisible != visible else { return }
+        popoverVisible = visible
+        if visible {
+            lastTopProcessSampleAt = .distantPast
+            requestUpdate()
+        }
+    }
+
     // MARK: - Private Methods
 
     private func requestUpdate() {
@@ -226,8 +261,16 @@ final class SystemMonitor: ObservableObject {
             while self.pendingUpdate && !Task.isCancelled {
                 self.pendingUpdate = false
                 let settings = SettingsManager.shared
+                let now = Date()
+                // 进程榜：仅在弹窗可见且距上次采集≥节流间隔时采集。
+                let collectTopProcesses = self.popoverVisible
+                    && now.timeIntervalSince(self.lastTopProcessSampleAt) >= AppConfig.topProcessRefreshInterval
+                if collectTopProcesses {
+                    self.lastTopProcessSampleAt = now
+                }
                 let snapshot = await self.sampler.collect(
                     topProcessCount: AppConfig.topCPUProcessCount,
+                    collectTopProcesses: collectTopProcesses,
                     exitDetectionEnabled: settings.exitNodeDetectionEnabled,
                     exitProvider: settings.exitNodeProvider,
                     exitCacheTTL: AppConfig.exitNodeCacheTTL
@@ -248,7 +291,10 @@ final class SystemMonitor: ObservableObject {
         coreUsages = snapshot.coreUsages
         coreTopology = snapshot.coreTopology
         loadAverage = snapshot.loadAverage
-        topCPUProcesses = snapshot.topCPUProcesses
+        // nil 表示本轮未采集进程榜，保留上一次的值。
+        if let topProcesses = snapshot.topCPUProcesses {
+            topCPUProcesses = topProcesses
+        }
         gpuUsage = snapshot.gpuUsage
         memoryUsage = snapshot.memoryUsage
         memoryUsed = snapshot.memoryUsed
@@ -260,6 +306,7 @@ final class SystemMonitor: ObservableObject {
         networkDownload = snapshot.networkDownload
         cpuTemperature = snapshot.cpuTemperature
         fanSpeed = snapshot.fanSpeed
+        health = snapshot.health
         battery = snapshot.battery
         diskIO = snapshot.diskIO
         proxyConfig = snapshot.proxyConfig

@@ -100,14 +100,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(monitor)
         )
 
+        // 面板因 hidesOnDeactivate 自动隐藏时不会经过 togglePanel/closePanel，
+        // 监听 resignKey 兜底同步可见状态，确保关闭后停止采集进程榜。
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handlePanelDidResignKey),
+            name: NSWindow.didResignKeyNotification,
+            object: panel
+        )
+
         self.panel = panel
+    }
+
+    @objc private func handlePanelDidResignKey() {
+        monitor.setPopoverVisible(panel?.isVisible ?? false)
+        if panel?.isVisible != true {
+            appMemoryManager.stopMonitoring()
+        }
     }
 
     // MARK: - Monitoring
 
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
-        appMemoryManager.startMonitoring()
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
@@ -169,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             download: download,
             fan: fan,
             battery: monitor.battery,
+            health: monitor.health,
             settings: settings
         )
 
@@ -182,6 +198,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func closePanel() {
         panel?.orderOut(nil)
+        monitor.setPopoverVisible(false)
+        appMemoryManager.stopMonitoring()
     }
 
     // MARK: - About Window
@@ -217,6 +235,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if panel.isVisible {
             panel.orderOut(nil)
+            monitor.setPopoverVisible(false)
+            appMemoryManager.stopMonitoring()
             return
         }
 
@@ -234,6 +254,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setFrameOrigin(panelOrigin)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        monitor.setPopoverVisible(true)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

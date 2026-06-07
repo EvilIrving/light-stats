@@ -187,10 +187,17 @@ final class ProcessService: ProcessServiceProtocol {
         }
     }
     
+    private struct ProcessMemoryRow {
+        let pid: pid_t
+        let parentPid: pid_t
+        let rssBytes: UInt64
+        let command: String
+    }
+
     /// Parse `ps -axo pid=,ppid=,rss=,comm=` output.
-    /// RSS is reported in KB and used only as a fallback when physical footprint is unavailable.
+    /// RSS is reported in KB. Only the largest RSS rows are refined with physical footprint.
     private func parseProcessMemoryOutput(_ output: String, maxCount: Int) -> [TopProcessInfo] {
-        var processes: [TopProcessInfo] = []
+        var rows: [ProcessMemoryRow] = []
         let lines = output.components(separatedBy: "\n")
 
         for line in lines {
@@ -204,16 +211,36 @@ final class ProcessService: ProcessServiceProtocol {
 
             let rssKB = UInt64(components[2]) ?? 0
             let rssBytes = rssKB * 1024
-            let memBytes = physicalFootprintBytes(for: pid) ?? rssBytes
             let command = components[3...].joined(separator: " ")
 
-            let processInfo = TopProcessInfo(
+            rows.append(ProcessMemoryRow(
                 pid: pid,
                 parentPid: parentPid,
-                command: command,
+                rssBytes: rssBytes,
+                command: command
+            ))
+        }
+
+        let exactPids = Set(rows
+            .sorted { lhs, rhs in
+                if lhs.rssBytes == rhs.rssBytes {
+                    return lhs.pid < rhs.pid
+                }
+                return lhs.rssBytes > rhs.rssBytes
+            }
+            .prefix(AppConfig.topMemoryExactProcessLimit)
+            .map(\.pid))
+
+        var processes = rows.map { row in
+            let memBytes = exactPids.contains(row.pid)
+                ? (physicalFootprintBytes(for: row.pid) ?? row.rssBytes)
+                : row.rssBytes
+            return TopProcessInfo(
+                pid: row.pid,
+                parentPid: row.parentPid,
+                command: row.command,
                 memoryBytes: memBytes
             )
-            processes.append(processInfo)
         }
 
         processes.sort { lhs, rhs in

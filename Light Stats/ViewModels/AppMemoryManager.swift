@@ -172,7 +172,8 @@ final class AppMemoryManager: ObservableObject {
     /// - Parameter app: The app group
     /// - Returns: Array of TopProcessInfo for child processes
     func childProcesses(for app: AppGroup) -> [TopProcessInfo] {
-        return allTopProcesses.filter { app.allPids.contains($0.pid) && $0.pid != app.id }
+        let pidSet = Set(app.allPids)
+        return allTopProcesses.filter { pidSet.contains($0.pid) && $0.pid != app.id }
             .sorted { $0.memoryBytes > $1.memoryBytes }
     }
 
@@ -202,7 +203,7 @@ final class AppMemoryManager: ObservableObject {
         var accumulators: [String: AppGroupAccumulator] = [:]
         var backgroundAccumulator = BackgroundProcessAccumulator(defaultIcon: defaultGearIcon)
         var pidToBundleInfo: [pid_t: ProcessBundleInfo] = [:]
-        let parentByPid = Dictionary(uniqueKeysWithValues: topProcesses.map { ($0.pid, $0.parentPid) })
+        let parentByPid = Dictionary(topProcesses.map { ($0.pid, $0.parentPid) }, uniquingKeysWith: { first, _ in first })
 
         func bundleInfo(for pid: pid_t) -> ProcessBundleInfo {
             if let cached = pidToBundleInfo[pid] {

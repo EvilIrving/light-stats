@@ -122,6 +122,12 @@ struct CleanupTabView: View {
         } message: {
             Text("cleanup.forceQuitMessage".localized)
         }
+        .onAppear {
+            appManager.startMonitoring()
+        }
+        .onDisappear {
+            appManager.stopMonitoring()
+        }
     }
 
     // MARK: - Helpers

@@ -14,6 +14,8 @@ struct OverviewTabView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
+                HealthCard(health: monitor.health)
+
                 // Main Metrics Grid
                 LazyVGrid(columns: [
                     GridItem(.flexible(), spacing: 12),
@@ -53,12 +55,12 @@ struct OverviewTabView: View {
                     BentoCard(title: "MEM", icon: "memorychip") {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text(String(format: "%.1f", Double(AppMemoryManager.shared.totalMemoryUsed) / 1024 / 1024 / 1024))
+                                Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                                 Text("/")
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
-                                Text(String(format: "%.0fGB", Double(AppMemoryManager.shared.totalMemory) / 1024 / 1024 / 1024))
+                                Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.secondary)
                             }
@@ -331,7 +333,7 @@ struct OverviewTabView: View {
         guard proxy.isEnabled else { return "network.proxy.none".localized }
         switch proxy.kind {
         case .tun:
-            return "network.proxy.tun".localized
+            return proxy.host.map { "TUN \($0)" } ?? "TUN"
         case .http:
             return "HTTP \(proxy.host ?? "")"
         case .https:
@@ -339,7 +341,7 @@ struct OverviewTabView: View {
         case .socks:
             return "SOCKS \(proxy.host ?? "")"
         case .pac:
-            return "PAC \(proxy.host ?? "")"
+            return "PAC"
         case .none:
             return "network.proxy.none".localized
         }
@@ -419,6 +421,88 @@ private struct SpinningFanIcon: View {
 
 // MARK: - Battery Card
 
+/// 健康分卡片：总分 + 分档 + 各维度简评。
+private struct HealthCard: View {
+    let health: HealthScore
+
+    var body: some View {
+        BentoCard(title: "health.title".localized, icon: "heart.text.square") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .lastTextBaseline, spacing: 5) {
+                    Text("\(health.score)")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundColor(gradeColor)
+                    Text("/ 100")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundColor(.secondary)
+                    Text(gradeText)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(gradeColor)
+                        .padding(.leading, 4)
+                    Spacer()
+                    Circle()
+                        .fill(gradeColor)
+                        .frame(width: 10, height: 10)
+                }
+
+                Text(summaryText)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var gradeText: String {
+        switch health.grade {
+        case .excellent: return "health.grade.excellent".localized
+        case .good: return "health.grade.good".localized
+        case .fair: return "health.grade.fair".localized
+        case .poor: return "health.grade.poor".localized
+        case .critical: return "health.grade.critical".localized
+        }
+    }
+
+    private var gradeColor: Color {
+        switch health.grade {
+        case .excellent: return .green
+        case .good: return Color(red: 0.35, green: 0.78, blue: 0.42)
+        case .fair: return .yellow
+        case .poor: return .orange
+        case .critical: return .red
+        }
+    }
+
+    private var summaryText: String {
+        let dimensions: [(HealthScore.Dimension, String)] = [
+            (.cpu, "health.dimension.cpu".localized),
+            (.memory, "health.dimension.memory".localized),
+            (.disk, "health.dimension.disk".localized),
+            (.temperature, "health.dimension.temperature".localized),
+            (.diskIO, "health.dimension.diskIO".localized)
+        ]
+
+        return dimensions.compactMap { dimension, label in
+            guard let score = health.breakdown[dimension.rawValue] else { return nil }
+            return "\(label) \(levelText(for: dimension, score: score))"
+        }
+        .joined(separator: " · ")
+    }
+
+    private func levelText(for dimension: HealthScore.Dimension, score: Double) -> String {
+        if dimension == .temperature {
+            if score >= 85 { return "health.level.normal".localized }
+            if score >= 60 { return "health.level.warm".localized }
+            return "health.level.hot".localized
+        }
+
+        if score >= 85 { return "health.level.low".localized }
+        if score >= 60 { return "health.level.medium".localized }
+        return "health.level.high".localized
+    }
+}
+
 /// 电池概览卡：电量百分比（大字+上色）、状态、剩余时间；副行循环/健康/功耗/温度。
 /// 无电池机型（台式 Mac）优雅显示 N/A。
 private struct BatteryCard: View {
@@ -486,8 +570,8 @@ private struct BatteryCard: View {
 
     private var batteryColor: Color {
         if battery.state == .charging || battery.state == .charged { return .green }
-        if battery.percent <= 20 { return .red }
-        if battery.percent <= 40 { return .yellow }
+        if battery.percent < 10 { return .red }
+        if battery.percent < 20 { return .yellow }
         return .green
     }
 

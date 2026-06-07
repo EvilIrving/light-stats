@@ -12,6 +12,10 @@ import Combine
 nonisolated enum AppConfig {
     static let topCPUProcessCount: Int = 5
     static let topMemoryProcessCount: Int = 300
+    static let topMemoryExactProcessLimit: Int = 80
+    /// 进程榜采样间隔：进程榜仅在弹窗内展示，无需跟随主采样周期高频刷新，
+    /// 单独节流以降低 `ps -A` 全进程表遍历的 CPU 开销。
+    static let topProcessRefreshInterval: TimeInterval = 5.0
     static let appMemoryRefreshInterval: TimeInterval = 5.0
     /// 出口节点探测缓存有效期：TTL 内不重复发外部请求。
     static let exitNodeCacheTTL: TimeInterval = 60
@@ -30,6 +34,7 @@ protocol SettingsManaging: ObservableObject {
     var showNetwork: Bool { get set }
     var showFan: Bool { get set }
     var showBattery: Bool { get set }
+    var showHealth: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
@@ -65,6 +70,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     @Published var showBattery: Bool {
         didSet { save(showBattery, for: .showBattery) }
+    }
+    @Published var showHealth: Bool {
+        didSet { save(showHealth, for: .showHealth) }
     }
 
     // MARK: - Other Settings
@@ -185,6 +193,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showNetwork = "settings.showNetwork"
         case showFan = "settings.showFan"
         case showBattery = "settings.showBattery"
+        case showHealth = "settings.showHealth"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
@@ -208,6 +217,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         showFan = defaults.object(forKey: Key.showFan.rawValue) as? Bool ?? false
         // 电池：菜单栏默认关闭（沿用 disk/fan 的 toggle 模式）。
         showBattery = defaults.object(forKey: Key.showBattery.rawValue) as? Bool ?? false
+        // 健康分：总门面默认关闭，避免改变现有菜单栏宽度。
+        showHealth = defaults.object(forKey: Key.showHealth.rawValue) as? Bool ?? false
         
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue
@@ -232,7 +243,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     
     /// Returns true if at least one status bar item is enabled
     var hasAtLeastOneItem: Bool {
-        showLogo || showCPU || showGPU || showMemory || showDisk || showNetwork || showFan || showBattery
+        showLogo || showCPU || showGPU || showMemory || showDisk || showNetwork || showFan || showBattery || showHealth
     }
     
     /// Ensures at least one item is shown; if all are off, enable CPU

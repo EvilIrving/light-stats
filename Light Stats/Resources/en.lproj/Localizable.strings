@@ -18,6 +18,7 @@
 "settings.network" = "Network";
 "settings.fan" = "Fan";
 "settings.battery" = "Battery";
+"settings.health" = "Health";
 "settings.refreshRate" = "Refresh Rate";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
@@ -61,6 +62,25 @@
 "battery.state.discharging" = "On battery";
 "battery.state.charged" = "Charged";
 
+// MARK: - Health
+"health.title" = "Health";
+"health.grade.excellent" = "Excellent";
+"health.grade.good" = "Good";
+"health.grade.fair" = "Fair";
+"health.grade.poor" = "Poor";
+"health.grade.critical" = "Critical";
+"health.dimension.cpu" = "CPU";
+"health.dimension.memory" = "Memory";
+"health.dimension.disk" = "Disk";
+"health.dimension.temperature" = "Temp";
+"health.dimension.diskIO" = "I/O";
+"health.level.low" = "Low";
+"health.level.medium" = "Medium";
+"health.level.high" = "High";
+"health.level.normal" = "Normal";
+"health.level.warm" = "Warm";
+"health.level.hot" = "Hot";
+
 // MARK: - Cleanup Tab
 "cleanup.memoryUsage" = "Memory Usage";
 "cleanup.availableMemory" = "Available";
@@ -78,8 +98,8 @@
 "core.suffix" = " cores";
 
 // MARK: - Network / Proxy / Exit Node
-"network.proxy.title" = "Local Proxy";
-"network.proxy.none" = "No proxy";
+"network.proxy.title" = "Proxy";
+"network.proxy.none" = "Not set";
 "network.proxy.tun" = "Tunnel detected";
 "network.exit.title" = "Exit Node";
 "network.exit.disabled" = "Exit detection off — enable in Settings";

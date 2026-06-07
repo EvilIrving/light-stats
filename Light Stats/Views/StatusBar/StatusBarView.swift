@@ -18,6 +18,7 @@ final class StatusBarView: NSView {
         static let networkItemWidth: CGFloat = 56  // NET (e.g., "↑0.0 KB/s" / "↓0.0 KB/s")
         static let fanItemWidth: CGFloat = 50      // FAN (e.g., "9999 RPM")
         static let batteryItemWidth: CGFloat = 34  // BAT (e.g., "⚡100%")
+        static let healthItemWidth: CGFloat = 30   // HLT (e.g., "87")
         static let separatorWidth: CGFloat = 2
         static let itemHeight: CGFloat = 22
         static let arrowWidth: CGFloat = 8         // 箭头固定宽度
@@ -68,6 +69,7 @@ final class StatusBarView: NSView {
         download: Double,
         fan: Int?,
         battery: BatteryInfo,
+        health: HealthScore,
         settings: any SettingsManaging
     ) {
         displayItems.removeAll()
@@ -164,6 +166,16 @@ final class StatusBarView: NSView {
             ))
         }
 
+        // Health（默认关闭）：显示 0-100 总分。
+        if settings.showHealth {
+            displayItems.append(DisplayItem(
+                value: "\(health.score)",
+                label: "HLT",
+                width: Layout.healthItemWidth,
+                isLogo: false
+            ))
+        }
+
         needsDisplay = true
     }
 
@@ -201,6 +213,10 @@ final class StatusBarView: NSView {
         }
         if settings.showBattery {
             width += Layout.batteryItemWidth
+            itemCount += 1
+        }
+        if settings.showHealth {
+            width += Layout.healthItemWidth
             itemCount += 1
         }
 
