@@ -63,7 +63,7 @@ struct AppCardView: View {
                     ProgressView()
                         .controlSize(.small)
                         .frame(width: 16, height: 16)
-                } else {
+                } else if app.isTerminable {
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
@@ -165,6 +165,8 @@ struct AppCardView: View {
         totalMemoryBytes: 1024 * 1024 * 100,
         processCount: 4,
         allPids: [1234, 5678, 9012, 3456],
+        terminablePids: [1234, 5678, 9012, 3456],
+        isTerminable: true,
         bundleIdentifier: "com.googlecode.iterm2",
         bundlePath: "/Applications/iTerm.app",
         execPath: "/Applications/iTerm.app/Contents/MacOS/iTerm2"
@@ -183,6 +185,8 @@ struct AppCardView: View {
             totalMemoryBytes: 500 * 1024 * 1024,
             processCount: 1,
             allPids: [9999],
+            terminablePids: [9999],
+            isTerminable: true,
             bundleIdentifier: "com.apple.safari",
             bundlePath: "/Applications/Safari.app",
             execPath: "/Applications/Safari.app/Contents/MacOS/Safari"

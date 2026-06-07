@@ -200,7 +200,9 @@ final class AppMemoryManager: ObservableObject {
         }
 
         var accumulators: [String: AppGroupAccumulator] = [:]
+        var backgroundAccumulator = BackgroundProcessAccumulator(defaultIcon: defaultGearIcon)
         var pidToBundleInfo: [pid_t: ProcessBundleInfo] = [:]
+        let parentByPid = Dictionary(uniqueKeysWithValues: topProcesses.map { ($0.pid, $0.parentPid) })
 
         func bundleInfo(for pid: pid_t) -> ProcessBundleInfo {
             if let cached = pidToBundleInfo[pid] {
@@ -216,46 +218,38 @@ final class AppMemoryManager: ObservableObject {
             let processBundleInfo = bundleInfo(for: process.pid)
             let responsibleBundleInfo = responsiblePid > 0 ? bundleInfo(for: responsiblePid) : nil
 
-            if let groupKey = resolveGroupKey(
+            if let resolution = resolveGroup(
                 for: process,
                 responsiblePid: responsiblePid,
                 processBundleInfo: processBundleInfo,
                 responsibleBundleInfo: responsibleBundleInfo,
                 monitoredByPid: monitoredByPid,
                 monitoredByBundleId: monitoredByBundleId,
-                monitoredByBundlePath: monitoredByBundlePath
+                monitoredByBundlePath: monitoredByBundlePath,
+                parentByPid: parentByPid
             ) {
+                let groupKey = resolution.groupKey
                 if accumulators[groupKey] == nil, let candidate = monitoredByKey[groupKey] {
                     accumulators[groupKey] = AppGroupAccumulator(candidate: candidate)
                 }
-                accumulators[groupKey]?.add(process)
-                continue
+                accumulators[groupKey]?.add(process, attributionSource: resolution.source)
+            } else if shouldShowProcess(processBundleInfo, processName: process.command) {
+                backgroundAccumulator.add(process)
             }
-
-            let standalone = StandaloneGroupDescriptor(
-                process: process,
-                bundleInfo: processBundleInfo,
-                processService: processService
-            )
-            guard shouldShowProcess(standalone.bundleInfo, processName: standalone.process.command) else {
-                continue
-            }
-
-            let key = standalone.groupKey
-            if accumulators[key] == nil {
-                accumulators[key] = AppGroupAccumulator(standalone: standalone, defaultIcon: defaultGearIcon)
-            }
-            accumulators[key]?.add(process)
         }
 
-        return accumulators.values
-            .compactMap { $0.makeAppGroup(defaultAppIcon: defaultAppIcon, processService: processService) }
+        var groups = accumulators.values
+            .compactMap { $0.makeAppGroup() }
             .sorted {
                 if $0.totalMemoryBytes == $1.totalMemoryBytes {
                     return $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 }
                 return $0.totalMemoryBytes > $1.totalMemoryBytes
             }
+        if let backgroundGroup = backgroundAccumulator.makeAppGroup() {
+            groups.append(backgroundGroup)
+        }
+        return groups
     }
 
     private func buildMonitoredAppCandidates(from guiApps: [NSRunningApplication]) -> [MonitoredAppCandidate] {
@@ -331,48 +325,77 @@ final class AppMemoryManager: ObservableObject {
         return helperKeywords.contains { lowerName.contains($0) }
     }
 
-    private func resolveGroupKey(
+    private func resolveGroup(
         for process: TopProcessInfo,
         responsiblePid: pid_t,
         processBundleInfo: ProcessBundleInfo,
         responsibleBundleInfo: ProcessBundleInfo?,
         monitoredByPid: [pid_t: String],
         monitoredByBundleId: [String: String],
-        monitoredByBundlePath: [String: String]
-    ) -> String? {
+        monitoredByBundlePath: [String: String],
+        parentByPid: [pid_t: pid_t]
+    ) -> ProcessGroupResolution? {
         if responsiblePid > 0, let key = monitoredByPid[responsiblePid] {
-            return key
+            return ProcessGroupResolution(groupKey: key, source: .responsibility)
         }
         if let bundleId = responsibleBundleInfo?.bundleId {
             if let key = monitoredByBundleId[bundleId] {
-                return key
+                return ProcessGroupResolution(groupKey: key, source: .responsibility)
             }
             if let key = inferredParentBundleGroupKey(
                 for: bundleId,
                 monitoredByBundleId: monitoredByBundleId
             ) {
-                return key
+                return ProcessGroupResolution(groupKey: key, source: .responsibility)
             }
         }
         if let bundleId = processBundleInfo.bundleId {
             if let key = monitoredByBundleId[bundleId] {
-                return key
+                return ProcessGroupResolution(groupKey: key, source: .bundle)
             }
             if let key = inferredParentBundleGroupKey(
                 for: bundleId,
                 monitoredByBundleId: monitoredByBundleId
             ) {
-                return key
+                return ProcessGroupResolution(groupKey: key, source: .bundle)
             }
         }
         if let bundlePath = responsibleBundleInfo?.bundlePath, let key = monitoredByBundlePath[bundlePath] {
-            return key
+            return ProcessGroupResolution(groupKey: key, source: .responsibility)
         }
         if let bundlePath = processBundleInfo.bundlePath, let key = monitoredByBundlePath[bundlePath] {
-            return key
+            return ProcessGroupResolution(groupKey: key, source: .bundle)
         }
         if let key = monitoredByPid[process.pid] {
-            return key
+            return ProcessGroupResolution(groupKey: key, source: .owningApp)
+        }
+        if let key = resolveGroupKeyFromParentChain(
+            for: process,
+            parentByPid: parentByPid,
+            monitoredByPid: monitoredByPid
+        ) {
+            return ProcessGroupResolution(groupKey: key, source: .parentProcess)
+        }
+        return nil
+    }
+
+    private func resolveGroupKeyFromParentChain(
+        for process: TopProcessInfo,
+        parentByPid: [pid_t: pid_t],
+        monitoredByPid: [pid_t: String]
+    ) -> String? {
+        var visited = Set<pid_t>()
+        var parentPid = process.parentPid
+        var depth = 0
+
+        while parentPid > 1 && depth < 32 {
+            if let key = monitoredByPid[parentPid] {
+                return key
+            }
+            guard visited.insert(parentPid).inserted else { return nil }
+            guard let nextParentPid = parentByPid[parentPid] else { return nil }
+            parentPid = nextParentPid
+            depth += 1
         }
         return nil
     }
@@ -424,64 +447,32 @@ private struct MonitoredAppCandidate {
     }
 }
 
-private struct StandaloneGroupDescriptor {
+private struct ProcessGroupResolution {
     let groupKey: String
-    let seedPid: pid_t
-    let name: String
-    let bundleInfo: ProcessBundleInfo
-    let process: TopProcessInfo
-
-    init(process: TopProcessInfo, bundleInfo: ProcessBundleInfo, processService: ProcessServiceProtocol) {
-        self.process = process
-        self.bundleInfo = bundleInfo
-        self.seedPid = process.pid
-
-        if let bundleId = bundleInfo.bundleId, !bundleId.isEmpty {
-            self.groupKey = "bundle:\(bundleId)"
-        } else if let bundlePath = bundleInfo.bundlePath, !bundlePath.isEmpty {
-            self.groupKey = "path:\(bundlePath)"
-        } else {
-            self.groupKey = "pid:\(process.pid)"
-        }
-
-        if let bundlePath = bundleInfo.bundlePath, let bundle = Bundle(path: bundlePath) {
-            self.name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-                ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
-                ?? processService.getProcessName(for: process.pid)
-                ?? process.command
-        } else {
-            self.name = processService.getProcessName(for: process.pid) ?? process.command
-        }
-    }
+    let source: ProcessAttributionSource
 }
 
 private struct AppGroupAccumulator {
-    private let candidate: MonitoredAppCandidate?
-    private let standalone: StandaloneGroupDescriptor?
-    private let fallbackIcon: NSImage
+    private let candidate: MonitoredAppCandidate
     private(set) var assignedProcesses: [TopProcessInfo] = []
     private var pidSet: Set<pid_t>
+    private var terminablePidSet: Set<pid_t>
 
     init(candidate: MonitoredAppCandidate) {
         self.candidate = candidate
-        self.standalone = nil
-        self.fallbackIcon = candidate.icon
         self.pidSet = [candidate.pid]
+        self.terminablePidSet = [candidate.pid]
     }
 
-    init(standalone: StandaloneGroupDescriptor, defaultIcon: NSImage) {
-        self.candidate = nil
-        self.standalone = standalone
-        self.fallbackIcon = defaultIcon
-        self.pidSet = [standalone.seedPid]
-    }
-
-    mutating func add(_ process: TopProcessInfo) {
+    mutating func add(_ process: TopProcessInfo, attributionSource: ProcessAttributionSource) {
         assignedProcesses.append(process)
         pidSet.insert(process.pid)
+        if attributionSource.canTerminateWithApp {
+            terminablePidSet.insert(process.pid)
+        }
     }
 
-    func makeAppGroup(defaultAppIcon: NSImage, processService: ProcessServiceProtocol) -> AppGroup? {
+    func makeAppGroup() -> AppGroup? {
         let sortedProcesses = assignedProcesses.sorted { lhs, rhs in
             if lhs.memoryBytes == rhs.memoryBytes {
                 return lhs.pid < rhs.pid
@@ -490,34 +481,59 @@ private struct AppGroupAccumulator {
         }
         let totalMemory = sortedProcesses.reduce(0) { $0 + $1.memoryBytes }
 
-        if let candidate {
-            let allPids = Array(pidSet)
-            return AppGroup(
-                id: candidate.pid,
-                name: candidate.name,
-                icon: candidate.icon,
-                totalMemoryBytes: totalMemory,
-                processCount: allPids.count,
-                allPids: allPids,
-                bundleIdentifier: candidate.bundleIdentifier,
-                bundlePath: candidate.bundlePath,
-                execPath: candidate.execPath
-            )
-        }
-
-        guard let standalone else { return nil }
-        let primaryPid = sortedProcesses.first?.pid ?? standalone.seedPid
-        let allPids = Array(pidSet)
+        let allPids = pidSet.sorted()
+        let terminablePids = terminablePidSet.sorted()
         return AppGroup(
-            id: primaryPid,
-            name: standalone.name,
-            icon: fallbackIcon,
+            id: candidate.pid,
+            name: candidate.name,
+            icon: candidate.icon,
             totalMemoryBytes: totalMemory,
             processCount: allPids.count,
             allPids: allPids,
-            bundleIdentifier: standalone.bundleInfo.bundleId,
-            bundlePath: standalone.bundleInfo.bundlePath,
-            execPath: standalone.bundleInfo.execPath
+            terminablePids: terminablePids,
+            isTerminable: true,
+            bundleIdentifier: candidate.bundleIdentifier,
+            bundlePath: candidate.bundlePath,
+            execPath: candidate.execPath
+        )
+    }
+}
+
+private struct BackgroundProcessAccumulator {
+    private let defaultIcon: NSImage
+    private var processes: [TopProcessInfo] = []
+
+    init(defaultIcon: NSImage) {
+        self.defaultIcon = defaultIcon
+    }
+
+    mutating func add(_ process: TopProcessInfo) {
+        processes.append(process)
+    }
+
+    func makeAppGroup() -> AppGroup? {
+        guard !processes.isEmpty else { return nil }
+        let sortedProcesses = processes.sorted { lhs, rhs in
+            if lhs.memoryBytes == rhs.memoryBytes {
+                return lhs.pid < rhs.pid
+            }
+            return lhs.memoryBytes > rhs.memoryBytes
+        }
+        let allPids = sortedProcesses.map(\.pid)
+        let totalMemory = sortedProcesses.reduce(0) { $0 + $1.memoryBytes }
+
+        return AppGroup(
+            id: AppGroup.backgroundGroupId,
+            name: "cleanup.backgroundProcesses".localized,
+            icon: defaultIcon,
+            totalMemoryBytes: totalMemory,
+            processCount: allPids.count,
+            allPids: allPids,
+            terminablePids: [],
+            isTerminable: false,
+            bundleIdentifier: nil,
+            bundlePath: nil,
+            execPath: nil
         )
     }
 }

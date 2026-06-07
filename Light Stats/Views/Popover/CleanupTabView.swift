@@ -84,7 +84,7 @@ struct CleanupTabView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(String(format: "cleanup.appCount".localized, appManager.runningApps.count))
+                Text(String(format: "cleanup.appCount".localized, appManager.runningApps.filter(\.isTerminable).count))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary.opacity(0.8))
             }
@@ -158,6 +158,7 @@ struct CleanupTabView: View {
     // MARK: - Actions
 
     private func terminateApp(_ app: RunningApp) {
+        guard app.isTerminable else { return }
         guard !terminatingApps.contains(app.id) else { return }
         
         terminatingApps.insert(app.id)

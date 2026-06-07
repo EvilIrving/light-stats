@@ -68,6 +68,7 @@
 "cleanup.runningApps" = "実行中のApp";
 "cleanup.appCount" = "%d 個";
 "cleanup.noApps" = "実行中のアプリはありません";
+"cleanup.backgroundProcesses" = "バックグラウンドプロセス";
 "cleanup.appNotResponding" = "アプリが応答しません";
 "cleanup.forceQuit" = "強制終了";
 "cleanup.cancel" = "キャンセル";

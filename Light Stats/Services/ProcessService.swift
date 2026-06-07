@@ -112,13 +112,13 @@ final class ProcessService: ProcessServiceProtocol {
     // MARK: - Top Command Execution
     
     /// Get memory usage for processes.
-    /// Uses `ps` for full-process coverage, then sorts by RSS descending.
+    /// Uses `ps` for full-process coverage, then sorts by physical footprint descending.
     func getTopMemoryProcesses(count: Int) async -> [TopProcessInfo] {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let task = Process()
                 task.executableURL = URL(fileURLWithPath: "/bin/ps")
-                task.arguments = ["-axo", "pid=,rss=,comm="]
+                task.arguments = ["-axo", "pid=,ppid=,rss=,comm="]
 
                 let outputPipe = Pipe()
                 let errorPipe = Pipe()
@@ -187,8 +187,8 @@ final class ProcessService: ProcessServiceProtocol {
         }
     }
     
-    /// Parse `ps -axo pid=,rss=,comm=` output.
-    /// RSS is reported in KB.
+    /// Parse `ps -axo pid=,ppid=,rss=,comm=` output.
+    /// RSS is reported in KB and used only as a fallback when physical footprint is unavailable.
     private func parseProcessMemoryOutput(_ output: String, maxCount: Int) -> [TopProcessInfo] {
         var processes: [TopProcessInfo] = []
         let lines = output.components(separatedBy: "\n")
@@ -198,15 +198,18 @@ final class ProcessService: ProcessServiceProtocol {
             guard !trimmed.isEmpty else { continue }
 
             let components = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-            guard components.count >= 3 else { continue }
+            guard components.count >= 4 else { continue }
             guard let pid = pid_t(components[0]) else { continue }
+            guard let parentPid = pid_t(components[1]) else { continue }
 
-            let rssKB = UInt64(components[1]) ?? 0
-            let memBytes = rssKB * 1024
-            let command = components[2...].joined(separator: " ")
+            let rssKB = UInt64(components[2]) ?? 0
+            let rssBytes = rssKB * 1024
+            let memBytes = physicalFootprintBytes(for: pid) ?? rssBytes
+            let command = components[3...].joined(separator: " ")
 
             let processInfo = TopProcessInfo(
                 pid: pid,
+                parentPid: parentPid,
                 command: command,
                 memoryBytes: memBytes
             )
@@ -224,6 +227,19 @@ final class ProcessService: ProcessServiceProtocol {
             return Array(processes.prefix(maxCount))
         }
         return processes
+    }
+
+    private func physicalFootprintBytes(for pid: pid_t) -> UInt64? {
+        var info = rusage_info_v4()
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            proc_pid_rusage(
+                pid,
+                RUSAGE_INFO_V4,
+                UnsafeMutableRawPointer(pointer).assumingMemoryBound(to: rusage_info_t?.self)
+            )
+        }
+        guard result == 0, info.ri_phys_footprint > 0 else { return nil }
+        return info.ri_phys_footprint
     }
     
     // MARK: - Process Control
@@ -285,31 +301,12 @@ final class ProcessService: ProcessServiceProtocol {
                 try? await Task.sleep(for: .milliseconds(300))
                 
                 if !isProcessAlive(app.id) {
-                    await terminateSurvivingChildrenAsync(app.allPids)
                     return true
                 }
             }
         }
         
-        var success = await killProcessGracefully(pid: app.id)
-        
-        for pid in app.allPids where pid != app.id {
-            if isProcessAlive(pid) {
-                let childSuccess = await killProcessGracefully(pid: pid)
-                success = success && childSuccess
-            }
-        }
-        
-        return success
-    }
-    
-    /// Async version of child process cleanup
-    private func terminateSurvivingChildrenAsync(_ pids: [pid_t]) async {
-        for pid in pids {
-            if isProcessAlive(pid) {
-                _ = await killProcessGracefully(pid: pid)
-            }
-        }
+        return await killProcessGracefully(pid: app.id)
     }
     
     /// Trigger system memory cleanup
@@ -372,31 +369,7 @@ final class ProcessService: ProcessServiceProtocol {
         }
         
         let mainTerminated = mainApp.terminate()
-        
-        if mainTerminated {
-            // Wait briefly then check for surviving child processes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                self?.terminateSurvivingChildren(app.allPids)
-            }
-        }
-        
         return mainTerminated
-    }
-    
-    /// Terminate any surviving child processes
-    private func terminateSurvivingChildren(_ pids: [pid_t]) {
-        for pid in pids {
-            // Check if process still exists
-            if kill(pid, 0) == 0 {
-                // Process still alive, try to terminate via NSRunningApplication
-                if let app = NSRunningApplication(processIdentifier: pid) {
-                    _ = app.terminate()
-                } else {
-                    // Not an NSRunningApplication, use SIGTERM
-                    kill(pid, SIGTERM)
-                }
-            }
-        }
     }
     
     /// Force terminate an app group (all processes)
@@ -415,8 +388,8 @@ final class ProcessService: ProcessServiceProtocol {
             }
         }
         
-        // Force terminate all child processes
-        for pid in app.allPids where pid != app.id {
+        // Force terminate all safely attributed child processes
+        for pid in app.terminablePids where pid != app.id {
             if let childApp = NSRunningApplication(processIdentifier: pid) {
                 if !childApp.forceTerminate() {
                     allSucceeded = false

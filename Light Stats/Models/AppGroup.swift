@@ -13,8 +13,25 @@ import AppKit
 /// Process info parsed from top command output
 struct TopProcessInfo {
     let pid: pid_t
+    let parentPid: pid_t
     let command: String
     let memoryBytes: UInt64
+}
+
+enum ProcessAttributionSource {
+    case owningApp
+    case responsibility
+    case bundle
+    case parentProcess
+
+    var canTerminateWithApp: Bool {
+        switch self {
+        case .owningApp, .responsibility, .bundle:
+            return true
+        case .parentProcess:
+            return false
+        }
+    }
 }
 
 // MARK: - Process Bundle Info
@@ -62,12 +79,16 @@ struct ProcessBundleInfo {
 
 /// Represents a merged application group (main process + child processes)
 struct AppGroup: Identifiable {
+    static let backgroundGroupId: pid_t = -1
+
     let id: pid_t  // Main process PID
     let name: String
     let icon: NSImage
     let totalMemoryBytes: UInt64
     let processCount: Int
-    let allPids: [pid_t]  // All process PIDs (for termination)
+    let allPids: [pid_t]  // All attributed process PIDs (for display)
+    let terminablePids: [pid_t]  // PIDs safe to terminate with the owning app
+    let isTerminable: Bool
     let bundleIdentifier: String?
     let bundlePath: String?       // .app bundle 路径
     let execPath: String?         // 可执行文件路径
