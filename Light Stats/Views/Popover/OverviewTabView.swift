@@ -77,9 +77,11 @@ struct OverviewTabView: View {
                             .minimumScaleFactor(0.7)
                     }
                 }
-                
-                // Battery Card: 电量 + 状态 + 剩余时间 + 循环/健康/功耗/温度
-                BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit)
+
+                // Battery Card: 电量 + 状态 + 剩余时间 + 循环/健康/功耗/温度（无电池则不显示）
+                if monitor.battery.state != .noBattery {
+                    BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit)
+                }
 
                 // Status Strip
                 BentoCard(padding: 10) {
