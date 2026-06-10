@@ -40,6 +40,7 @@ protocol SettingsManaging: ObservableObject {
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
     var exitNodeDetectionEnabled: Bool { get set }
     var exitNodeProvider: ExitNodeProvider { get set }
+    var appearancePreset: AppearancePreset { get set }
 }
 
 @MainActor
@@ -106,6 +107,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
                 LocalizationManager.shared.setLanguage(appLanguage)
             }
         }
+    }
+
+    @Published var appearancePreset: AppearancePreset {
+        didSet { save(appearancePreset.rawValue, for: .appearancePreset) }
     }
 
     // MARK: - Network / Exit Node Settings
@@ -237,6 +242,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case aiMonitorClaude = "settings.aiMonitorClaude"
         case aiMonitorCodex = "settings.aiMonitorCodex"
         case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
+        case appearancePreset = "settings.appearancePreset"
     }
     
     // MARK: - Init
@@ -280,6 +286,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
         let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m5.rawValue
         aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m5
+
+        let presetStr = defaults.string(forKey: Key.appearancePreset.rawValue) ?? AppearancePreset.classic.rawValue
+        appearancePreset = AppearancePreset(rawValue: presetStr) ?? .classic
     }
     
     // MARK: - Validation

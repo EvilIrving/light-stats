@@ -1,10 +1,3 @@
-//
-//  SettingsView.swift
-//  Light Stats
-//
-//  Created on 2024/12/24.
-//
-
 import SwiftUI
 
 struct SettingsView: View {
@@ -12,10 +5,34 @@ struct SettingsView: View {
     @ObservedObject private var localization = LocalizationManager.shared
     @State private var showMinimumItemAlert = false
     @State private var showExitPrivacyAlert = false
-    
+
+    @Environment(\.appTheme) private var theme
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
+                // Appearance Preset Card
+                BentoCard(title: "settings.appearance".localized, icon: "paintpalette") {
+                    VStack(spacing: 12) {
+                        Picker("", selection: $settings.appearancePreset) {
+                            ForEach(AppearancePreset.allCases, id: \.self) { preset in
+                                HStack(spacing: 6) {
+                                    presetIcon(preset)
+                                    Text(preset.displayName)
+                                }
+                                .tag(preset)
+                            }
+                        }
+                        .pickerStyle(.radioGroup)
+                        .labelsHidden()
+
+                        Text(presetDescription(settings.appearancePreset))
+                            .font(.system(size: 10, design: theme.fontDesign))
+                            .foregroundColor(theme.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
                 // Status Bar Items Card
                 BentoCard(title: "settings.statusBar".localized, icon: "menubar.rectangle") {
                     LazyVGrid(columns: [
@@ -35,7 +52,7 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                
+
                 // Language Card
                 BentoCard(title: "settings.language".localized, icon: "globe") {
                     Picker("", selection: $settings.appLanguage) {
@@ -46,7 +63,7 @@ struct SettingsView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
-                
+
                 // Refresh Rate Card
                 BentoCard(title: "settings.refreshRate".localized, icon: "timer") {
                     Picker("", selection: $settings.refreshRate) {
@@ -57,7 +74,7 @@ struct SettingsView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
-                
+
                 // AI Usage Card
                 BentoCard(title: "settings.aiUsage".localized, icon: "sparkles") {
                     VStack(spacing: 12) {
@@ -67,36 +84,27 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                             Spacer()
                             Toggle("", isOn: $settings.aiMonitorClaudeEnabled)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                                .toggleStyle(.switch).controlSize(.small).labelsHidden()
                         }
-
                         HStack {
                             Text("aiUsage.codex".localized)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
                             Toggle("", isOn: $settings.aiMonitorCodexEnabled)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                                .toggleStyle(.switch).controlSize(.small).labelsHidden()
                         }
-
                         if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
                             HStack {
                                 Text("settings.aiUsageInterval".localized)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 12)).foregroundColor(.secondary)
                                 Spacer()
                                 Picker("", selection: $settings.aiUsageRefreshInterval) {
                                     ForEach(SettingsManager.AIRefreshInterval.allCases, id: \.self) { interval in
                                         Text(interval.displayName).tag(interval)
                                     }
                                 }
-                                .pickerStyle(.segmented)
-                                .labelsHidden()
-                                .fixedSize()
+                                .pickerStyle(.segmented).labelsHidden().fixedSize()
                             }
                         }
                     }
@@ -107,30 +115,25 @@ struct SettingsView: View {
                     VStack(spacing: 16) {
                         HStack {
                             Text("settings.temperatureUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12)).foregroundColor(.secondary)
                             Spacer()
                             Picker("", selection: $settings.temperatureUnit) {
                                 ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
                                     Text(unit.displayName).tag(unit)
                                 }
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
+                            .pickerStyle(.segmented).labelsHidden()
                         }
-                        
                         HStack {
                             Text("settings.networkSpeedUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 12)).foregroundColor(.secondary)
                             Spacer()
                             Picker("", selection: $settings.networkSpeedUnit) {
                                 ForEach(SettingsManager.NetworkSpeedUnit.allCases, id: \.self) { unit in
                                     Text(unit.displayName).tag(unit)
                                 }
                             }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
+                            .pickerStyle(.segmented).labelsHidden()
                         }
                     }
                 }
@@ -141,38 +144,28 @@ struct SettingsView: View {
                         Toggle(isOn: Binding(
                             get: { settings.exitNodeDetectionEnabled },
                             set: { newValue in
-                                // 开启前先弹隐私说明；关闭直接生效。
-                                if newValue {
-                                    showExitPrivacyAlert = true
-                                } else {
-                                    settings.exitNodeDetectionEnabled = false
-                                }
+                                if newValue { showExitPrivacyAlert = true }
+                                else { settings.exitNodeDetectionEnabled = false }
                             }
                         )) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("settings.exitNode.toggle".localized)
-                                    .font(.system(size: 12))
+                                Text("settings.exitNode.toggle".localized).font(.system(size: 12))
                                 Text("settings.exitNode.toggleHint".localized)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 10)).foregroundColor(.secondary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
-
                         if settings.exitNodeDetectionEnabled {
                             HStack {
                                 Text("settings.exitNode.provider".localized)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
+                                    .font(.system(size: 12)).foregroundColor(.secondary)
                                 Spacer()
                                 Picker("", selection: $settings.exitNodeProvider) {
                                     ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
                                         Text(provider.displayName).tag(provider)
                                     }
                                 }
-                                .pickerStyle(.menu)
-                                .labelsHidden()
-                                .frame(width: 140)
+                                .pickerStyle(.menu).labelsHidden().frame(width: 140)
                             }
                         }
                     }
@@ -195,11 +188,30 @@ struct SettingsView: View {
         }
         .id(localization.currentLanguage)
     }
-    
+
     private func validateMinimumItems() {
         if !settings.hasAtLeastOneItem {
             settings.ensureAtLeastOneItem()
             showMinimumItemAlert = true
+        }
+    }
+
+    @ViewBuilder
+    private func presetIcon(_ preset: AppearancePreset) -> some View {
+        switch preset {
+        case .classic: Image(systemName: "square.grid.2x2").font(.system(size: 12))
+        case .compact: Image(systemName: "rectangle.compress.vertical").font(.system(size: 12))
+        case .terminal: Image(systemName: "apple.terminal").font(.system(size: 12))
+        case .glass: Image(systemName: "circle.lefthalf.filled.righthalf.striped.horizontal").font(.system(size: 12))
+        }
+    }
+
+    private func presetDescription(_ preset: AppearancePreset) -> String {
+        switch preset {
+        case .classic: return "theme.classic.desc".localized
+        case .compact: return "theme.compact.desc".localized
+        case .terminal: return "theme.terminal.desc".localized
+        case .glass: return "theme.glass.desc".localized
         }
     }
 }
@@ -211,7 +223,7 @@ struct SettingsGridItem: View {
     @Binding var isOn: Bool
     let icon: String
     let onChange: () -> Void
-    
+
     var body: some View {
         Button {
             isOn.toggle()
@@ -221,7 +233,7 @@ struct SettingsGridItem: View {
                 Image(systemName: icon)
                     .font(.system(size: 18))
                     .foregroundColor(isOn ? .blue : .secondary)
-                
+
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(isOn ? .primary : .secondary)
@@ -240,7 +252,7 @@ struct SettingsGridItem: View {
         .buttonStyle(.plain)
     }
 }
-    
+
 #if DEBUG
 #Preview {
     SettingsView()

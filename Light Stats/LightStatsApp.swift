@@ -1,19 +1,14 @@
-//
-//  LightStatsApp.swift
-//  Light Stats
-//
-//  Created by Cain on 2025/12/24.
-//
-
 import SwiftUI
 
 @main
 struct LightStatsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+    @ObservedObject private var settings = SettingsManager.shared
+
     var body: some Scene {
         Settings {
             SettingsView()
+                .environment(\.appTheme, settings.appearancePreset.theme)
         }
     }
 }

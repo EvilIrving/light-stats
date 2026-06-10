@@ -1,17 +1,7 @@
-//
-//  AppDelegate.swift
-//  Light Stats
-//
-//  Created on 2024/12/24.
-//
-
 import AppKit
 import SwiftUI
 import Combine
 
-/// 无标题栏的浮动面板默认 `canBecomeKey` 返回 false，导致 `makeKeyAndOrderFront`
-/// 无法设为 key window（控制台报 makeKeyWindow 警告），且配合 `hidesOnDeactivate`
-/// 会在激活时立刻被隐藏。重写这两个属性以允许面板成为 key/main window。
 final class KeyablePanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -25,11 +15,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
     private var statusBarView: StatusBarView?
-    
+
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let appMemoryManager: AppMemoryManager
-    
+
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared
@@ -41,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupPanel()
         startMonitoring()
+        observePresetChanges()
 
         NotificationCenter.default.addObserver(
             self,
@@ -54,16 +45,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showAbout()
     }
 
+    // MARK: - Preset Change Observation
+
+    private func observePresetChanges() {
+        settings.$appearancePreset
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] preset in
+                self?.handlePresetChanged(preset)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handlePresetChanged(_ preset: AppearancePreset) {
+        let layout = preset.layout
+        let theme = preset.theme
+
+        // Force dark appearance for terminal
+        if theme.forceDarkAppearance {
+            panel?.appearance = NSAppearance(named: .darkAqua)
+        } else {
+            panel?.appearance = nil
+        }
+
+        // Resize panel
+        if let panel = panel {
+            let newSize = layout.popoverSize
+            var frame = panel.frame
+            let oldSize = frame.size
+            frame.origin.x += (oldSize.width - newSize.width) / 2
+            frame.origin.y += (oldSize.height - newSize.height) / 2
+            frame.size = newSize
+            panel.setFrame(frame, display: true, animate: true)
+        }
+
+        // Rebuild status bar item with new width
+        let newWidth = StatusBarView.calculateWidth(settings: settings)
+        statusItem?.length = newWidth
+        statusBarView?.frame.size.width = newWidth
+        statusBarView?.needsDisplay = true
+    }
+
     // MARK: - Status Item Setup
 
     private func setupStatusItem() {
-        // Calculate initial width based on enabled items
         let initialWidth = StatusBarView.calculateWidth(settings: settings)
 
         statusItem = NSStatusBar.system.statusItem(withLength: initialWidth)
 
         if let button = statusItem?.button {
-            // Create custom status bar view
             let view = StatusBarView(frame: NSRect(x: 0, y: 0, width: initialWidth, height: 22))
             statusBarView = view
             button.addSubview(view)
@@ -78,8 +108,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Panel Setup
 
     private func setupPanel() {
+        let layout = settings.appearancePreset.layout
+        let size = layout.popoverSize
+
         let panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: size.width, height: size.height),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -92,17 +125,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
+
+        // Terminal theme forces dark appearance
+        if settings.appearancePreset.theme.forceDarkAppearance {
+            panel.appearance = NSAppearance(named: .darkAqua)
+        }
+
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.contentViewController = NSHostingController(
-            rootView: PopoverContentView()
-                .environmentObject(monitor)
-                .environmentObject(AIUsageMonitor.shared)
-        )
 
-        // 面板因 hidesOnDeactivate 自动隐藏时不会经过 togglePanel/closePanel，
-        // 监听 resignKey 兜底同步可见状态，确保关闭后停止采集进程榜。
+        let contentView = PopoverContentView()
+            .environmentObject(monitor)
+            .environmentObject(AIUsageMonitor.shared)
+            .environment(\.appTheme, settings.appearancePreset.theme)
+
+        panel.contentViewController = NSHostingController(rootView: contentView)
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handlePanelDidResignKey),
@@ -125,20 +164,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
         appMemoryManager.startMonitoring()
-        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
-            AIUsageMonitor.shared.start()
-        }
+        AIUsageMonitor.shared.start()
 
-        // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
-            .dropFirst()  // 跳过初始值
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak monitor = self.monitor] newRate in
                 monitor?.startMonitoring(interval: newRate.interval)
             }
             .store(in: &cancellables)
 
-        // Update status bar text when values change
         Publishers.CombineLatest4(
             monitor.$cpuUsage,
             monitor.$gpuUsage,
@@ -179,7 +214,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         download: Double,
         fan: Int?
     ) {
-        // Update status bar view（电池随每周期刷新，直接从 monitor 取最新值）
         statusBarView?.updateValues(
             cpu: cpu,
             gpu: gpu,
@@ -193,7 +227,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings: settings
         )
 
-        // Update status item width
         let newWidth = StatusBarView.calculateWidth(settings: settings)
         statusItem?.length = newWidth
         statusBarView?.frame.size.width = newWidth
@@ -226,8 +259,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.titleVisibility = .hidden
         window.isReleasedWhenClosed = false
         window.center()
+
+        let theme = settings.appearancePreset.theme
+        if theme.forceDarkAppearance {
+            window.appearance = NSAppearance(named: .darkAqua)
+        }
+
         window.contentViewController = NSHostingController(
             rootView: AboutView()
+                .environment(\.appTheme, theme)
         )
 
         aboutWindow = window
@@ -249,6 +289,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let buttonRectInWindow = button.convert(button.bounds, to: nil)
         let buttonRectOnScreen = buttonWindow.convertToScreen(buttonRectInWindow)
+
+        let preset = settings.appearancePreset
+
+        // Force dark appearance for terminal
+        if preset.theme.forceDarkAppearance {
+            panel.appearance = NSAppearance(named: .darkAqua)
+        } else {
+            panel.appearance = nil
+        }
+
+        // Update content view with current theme before showing
+        let contentView = PopoverContentView()
+            .environmentObject(monitor)
+            .environmentObject(AIUsageMonitor.shared)
+            .environment(\.appTheme, preset.theme)
+        panel.contentViewController = NSHostingController(rootView: contentView)
+
+        // Ensure panel size matches current preset
+        let layoutSize = preset.layout.popoverSize
+        if panel.frame.size != layoutSize {
+            var frame = panel.frame
+            let oldSize = frame.size
+            frame.origin.x += (oldSize.width - layoutSize.width) / 2
+            frame.origin.y += (oldSize.height - layoutSize.height) / 2
+            frame.size = layoutSize
+            panel.setFrame(frame, display: false)
+        }
 
         let panelSize = panel.frame.size
         let panelOrigin = NSPoint(

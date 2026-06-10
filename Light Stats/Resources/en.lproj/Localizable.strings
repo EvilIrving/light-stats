@@ -127,3 +127,14 @@
 "aiUsage.tokenExpired" = "Token expired — run %@ once to refresh";
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";
+
+// MARK: - Theme / Appearance
+"settings.appearance" = "Appearance";
+"theme.classic" = "Classic";
+"theme.compact" = "Compact";
+"theme.terminal" = "Terminal";
+"theme.glass" = "Glass";
+"theme.classic.desc" = "Bento cards, top tab bar, stacked status bar. The original layout.";
+"theme.compact.desc" = "2-column micro-tiles, icon nav, compact status bar. Dense and quick to scan.";
+"theme.terminal.desc" = "Dark green-on-black, monospace rows, command-line aesthetic.";
+"theme.glass.desc" = "Translucent glass cards, floating segment, spacious and elegant.";

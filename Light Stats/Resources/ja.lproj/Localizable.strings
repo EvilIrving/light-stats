@@ -127,3 +127,14 @@
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
+
+// MARK: - Theme / Appearance
+"settings.appearance" = "外観";
+"theme.classic" = "クラシック";
+"theme.compact" = "コンパクト";
+"theme.terminal" = "ターミナル";
+"theme.glass" = "ガラス";
+"theme.classic.desc" = "Bentoカード、上部タブバー、スタックステータスバー。オリジナルレイアウト。";
+"theme.compact.desc" = "2列マイクロタイル、アイコンナビ、コンパクトステータスバー。高密度で素早く確認。";
+"theme.terminal.desc" = "黒背景に緑文字、等幅フォント、コマンドライン美学。";
+"theme.glass.desc" = "半透明ガラスカード、フローティングセグメント、広々としたエレガントなデザイン。";

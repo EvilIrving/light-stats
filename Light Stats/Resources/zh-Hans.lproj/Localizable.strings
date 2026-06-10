@@ -127,3 +127,14 @@
 "aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";
+
+// MARK: - Theme / Appearance
+"settings.appearance" = "外观";
+"theme.classic" = "经典";
+"theme.compact" = "紧凑";
+"theme.terminal" = "终端";
+"theme.glass" = "毛玻璃";
+"theme.classic.desc" = "Bento 卡片、顶部标签栏、堆叠状态栏。原版布局。";
+"theme.compact.desc" = "2 列微型磁贴、图标导航、紧凑状态栏。信息密集，快速扫读。";
+"theme.terminal.desc" = "黑底绿字、等宽字体、命令行美学。";
+"theme.glass.desc" = "半透明毛玻璃卡片、悬浮分段、通透优雅。";

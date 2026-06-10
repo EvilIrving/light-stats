@@ -12,6 +12,7 @@ struct ChildProcessRowView: View {
     let command: String
     let memoryBytes: UInt64
     let indentation: CGFloat
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         HStack(spacing: 8) {
@@ -20,8 +21,8 @@ struct ChildProcessRowView: View {
 
             // 子进程名称
             Text(command)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .font(.system(size: 12, design: theme.fontDesign))
+                .foregroundColor(theme.secondaryText)
                 .lineLimit(1)
                 .help(command)
 
@@ -29,8 +30,8 @@ struct ChildProcessRowView: View {
 
             // 内存
             Text(memoryFormatted)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.8))
+                .font(.system(size: 11, design: theme.fontDesign))
+                .foregroundColor(theme.secondaryText.opacity(0.8))
         }
         .padding(.leading, 8)
         .padding(.vertical, 6)

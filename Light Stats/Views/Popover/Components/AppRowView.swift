@@ -15,6 +15,7 @@ struct AppCardView: View {
     var isTerminating: Bool = false
     let appManager: AppMemoryManager
     let onClose: () -> Void
+    @Environment(\.appTheme) private var theme
 
     @State private var isHovered = false
     @State private var isExpanded = false
@@ -115,7 +116,7 @@ struct AppCardView: View {
         }) {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundColor(theme.secondaryText)
                 .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
                 .contentShape(Rectangle())
         }

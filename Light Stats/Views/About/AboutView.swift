@@ -3,6 +3,7 @@ import AppKit
 
 struct AboutView: View {
     @ObservedObject private var localization = LocalizationManager.shared
+    @Environment(\.appTheme) private var theme
 
     private let appName: String = {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -83,7 +84,7 @@ struct AboutView: View {
             Spacer().frame(height: 28)
         }
         .frame(width: 280)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(theme.background)
         .id(localization.currentLanguage)
     }
 
