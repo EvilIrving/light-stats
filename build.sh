@@ -124,6 +124,9 @@ hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_DIR" -ov -format UDRW "$DMG
 
 MOUNT_DIR="$(mktemp -d "/tmp/${APP_NAME// /_}.XXXXXX")"
 hdiutil attach "$DMG_RW_FILE" -mountpoint "$MOUNT_DIR" -nobrowse -quiet
+
+# Try to configure DMG appearance; fail gracefully in CI environments
+set +e
 osascript <<EOF
 tell application "Finder"
   tell disk "$APP_NAME"
@@ -145,6 +148,8 @@ tell application "Finder"
   end tell
 end tell
 EOF
+set -e
+
 hdiutil detach "$MOUNT_DIR" -quiet
 rmdir "$MOUNT_DIR"
 hdiutil convert "$DMG_RW_FILE" -format UDZO -imagekey zlib-level=9 -o "$DMG_FILE" -quiet
