@@ -134,9 +134,9 @@ private struct WindowRow: View {
     }
 
     private func colorForRemaining(_ remaining: Double) -> Color {
-        if remaining > 50 {
+        if remaining > 25 {
             return .green
-        } else if remaining > 20 {
+        } else if remaining > 10 {
             return .yellow
         } else {
             return .red
