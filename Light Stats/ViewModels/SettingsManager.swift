@@ -87,6 +87,18 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(networkSpeedUnit.rawValue, for: .networkSpeedUnit) }
     }
     
+    // MARK: - AI Usage Settings
+
+    @Published var aiMonitorClaudeEnabled: Bool {
+        didSet { save(aiMonitorClaudeEnabled, for: .aiMonitorClaude) }
+    }
+    @Published var aiMonitorCodexEnabled: Bool {
+        didSet { save(aiMonitorCodexEnabled, for: .aiMonitorCodex) }
+    }
+    @Published var aiUsageRefreshInterval: AIRefreshInterval {
+        didSet { save(aiUsageRefreshInterval.rawValue, for: .aiUsageRefreshInterval) }
+    }
+
     @Published var appLanguage: AppLanguage {
         didSet {
             save(appLanguage.rawValue, for: .appLanguage)
@@ -157,6 +169,28 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
     
+    enum AIRefreshInterval: String, CaseIterable {
+        case m1 = "m1"
+        case m5 = "m5"
+        case m15 = "m15"
+
+        var interval: TimeInterval {
+            switch self {
+            case .m1: return 60
+            case .m5: return 300
+            case .m15: return 900
+            }
+        }
+
+        var displayName: String {
+            switch self {
+            case .m1: return "1 min"
+            case .m5: return "5 min"
+            case .m15: return "15 min"
+            }
+        }
+    }
+
     enum NetworkSpeedUnit: String, CaseIterable {
         case auto = "auto"
         case kbps = "kbps"
@@ -200,6 +234,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case appLanguage = "settings.appLanguage"
         case exitNodeDetectionEnabled = "settings.exitNodeDetectionEnabled"
         case exitNodeProvider = "settings.exitNodeProvider"
+        case aiMonitorClaude = "settings.aiMonitorClaude"
+        case aiMonitorCodex = "settings.aiMonitorCodex"
+        case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
     }
     
     // MARK: - Init
@@ -237,6 +274,12 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         exitNodeDetectionEnabled = defaults.object(forKey: Key.exitNodeDetectionEnabled.rawValue) as? Bool ?? false
         let providerStr = defaults.string(forKey: Key.exitNodeProvider.rawValue) ?? ExitNodeProvider.ipsb.rawValue
         exitNodeProvider = ExitNodeProvider(rawValue: providerStr) ?? .ipsb
+
+        // AI usage monitoring - opt-in, default off
+        aiMonitorClaudeEnabled = defaults.object(forKey: Key.aiMonitorClaude.rawValue) as? Bool ?? false
+        aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
+        let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m5.rawValue
+        aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m5
     }
     
     // MARK: - Validation

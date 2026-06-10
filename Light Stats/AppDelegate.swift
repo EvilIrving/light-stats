@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentViewController = NSHostingController(
             rootView: PopoverContentView()
                 .environmentObject(monitor)
+                .environmentObject(AIUsageMonitor.shared)
         )
 
         // 面板因 hidesOnDeactivate 自动隐藏时不会经过 togglePanel/closePanel，
@@ -123,6 +124,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
+        appMemoryManager.startMonitoring()
+        AIUsageMonitor.shared.start()
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
@@ -252,6 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         panel.setFrameOrigin(panelOrigin)
+        AIUsageMonitor.shared.refreshIfStale()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         monitor.setPopoverVisible(true)
@@ -260,5 +264,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
+        AIUsageMonitor.shared.stop()
     }
 }

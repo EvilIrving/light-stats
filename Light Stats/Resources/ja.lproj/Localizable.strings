@@ -117,3 +117,13 @@
 "settings.exitNode.privacyMessage" = "有効にすると、Light Stats は選択したサービスにリクエストを送信し、公開IPとその所在地を照会します。この機能がオンの間のみ実行されます。続行しますか？";
 "settings.exitNode.enable" = "有効化";
 "settings.exitNode.cancel" = "キャンセル";
+
+// MARK: - AI Usage
+"settings.aiUsage" = "AI 使用量";
+"settings.aiUsageInterval" = "更新間隔";
+"aiUsage.claude" = "Claude Code";
+"aiUsage.codex" = "Codex";
+"aiUsage.updatedAgo" = "%@前に更新";
+"aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
+"aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
+"aiUsage.fetchFailed" = "使用量の取得に失敗しました";

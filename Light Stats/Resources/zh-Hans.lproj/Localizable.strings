@@ -117,3 +117,13 @@
 "settings.exitNode.privacyMessage" = "开启后，Light Stats 会向所选服务发送请求以查询你的公网 IP 及归属地。仅在该功能开启时发生。是否继续？";
 "settings.exitNode.enable" = "开启";
 "settings.exitNode.cancel" = "取消";
+
+// MARK: - AI Usage
+"settings.aiUsage" = "AI 用量";
+"settings.aiUsageInterval" = "刷新间隔";
+"aiUsage.claude" = "Claude Code";
+"aiUsage.codex" = "Codex";
+"aiUsage.updatedAgo" = "%@ 前更新";
+"aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
+"aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
+"aiUsage.fetchFailed" = "用量获取失败";

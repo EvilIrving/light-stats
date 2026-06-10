@@ -9,6 +9,7 @@ import SwiftUI
 
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
+    @EnvironmentObject var aiMonitor: AIUsageMonitor
     @ObservedObject private var settings = SettingsManager.shared
 
     var body: some View {
@@ -180,6 +181,14 @@ struct OverviewTabView: View {
                     }
                 }
                 
+                // AI Usage Cards (hidden entirely when toggled off in settings)
+                if settings.aiMonitorClaudeEnabled {
+                    AIUsageCard(provider: .claude, state: aiMonitor.claudeState)
+                }
+                if settings.aiMonitorCodexEnabled {
+                    AIUsageCard(provider: .codex, state: aiMonitor.codexState)
+                }
+
                 // Top Processes Section
                 BentoCard(title: "overview.processes".localized, icon: "list.bullet") {
                     if monitor.topCPUProcesses.isEmpty {

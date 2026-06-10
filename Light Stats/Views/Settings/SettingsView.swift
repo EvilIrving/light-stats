@@ -58,6 +58,50 @@ struct SettingsView: View {
                     .labelsHidden()
                 }
                 
+                // AI Usage Card
+                BentoCard(title: "settings.aiUsage".localized, icon: "sparkles") {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("aiUsage.claude".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Toggle("", isOn: $settings.aiMonitorClaudeEnabled)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
+                        }
+
+                        HStack {
+                            Text("aiUsage.codex".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Toggle("", isOn: $settings.aiMonitorCodexEnabled)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
+                        }
+
+                        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
+                            HStack {
+                                Text("settings.aiUsageInterval".localized)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Picker("", selection: $settings.aiUsageRefreshInterval) {
+                                    ForEach(SettingsManager.AIRefreshInterval.allCases, id: \.self) { interval in
+                                        Text(interval.displayName).tag(interval)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .labelsHidden()
+                                .fixedSize()
+                            }
+                        }
+                    }
+                }
+
                 // Units Card
                 BentoCard(title: "settings.units".localized, icon: "ruler") {
                     VStack(spacing: 16) {
