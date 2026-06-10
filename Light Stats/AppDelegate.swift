@@ -125,7 +125,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
         appMemoryManager.startMonitoring()
-        AIUsageMonitor.shared.start()
+        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
+            AIUsageMonitor.shared.start()
+        }
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
