@@ -90,21 +90,21 @@ private struct WindowRow: View {
                 .foregroundColor(.secondary)
                 .frame(width: 22, alignment: .leading)
 
-            // Progress bar
+            // Progress bar (remaining)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
                         .fill(Color.primary.opacity(0.06))
                     Capsule()
-                        .fill(colorForUsage(window.usedPercent))
-                        .frame(width: max(4, geo.size.width * min(window.usedPercent, 100) / 100))
+                        .fill(colorForRemaining(remainingPercent))
+                        .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
                 }
             }
             .frame(height: 5)
 
-            Text(String(format: "%.0f%%", window.usedPercent))
+            Text(String(format: "%.0f%%", remainingPercent))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(colorForUsage(window.usedPercent))
+                .foregroundColor(colorForRemaining(remainingPercent))
                 .frame(width: 36, alignment: .trailing)
 
             Text(resetText)
@@ -129,10 +129,14 @@ private struct WindowRow: View {
         }
     }
 
-    private func colorForUsage(_ usage: Double) -> Color {
-        if usage < 50 {
+    private var remainingPercent: Double {
+        max(0, 100 - window.usedPercent)
+    }
+
+    private func colorForRemaining(_ remaining: Double) -> Color {
+        if remaining > 50 {
             return .green
-        } else if usage < 80 {
+        } else if remaining > 20 {
             return .yellow
         } else {
             return .red
