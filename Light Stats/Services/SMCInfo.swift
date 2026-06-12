@@ -12,8 +12,10 @@ import IOKit
 /// Based on AppleSMC.kext interface - struct size must be exactly 80 bytes
 enum SMCInfo {
 
-    // SMC connection
+    // SMC connection (persistent across reads)
     private static var conn: io_connect_t = 0
+    /// Serialises open/close/invalidate so concurrent reads cannot race connection state.
+    private static let connLock = NSLock()
 
     // Temperature cache for stability (with thread safety)
     private static let temperatureLock = NSLock()
@@ -67,10 +69,9 @@ enum SMCInfo {
         // Hold lock for entire read/compute/update. Use only _cachedTemperature/_cacheTimestamp
         // inside the block—never the cachedTemperature property—to avoid reentrant deadlock (NSLock is non-reentrant).
         return temperatureLock.withLock {
-            guard open() else {
+            guard ensureConnection() else {
                 return readCachedTemperatureIfValid()
             }
-            defer { close() }
 
             let cpuTempKeys = [
                 // Apple Silicon SOC 温度
@@ -110,8 +111,20 @@ enum SMCInfo {
                 }
             }
 
-            guard !temperatures.isEmpty else {
-                return readCachedTemperatureIfValid()
+            if temperatures.isEmpty {
+                // Possible stale connection (e.g. after sleep); reconnect and retry once.
+                invalidateConnection()
+                guard ensureConnection() else {
+                    return readCachedTemperatureIfValid()
+                }
+                for key in cpuTempKeys {
+                    if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
+                        temperatures.append(temp)
+                    }
+                }
+                guard !temperatures.isEmpty else {
+                    return readCachedTemperatureIfValid()
+                }
             }
 
             let avgTemp = temperatures.reduce(0, +) / Double(temperatures.count)
@@ -139,8 +152,7 @@ enum SMCInfo {
     }
 
     static func getFanSpeed() -> Int? {
-        guard open() else { return nil }
-        defer { close() }
+        guard ensureConnection() else { return nil }
 
         // Try to read fan count first
         var fanCount = 1
@@ -171,12 +183,45 @@ enum SMCInfo {
             }
         }
 
-        return nil
+        // Possible stale connection (e.g. after sleep); reconnect and retry once.
+        invalidateConnection()
+        guard ensureConnection() else { return nil }
+
+        fanCount = 1
+        if let countData = readKey("FNum"), !countData.isEmpty {
+            fanCount = max(Int(countData[0]), 1)
+        }
+
+        var retryMaxSpeed: Int? = nil
+        for i in 0..<min(fanCount, 4) {
+            if let speed = readFanSpeed(index: i) {
+                if retryMaxSpeed == nil || speed > retryMaxSpeed! {
+                    retryMaxSpeed = speed
+                }
+            }
+        }
+
+        if retryMaxSpeed == nil {
+            for index in 0..<4 {
+                if let speed = readFanSpeed(index: index) {
+                    return speed
+                }
+            }
+        }
+
+        return retryMaxSpeed
     }
 
-    // MARK: - SMC Connection
+    // MARK: - SMC Connection (persistent)
 
-    private static func open() -> Bool {
+    /// Ensure a usable SMC connection exists, opening a new one if needed.
+    /// This is the single entry point for all SMC reads — the connection stays
+    /// open across calls so `IOServiceOpen` (and its auth dialog) fires once,
+    /// not every sampling cycle.
+    private static func ensureConnection() -> Bool {
+        connLock.lock()
+        defer { connLock.unlock() }
+
         if conn != 0 { return true }
 
         let service = IOServiceGetMatchingService(
@@ -199,11 +244,21 @@ enum SMCInfo {
         return true
     }
 
-    private static func close() {
+    /// Close and reset the connection. Call this when an IOKit call fails
+    /// (stale handle after sleep/wake) so the next `ensureConnection()` will
+    /// open a fresh one.
+    private static func invalidateConnection() {
+        connLock.lock()
         if conn != 0 {
             IOServiceClose(conn)
             conn = 0
         }
+        connLock.unlock()
+    }
+
+    /// Gracefully tear down the SMC connection. Call at app termination.
+    static func shutdown() {
+        invalidateConnection()
     }
 
     // MARK: - Read Helpers

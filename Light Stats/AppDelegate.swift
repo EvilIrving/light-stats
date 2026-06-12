@@ -267,5 +267,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
         AIUsageMonitor.shared.stop()
+        SMCInfo.shutdown()
     }
 }

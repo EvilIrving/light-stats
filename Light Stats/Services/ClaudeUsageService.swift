@@ -89,9 +89,23 @@ enum ClaudeUsageService {
 
     // MARK: - Keychain
 
+    /// In-memory cache of the OAuth access token so we only hit the Keychain
+    /// once per process lifetime. Keychain access to another app's item
+    /// triggers a macOS authorization prompt; caching avoids repeated prompts.
+    private static var _cachedToken: String?
+    private static var _tokenFailed: Bool = false
+
     /// Reads the OAuth access token from the Claude Code CLI keychain item.
-    /// First access triggers a one-time keychain authorization prompt.
+    /// First access triggers a one-time keychain authorization prompt;
+    /// subsequent calls return the in-memory copy.
     private static func readAccessToken() -> String? {
+        if let token = _cachedToken {
+            return token
+        }
+        if _tokenFailed {
+            return nil
+        }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -107,8 +121,10 @@ enum ClaudeUsageService {
               let oauth = json["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String,
               !token.isEmpty else {
+            _tokenFailed = true
             return nil
         }
+        _cachedToken = token
         return token
     }
 }
