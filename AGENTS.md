@@ -1,5 +1,8 @@
 # AGENTS.md — Light Stats
 
+> **Keep `CLAUDE.md` and `AGENTS.md` identical.** They are mirror copies — any edit to one
+> must be applied to the other in the same change so their contents never diverge.
+
 ## Project Overview
 
 Light Stats is a native macOS menu bar system monitor. It shows CPU, GPU, memory, disk, disk I/O, network, proxy, battery, temperature, fan, process, and system health in a compact menu bar widget with a detailed floating panel.
