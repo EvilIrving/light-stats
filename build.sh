@@ -122,8 +122,14 @@ cp "$DMG_BACKGROUND" "$DMG_DIR/.background/background.png"
 rm -f "$DMG_RW_FILE" "$DMG_FILE"
 hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_DIR" -ov -format UDRW "$DMG_RW_FILE" -quiet
 
-MOUNT_DIR="$(mktemp -d "/tmp/${APP_NAME// /_}.XXXXXX")"
-hdiutil attach "$DMG_RW_FILE" -mountpoint "$MOUNT_DIR" -nobrowse -quiet
+# NOTE: do NOT pass -nobrowse here. With -nobrowse the volume mounts but Finder
+# refuses to see it, so the AppleScript below fails with -1728 and the layout /
+# background .DS_Store is never written. Let it mount under /Volumes so Finder can
+# style it.
+MOUNT_DIR="/Volumes/$APP_NAME"
+hdiutil attach "$DMG_RW_FILE" -quiet
+# Give Finder a moment to register the freshly mounted volume.
+sleep 2
 
 # Try to configure DMG appearance; fail gracefully in CI environments
 set +e
@@ -151,7 +157,6 @@ EOF
 set -e
 
 hdiutil detach "$MOUNT_DIR" -quiet
-rmdir "$MOUNT_DIR"
 hdiutil convert "$DMG_RW_FILE" -format UDZO -imagekey zlib-level=9 -o "$DMG_FILE" -quiet
 rm -rf "$DMG_DIR"
 rm -f "$DMG_RW_FILE"
