@@ -491,6 +491,7 @@ private struct HealthCard: View {
             (.memory, "health.dimension.memory".localized),
             (.load, "health.dimension.load".localized),
             (.temperature, "health.dimension.temperature".localized),
+            (.gpu, "health.dimension.gpu".localized),
             (.battery, "health.dimension.battery".localized),
             (.diskIO, "health.dimension.diskIO".localized)
         ]

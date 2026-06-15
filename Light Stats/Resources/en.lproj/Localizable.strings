@@ -19,6 +19,9 @@
 "settings.fan" = "Fan";
 "settings.battery" = "Battery";
 "settings.health" = "Health";
+"settings.healthDimensions" = "Health Score Dimensions";
+"settings.healthDimensions.hint" = "Choose which metrics count toward the health score.";
+"settings.healthDimensions.power" = "Power";
 "settings.refreshRate" = "Refresh Rate";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
@@ -75,6 +78,7 @@
 "health.dimension.load" = "Load";
 "health.dimension.temperature" = "Temp";
 "health.dimension.battery" = "Battery";
+"health.dimension.gpu" = "GPU";
 "health.dimension.diskIO" = "I/O";
 "health.level.low" = "Low";
 "health.level.medium" = "Medium";

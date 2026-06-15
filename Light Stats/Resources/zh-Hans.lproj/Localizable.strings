@@ -19,6 +19,9 @@
 "settings.fan" = "风扇";
 "settings.battery" = "电池";
 "settings.health" = "健康分";
+"settings.healthDimensions" = "健康分维度";
+"settings.healthDimensions.hint" = "选择哪些指标参与健康分计算。";
+"settings.healthDimensions.power" = "电源";
 "settings.refreshRate" = "刷新频率";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
@@ -75,6 +78,7 @@
 "health.dimension.load" = "负载";
 "health.dimension.temperature" = "温度";
 "health.dimension.battery" = "电池";
+"health.dimension.gpu" = "GPU";
 "health.dimension.diskIO" = "I/O";
 "health.level.low" = "低";
 "health.level.medium" = "中";

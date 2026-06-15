@@ -268,6 +268,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func togglePanel() {
         guard let panel = panel, let button = statusItem?.button else { return }
 
+#if DEBUG
+        // 按住 ⌥ Option 点击图标：导出面板完整内容截图到 /tmp，不打开面板。
+        if NSEvent.modifierFlags.contains(.option) {
+            DebugSnapshot.dumpPanel()
+            return
+        }
+#endif
+
         if panel.isVisible {
             dismissPanel()
             return

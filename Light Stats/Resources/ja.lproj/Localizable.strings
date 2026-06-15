@@ -19,6 +19,9 @@
 "settings.fan" = "ファン";
 "settings.battery" = "バッテリー";
 "settings.health" = "健康度";
+"settings.healthDimensions" = "健康度の評価項目";
+"settings.healthDimensions.hint" = "健康度の計算に含める指標を選択します。";
+"settings.healthDimensions.power" = "電源";
 "settings.refreshRate" = "更新頻度";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
@@ -75,6 +78,7 @@
 "health.dimension.load" = "負荷";
 "health.dimension.temperature" = "温度";
 "health.dimension.battery" = "バッテリー";
+"health.dimension.gpu" = "GPU";
 "health.dimension.diskIO" = "I/O";
 "health.level.low" = "低";
 "health.level.medium" = "中";

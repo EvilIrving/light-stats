@@ -40,6 +40,17 @@ struct PopoverContentView: View {
 
                 // Icons: Settings, About, Quit
                 HStack(spacing: 4) {
+#if DEBUG
+                    Image(systemName: "camera.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(hoveredIcon == "snapshot" ? .secondary : .secondary.opacity(0.5))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("导出完整面板截图到 docs/screenshots（DEBUG）")
+                        .onHover { hoveredIcon = $0 ? "snapshot" : nil }
+                        .onTapGesture { DebugSnapshot.dumpPanel() }
+#endif
+
                     Image(systemName: "gear.circle.fill")
                         .font(.system(size: 16))
                         .foregroundColor(hoveredIcon == "settings" ? .secondary : .secondary.opacity(0.5))

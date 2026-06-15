@@ -35,6 +35,12 @@ protocol SettingsManaging: ObservableObject {
     var showFan: Bool { get set }
     var showBattery: Bool { get set }
     var showHealth: Bool { get set }
+    var healthIncludeCPU: Bool { get set }
+    var healthIncludeMemory: Bool { get set }
+    var healthIncludeLoad: Bool { get set }
+    var healthIncludeTemperature: Bool { get set }
+    var healthIncludeGPU: Bool { get set }
+    var healthIncludePower: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
@@ -73,6 +79,40 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     @Published var showHealth: Bool {
         didSet { save(showHealth, for: .showHealth) }
+    }
+
+    // MARK: - Health Score Dimensions
+    // 哪些维度参与健康分计算（逐项开关）。关闭的维度权重自动重分配到其余维度。
+
+    @Published var healthIncludeCPU: Bool {
+        didSet { save(healthIncludeCPU, for: .healthIncludeCPU) }
+    }
+    @Published var healthIncludeMemory: Bool {
+        didSet { save(healthIncludeMemory, for: .healthIncludeMemory) }
+    }
+    @Published var healthIncludeLoad: Bool {
+        didSet { save(healthIncludeLoad, for: .healthIncludeLoad) }
+    }
+    @Published var healthIncludeTemperature: Bool {
+        didSet { save(healthIncludeTemperature, for: .healthIncludeTemperature) }
+    }
+    @Published var healthIncludeGPU: Bool {
+        didSet { save(healthIncludeGPU, for: .healthIncludeGPU) }
+    }
+    @Published var healthIncludePower: Bool {
+        didSet { save(healthIncludePower, for: .healthIncludePower) }
+    }
+
+    /// 组装供 `HealthScoreService.compute` 使用的维度开关。
+    var healthDimensionToggles: HealthScoreService.DimensionToggles {
+        HealthScoreService.DimensionToggles(
+            cpu: healthIncludeCPU,
+            memory: healthIncludeMemory,
+            load: healthIncludeLoad,
+            temperature: healthIncludeTemperature,
+            gpu: healthIncludeGPU,
+            power: healthIncludePower
+        )
     }
 
     // MARK: - Other Settings
@@ -228,6 +268,12 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showFan = "settings.showFan"
         case showBattery = "settings.showBattery"
         case showHealth = "settings.showHealth"
+        case healthIncludeCPU = "settings.healthIncludeCPU"
+        case healthIncludeMemory = "settings.healthIncludeMemory"
+        case healthIncludeLoad = "settings.healthIncludeLoad"
+        case healthIncludeTemperature = "settings.healthIncludeTemperature"
+        case healthIncludeGPU = "settings.healthIncludeGPU"
+        case healthIncludePower = "settings.healthIncludePower"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
@@ -256,6 +302,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         showBattery = defaults.object(forKey: Key.showBattery.rawValue) as? Bool ?? false
         // 健康分：总门面默认关闭，避免改变现有菜单栏宽度。
         showHealth = defaults.object(forKey: Key.showHealth.rawValue) as? Bool ?? false
+
+        // 健康分维度：默认全部参与计算（含 GPU）。
+        healthIncludeCPU = defaults.object(forKey: Key.healthIncludeCPU.rawValue) as? Bool ?? true
+        healthIncludeMemory = defaults.object(forKey: Key.healthIncludeMemory.rawValue) as? Bool ?? true
+        healthIncludeLoad = defaults.object(forKey: Key.healthIncludeLoad.rawValue) as? Bool ?? true
+        healthIncludeTemperature = defaults.object(forKey: Key.healthIncludeTemperature.rawValue) as? Bool ?? true
+        healthIncludeGPU = defaults.object(forKey: Key.healthIncludeGPU.rawValue) as? Bool ?? true
+        healthIncludePower = defaults.object(forKey: Key.healthIncludePower.rawValue) as? Bool ?? true
         
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue

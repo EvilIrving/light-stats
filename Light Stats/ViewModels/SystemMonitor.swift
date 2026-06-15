@@ -70,7 +70,8 @@ private actor MonitorSampler {
                  collectTopProcesses: Bool,
                  exitDetectionEnabled: Bool,
                  exitProvider: ExitNodeProvider,
-                 exitCacheTTL: TimeInterval) async -> SystemSnapshot {
+                 exitCacheTTL: TimeInterval,
+                 healthToggles: HealthScoreService.DimensionToggles) async -> SystemSnapshot {
         let cpuInfo = await getCPUInfo()
         let networkInfo = await getNetworkInfo()
 
@@ -115,9 +116,12 @@ private actor MonitorSampler {
             load1: loadAverage.load1,
             coreCount: coreTopology.totalCores,
             temp: cpuTemperature,
+            thermalState: ProcessInfo.processInfo.thermalState,
+            gpu: gpuUsage,
             batteryState: battery.state,
             batteryPercent: battery.percent,
-            diskIO: diskIO.readMBs + diskIO.writeMBs
+            diskIO: diskIO.readMBs + diskIO.writeMBs,
+            toggles: healthToggles
         )
         let health = HealthScoreService.smooth(current: rawHealth, previous: previousHealth)
         previousHealth = health
@@ -278,7 +282,8 @@ final class SystemMonitor: ObservableObject {
                     collectTopProcesses: collectTopProcesses,
                     exitDetectionEnabled: settings.exitNodeDetectionEnabled,
                     exitProvider: settings.exitNodeProvider,
-                    exitCacheTTL: AppConfig.exitNodeCacheTTL
+                    exitCacheTTL: AppConfig.exitNodeCacheTTL,
+                    healthToggles: settings.healthDimensionToggles
                 )
                 guard !Task.isCancelled else { break }
                 self.applySnapshot(snapshot)

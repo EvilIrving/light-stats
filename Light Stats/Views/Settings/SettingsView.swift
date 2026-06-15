@@ -54,6 +54,47 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
                 
+                // Health Score Dimensions Card — 哪些维度参与健康分计算
+                BentoCard(title: "settings.healthDimensions".localized, icon: "heart.text.square") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("settings.healthDimensions.hint".localized)
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 12) {
+                            SettingsGridItem(
+                                title: "health.dimension.cpu".localized,
+                                isOn: $settings.healthIncludeCPU, icon: "cpu"
+                            ) {}
+                            SettingsGridItem(
+                                title: "health.dimension.memory".localized,
+                                isOn: $settings.healthIncludeMemory, icon: "memorychip"
+                            ) {}
+                            SettingsGridItem(
+                                title: "health.dimension.load".localized,
+                                isOn: $settings.healthIncludeLoad, icon: "gauge.with.dots.needle.50percent"
+                            ) {}
+                            SettingsGridItem(
+                                title: "health.dimension.temperature".localized,
+                                isOn: $settings.healthIncludeTemperature, icon: "thermometer.medium"
+                            ) {}
+                            SettingsGridItem(
+                                title: "health.dimension.gpu".localized,
+                                isOn: $settings.healthIncludeGPU, icon: "square.grid.2x2"
+                            ) {}
+                            SettingsGridItem(
+                                title: "settings.healthDimensions.power".localized,
+                                isOn: $settings.healthIncludePower, icon: "bolt.fill"
+                            ) {}
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 // Language Card
                 BentoCard(title: "settings.language".localized, icon: "globe") {
                     Picker("", selection: $settings.appLanguage) {

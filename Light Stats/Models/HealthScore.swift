@@ -22,6 +22,7 @@ nonisolated struct HealthScore: Sendable, Equatable {
         case memory
         case load
         case temperature
+        case gpu
         case battery
         case diskIO
     }
