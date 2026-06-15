@@ -6,6 +6,14 @@ Light Stats 是一款紧凑的 macOS 菜单栏系统监控应用，可显示 CPU
 
 ---
 
+## 界面预览
+
+| 概览 | 清理 |
+|------|------|
+| <img src="docs/screenshots/popover-overview.png" width="320" alt="概览面板" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="清理面板" /> |
+
+---
+
 ## 概览
 
 Light Stats 将核心系统指标固定在菜单栏中，需要更多上下文时可打开详细浮动面板。它适合希望快速查看系统状态的普通用户，也适合想参考原生 SwiftUI/AppKit 菜单栏监控实现的开发者。

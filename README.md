@@ -9,6 +9,14 @@ Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk
 
 ---
 
+## Screenshots
+
+| Overview | Cleanup |
+|----------|---------|
+| <img src="docs/screenshots/popover-overview.png" width="320" alt="Overview panel" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="Cleanup panel" /> |
+
+---
+
 ## Overview
 
 Light Stats keeps core system metrics visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for users who want quick status checks without keeping Activity Monitor open, and for developers who want a native SwiftUI/AppKit reference for menu bar monitoring.
