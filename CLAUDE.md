@@ -73,11 +73,27 @@ Never: View → Service directly (go through ViewModel). Never: Service → View
 
 ### Code Style
 
-- No `print()` / `NSLog()` in production — use `os.Logger`
+- No `print()` / `NSLog()` anywhere — use `os.Logger`. This includes `#Preview`
+  blocks and sample/mock code (SwiftLint scans them too; leave an empty closure
+  with a comment instead of a `print`).
 - No force-unwrap (`!`) unless provably safe with comment
 - Prefer `guard let` over `if let` for early exits
 - One type per file (except tightly coupled private helpers)
 - File structure: imports → type declaration → properties → init → methods → extensions
+
+### Lint (CI gate)
+
+CI runs `swiftlint lint --strict`, which **promotes every warning to a hard error** —
+a single warning fails the Build workflow. Before pushing, run `swiftlint lint --strict`
+locally (`brew install swiftlint`) and fix all output. Key thresholds from `.swiftlint.yml`:
+
+- Line length: **≤ 140 chars** (warning). Wrap long calls/expressions onto multiple lines.
+  Comments and URLs are exempt (`ignores_comments`, `ignores_urls`).
+- Function body ≤ 80 lines, type body ≤ 400, file ≤ 500, cyclomatic complexity ≤ 12.
+- Custom rules: `no_print` (warning) and `no_nslog` (error) — see above.
+
+`swiftlint --fix` auto-resolves some violations, but line-length and the custom rules
+must be fixed by hand.
 
 ### Localization
 

@@ -272,7 +272,10 @@ final class StatusBarView: NSView {
                 let upArrowPoint = NSPoint(x: itemRect.origin.x + arrowXOffset, y: itemRect.midY + lineSpacing + globalYOffset)
                 upArrow.draw(at: upArrowPoint, withAttributes: netAttrs)
                 
-                let upValuePoint = NSPoint(x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth, y: itemRect.midY + lineSpacing + globalYOffset)
+                let upValuePoint = NSPoint(
+                    x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth,
+                    y: itemRect.midY + lineSpacing + globalYOffset
+                )
                 upValue.draw(at: upValuePoint, withAttributes: netAttrs)
 
                 // 绘制下载 (下行)

@@ -23,15 +23,33 @@ struct SettingsView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 12) {
-                        SettingsGridItem(title: "settings.logo".localized, isOn: $settings.showLogo, icon: "applelogo") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.gpu".localized, isOn: $settings.showGPU, icon: "square.grid.2x2") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.memory".localized, isOn: $settings.showMemory, icon: "memorychip") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") { validateMinimumItems() }
-                        SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") { validateMinimumItems() }
+                        SettingsGridItem(title: "settings.logo".localized, isOn: $settings.showLogo, icon: "applelogo") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.gpu".localized, isOn: $settings.showGPU, icon: "square.grid.2x2") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.memory".localized, isOn: $settings.showMemory, icon: "memorychip") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") {
+                            validateMinimumItems()
+                        }
+                        SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") {
+                            validateMinimumItems()
+                        }
                     }
                     .padding(.vertical, 4)
                 }

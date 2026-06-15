@@ -174,7 +174,7 @@ struct AppCardView: View {
 
     VStack(spacing: 12) {
         AppCardView(app: mockApp, isTerminating: false, appManager: AppMemoryManager.shared) {
-            print("Close tapped")
+            // 预览中无需处理关闭动作
         }
 
         // 单进程应用
@@ -193,7 +193,7 @@ struct AppCardView: View {
         )
 
         AppCardView(app: singleApp, isTerminating: false, appManager: AppMemoryManager.shared) {
-            print("Close tapped")
+            // 预览中无需处理关闭动作
         }
     }
     .padding()
