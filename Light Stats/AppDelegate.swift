@@ -15,6 +15,15 @@ import Combine
 final class KeyablePanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
+    /// 面板失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时回调。
+    /// 复刻 NSPopover .transient 的自动关闭行为，参考 Maccy 的 FloatingPanel。
+    var onResignKey: (() -> Void)?
+
+    override func resignKey() {
+        super.resignKey()
+        onResignKey?()
+    }
 }
 
 @MainActor
@@ -25,7 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
     private var statusBarView: StatusBarView?
-    
+    // 面板因失去 key 焦点自动关闭的时刻，用于在点击图标关闭时避免立即重开
+    private var panelAutoClosedAt: Date?
+
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let appMemoryManager: AppMemoryManager
@@ -87,7 +98,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.isFloatingPanel = true
         panel.level = .statusBar
-        panel.hidesOnDeactivate = true
+        // 自动关闭交给 resignKey 处理（见 onResignKey），无需 hidesOnDeactivate。
+        panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -101,23 +113,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(AIUsageMonitor.shared)
         )
 
-        // 面板因 hidesOnDeactivate 自动隐藏时不会经过 togglePanel/closePanel，
-        // 监听 resignKey 兜底同步可见状态，确保关闭后停止采集进程榜。
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handlePanelDidResignKey),
-            name: NSWindow.didResignKeyNotification,
-            object: panel
-        )
+        // 失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时自动关闭，
+        // 复刻 NSPopover .transient 行为，无需再次点击图标手动隐藏。
+        panel.onResignKey = { [weak self] in
+            guard let self, self.panel?.isVisible == true else { return }
+            self.panel?.orderOut(nil)
+            self.panelAutoClosedAt = Date()
+            self.monitor.setPopoverVisible(false)
+            self.appMemoryManager.stopMonitoring()
+        }
 
         self.panel = panel
-    }
-
-    @objc private func handlePanelDidResignKey() {
-        monitor.setPopoverVisible(panel?.isVisible ?? false)
-        if panel?.isVisible != true {
-            appMemoryManager.stopMonitoring()
-        }
     }
 
     // MARK: - Monitoring
@@ -242,6 +248,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.orderOut(nil)
             monitor.setPopoverVisible(false)
             appMemoryManager.stopMonitoring()
+            return
+        }
+
+        // 若面板刚因 resignKey 自动关闭（点击图标时会先失去 key 焦点），
+        // 则把这次点击视为"关闭"，不要立即重新打开。
+        if let closedAt = panelAutoClosedAt, Date().timeIntervalSince(closedAt) < 0.25 {
+            panelAutoClosedAt = nil
             return
         }
 
