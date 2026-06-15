@@ -72,7 +72,9 @@
 "health.dimension.cpu" = "CPU";
 "health.dimension.memory" = "内存";
 "health.dimension.disk" = "磁盘";
+"health.dimension.load" = "负载";
 "health.dimension.temperature" = "温度";
+"health.dimension.battery" = "电池";
 "health.dimension.diskIO" = "I/O";
 "health.level.low" = "低";
 "health.level.medium" = "中";

@@ -489,8 +489,9 @@ private struct HealthCard: View {
         let dimensions: [(HealthScore.Dimension, String)] = [
             (.cpu, "health.dimension.cpu".localized),
             (.memory, "health.dimension.memory".localized),
-            (.disk, "health.dimension.disk".localized),
+            (.load, "health.dimension.load".localized),
             (.temperature, "health.dimension.temperature".localized),
+            (.battery, "health.dimension.battery".localized),
             (.diskIO, "health.dimension.diskIO".localized)
         ]
 

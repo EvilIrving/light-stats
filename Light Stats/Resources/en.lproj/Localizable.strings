@@ -72,7 +72,9 @@
 "health.dimension.cpu" = "CPU";
 "health.dimension.memory" = "Memory";
 "health.dimension.disk" = "Disk";
+"health.dimension.load" = "Load";
 "health.dimension.temperature" = "Temp";
+"health.dimension.battery" = "Battery";
 "health.dimension.diskIO" = "I/O";
 "health.level.low" = "Low";
 "health.level.medium" = "Medium";

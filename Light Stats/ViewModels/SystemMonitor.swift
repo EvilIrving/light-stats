@@ -106,12 +106,17 @@ private actor MonitorSampler {
         let exitNode = await exitNodeResult
         let route = classifyRoute(proxy: proxyConfig, exit: exitNode)
         let battery = await batteryResult
-        let diskUsage = diskInfo.total > 0 ? Double(diskInfo.used) / Double(diskInfo.total) * 100 : 0
+        let detailedMemory = MemoryInfo.getDetailedMemoryInfo()
         let rawHealth = HealthScoreService.compute(
             cpu: cpuUsage.total,
-            mem: memoryInfo.usagePercent,
-            disk: diskUsage,
+            memoryPressure: detailedMemory.pressureLevel,
+            swapUsed: detailedMemory.swapUsed,
+            physicalMemory: detailedMemory.total,
+            load1: loadAverage.load1,
+            coreCount: coreTopology.totalCores,
             temp: cpuTemperature,
+            batteryState: battery.state,
+            batteryPercent: battery.percent,
             diskIO: diskIO.readMBs + diskIO.writeMBs
         )
         let health = HealthScoreService.smooth(current: rawHealth, previous: previousHealth)

@@ -20,8 +20,9 @@ nonisolated struct HealthScore: Sendable, Equatable {
     enum Dimension: String, CaseIterable, Sendable {
         case cpu
         case memory
-        case disk
+        case load
         case temperature
+        case battery
         case diskIO
     }
 
