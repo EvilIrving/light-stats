@@ -116,16 +116,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit CHANGELOG.md to main
-        run: |
-          git fetch origin main:main
-          git checkout main
-          git add CHANGELOG.md
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git -c user.name="github-actions[bot]" \
-                -c user.email="github-actions[bot]@users.noreply.github.com" \
-                commit -m "docs(changelog): update for ${{ steps.version.outputs.tag }}"
-            git push origin main
-          fi
+      # CHANGELOG.md is generated only for the GitHub Release body; it is intentionally
+      # NOT committed back to the repo, to keep main's history linear and bot-free.
