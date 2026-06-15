@@ -115,12 +115,12 @@
 "network.route.unknown" = "未知";
 
 // MARK: - Settings: Exit Node
-"settings.exitNode.section" = "网络";
-"settings.exitNode.toggle" = "显示出口节点";
-"settings.exitNode.toggleHint" = "需联网查询公网 IP";
+"settings.exitNode.section" = "出口节点";
+"settings.exitNode.toggle" = "显示公网出口";
+"settings.exitNode.toggleHint" = "刷新时查询公网 IP";
 "settings.exitNode.provider" = "服务商";
-"settings.exitNode.privacyTitle" = "关于出口节点探测";
-"settings.exitNode.privacyMessage" = "开启后，Light Stats 会向所选服务发送请求以查询你的公网 IP 及归属地。仅在该功能开启时发生。是否继续？";
+"settings.exitNode.privacyTitle" = "开启前请确认";
+"settings.exitNode.privacyMessage" = "Light Stats 将向所选服务查询你的公网 IP 及估计位置。不发送凭证，结果仅在本机显示。是否继续？";
 "settings.exitNode.enable" = "开启";
 "settings.exitNode.cancel" = "取消";
 
@@ -135,24 +135,24 @@
 "aiUsage.fetchFailed" = "用量获取失败";
 
 // MARK: - Software Update
-"update.checkButton" = "检查更新";
-"settings.update.section" = "软件更新";
+"update.checkButton" = "立即检查";
+"settings.update.section" = "自动更新";
 "settings.update.autoCheck" = "自动检查更新";
-"settings.update.autoCheckHint" = "启动时检查是否有新版本";
-"update.available.title" = "发现新版本 %@";
-"update.available.message" = "Light Stats 有新版本可供安装。";
+"settings.update.autoCheckHint" = "启动及每日检查";
+"update.available.title" = "Light Stats %@ 可更新";
+"update.available.message" = "已签公证，设置保留。";
 "update.action.install" = "立即更新";
 "update.action.later" = "稍后";
 "update.action.skip" = "忽略此版本";
 "update.action.ok" = "好";
 "update.action.openPage" = "打开下载页面";
-"update.upToDate.title" = "已是最新版本";
-"update.upToDate.message" = "你已经在使用最新版本的 Light Stats。";
-"update.progress.downloading" = "正在下载更新…";
+"update.upToDate.title" = "已是最新";
+"update.upToDate.message" = "你正在使用最新版 Light Stats。";
+"update.progress.downloading" = "正在下载…";
 "update.progress.installing" = "正在校验并安装…";
 "update.error.title" = "更新失败";
-"update.error.network" = "无法连接更新服务器。";
-"update.error.noRelease" = "未找到发布信息。";
-"update.error.download" = "下载失败。";
-"update.error.install" = "无法安装更新。";
-"update.error.verification" = "下载的更新未通过安全校验。";
+"update.error.network" = "无法连接 GitHub，请检查网络。";
+"update.error.noRelease" = "未找到发布信息，请前往 GitHub Releases 手动下载。";
+"update.error.download" = "下载中断，请重试。";
+"update.error.install" = "安装未完成，当前版本未受影响。";
+"update.error.verification" = "安全校验失败，更新已丢弃。";

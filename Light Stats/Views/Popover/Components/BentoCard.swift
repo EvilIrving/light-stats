@@ -1,18 +1,24 @@
 import SwiftUI
 
-struct BentoCard<Content: View>: View {
+struct BentoCard<Content: View, Accessory: View>: View {
     let title: String?
     let icon: String?
     let content: Content
+    let headerAccessory: Accessory
     let padding: CGFloat
-    
-    init(title: String? = nil, icon: String? = nil, padding: CGFloat = 12, @ViewBuilder content: () -> Content) {
+
+    init(title: String? = nil,
+         icon: String? = nil,
+         padding: CGFloat = 12,
+         @ViewBuilder headerAccessory: () -> Accessory = { EmptyView() },
+         @ViewBuilder content: () -> Content) {
         self.title = title
         self.icon = icon
         self.padding = padding
+        self.headerAccessory = headerAccessory()
         self.content = content()
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if title != nil || icon != nil {
@@ -27,6 +33,8 @@ struct BentoCard<Content: View>: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.labelMuted)
                     }
+                    Spacer()
+                    headerAccessory
                 }
             }
             

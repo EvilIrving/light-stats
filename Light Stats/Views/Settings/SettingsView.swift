@@ -56,12 +56,7 @@ struct SettingsView: View {
                 
                 // Health Score Dimensions Card — 哪些维度参与健康分计算
                 BentoCard(title: "settings.healthDimensions".localized, icon: "heart.text.square") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("settings.healthDimensions.hint".localized)
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        LazyVGrid(columns: [
+                    LazyVGrid(columns: [
                             GridItem(.flexible()),
                             GridItem(.flexible()),
                             GridItem(.flexible())
@@ -92,7 +87,6 @@ struct SettingsView: View {
                             ) {}
                         }
                         .padding(.vertical, 4)
-                    }
                 }
 
                 // Language Card
@@ -194,76 +188,57 @@ struct SettingsView: View {
                     }
                 }
 
-                // Exit Node Card
-                BentoCard(title: "settings.exitNode.section".localized, icon: "globe") {
-                    VStack(spacing: 12) {
-                        Toggle(isOn: Binding(
-                            get: { settings.exitNodeDetectionEnabled },
-                            set: { newValue in
-                                // 开启前先弹隐私说明；关闭直接生效。
-                                if newValue {
-                                    showExitPrivacyAlert = true
-                                } else {
-                                    settings.exitNodeDetectionEnabled = false
-                                }
+                // Exit Node Card — toggle lives in the header, provider picker in body.
+                BentoCard(title: "settings.exitNode.section".localized, icon: "globe",
+                          headerAccessory: {
+                    Toggle("", isOn: Binding(
+                        get: { settings.exitNodeDetectionEnabled },
+                        set: { newValue in
+                            if newValue {
+                                showExitPrivacyAlert = true
+                            } else {
+                                settings.exitNodeDetectionEnabled = false
                             }
-                        )) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("settings.exitNode.toggle".localized)
-                                    .font(.system(size: 12))
-                                Text("settings.exitNode.toggleHint".localized)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-
-                        if settings.exitNodeDetectionEnabled {
-                            HStack {
-                                Text("settings.exitNode.provider".localized)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Picker("", selection: $settings.exitNodeProvider) {
-                                    ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
-                                        Text(provider.displayName).tag(provider)
-                                    }
+                    ))
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .labelsHidden()
+                }) {
+                    if settings.exitNodeDetectionEnabled {
+                        HStack {
+                            Text("settings.exitNode.provider".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.exitNodeProvider) {
+                                ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
+                                    Text(provider.displayName).tag(provider)
                                 }
-                                .pickerStyle(.menu)
-                                .labelsHidden()
-                                .frame(width: 140)
                             }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .frame(width: 140)
                         }
                     }
                 }
 
-                // Software Update Card
-                BentoCard(title: "settings.update.section".localized, icon: "arrow.down.circle") {
-                    VStack(spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("settings.update.autoCheck".localized)
-                                    .font(.system(size: 12))
-                                Text("settings.update.autoCheckHint".localized)
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            Toggle("", isOn: $settings.autoCheckUpdates)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
-                        }
-
-                        Button {
-                            UpdateManager.shared.checkForUpdates(userInitiated: true)
-                        } label: {
-                            Text("update.checkButton".localized)
-                                .font(.system(size: 12, weight: .medium))
-                                .frame(maxWidth: .infinity)
-                        }
-                        .controlSize(.large)
+                // Software Update Card — toggle in header, manual button in body.
+                BentoCard(title: "settings.update.section".localized, icon: "arrow.down.circle",
+                          headerAccessory: {
+                    Toggle("", isOn: $settings.autoCheckUpdates)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                }) {
+                    Button {
+                        UpdateManager.shared.checkForUpdates(userInitiated: true)
+                    } label: {
+                        Text("update.checkButton".localized)
+                            .font(.system(size: 12, weight: .medium))
+                            .frame(maxWidth: .infinity)
                     }
+                    .controlSize(.large)
                 }
             }
             .padding(16)

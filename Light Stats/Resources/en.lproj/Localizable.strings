@@ -1,4 +1,4 @@
-/* 
+/*
   Localizable.strings (English)
   Light Stats
 */
@@ -115,12 +115,12 @@
 "network.route.unknown" = "Unknown";
 
 // MARK: - Settings: Exit Node
-"settings.exitNode.section" = "Network";
+"settings.exitNode.section" = "Exit Node";
 "settings.exitNode.toggle" = "Show exit node";
-"settings.exitNode.toggleHint" = "Queries your public IP online";
-"settings.exitNode.provider" = "Service";
-"settings.exitNode.privacyTitle" = "About Exit Node Detection";
-"settings.exitNode.privacyMessage" = "When enabled, Light Stats sends a request to the selected service to look up your public IP and its location. This only happens while the feature is on. Continue?";
+"settings.exitNode.toggleHint" = "Queries public IP each refresh.";
+"settings.exitNode.provider" = "Provider";
+"settings.exitNode.privacyTitle" = "Before You Enable";
+"settings.exitNode.privacyMessage" = "Light Stats will query the selected service to fetch your public IP and estimated location. No credentials are sent, and results stay on your machine.";
 "settings.exitNode.enable" = "Enable";
 "settings.exitNode.cancel" = "Cancel";
 
@@ -135,24 +135,24 @@
 "aiUsage.fetchFailed" = "Failed to fetch usage";
 
 // MARK: - Software Update
-"update.checkButton" = "Check for Updates";
-"settings.update.section" = "Software Update";
+"update.checkButton" = "Check Now";
+"settings.update.section" = "Auto Update";
 "settings.update.autoCheck" = "Check automatically";
-"settings.update.autoCheckHint" = "Check for new versions on launch";
-"update.available.title" = "New version %@ available";
-"update.available.message" = "A new version of Light Stats is ready to install.";
+"settings.update.autoCheckHint" = "Checks on launch & every 24h.";
+"update.available.title" = "Light Stats %@ available";
+"update.available.message" = "Signed, notarized update. Settings preserved.";
 "update.action.install" = "Update Now";
 "update.action.later" = "Later";
 "update.action.skip" = "Skip This Version";
 "update.action.ok" = "OK";
 "update.action.openPage" = "Open Download Page";
-"update.upToDate.title" = "You're up to date";
-"update.upToDate.message" = "You already have the latest version of Light Stats.";
-"update.progress.downloading" = "Downloading update…";
-"update.progress.installing" = "Verifying and installing…";
+"update.upToDate.title" = "Up to Date";
+"update.upToDate.message" = "You're on the latest release.";
+"update.progress.downloading" = "Downloading…";
+"update.progress.installing" = "Verifying…";
 "update.error.title" = "Update Failed";
-"update.error.network" = "Could not reach the update server.";
-"update.error.noRelease" = "No release information found.";
+"update.error.network" = "Can't reach GitHub.";
+"update.error.noRelease" = "No release found.";
 "update.error.download" = "Download failed.";
-"update.error.install" = "Could not install the update.";
-"update.error.verification" = "The downloaded update failed security verification.";
+"update.error.install" = "Install failed.";
+"update.error.verification" = "Verification failed.";

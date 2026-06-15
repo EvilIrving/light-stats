@@ -115,12 +115,12 @@
 "network.route.unknown" = "不明";
 
 // MARK: - Settings: Exit Node
-"settings.exitNode.section" = "ネットワーク";
-"settings.exitNode.toggle" = "出口ノードを表示";
-"settings.exitNode.toggleHint" = "公開IPをオンラインで照会します";
-"settings.exitNode.provider" = "サービス";
-"settings.exitNode.privacyTitle" = "出口ノード検出について";
-"settings.exitNode.privacyMessage" = "有効にすると、Light Stats は選択したサービスにリクエストを送信し、公開IPとその所在地を照会します。この機能がオンの間のみ実行されます。続行しますか？";
+"settings.exitNode.section" = "出口ノード";
+"settings.exitNode.toggle" = "公開IPを表示";
+"settings.exitNode.toggleHint" = "リフレッシュ毎に照会";
+"settings.exitNode.provider" = "プロバイダ";
+"settings.exitNode.privacyTitle" = "有効にする前に";
+"settings.exitNode.privacyMessage" = "選択したサービスに公開IPと推定位置を照会します。認証情報は送信されず、結果はこのマシン上にのみ表示されます。続行しますか？";
 "settings.exitNode.enable" = "有効化";
 "settings.exitNode.cancel" = "キャンセル";
 
@@ -135,24 +135,24 @@
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
 
 // MARK: - Software Update
-"update.checkButton" = "アップデートを確認";
-"settings.update.section" = "ソフトウェアアップデート";
+"update.checkButton" = "今すぐ確認";
+"settings.update.section" = "自動アップデート";
 "settings.update.autoCheck" = "自動的に確認";
-"settings.update.autoCheckHint" = "起動時に新しいバージョンを確認";
-"update.available.title" = "新しいバージョン %@ が利用可能";
-"update.available.message" = "Light Stats の新しいバージョンをインストールできます。";
+"settings.update.autoCheckHint" = "起動時と24時間ごとに確認";
+"update.available.title" = "Light Stats %@ が利用可能";
+"update.available.message" = "署名・公証済みの新バージョンです。設定はそのまま維持されます。";
 "update.action.install" = "今すぐ更新";
 "update.action.later" = "後で";
 "update.action.skip" = "このバージョンをスキップ";
 "update.action.ok" = "OK";
 "update.action.openPage" = "ダウンロードページを開く";
 "update.upToDate.title" = "最新の状態です";
-"update.upToDate.message" = "すでに最新バージョンの Light Stats を使用しています。";
-"update.progress.downloading" = "アップデートをダウンロード中…";
+"update.upToDate.message" = "最新バージョンを使用しています。";
+"update.progress.downloading" = "ダウンロード中…";
 "update.progress.installing" = "検証してインストール中…";
 "update.error.title" = "アップデート失敗";
-"update.error.network" = "アップデートサーバーに接続できません。";
-"update.error.noRelease" = "リリース情報が見つかりません。";
-"update.error.download" = "ダウンロードに失敗しました。";
-"update.error.install" = "アップデートをインストールできません。";
-"update.error.verification" = "ダウンロードしたアップデートのセキュリティ検証に失敗しました。";
+"update.error.network" = "GitHub に接続できません。";
+"update.error.noRelease" = "リリース情報が見つかりません。GitHub からダウンロードしてください。";
+"update.error.download" = "ダウンロードが中断されました。再試行してください。";
+"update.error.install" = "インストールが完了しませんでした。現在のバージョンはそのままです。";
+"update.error.verification" = "セキュリティ検証に失敗しました。更新は破棄されました。";
