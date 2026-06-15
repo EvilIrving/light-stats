@@ -9,6 +9,21 @@ import Foundation
 
 /// Fetches Codex subscription usage via the ChatGPT backend usage endpoint.
 /// Credentials are maintained by the Codex CLI in ~/.codex/auth.json; we only read them.
+///
+/// API contract (undocumented endpoint, verified against a real 200 response on
+/// 2026-06-10 — decode defensively):
+/// - Request:  `GET https://chatgpt.com/backend-api/wham/usage`
+/// - Headers:  `Authorization: Bearer <access_token>`
+///             `ChatGPT-Account-Id: <account_id>`
+///             `Accept: application/json`
+/// - Auth:     `~/.codex/auth.json` → `tokens.access_token` + `tokens.account_id`.
+///             Read-only; on 401 we re-read the file (CLI may have refreshed) and retry once.
+/// - Response: `{ "rate_limit": { "primary_window": Window, "secondary_window": Window } }`
+///             where `Window = { used_percent: 0–100, limit_window_seconds: Int,
+///             reset_at: Unix epoch seconds (NOT ISO8601) }`. `plan_type` also present.
+/// - Errors:   401/403 → token expired. All fields optional so a renamed field
+///             degrades to stale rather than crashing; one window decoding fail
+///             doesn't sink the other.
 enum CodexUsageService {
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!

@@ -10,6 +10,18 @@ import Security
 
 /// Fetches Claude Code subscription usage via the OAuth usage endpoint.
 /// Credentials are maintained by the Claude Code CLI; we only read them.
+///
+/// API contract (undocumented endpoint — decode defensively):
+/// - Request:  `GET https://api.anthropic.com/api/oauth/usage`
+/// - Headers:  `Authorization: Bearer <accessToken>`
+///             `anthropic-beta: oauth-2025-04-20`
+/// - Auth:     Keychain generic password, service `Claude Code-credentials`,
+///             JSON field `claudeAiOauth.accessToken`. Read-only; we never refresh.
+/// - Response: `{ "five_hour": Window, "seven_day": Window, ... }` where
+///             `Window = { utilization: 0–100, resets_at: ISO8601 }`.
+///             Extra fields (`seven_day_opus`/`_sonnet`, …) are ignored.
+/// - Errors:   401/403 → token expired (user runs `claude` to refresh). All
+///             fields optional so field renames degrade rather than crash.
 enum ClaudeUsageService {
 
     private static let keychainService = "Claude Code-credentials"
