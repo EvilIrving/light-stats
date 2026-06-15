@@ -99,6 +99,54 @@ must be fixed by hand.
 
 Three languages: en, zh-Hans, ja. User-facing strings must use `NSLocalizedString` or `String(localized:)`. When adding a new key, update all three `.lproj/Localizable.strings` files.
 
+## Health Score
+
+`HealthScoreService` (pure, `nonisolated`) computes a 0–100 score from real-time **pressure**
+signals — "is the Mac sluggish right now", not slow-moving capacity numbers. Philosophy: a
+smooth machine stays high even with lots of RAM used / many apps open; the score only drops
+when the system is *actually* struggling. Disk **usage %** was deliberately removed (it's a
+capacity alert, not a responsiveness signal).
+
+### Dimensions & weights
+
+| Dimension | Weight | Signal | Score curve (100 = healthy) |
+|-----------|-------:|--------|------------------------------|
+| `cpu`         | 25 | CPU usage % | ≤50 →100, 50–85 →100..60, 85+ →60..0 |
+| `memory`      | 30 | **pressure level + swap ratio** (min of the two) | level normal/warning/critical = 100/55/15; swap%RAM ≤2 →100, 2–10 →100..60, 10–25 →60..0 |
+| `load`        | 15 | LoadAvg(1m) ÷ core count | per-core ≤0.7 →100, 0.7–1.0 →100..60, 1.0–2.0 →60..0 |
+| `temperature` | 20 | **min(SMC temp, thermal state)** | temp ≤60 →100, 60–85 →100..60, 85+ →60..0; thermal nominal/fair/serious/critical = 100/80/45/10 |
+| `gpu`         | 15 | GPU utilization % | ≤70 →100, 70–90 →100..60, 90+ →60..0 |
+| `battery` / `diskIO` | 10 | **power slot** (hardware-chosen) | laptop: battery charge (on AC = 100; discharge ≥40 →100, <20 →0). desktop (no battery) falls back to disk I/O MB/s: ≤50 →100, 150 →60, 300 →0 |
+
+Weights are **relative**: absent dimensions (sensor missing, or toggled off) drop out and the
+remaining weights renormalize (`totalWeight`). All-off → returns `.perfect` (100).
+
+### Key algorithm details
+
+- **Bottleneck cap** (the important one): a single saturated *performance* dimension gets
+  diluted by the weighted average, yet the user just feels "lag". So the final score is capped:
+  `total ≤ worstPerformanceScore + bottleneckHeadroom (25)`. Performance dimensions =
+  `{cpu, memory, load, temperature, gpu}`. The power slot (battery/diskIO) is **not** a lag
+  source and does **not** participate in the cap.
+- **Thermal throttling** is folded into the `temperature` dimension via `ProcessInfo.thermalState`
+  (always readable, so the temp dimension is always present) — throttling is the most direct
+  cause of visible slowdown.
+- **Memory uses pressure, not usage %**: Apple Silicon compresses inactive pages, so even ~30 GB
+  allocated on a 32 GB Mac can stay at "normal" pressure with zero swap. Usage % would false-alarm;
+  pressure + swap is the honest signal.
+- **Smoothing**: `smooth()` applies EMA with `smoothingAlpha = 0.35` (new sample 35%) so the
+  number doesn't jolt between samples.
+- **Grades**: 90–100 excellent · 75–89 good · 60–74 fair · 40–59 poor · <40 critical.
+
+### Configurable dimensions
+
+Which dimensions count is user-configurable in **Settings → Health Score Dimensions**:
+`SettingsManager` exposes `healthInclude{CPU,Memory,Load,Temperature,GPU,Power}` toggles
+(all default ON), assembled into `HealthScoreService.DimensionToggles` via
+`healthDimensionToggles` and passed through `SystemMonitor.collect(... healthToggles:)` into
+`compute(... toggles:)`. `Power` covers the battery/diskIO slot. Disabling a dimension removes
+it and renormalizes the rest.
+
 ## Build
 
 ```bash
