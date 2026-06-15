@@ -133,3 +133,26 @@
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
+
+// MARK: - Software Update
+"update.checkButton" = "アップデートを確認";
+"settings.update.section" = "ソフトウェアアップデート";
+"settings.update.autoCheck" = "自動的に確認";
+"settings.update.autoCheckHint" = "起動時に新しいバージョンを確認";
+"update.available.title" = "新しいバージョン %@ が利用可能";
+"update.available.message" = "Light Stats の新しいバージョンをインストールできます。";
+"update.action.install" = "今すぐ更新";
+"update.action.later" = "後で";
+"update.action.skip" = "このバージョンをスキップ";
+"update.action.ok" = "OK";
+"update.action.openPage" = "ダウンロードページを開く";
+"update.upToDate.title" = "最新の状態です";
+"update.upToDate.message" = "すでに最新バージョンの Light Stats を使用しています。";
+"update.progress.downloading" = "アップデートをダウンロード中…";
+"update.progress.installing" = "検証してインストール中…";
+"update.error.title" = "アップデート失敗";
+"update.error.network" = "アップデートサーバーに接続できません。";
+"update.error.noRelease" = "リリース情報が見つかりません。";
+"update.error.download" = "ダウンロードに失敗しました。";
+"update.error.install" = "アップデートをインストールできません。";
+"update.error.verification" = "ダウンロードしたアップデートのセキュリティ検証に失敗しました。";

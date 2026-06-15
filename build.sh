@@ -76,6 +76,7 @@ xcodebuild build \
   -scheme "$SCHEME" \
   -configuration Release \
   -derivedDataPath "$BUILD_DIR/DerivedData" \
+  MARKETING_VERSION="$VERSION" \
   CODE_SIGN_IDENTITY="" \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$BUILD_LOG"

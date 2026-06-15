@@ -133,3 +133,26 @@
 "aiUsage.tokenExpired" = "Token expired — run %@ once to refresh";
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";
+
+// MARK: - Software Update
+"update.checkButton" = "Check for Updates";
+"settings.update.section" = "Software Update";
+"settings.update.autoCheck" = "Check automatically";
+"settings.update.autoCheckHint" = "Check for new versions on launch";
+"update.available.title" = "New version %@ available";
+"update.available.message" = "A new version of Light Stats is ready to install.";
+"update.action.install" = "Update Now";
+"update.action.later" = "Later";
+"update.action.skip" = "Skip This Version";
+"update.action.ok" = "OK";
+"update.action.openPage" = "Open Download Page";
+"update.upToDate.title" = "You're up to date";
+"update.upToDate.message" = "You already have the latest version of Light Stats.";
+"update.progress.downloading" = "Downloading update…";
+"update.progress.installing" = "Verifying and installing…";
+"update.error.title" = "Update Failed";
+"update.error.network" = "Could not reach the update server.";
+"update.error.noRelease" = "No release information found.";
+"update.error.download" = "Download failed.";
+"update.error.install" = "Could not install the update.";
+"update.error.verification" = "The downloaded update failed security verification.";

@@ -236,6 +236,35 @@ struct SettingsView: View {
                         }
                     }
                 }
+
+                // Software Update Card
+                BentoCard(title: "settings.update.section".localized, icon: "arrow.down.circle") {
+                    VStack(spacing: 12) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("settings.update.autoCheck".localized)
+                                    .font(.system(size: 12))
+                                Text("settings.update.autoCheckHint".localized)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Toggle("", isOn: $settings.autoCheckUpdates)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
+                        }
+
+                        Button {
+                            UpdateManager.shared.checkForUpdates(userInitiated: true)
+                        } label: {
+                            Text("update.checkButton".localized)
+                                .font(.system(size: 12, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .controlSize(.large)
+                    }
+                }
             }
             .padding(16)
         }

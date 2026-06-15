@@ -52,7 +52,19 @@ struct AboutView: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
 
-            Spacer().frame(height: 28)
+            Spacer().frame(height: 12)
+
+            // Check for Updates
+            Button {
+                UpdateManager.shared.checkForUpdates(userInitiated: true)
+            } label: {
+                Text("update.checkButton".localized)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.borderless)
+            .foregroundColor(.accentColor)
+
+            Spacer().frame(height: 24)
 
             // Links
             HStack(spacing: 12) {

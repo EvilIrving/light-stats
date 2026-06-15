@@ -46,6 +46,7 @@ protocol SettingsManaging: ObservableObject {
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
     var exitNodeDetectionEnabled: Bool { get set }
     var exitNodeProvider: ExitNodeProvider { get set }
+    var autoCheckUpdates: Bool { get set }
 }
 
 @MainActor
@@ -159,8 +160,19 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(exitNodeProvider.rawValue, for: .exitNodeProvider) }
     }
     
+    // MARK: - Software Update Settings
+
+    /// 启动时与定时自动检查更新。默认开启；用户可在设置关闭。
+    @Published var autoCheckUpdates: Bool {
+        didSet { save(autoCheckUpdates, for: .autoCheckUpdates) }
+    }
+    /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
+    @Published var lastIgnoredVersion: String {
+        didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
+    }
+
     // MARK: - Singleton
-    
+
     static let shared = SettingsManager()
     
     // MARK: - Enums
@@ -283,6 +295,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case aiMonitorClaude = "settings.aiMonitorClaude"
         case aiMonitorCodex = "settings.aiMonitorCodex"
         case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
+        case autoCheckUpdates = "settings.autoCheckUpdates"
+        case lastIgnoredVersion = "settings.lastIgnoredVersion"
     }
     
     // MARK: - Init
@@ -334,6 +348,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
         let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m5.rawValue
         aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m5
+
+        // 自动检查更新：默认开启。
+        autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
+        lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
     }
     
     // MARK: - Validation

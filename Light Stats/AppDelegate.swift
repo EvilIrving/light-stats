@@ -61,6 +61,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .showAbout,
             object: nil
         )
+
+        // 启动后延迟检查更新，避开冷启动高峰；尊重「自动检查」开关。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            UpdateManager.shared.checkOnLaunch()
+        }
     }
 
     @objc private func handleShowAbout() {
@@ -247,7 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 330),
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 380),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
