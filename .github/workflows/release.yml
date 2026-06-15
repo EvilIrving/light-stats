@@ -93,17 +93,18 @@ jobs:
           xcrun stapler validate build/output/*.dmg
 
       - name: Generate Changelog
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          # 可选: 配置 OpenAI 兼容 API 后自动改写为面向用户的双语 release notes，
+          # 未配置则降级为按类型分类的脚本生成。
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          echo "## What's Changed" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          if [ -n "$PREV_TAG" ]; then
-            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges >> CHANGELOG.md
-          else
-            git log --pretty=format:"- %s" --no-merges -20 >> CHANGELOG.md
-          fi
-          echo "" >> CHANGELOG.md
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.version.outputs.tag }}" >> CHANGELOG.md
+          chmod +x script/gen-changelog.sh
+          ./script/gen-changelog.sh > CHANGELOG.md
+          echo "----- generated CHANGELOG.md -----"
+          cat CHANGELOG.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
