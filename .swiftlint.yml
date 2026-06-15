@@ -1,0 +1,77 @@
+# SwiftLint configuration for Light Stats
+#
+# Run locally: swiftlint lint --strict
+# CI catches violations as warnings; fix with: swiftlint --fix
+
+included:
+  - "Light Stats"
+
+disabled_rules:
+  - trailing_comma
+  - opening_brace
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - modifier_order
+  - overridden_super_call
+  - private_outlet
+  - prohibited_super_call
+  - unowned_guard
+  - yoda_condition
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_urls: true
+  ignores_comments: true
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 500
+  error: 800
+
+function_body_length:
+  warning: 80
+  error: 120
+
+cyclomatic_complexity:
+  warning: 12
+  error: 20
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - x
+    - y
+
+type_name:
+  min_length:
+    warning: 3
+
+nesting:
+  type_level:
+    warning: 2
+
+force_cast: warning
+force_try: warning
+
+custom_rules:
+  no_print:
+    name: "Print Statement"
+    regex: '\bprint\('
+    message: "Use Logger or os_log instead of print() in production code."
+    severity: warning
+  no_nslog:
+    name: "NSLog"
+    regex: '\bNSLog\('
+    message: "Use Logger or os_log instead of NSLog() in production code."
+    severity: error

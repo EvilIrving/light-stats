@@ -1,0 +1,73 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: "Be direct and evidence-based. Reference the specific AGENTS.md section or rule file. When flagging an issue, cite the relevant convention and suggest the smallest fix."
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  path_instructions:
+    # ── All Swift files ──────────────────────────────
+    - path: "Light Stats/**/*.swift"
+      instructions: |
+        Use AGENTS.md as the source of truth. Flag:
+        - `print()` or `NSLog()` in production code (use `os.Logger`).
+        - Force-unwrap (`!`) without a safety comment.
+        - View importing Service directly instead of going through ViewModel.
+        - Service importing View (Services don't know about UI).
+        - Hardcoded user-facing strings that should use `String(localized:)`.
+        - Blocking waits, semaphores, or `Task.sleep` used as synchronization in async contexts.
+
+    # ── ViewModels ──────────────────────────────────
+    - path: "Light Stats/ViewModels/**/*.swift"
+      instructions: |
+        Additionally: ViewModels must use `@Observable` (Swift 6), not `@Published` / `ObservableObject`.
+        UI-bound ViewModels must be `@MainActor`.
+        Flag any ViewModel that directly calls Mach/IOKit/SMC APIs (that's a Service's job).
+
+    # ── Services ────────────────────────────────────
+    - path: "Light Stats/Services/**/*.swift"
+      instructions: |
+        Services must not import SwiftUI or reference any View type.
+        Cached or async collectors (ExitNodeService, ClaudeUsageService, CodexUsageService) must use `actor`.
+        Lightweight synchronous helpers are acceptable for simple system queries (SMCInfo).
+
+    # ── Models ──────────────────────────────────────
+    - path: "Light Stats/Models/**/*.swift"
+      instructions: |
+        Models must be pure data structs. No logic, no imports of Services or ViewModels.
+        Flag any Model that contains business logic or service calls.
+
+    # ── Localization ────────────────────────────────
+    - path: "Light Stats/Resources/**/*.strings"
+      instructions: |
+        Verify: every new or changed key exists in en, zh-Hans, and ja `Localizable.strings`.
+        Flag: key only in one language file, missing translation, format specifier mismatch.
+
+  pre_merge_checks:
+    custom_checks:
+      - name: "light-stats no print/NSLog"
+        mode: error
+        instructions: |
+          For all Swift files in `Light Stats/`: fail when the diff introduces `print(` or `NSLog(`.
+          Use `os.Logger` instead. Pass for test files and debug-only guard blocks with explicit comments.
+
+      - name: "light-stats localization coverage"
+        mode: error
+        instructions: |
+          For changes to `Light Stats/Resources/`: fail when a `Localizable.strings` key is added
+          or edited in fewer than all three language directories (en, zh-Hans, ja).
+
+      - name: "light-stats layer boundaries"
+        mode: error
+        instructions: |
+          Fail when the diff introduces a reverse dependency:
+          - Service importing SwiftUI or View types
+          - View accessing Service directly (must go through ViewModel)
+          - Model containing business logic or importing Services/ViewModels
+          Apply AGENTS.md architecture section.

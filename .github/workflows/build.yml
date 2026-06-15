@@ -29,6 +29,16 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Lint
+        run: |
+          brew install swiftlint
+          swiftlint lint --strict --reporter github-actions-logging
+
+      - name: Localization check
+        run: |
+          chmod +x validate_localization.sh
+          ./validate_localization.sh
+
       - name: Build App
         run: |
           chmod +x build.sh
