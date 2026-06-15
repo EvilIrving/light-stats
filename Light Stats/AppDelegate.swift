@@ -36,6 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusBarView: StatusBarView?
     // 面板因失去 key 焦点自动关闭的时刻，用于在点击图标关闭时避免立即重开
     private var panelAutoClosedAt: Date?
+    // 面板打开时监听面板外的全局点击（含别的菜单栏图标），点外部即关闭
+    private var globalClickMonitor: Any?
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -117,10 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 复刻 NSPopover .transient 行为，无需再次点击图标手动隐藏。
         panel.onResignKey = { [weak self] in
             guard let self, self.panel?.isVisible == true else { return }
-            self.panel?.orderOut(nil)
-            self.panelAutoClosedAt = Date()
-            self.monitor.setPopoverVisible(false)
-            self.appMemoryManager.stopMonitoring()
+            self.dismissPanel(autoClosed: true)
         }
 
         self.panel = panel
@@ -208,9 +207,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Actions
 
     func closePanel() {
+        dismissPanel()
+    }
+
+    /// 统一关闭面板：隐藏、同步状态、停止采集、移除全局点击监听。
+    private func dismissPanel(autoClosed: Bool = false) {
         panel?.orderOut(nil)
+        if autoClosed { panelAutoClosedAt = Date() }
         monitor.setPopoverVisible(false)
         appMemoryManager.stopMonitoring()
+        removeGlobalClickMonitor()
+    }
+
+    /// 面板打开期间监听面板外的全局点击（点桌面、点别的菜单栏图标等）并关闭面板。
+    /// 自身状态栏按钮/面板内部的点击是本进程本地事件，不会被全局监听捕获，因此不受影响。
+    private func installGlobalClickMonitor() {
+        removeGlobalClickMonitor()
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            self?.dismissPanel(autoClosed: true)
+        }
+    }
+
+    private func removeGlobalClickMonitor() {
+        if let monitor = globalClickMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalClickMonitor = nil
+        }
     }
 
     // MARK: - About Window
@@ -245,9 +269,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let panel = panel, let button = statusItem?.button else { return }
 
         if panel.isVisible {
-            panel.orderOut(nil)
-            monitor.setPopoverVisible(false)
-            appMemoryManager.stopMonitoring()
+            dismissPanel()
             return
         }
 
@@ -274,6 +296,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         monitor.setPopoverVisible(true)
+        installGlobalClickMonitor()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

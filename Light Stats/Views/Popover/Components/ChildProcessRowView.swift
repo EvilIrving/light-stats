@@ -21,7 +21,7 @@ struct ChildProcessRowView: View {
             // 子进程名称
             Text(command)
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
                 .lineLimit(1)
                 .help(command)
 

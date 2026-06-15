@@ -29,7 +29,7 @@ struct OverviewTabView: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                             Text("%")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                         }
                         .foregroundColor(colorForUsage(monitor.cpuUsage))
                     }
@@ -42,13 +42,13 @@ struct OverviewTabView: View {
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
                                 Text("%")
                                     .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.labelMuted)
                             }
                             .foregroundColor(colorForUsage(gpu))
                         } else {
                             Text("N/A")
                                 .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                         }
                     }
                     
@@ -60,10 +60,10 @@ struct OverviewTabView: View {
                                     .font(.system(size: 20, weight: .bold, design: .rounded))
                                 Text("/")
                                     .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.labelMuted)
                                 Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
                                     .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.labelMuted)
                             }
                         }
                         .foregroundColor(.purple)
@@ -133,7 +133,7 @@ struct OverviewTabView: View {
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                     }
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
                 }
                 
                 // Network Card: 速率 + 本地代理 + 出口节点
@@ -159,9 +159,9 @@ struct OverviewTabView: View {
                         // ② 本地代理行
                         HStack(spacing: 4) {
                             Image(systemName: "lock.shield")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                             Text("network.proxy.title".localized)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                             Spacer()
                             Text(proxyText(monitor.proxyConfig))
                                 .foregroundColor(monitor.proxyConfig.isEnabled ? .primary : .secondary)
@@ -173,9 +173,9 @@ struct OverviewTabView: View {
                         // ③ 出口行
                         HStack(spacing: 4) {
                             Image(systemName: "globe")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                             Text("network.exit.title".localized)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                             Spacer()
                             exitValueView
                         }
@@ -196,7 +196,7 @@ struct OverviewTabView: View {
                     if monitor.topCPUProcesses.isEmpty {
                         Text("overview.loading".localized)
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
                     } else {
                         VStack(spacing: 8) {
                             ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
@@ -215,7 +215,7 @@ struct OverviewTabView: View {
                                 VStack(spacing: 4) {
                                     Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
                                         .font(.system(size: 9, weight: .bold))
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(.labelMuted)
                                     
                                     ZStack(alignment: .bottom) {
                                         RoundedRectangle(cornerRadius: 2)
@@ -320,7 +320,7 @@ struct OverviewTabView: View {
     private var exitValueView: some View {
         if !settings.exitNodeDetectionEnabled {
             Text("network.exit.disabled".localized)
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
                 .lineLimit(1)
                 .truncationMode(.tail)
         } else if let exit = monitor.exitNode {
@@ -335,7 +335,7 @@ struct OverviewTabView: View {
             }
         } else {
             Text("network.exit.failed".localized)
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
         }
     }
 
@@ -445,7 +445,7 @@ private struct HealthCard: View {
                         .foregroundColor(gradeColor)
                     Text("/ 100")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.labelMuted)
                     Text(gradeText)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(gradeColor)
@@ -458,7 +458,7 @@ private struct HealthCard: View {
 
                 Text(summaryText)
                     .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -525,7 +525,7 @@ private struct BatteryCard: View {
             if battery.state == .noBattery {
                 Text("battery.na".localized)
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     // 主行：电量大字 + 状态 + 剩余时间
@@ -535,11 +535,11 @@ private struct BatteryCard: View {
                             .foregroundColor(batteryColor)
                         Text("%")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
 
                         Text(stateText)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
                             .padding(.leading, 4)
 
                         Spacer()
@@ -547,7 +547,7 @@ private struct BatteryCard: View {
                         if let time = timeRemainingText {
                             Text(time)
                                 .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.labelMuted)
                         }
                     }
 
@@ -620,7 +620,7 @@ private struct SubStat: View {
                 .foregroundColor(.primary)
             Text(label)
                 .font(.system(size: 9))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
         }
     }
 }

@@ -24,7 +24,7 @@ struct CleanupTabView: View {
                         Spacer()
                         Text(String(format: "%.0f%%", memoryUsagePercent))
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
                     }
 
                     GeometryReader { geometry in
@@ -82,7 +82,7 @@ struct CleanupTabView: View {
             HStack {
                 Text("cleanup.runningApps".localized)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
                 Spacer()
                 Text(String(format: "cleanup.appCount".localized, appManager.runningApps.filter(\.isTerminable).count))
                     .font(.system(size: 11))
@@ -156,7 +156,7 @@ struct CleanupTabView: View {
             Spacer()
             Text("cleanup.noApps".localized)
                 .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
             Spacer()
         }
     }

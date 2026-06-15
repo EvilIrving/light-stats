@@ -18,7 +18,7 @@ struct AIUsageCard: View {
             case .idle:
                 Text("overview.loading".localized)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
 
             case .loaded(let snapshot):
                 windowsView(snapshot)
@@ -34,7 +34,7 @@ struct AIUsageCard: View {
             case .error(let error):
                 Text(errorText(error))
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
                     .lineLimit(2)
             }
         }
@@ -87,7 +87,7 @@ private struct WindowRow: View {
         HStack(spacing: 8) {
             Text(window.label)
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
                 .frame(width: 22, alignment: .leading)
 
             // Progress bar (remaining)
@@ -109,7 +109,7 @@ private struct WindowRow: View {
 
             Text(resetText)
                 .font(.system(size: 9))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
                 .frame(width: 76, alignment: .trailing)
                 .lineLimit(1)
         }

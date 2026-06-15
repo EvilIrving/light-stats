@@ -55,7 +55,7 @@ struct AppCardView: View {
                 // Memory Usage
                 Text(app.memoryFormatted)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.labelMuted)
                     .opacity(isTerminating ? 0.5 : 1.0)
 
                 // Close Button or Loading Indicator
@@ -115,7 +115,7 @@ struct AppCardView: View {
         }) {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(.secondary)
+                .foregroundColor(.labelMuted)
                 .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
                 .contentShape(Rectangle())
         }

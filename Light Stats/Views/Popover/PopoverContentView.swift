@@ -86,7 +86,7 @@ struct PopoverContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .ignoresSafeArea(.container, edges: .top)
-        .background(VisualEffectView(material: .sidebar, blendingMode: .behindWindow).ignoresSafeArea())
+        .background(GlassBackgroundView(cornerRadius: 12).ignoresSafeArea())
         .frame(width: 360, height: 520)
         .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes

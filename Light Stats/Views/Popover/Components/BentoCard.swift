@@ -20,12 +20,12 @@ struct BentoCard<Content: View>: View {
                     if let icon = icon {
                         Image(systemName: icon)
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
                     }
                     if let title = title {
                         Text(title)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.labelMuted)
                     }
                 }
             }
@@ -36,11 +36,13 @@ struct BentoCard<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.78))
         )
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
         )
     }
 }
