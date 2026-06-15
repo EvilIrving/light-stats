@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Light Stats — MacOS Menu Bar System Monitor</title>
+  <meta name="description" content="Real-time CPU, GPU, memory, disk, network, and fan speed monitoring from your Mac's menu bar. Zero data collection.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='100%25' stop-color='%235AC8FA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Crect x='140' y='226' width='60' height='120' rx='10' fill='white' opacity='.9'/%3E%3Crect x='226' y='166' width='60' height='180' rx='10' fill='white' opacity='.9'/%3E%3Crect x='312' y='196' width='60' height='150' rx='10' fill='white' opacity='.9'/%3E%3C/svg%3E">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', '"Helvetica Neue"', 'sans-serif'],
+            mono: ['"SF Mono"', 'Menlo', 'Monaco', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.12s ease-out; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .prose p + p { margin-top: 0.875em; }
+    .prose h2 { font-size: 1.375rem; font-weight: 600; line-height: 1.3; margin-top: 2em; margin-bottom: 0.5em; letter-spacing: -0.01em; }
+    .prose h3 { font-size: 1.125rem; font-weight: 500; margin-top: 1.5em; margin-bottom: 0.375em; }
+    .prose ul { list-style: disc; padding-left: 1.25em; }
+    .prose li + li { margin-top: 0.25em; }
+    .prose a { color: #0071e3; text-decoration: none; }
+    .prose a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body class="min-h-screen antialiased" style="background: #f5f5f7; color: #1d1d1f;">
+
+<div id="app" v-cloak>
+  <div class="max-w-xl mx-auto px-5 py-20 sm:py-28">
+
+    <!-- Header -->
+    <header class="text-center mb-14">
+      <svg class="mx-auto mb-5" width="56" height="56" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#007AFF;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#5AC8FA;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="512" height="512" rx="115" fill="url(#logoGrad)"/>
+        <rect x="140" y="226" width="60" height="120" rx="10" fill="white" opacity="0.9"/>
+        <rect x="226" y="166" width="60" height="180" rx="10" fill="white" opacity="0.9"/>
+        <rect x="312" y="196" width="60" height="150" rx="10" fill="white" opacity="0.9"/>
+      </svg>
+      <h1 class="text-[1.75rem] font-semibold tracking-[-0.015em] mb-1">Light Stats</h1>
+      <p class="text-[0.875rem]" style="color: #86868b;">MacOS Menu Bar System Monitor</p>
+    </header>
+
+    <!-- Tab Bar -->
+    <nav class="flex justify-center mb-12">
+      <div class="inline-flex rounded-lg p-0.5" style="background: #e5e5ea;">
+        <button
+          v-for="tab in tabs" :key="tab.id"
+          @click="activeTab = tab.id"
+          class="relative px-4 py-1.5 text-[0.875rem] font-medium rounded-[0.4rem] transition-colors duration-150"
+          :style="activeTab === tab.id
+            ? 'background: #ffffff; color: #1d1d1f; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04);'
+            : 'background: transparent; color: #86868b;'"
+        >{{ tab.label }}</button>
+      </div>
+    </nav>
+
+    <!-- Content -->
+    <transition name="fade" mode="out-in">
+      <main :key="activeTab" class="text-base leading-relaxed">
+
+        <!-- ========== LANDING TAB ========== -->
+        <section v-if="activeTab === 'landing'">
+          <p class="text-[#86868b] leading-relaxed text-center px-20">
+            Light Stats lives in your Mac's menu bar, showing real-time system performance at a glance. No windows to manage, no setup required.
+          </p>
+
+          <!-- Metric tags -->
+          <div class="flex flex-wrap justify-between gap-1.5 mt-8">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+              CPU
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              GPU
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="4" y="2" width="16" height="12" rx="2"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+              Memory
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+              Disk
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Network
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[0.875rem] rounded-md font-medium" style="background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/></svg>
+              Fan
+            </span>
+          </div>
+
+          <!-- Feature prose -->
+          <div class="mt-14 space-y-9">
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Two-line menu bar display</h3>
+              <p style="color: #86868b;">Values on top, labels below. Fixed widths keep the layout stable as numbers change. Toggle individual items in Settings to show only what you care about.</p>
+            </div>
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Click for detail</h3>
+              <p style="color: #86868b;">Tap any metric to open a panel with ring progress bars, per-core CPU usage, network speed graphs, and fan status. Memory tab shows running apps sorted by usage, with one-click force quit.</p>
+            </div>
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Privacy by design</h3>
+              <p style="color: #86868b;">Everything runs locally. No analytics, no network calls, no data leaves your device. The app requests no network permissions — and never will.</p>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="mt-12 text-center">
+            <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-2.5 text-[0.875rem] font-medium rounded-lg transition-colors duration-150" style="background: #0071e3; color: #fff;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+              View on GitHub
+            </a>
+            <p class="mt-3 text-[0.75rem]" style="color: #86868b;">Free and open source. MacOS 14+</p>
+          </div>
+        </section>
+
+        <!-- ========== PRIVACY TAB ========== -->
+        <section v-if="activeTab === 'privacy'" class="prose max-w-none">
+          <p class="text-[#86868b] leading-relaxed">
+            Light Stats is designed to respect your privacy from the ground up. This policy is short because there is almost nothing to disclose.
+          </p>
+
+          <h2>Data Collection</h2>
+          <p>Light Stats does not collect, transmit, or store any personal data. All system metrics are read locally and displayed directly on your device. No information ever leaves your Mac.</p>
+          <p>The app reads the following system-level information solely for display purposes:</p>
+          <ul>
+            <li>CPU usage percentage and per-core utilization</li>
+            <li>GPU usage percentage (supported Macs only)</li>
+            <li>Memory pressure, used, and available memory</li>
+            <li>Disk capacity and available space</li>
+            <li>Network upload and download throughput</li>
+            <li>Fan speed in RPM (supported Macs only)</li>
+            <li>List of running applications (Memory Cleanup tab only)</li>
+          </ul>
+
+          <h2>Local Processing</h2>
+          <p>All data processing happens on your device. The app uses MacOS system APIs — Mach, IOKit, SMC — to read hardware metrics. No data is cached to disk beyond what the system already tracks.</p>
+
+          <h2>Network Access</h2>
+          <p>Light Stats makes no network requests. It does not include analytics, crash reporting, ad frameworks, or any third-party SDKs that communicate over the network. The app's network entitlements are limited to reading interface statistics locally.</p>
+
+          <h2>Third Parties</h2>
+          <p>Light Stats does not integrate with any third-party services, analytics providers, or advertising networks. There are no third parties to disclose.</p>
+
+          <h2>Open Source</h2>
+          <p>The full source code is available on <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">GitHub</a>. You can inspect exactly what the app does and how it works.</p>
+
+          <h2>Changes</h2>
+          <p>If this policy ever changes, the update will be reflected here and noted in the app's release notes. The app will never silently change its data handling behavior.</p>
+
+          <p class="text-[0.75rem] mt-8" style="color: #86868b;">Last updated: April 2026</p>
+        </section>
+
+        <!-- ========== SUPPORT TAB ========== -->
+        <section v-if="activeTab === 'support'" class="max-w-none">
+          <p class="text-[#86868b] leading-relaxed">
+            Light Stats is maintained as an open source project. Here is how to get help, report issues, or contribute.
+          </p>
+
+          <div class="mt-10 space-y-8">
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Report a bug or request a feature</h3>
+              <p style="color: #86868b;">File an issue on GitHub. Include your MacOS version, Mac model, and steps to reproduce. Screenshots of the stats panel help.</p>
+              <a href="https://github.com/EvilIrving/light-stats/issues" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 mt-2 text-[0.875rem] font-medium" style="color: #0071e3;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                GitHub Issues
+              </a>
+            </div>
+
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Email</h3>
+              <p style="color: #86868b;">For security concerns or private inquiries, email us directly. We respond within 2–3 business days.</p>
+              <a href="mailto:jescain2024@gmail.com" class="inline-flex items-center gap-1.5 mt-2 text-[0.875rem] font-medium" style="color: #0071e3;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg>
+                jescain2024@gmail.com
+              </a>
+            </div>
+
+            <div>
+              <h3 class="text-[1.125rem] font-medium tracking-[-0.01em] mb-1.5">Frequently asked</h3>
+              <dl class="mt-3 space-y-5">
+                <div>
+                  <dt class="font-medium text-base">How do I change what shows in the menu bar?</dt>
+                  <dd class="mt-1 text-[0.875rem]" style="color: #86868b;">Click the ellipsis (…) button in the popover to open Settings. Toggle individual items under Status Bar Items.</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-base">Why do some items show "N/A"?</dt>
+                  <dd class="mt-1 text-[0.875rem]" style="color: #86868b;">GPU and Fan metrics require supported hardware. Apple Silicon Macs without fans, or Macs without a discrete GPU, will show N/A for those readings.</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-base">Does the app affect battery life?</dt>
+                  <dd class="mt-1 text-[0.875rem]" style="color: #86868b;">The default refresh rate is 2 seconds. At this interval, CPU overhead is negligible (typically under 0.5%). You can lower the refresh rate in Settings if preferred.</dd>
+                </div>
+                <div>
+                  <dt class="font-medium text-base">Is force-quitting apps safe?</dt>
+                  <dd class="mt-1 text-[0.875rem]" style="color: #86868b;">Force quit bypasses an app's normal shutdown and may cause data loss for unsaved work. The app shows a confirmation dialog before force-quitting. Use normal quit when possible.</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </transition>
+
+    <!-- Footer -->
+    <footer class="mt-20 pt-6 text-center text-[0.75rem]" style="color: #86868b; border-top: 1px solid #e5e5ea;">
+      <p>Light Stats is not affiliated with Apple Inc. Apple, MacOS, and Mac are trademarks of Apple Inc.</p>
+      <p class="mt-1">Light Stats is open source under the MIT License.</p>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue
+createApp({
+  data() {
+    const hash = window.location.hash.replace('#', '')
+    const validTabs = ['landing', 'privacy', 'support']
+    return {
+      activeTab: validTabs.includes(hash) ? hash : 'landing',
+      tabs: [
+        { id: 'landing', label: 'Overview' },
+        { id: 'privacy', label: 'Privacy' },
+        { id: 'support', label: 'Support' },
+      ]
+    }
+  },
+  watch: {
+    activeTab(val) {
+      if (window.location.hash !== '#' + val) {
+        history.replaceState(null, '', '#' + val)
+      }
+    }
+  },
+  mounted() {
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '')
+      if (['landing', 'privacy', 'support'].includes(hash)) {
+        this.activeTab = hash
+      }
+    })
+  }
+}).mount('#app')
+</script>
+
+</body>
+</html>
