@@ -326,7 +326,7 @@ enum ClaudeUsageService {
         defer { try? FileManager.default.removeItem(at: workDir) }
         process.currentDirectoryURL = workDir
 
-        guard let _ = try? process.run() else {
+        guard (try? process.run()) != nil else {
             throw AIUsageError.network
         }
         defer {

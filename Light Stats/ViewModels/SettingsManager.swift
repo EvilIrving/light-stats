@@ -196,9 +196,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     // MARK: - Enums
 
     enum RefreshRate: String, CaseIterable {
-        case low = "low"       // 5 seconds
-        case medium = "medium" // 2 seconds
-        case high = "high"     // 1 second
+        case low       // 5 seconds
+        case medium // 2 seconds
+        case high     // 1 second
 
         var interval: TimeInterval {
             switch self {
@@ -218,8 +218,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
 
     enum TemperatureUnit: String, CaseIterable {
-        case celsius = "celsius"
-        case fahrenheit = "fahrenheit"
+        case celsius
+        case fahrenheit
 
         var displayName: String {
             switch self {
@@ -240,10 +240,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
 
     enum AIRefreshInterval: String, CaseIterable {
-        case m1 = "m1"
-        case m2 = "m2"
-        case m5 = "m5"
-        case m15 = "m15"
+        case m1
+        case m2
+        case m5
+        case m15
 
         var interval: TimeInterval {
             switch self {
@@ -265,9 +265,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
 
     enum NetworkSpeedUnit: String, CaseIterable {
-        case auto = "auto"
-        case kbps = "kbps"
-        case mbps = "mbps"
+        case auto
+        case kbps
+        case mbps
 
         var displayName: String {
             switch self {

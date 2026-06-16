@@ -52,6 +52,18 @@ identifier_name:
     - id
     - x
     - y
+    - i
+    - h
+    - m
+    - w
+    - r
+    - s
+    - c
+    - d
+    - f
+    - n
+    - t
+    - a
 
 type_name:
   min_length:

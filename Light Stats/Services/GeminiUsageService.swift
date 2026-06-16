@@ -178,7 +178,7 @@ nonisolated enum GeminiUsageService {
         process.standardOutput = outPipe
         process.standardError = FileHandle.nullDevice
 
-        guard let _ = try? process.run() else {
+        guard (try? process.run()) != nil else {
             throw AIUsageError.network
         }
         process.waitUntilExit()

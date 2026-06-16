@@ -178,7 +178,7 @@ final class SystemMonitor: ObservableObject {
     // Top CPU processes
     @Published var topCPUProcesses: [TopProcess] = []
 
-    @Published var gpuUsage: Double? = nil
+    @Published var gpuUsage: Double?
 
     @Published var memoryUsage: Double = 0
     @Published var memoryUsed: UInt64 = 0
@@ -191,8 +191,8 @@ final class SystemMonitor: ObservableObject {
     @Published var networkUpload: Double = 0  // bytes per second
     @Published var networkDownload: Double = 0  // bytes per second
 
-    @Published var cpuTemperature: Double? = nil
-    @Published var fanSpeed: Int? = nil
+    @Published var cpuTemperature: Double?
+    @Published var fanSpeed: Int?
     @Published var health: HealthScore = .perfect
 
     // Phase 2: 电池/功耗 + 磁盘 IO
@@ -201,8 +201,8 @@ final class SystemMonitor: ObservableObject {
 
     // Phase 1: 网络 / 代理 / 出口节点
     @Published var proxyConfig: ProxyConfig = .none
-    @Published var primaryIP: String? = nil
-    @Published var exitNode: ExitNode? = nil
+    @Published var primaryIP: String?
+    @Published var exitNode: ExitNode?
     @Published var route: NetworkRoute = .unknown
 
     // MARK: - Private Properties

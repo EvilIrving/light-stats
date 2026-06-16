@@ -11,7 +11,7 @@ struct PopoverContentView: View {
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
     @Environment(\.openSettings) private var openSettingsAction
-    @State private var hoveredIcon: String? = nil
+    @State private var hoveredIcon: String?
 
     var body: some View {
         VStack(spacing: 0) {

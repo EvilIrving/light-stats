@@ -19,8 +19,8 @@ enum SMCInfo {
 
     // Temperature cache for stability (with thread safety)
     private static let temperatureLock = NSLock()
-    private static var _cachedTemperature: Double? = nil
-    private static var _cacheTimestamp: Date? = nil
+    private static var _cachedTemperature: Double?
+    private static var _cacheTimestamp: Date?
     private static let maxCacheAge: TimeInterval = 10  // 10 seconds
 
     /// Thread-safe cached temperature with automatic expiration
@@ -161,7 +161,7 @@ enum SMCInfo {
         }
 
         // Read all fans and return the maximum speed
-        var maxSpeed: Int? = nil
+        var maxSpeed: Int?
 
         for i in 0..<min(fanCount, 4) {
             if let speed = readFanSpeed(index: i) {
@@ -192,7 +192,7 @@ enum SMCInfo {
             fanCount = max(Int(countData[0]), 1)
         }
 
-        var retryMaxSpeed: Int? = nil
+        var retryMaxSpeed: Int?
         for i in 0..<min(fanCount, 4) {
             if let speed = readFanSpeed(index: i) {
                 if retryMaxSpeed == nil || speed > retryMaxSpeed! {
