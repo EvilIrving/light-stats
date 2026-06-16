@@ -7,15 +7,17 @@
 
 import Foundation
 
-/// AI subscription usage providers (Phase 1: Claude Code + Codex)
+/// AI subscription usage providers
 enum AIProvider: String, Codable, CaseIterable {
     case claude
     case codex
+    case gemini
 
     var displayName: String {
         switch self {
         case .claude: return "Claude Code"
         case .codex: return "Codex"
+        case .gemini: return "Gemini"
         }
     }
 }

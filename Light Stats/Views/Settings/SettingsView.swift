@@ -181,7 +181,18 @@ struct SettingsView: View {
                                 .labelsHidden()
                         }
 
-                        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
+                        HStack {
+                            Text("aiUsage.gemini".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Toggle("", isOn: $settings.aiMonitorGeminiEnabled)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
+                        }
+
+                        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled {
                             HStack {
                                 Text("settings.aiUsageInterval".localized)
                                     .font(.system(size: 12))

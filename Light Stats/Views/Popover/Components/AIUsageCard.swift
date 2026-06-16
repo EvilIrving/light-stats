@@ -15,7 +15,7 @@ struct AIUsageCard: View {
     let retry: () -> Void
 
     var body: some View {
-        BentoCard(title: provider.displayName, assetIcon: assetIcon) {
+        BentoCard(title: provider.displayName, icon: symbolIcon, assetIcon: assetIcon) {
             switch state {
             case .idle:
                 Text("overview.loading".localized)
@@ -46,10 +46,17 @@ struct AIUsageCard: View {
         }
     }
 
-    private var assetIcon: String {
+    private var assetIcon: String? {
         switch provider {
         case .claude: return "claudeLogo"
         case .codex: return "codexLogo"
+        case .gemini: return "geminiLogo"
+        }
+    }
+
+    private var symbolIcon: String? {
+        switch provider {
+        case .claude, .codex, .gemini: return nil
         }
     }
 
@@ -66,7 +73,7 @@ struct AIUsageCard: View {
     // MARK: - Texts
 
     private func errorText(_ error: AIUsageError) -> String {
-        let cli = provider == .claude ? "claude" : "codex"
+        let cli = providerCLIName
         switch error {
         case .tokenExpired:
             return "aiUsage.tokenExpired".localized(cli)
@@ -74,6 +81,14 @@ struct AIUsageCard: View {
             return "aiUsage.credentialsMissing".localized(cli)
         case .network, .decoding, .endpointNotFound:
             return "aiUsage.fetchFailed".localized
+        }
+    }
+
+    private var providerCLIName: String {
+        switch provider {
+        case .claude: return "claude"
+        case .codex: return "codex"
+        case .gemini: return "gemini"
         }
     }
 

@@ -10,7 +10,6 @@ import SwiftUI
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
-    @Environment(\.openSettings) private var openSettingsAction
     @ObservedObject private var settings = SettingsManager.shared
 
     var body: some View {
@@ -155,6 +154,14 @@ struct OverviewTabView: View {
                         retry: { aiMonitor.retry(.codex) }
                     )
                 }
+                if settings.aiMonitorGeminiEnabled {
+                    AIUsageCard(
+                        provider: .gemini,
+                        state: aiMonitor.geminiState,
+                        isRefreshing: aiMonitor.refreshingProviders.contains(.gemini),
+                        retry: { aiMonitor.retry(.gemini) }
+                    )
+                }
                 
                 // Network Card: 速率 + 本地代理 + 出口节点
                 BentoCard(title: "overview.network".localized, icon: "network") {
@@ -248,7 +255,6 @@ struct OverviewTabView: View {
                 }
 
                 ActionRowsCard(
-                    openSettings: openSettings,
                     openAbout: openAbout,
                     quit: { NSApp.terminate(nil) }
                 )
@@ -384,13 +390,6 @@ struct OverviewTabView: View {
         return parts.joined(separator: " · ")
     }
 
-    private func openSettings() {
-        closePanel()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            openSettingsAction()
-        }
-    }
-
     private func openAbout() {
         closePanel()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -406,13 +405,11 @@ struct OverviewTabView: View {
 // MARK: - Action Rows
 
 private struct ActionRowsCard: View {
-    let openSettings: () -> Void
     let openAbout: () -> Void
     let quit: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            ActionRow(icon: "gearshape", title: "popover.action.settings".localized, action: openSettings)
             ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
             ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit)
         }
@@ -429,11 +426,11 @@ private struct ActionRow: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.labelMuted)
+                    .foregroundColor(.secondary.opacity(0.58))
                     .frame(width: 20)
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundColor(.secondary.opacity(0.58))
                 Spacer()
             }
             .padding(.trailing, 12)

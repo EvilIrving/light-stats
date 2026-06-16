@@ -146,6 +146,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var aiMonitorCodexEnabled: Bool {
         didSet { save(aiMonitorCodexEnabled, for: .aiMonitorCodex) }
     }
+    @Published var aiMonitorGeminiEnabled: Bool {
+        didSet { save(aiMonitorGeminiEnabled, for: .aiMonitorGemini) }
+    }
     @Published var aiUsageRefreshInterval: AIRefreshInterval {
         didSet { save(aiUsageRefreshInterval.rawValue, for: .aiUsageRefreshInterval) }
     }
@@ -308,6 +311,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case exitNodeProvider = "settings.exitNodeProvider"
         case aiMonitorClaude = "settings.aiMonitorClaude"
         case aiMonitorCodex = "settings.aiMonitorCodex"
+        case aiMonitorGemini = "settings.aiMonitorGemini"
         case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
@@ -363,6 +367,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // AI usage monitoring - opt-in, default off
         aiMonitorClaudeEnabled = defaults.object(forKey: Key.aiMonitorClaude.rawValue) as? Bool ?? false
         aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
+        aiMonitorGeminiEnabled = defaults.object(forKey: Key.aiMonitorGemini.rawValue) as? Bool ?? false
         let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m2.rawValue
         aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m2
 

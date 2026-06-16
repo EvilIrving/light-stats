@@ -133,6 +133,7 @@
 "settings.aiUsageInterval" = "更新間隔";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
+"aiUsage.gemini" = "Gemini";
 "aiUsage.updatedAgo" = "%@前に更新";
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";

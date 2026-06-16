@@ -8,9 +8,9 @@
 import Foundation
 import Combine
 
-/// Polls AI subscription usage (Claude Code / Codex) on its own timer,
+/// Polls AI subscription usage (Claude Code / Codex / Gemini) on its own timer,
 /// fully independent from SystemMonitor's 1-5s refresh cycle.
-/// When both provider toggles are off, no timer exists and no requests are made.
+/// When all provider toggles are off, no timer exists and no requests are made.
 @MainActor
 final class AIUsageMonitor: ObservableObject {
 
@@ -18,6 +18,7 @@ final class AIUsageMonitor: ObservableObject {
 
     @Published private(set) var claudeState: ProviderFetchState = .idle
     @Published private(set) var codexState: ProviderFetchState = .idle
+    @Published private(set) var geminiState: ProviderFetchState = .idle
     @Published private(set) var refreshingProviders: Set<AIProvider> = []
 
     private var timer: Timer?
@@ -36,9 +37,10 @@ final class AIUsageMonitor: ObservableObject {
     // MARK: - Lifecycle
 
     func start() {
-        Publishers.CombineLatest3(
+        Publishers.CombineLatest4(
             settings.$aiMonitorClaudeEnabled,
             settings.$aiMonitorCodexEnabled,
+            settings.$aiMonitorGeminiEnabled,
             settings.$aiUsageRefreshInterval
         )
         .dropFirst()
@@ -80,6 +82,7 @@ final class AIUsageMonitor: ObservableObject {
         var providers: [AIProvider] = []
         if settings.aiMonitorClaudeEnabled { providers.append(.claude) }
         if settings.aiMonitorCodexEnabled { providers.append(.codex) }
+        if settings.aiMonitorGeminiEnabled { providers.append(.gemini) }
         return providers
     }
 
@@ -115,6 +118,7 @@ final class AIUsageMonitor: ObservableObject {
                 switch provider {
                 case .claude: snapshot = try await ClaudeUsageService.fetch()
                 case .codex: snapshot = try await CodexUsageService.fetch()
+                case .gemini: snapshot = try await GeminiUsageService.fetch()
                 }
                 result = .success(snapshot)
             } catch let error as AIUsageError {
@@ -161,6 +165,7 @@ final class AIUsageMonitor: ObservableObject {
         switch provider {
         case .claude: return claudeState
         case .codex: return codexState
+        case .gemini: return geminiState
         }
     }
 
@@ -168,6 +173,7 @@ final class AIUsageMonitor: ObservableObject {
         switch provider {
         case .claude: claudeState = state
         case .codex: codexState = state
+        case .gemini: geminiState = state
         }
     }
 

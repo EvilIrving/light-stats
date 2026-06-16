@@ -10,6 +10,7 @@ struct PopoverContentView: View {
     @State private var selectedTab: Int = 0
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
+    @Environment(\.openSettings) private var openSettingsAction
     @State private var hoveredIcon: String? = nil
 
     var body: some View {
@@ -48,6 +49,14 @@ struct PopoverContentView: View {
                         .onHover { hoveredIcon = $0 ? "snapshot" : nil }
                         .onTapGesture { DebugSnapshot.dumpPanel() }
 #endif
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(hoveredIcon == "settings" ? .secondary : .secondary.opacity(0.58))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("popover.action.settings".localized)
+                        .onHover { hoveredIcon = $0 ? "settings" : nil }
+                        .onTapGesture { openSettings() }
                 }
             }
             .padding(.horizontal, 16)
@@ -72,6 +81,13 @@ struct PopoverContentView: View {
         .frame(width: 360, height: 780)
         .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes
+    }
+
+    private func openSettings() {
+        (NSApp.delegate as? AppDelegate)?.closePanel()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            openSettingsAction()
+        }
     }
 }
 

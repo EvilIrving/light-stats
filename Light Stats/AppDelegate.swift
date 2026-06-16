@@ -138,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // proc_pidpath / responsibility 查询，每 5s 一次）仅服务于 Cleanup 标签页。
         // 改为在面板打开时预热（见 togglePanel），面板关闭即停（见 dismissPanel），
         // 既消除了面板从未打开时的后台白扫，又保证首次切到 Cleanup 页数据已就绪、不闪空态。
-        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
+        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled {
             AIUsageMonitor.shared.start()
         }
 
