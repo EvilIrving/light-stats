@@ -134,6 +134,10 @@
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";
 
+// MARK: - Accessibility
+"settings.accessibility.section" = "Color Indicator";
+"settings.accessibility.colorIndicator.hint" = "Show health levels as colored dots. Turn off to use Low / Medium / High text.";
+
 // MARK: - Software Update
 "update.checkButton" = "Check Now";
 "settings.update.section" = "Auto Update";

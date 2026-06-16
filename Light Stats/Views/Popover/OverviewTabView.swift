@@ -15,7 +15,7 @@ struct OverviewTabView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
-                HealthCard(health: monitor.health)
+                HealthCard(health: monitor.health, useColorIndicator: settings.useColorIndicator)
 
                 // Main Metrics Grid
                 LazyVGrid(columns: [
@@ -435,6 +435,8 @@ private struct SpinningFanIcon: View {
 /// 健康分卡片：总分 + 分档 + 各维度简评。
 private struct HealthCard: View {
     let health: HealthScore
+    /// 监控列表等级用颜色圆点（true）还是「低/中/高」文字（false）。
+    let useColorIndicator: Bool
 
     var body: some View {
         BentoCard(title: "health.title".localized, icon: "heart.text.square") {
@@ -456,7 +458,7 @@ private struct HealthCard: View {
                         .frame(width: 10, height: 10)
                 }
 
-                Text(summaryText)
+                summaryText
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundColor(.labelMuted)
                     .lineLimit(2)
@@ -485,22 +487,45 @@ private struct HealthCard: View {
         }
     }
 
-    private var summaryText: String {
-        let dimensions: [(HealthScore.Dimension, String)] = [
-            (.cpu, "health.dimension.cpu".localized),
-            (.memory, "health.dimension.memory".localized),
-            (.load, "health.dimension.load".localized),
-            (.temperature, "health.dimension.temperature".localized),
-            (.gpu, "health.dimension.gpu".localized),
-            (.battery, "health.dimension.battery".localized),
-            (.diskIO, "health.dimension.diskIO".localized)
-        ]
+    private static let dimensionLabels: [(HealthScore.Dimension, String)] = [
+        (.cpu, "health.dimension.cpu".localized),
+        (.memory, "health.dimension.memory".localized),
+        (.load, "health.dimension.load".localized),
+        (.temperature, "health.dimension.temperature".localized),
+        (.gpu, "health.dimension.gpu".localized),
+        (.battery, "health.dimension.battery".localized),
+        (.diskIO, "health.dimension.diskIO".localized)
+    ]
 
-        return dimensions.compactMap { dimension, label in
-            guard let score = health.breakdown[dimension.rawValue] else { return nil }
-            return "\(label) \(levelText(for: dimension, score: score))"
+    /// 各维度等级一览。颜色模式用圆点（`circle.fill` 内嵌进 Text，保留换行排版），
+    /// 文字模式用「低/中/高」。两套并存，由设置项 `useColorIndicator` 决定。
+    private var summaryText: Text {
+        var result = Text(verbatim: "")
+        var isFirst = true
+        for (dimension, label) in Self.dimensionLabels {
+            guard let score = health.breakdown[dimension.rawValue] else { continue }
+            if !isFirst {
+                result = result + Text(verbatim: " · ")
+                    .font(.system(size: 22, weight: .bold))
+                    .baselineOffset(-4)
+                    .foregroundColor(.labelMuted.opacity(0.25))
+            }
+            isFirst = false
+            if useColorIndicator {
+                // 颜色模式：直接给维度名上色（绿/黄/红），不再额外画圆点。
+                result = result + Text(verbatim: label).foregroundColor(levelColor(score: score))
+            } else {
+                result = result + Text(verbatim: label + " ") + Text(levelText(for: dimension, score: score))
+            }
         }
-        .joined(separator: " · ")
+        return result
+    }
+
+    /// 等级颜色：得分越高越「轻」。绿（健康）/ 黄（注意）/ 红（吃紧）。
+    private func levelColor(score: Double) -> Color {
+        if score >= 85 { return .green }
+        if score >= 60 { return .yellow }
+        return .red
     }
 
     private func levelText(for dimension: HealthScore.Dimension, score: Double) -> String {

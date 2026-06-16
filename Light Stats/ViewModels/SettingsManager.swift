@@ -41,6 +41,7 @@ protocol SettingsManaging: ObservableObject {
     var healthIncludeTemperature: Bool { get set }
     var healthIncludeGPU: Bool { get set }
     var healthIncludePower: Bool { get set }
+    var useColorIndicator: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
@@ -116,8 +117,15 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         )
     }
 
+    // MARK: - Accessibility
+
+    /// 监控列表用颜色圆点指示等级（默认开）；关闭后回退到「低/中/高」文字。
+    @Published var useColorIndicator: Bool {
+        didSet { save(useColorIndicator, for: .useColorIndicator) }
+    }
+
     // MARK: - Other Settings
-    
+
     @Published var refreshRate: RefreshRate {
         didSet { save(refreshRate.rawValue, for: .refreshRate) }
     }
@@ -286,6 +294,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case healthIncludeTemperature = "settings.healthIncludeTemperature"
         case healthIncludeGPU = "settings.healthIncludeGPU"
         case healthIncludePower = "settings.healthIncludePower"
+        case useColorIndicator = "settings.useColorIndicator"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
@@ -324,7 +333,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         healthIncludeTemperature = defaults.object(forKey: Key.healthIncludeTemperature.rawValue) as? Bool ?? true
         healthIncludeGPU = defaults.object(forKey: Key.healthIncludeGPU.rawValue) as? Bool ?? true
         healthIncludePower = defaults.object(forKey: Key.healthIncludePower.rawValue) as? Bool ?? true
-        
+
+        // 颜色指示器：默认开启（关闭则回退到文字等级）。
+        useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
+
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue
         refreshRate = RefreshRate(rawValue: refreshRateStr) ?? .medium

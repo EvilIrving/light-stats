@@ -223,6 +223,20 @@ struct SettingsView: View {
                     }
                 }
 
+                // Accessibility Card — 颜色指示器开关在标题栏。
+                BentoCard(title: "settings.accessibility.section".localized, icon: "eye",
+                          headerAccessory: {
+                    Toggle("", isOn: $settings.useColorIndicator)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                }) {
+                    Text("settings.accessibility.colorIndicator.hint".localized)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 // Software Update Card — toggle in header, manual button in body.
                 BentoCard(title: "settings.update.section".localized, icon: "arrow.down.circle",
                           headerAccessory: {

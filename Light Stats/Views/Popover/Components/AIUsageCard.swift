@@ -13,7 +13,7 @@ struct AIUsageCard: View {
     let state: ProviderFetchState
 
     var body: some View {
-        BentoCard(title: provider.displayName, icon: icon) {
+        BentoCard(title: provider.displayName, assetIcon: assetIcon) {
             switch state {
             case .idle:
                 Text("overview.loading".localized)
@@ -40,10 +40,10 @@ struct AIUsageCard: View {
         }
     }
 
-    private var icon: String {
+    private var assetIcon: String {
         switch provider {
-        case .claude: return "sparkles"
-        case .codex: return "terminal"
+        case .claude: return "claudeLogo"
+        case .codex: return "codexLogo"
         }
     }
 

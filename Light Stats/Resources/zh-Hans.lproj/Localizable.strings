@@ -134,6 +134,10 @@
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";
 
+// MARK: - Accessibility
+"settings.accessibility.section" = "颜色指示器";
+"settings.accessibility.colorIndicator.hint" = "用颜色圆点显示健康等级。关闭后改用「低 / 中 / 高」文字。";
+
 // MARK: - Software Update
 "update.checkButton" = "立即检查";
 "settings.update.section" = "自动更新";

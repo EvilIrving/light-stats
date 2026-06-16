@@ -3,17 +3,21 @@ import SwiftUI
 struct BentoCard<Content: View, Accessory: View>: View {
     let title: String?
     let icon: String?
+    /// 资源目录里的品牌图标名（如 Claude/Codex logo）。设置后优先于 SF Symbol 的 `icon`。
+    let assetIcon: String?
     let content: Content
     let headerAccessory: Accessory
     let padding: CGFloat
 
     init(title: String? = nil,
          icon: String? = nil,
+         assetIcon: String? = nil,
          padding: CGFloat = 12,
          @ViewBuilder headerAccessory: () -> Accessory = { EmptyView() },
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.icon = icon
+        self.assetIcon = assetIcon
         self.padding = padding
         self.headerAccessory = headerAccessory()
         self.content = content()
@@ -21,9 +25,14 @@ struct BentoCard<Content: View, Accessory: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if title != nil || icon != nil {
+            if title != nil || icon != nil || assetIcon != nil {
                 HStack(spacing: 6) {
-                    if let icon = icon {
+                    if let assetIcon = assetIcon {
+                        Image(assetIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 13, height: 13)
+                    } else if let icon = icon {
                         Image(systemName: icon)
                             .font(.system(size: 12))
                             .foregroundColor(.labelMuted)

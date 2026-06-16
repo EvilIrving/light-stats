@@ -45,6 +45,7 @@ private actor MonitorSampler {
     private let exitNodeService = ExitNodeService()
     private let powerService = PowerService()
     private let diskIOService = DiskIOService()
+    private let pageRateService = PageRateService()
     private var previousHealth: HealthScore?
 
     private func getCPUInfo() async -> CPUInfo {
@@ -100,6 +101,8 @@ private actor MonitorSampler {
 
         // 磁盘 IO 是 nonisolated 纯 syscall（差值法），在采集 actor 上同步执行。
         let diskIO = diskIOService.sample()
+        // 换页速率同为差值法 syscall，与磁盘 IO 一致在采集 actor 上同步执行。
+        let swapActivityMBs = pageRateService.sample()
 
         // 本地代理探测与主接口 IP 都是 nonisolated 纯 syscall，在采集 actor 上同步执行（不占主线程）。
         let proxyConfig = ProxyDetector.shared.currentProxyConfig()
@@ -111,8 +114,7 @@ private actor MonitorSampler {
         let rawHealth = HealthScoreService.compute(
             cpu: cpuUsage.total,
             memoryPressure: detailedMemory.pressureLevel,
-            swapUsed: detailedMemory.swapUsed,
-            physicalMemory: detailedMemory.total,
+            swapActivityMBs: swapActivityMBs,
             load1: loadAverage.load1,
             coreCount: coreTopology.totalCores,
             temp: cpuTemperature,

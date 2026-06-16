@@ -10,7 +10,7 @@ import Foundation
 /// 健康分纯计算服务：按 Mole 风格从满分向下扣，缺失可选维度时自动重分配权重。
 ///
 /// 维度选取偏向「此刻系统卡不卡」的实时压力信号，而非缓变的容量数字：
-/// - 内存看 **内存压力 + swap**（macOS 内存常年 80%+，使用率并不能反映健康）
+/// - 内存看 **内存压力 + 换页速率**（macOS 内存常年 80%+，使用率并不能反映健康；速率比 swap 占用量更诚实）
 /// - CPU 看持续负载，并辅以系统 **LoadAvg**（排队等 CPU 的进程数）
 /// - 温度反映热节流风险
 /// - 第 5 维：笔记本看 **电池电量**（电量过低也是一种系统风险）；台式机无电池时回退到 **磁盘 I/O**
@@ -58,8 +58,7 @@ nonisolated enum HealthScoreService {
     static func compute(
         cpu: Double,
         memoryPressure: MemoryPressureLevel,
-        swapUsed: UInt64,
-        physicalMemory: UInt64,
+        swapActivityMBs: Double,
         load1: Double,
         coreCount: Int,
         temp: Double?,
@@ -79,7 +78,7 @@ nonisolated enum HealthScoreService {
             inputs.append(DimensionInput(
                 dimension: .memory,
                 weight: Weight.memory,
-                score: memoryScore(pressure: memoryPressure, swapUsed: swapUsed, physicalMemory: physicalMemory)
+                score: memoryScore(pressure: memoryPressure, swapActivityMBs: swapActivityMBs)
             ))
         }
         if toggles.load {
@@ -198,9 +197,10 @@ nonisolated enum HealthScoreService {
         }
     }
 
-    /// 内存健康：以 macOS 内存压力等级为主、swap 占物理内存比例为辅，取两者较低值。
-    /// 内存压力是系统权威信号，swap 大量使用意味着真实的换页颠簸。
-    private static func memoryScore(pressure: MemoryPressureLevel, swapUsed: UInt64, physicalMemory: UInt64) -> Double {
+    /// 内存健康：以 macOS 内存压力等级为主、**换页速率**（磁盘 swap MB/s）为辅，取两者较低值。
+    /// 内存压力是系统权威信号；换页速率反映此刻是否正在颠簸——
+    /// 比 swap 占用量更诚实：占用量在压力消退后仍滞留，会对一台当下流畅的机器误扣分。
+    private static func memoryScore(pressure: MemoryPressureLevel, swapActivityMBs: Double) -> Double {
         let levelScore: Double
         switch pressure {
         case .normal: levelScore = 100
@@ -208,14 +208,15 @@ nonisolated enum HealthScoreService {
         case .critical: levelScore = 15
         }
 
-        let swapRatio = physicalMemory > 0 ? Double(swapUsed) / Double(physicalMemory) * 100 : 0
+        // 换页速率打分：≤1 MB/s 视为静止（满分），1–20 线性降到 60，20–100 继续降到 0。
+        let rate = Swift.max(0, swapActivityMBs)
         let swapScore: Double
-        if swapRatio <= 2 {
+        if rate <= 1 {
             swapScore = 100
-        } else if swapRatio <= 10 {
-            swapScore = interpolate(value: swapRatio, from: 2, to: 10, start: 100, end: 60)
+        } else if rate <= 20 {
+            swapScore = interpolate(value: rate, from: 1, to: 20, start: 100, end: 60)
         } else {
-            swapScore = interpolate(value: swapRatio, from: 10, to: 25, start: 60, end: 0)
+            swapScore = interpolate(value: rate, from: 20, to: 100, start: 60, end: 0)
         }
 
         return Swift.min(levelScore, swapScore)
