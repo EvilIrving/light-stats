@@ -10,6 +10,7 @@ import SwiftUI
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
+    @Environment(\.openSettings) private var openSettingsAction
     @ObservedObject private var settings = SettingsManager.shared
 
     var body: some View {
@@ -66,7 +67,7 @@ struct OverviewTabView: View {
                                     .foregroundColor(.labelMuted)
                             }
                         }
-                        .foregroundColor(.purple)
+                        .foregroundColor(colorForUsage(monitor.memoryUsage))
                     }
                     
                     // Load Card
@@ -75,6 +76,7 @@ struct OverviewTabView: View {
                             .font(.system(size: 14, weight: .semibold, design: .monospaced))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
+                            .foregroundColor(colorForUsage(loadUsagePercent))
                     }
                 }
 
@@ -187,10 +189,20 @@ struct OverviewTabView: View {
                 
                 // AI Usage Cards (hidden entirely when toggled off in settings)
                 if settings.aiMonitorClaudeEnabled {
-                    AIUsageCard(provider: .claude, state: aiMonitor.claudeState)
+                    AIUsageCard(
+                        provider: .claude,
+                        state: aiMonitor.claudeState,
+                        isRefreshing: aiMonitor.refreshingProviders.contains(.claude),
+                        retry: { aiMonitor.retry(.claude) }
+                    )
                 }
                 if settings.aiMonitorCodexEnabled {
-                    AIUsageCard(provider: .codex, state: aiMonitor.codexState)
+                    AIUsageCard(
+                        provider: .codex,
+                        state: aiMonitor.codexState,
+                        isRefreshing: aiMonitor.refreshingProviders.contains(.codex),
+                        retry: { aiMonitor.retry(.codex) }
+                    )
                 }
 
                 // Top Processes Section
@@ -234,6 +246,12 @@ struct OverviewTabView: View {
                         .padding(.vertical, 4)
                     }
                 }
+
+                ActionRowsCard(
+                    openSettings: openSettings,
+                    openAbout: openAbout,
+                    quit: { NSApp.terminate(nil) }
+                )
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -300,6 +318,13 @@ struct OverviewTabView: View {
         }
     }
 
+    private var loadUsagePercent: Double {
+        let coreCount = monitor.coreTopology.totalCores > 0
+            ? monitor.coreTopology.totalCores
+            : max(monitor.coreUsages.count, 1)
+        return min(100, max(0, monitor.loadAverage.load1 / Double(coreCount) * 100))
+    }
+
     private func colorForUsage(_ usage: Double) -> Color {
         if usage < 50 {
             return .green
@@ -321,15 +346,10 @@ struct OverviewTabView: View {
     @ViewBuilder
     private var exitValueView: some View {
         if let exit = monitor.exitNode {
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(routeColor(monitor.route))
-                    .frame(width: 6, height: 6)
-                Text(exitText(exit))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+            Text(exitText(exit))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.middle)
         } else {
             Text("network.exit.failed".localized)
                 .foregroundColor(.labelMuted)
@@ -364,13 +384,71 @@ struct OverviewTabView: View {
         return parts.joined(separator: " · ")
     }
 
-    /// 一致性结论上色：proxied 黄、direct 绿、unknown 灰。
-    private func routeColor(_ route: NetworkRoute) -> Color {
-        switch route {
-        case .direct: return .green
-        case .proxied: return .yellow
-        case .unknown: return .gray
+    private func openSettings() {
+        closePanel()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            openSettingsAction()
         }
+    }
+
+    private func openAbout() {
+        closePanel()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NotificationCenter.default.post(name: .showAbout, object: nil)
+        }
+    }
+
+    private func closePanel() {
+        (NSApp.delegate as? AppDelegate)?.closePanel()
+    }
+}
+
+// MARK: - Action Rows
+
+private struct ActionRowsCard: View {
+    let openSettings: () -> Void
+    let openAbout: () -> Void
+    let quit: () -> Void
+
+    var body: some View {
+        BentoCard(padding: 0) {
+            VStack(spacing: 0) {
+                ActionRow(icon: "gearshape", title: "popover.action.settings".localized, action: openSettings)
+                Divider().padding(.leading, 42)
+                ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
+                Divider().padding(.leading, 42)
+                ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit)
+            }
+        }
+    }
+}
+
+private struct ActionRow: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.labelMuted)
+                    .frame(width: 20)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+            .background(isHovered ? Color.primary.opacity(0.05) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -450,9 +528,6 @@ private struct HealthCard: View {
                         .foregroundColor(gradeColor)
                         .padding(.leading, 4)
                     Spacer()
-                    Circle()
-                        .fill(gradeColor)
-                        .frame(width: 10, height: 10)
                 }
 
                 summaryText
@@ -605,8 +680,8 @@ private struct BatteryCard: View {
 
     private var batteryColor: Color {
         if battery.state == .charging || battery.state == .charged { return .green }
-        if battery.percent < 10 { return .red }
-        if battery.percent < 20 { return .yellow }
+        if battery.percent < 20 { return .red }
+        if battery.percent < 40 { return .yellow }
         return .green
     }
 

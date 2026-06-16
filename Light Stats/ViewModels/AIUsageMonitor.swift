@@ -18,6 +18,7 @@ final class AIUsageMonitor: ObservableObject {
 
     @Published private(set) var claudeState: ProviderFetchState = .idle
     @Published private(set) var codexState: ProviderFetchState = .idle
+    @Published private(set) var refreshingProviders: Set<AIProvider> = []
 
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
@@ -68,6 +69,11 @@ final class AIUsageMonitor: ObservableObject {
         }
     }
 
+    func retry(_ provider: AIProvider) {
+        guard enabledProviders.contains(provider) else { return }
+        refresh(provider)
+    }
+
     // MARK: - Private
 
     private var enabledProviders: [AIProvider] {
@@ -83,8 +89,7 @@ final class AIUsageMonitor: ObservableObject {
 
         guard !enabledProviders.isEmpty else { return }
 
-        let interval = settings.aiUsageRefreshInterval.interval
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: AppConfig.aiUsageRefreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.refreshAll()
             }
@@ -101,6 +106,7 @@ final class AIUsageMonitor: ObservableObject {
     private func refresh(_ provider: AIProvider) {
         guard !inFlight.contains(provider) else { return }
         inFlight.insert(provider)
+        refreshingProviders.insert(provider)
 
         Task { [weak self] in
             let result: Result<ProviderUsageSnapshot, AIUsageError>
@@ -125,6 +131,7 @@ final class AIUsageMonitor: ObservableObject {
 
     private func handle(_ result: Result<ProviderUsageSnapshot, AIUsageError>, for provider: AIProvider) {
         inFlight.remove(provider)
+        refreshingProviders.remove(provider)
 
         let newState: ProviderFetchState
         switch result {

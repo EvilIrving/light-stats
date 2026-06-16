@@ -187,14 +187,9 @@ struct SettingsView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Picker("", selection: $settings.aiUsageRefreshInterval) {
-                                    ForEach(SettingsManager.AIRefreshInterval.allCases, id: \.self) { interval in
-                                        Text(interval.displayName).tag(interval)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .labelsHidden()
-                                .fixedSize()
+                                Text(SettingsManager.AIRefreshInterval.m2.displayName)
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }
@@ -270,7 +265,7 @@ struct SettingsView: View {
             }
             .padding(16)
         }
-        .frame(width: 430, height: 520)
+        .frame(width: 430, height: 676)
         .background(Color(nsColor: .windowBackgroundColor))
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}

@@ -53,6 +53,9 @@
 "overview.coreUsage" = "コア使用率";
 "overview.processes" = "プロセス";
 "overview.diskIO" = "ディスク I/O";
+"popover.action.settings" = "設定";
+"popover.action.about" = "Light Stats について";
+"popover.action.quit" = "Light Stats を終了";
 
 // MARK: - Battery
 "battery.title" = "バッテリー";

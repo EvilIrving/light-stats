@@ -21,6 +21,8 @@ nonisolated enum AppConfig {
     static let exitNodeCacheTTL: TimeInterval = 60
     /// 电池慢变量（循环/健康/功耗/温度）缓存有效期：TTL 内不重复读 IORegistry。
     static let batteryHealthCacheTTL: TimeInterval = 30
+    /// AI 用量刷新间隔固定为 2 分钟，降低令牌长时间闲置后失效的概率。
+    static let aiUsageRefreshInterval: TimeInterval = 120
 }
 
 /// User settings for the menu stats app
@@ -231,12 +233,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     
     enum AIRefreshInterval: String, CaseIterable {
         case m1 = "m1"
+        case m2 = "m2"
         case m5 = "m5"
         case m15 = "m15"
 
         var interval: TimeInterval {
             switch self {
             case .m1: return 60
+            case .m2: return 120
             case .m5: return 300
             case .m15: return 900
             }
@@ -245,6 +249,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         var displayName: String {
             switch self {
             case .m1: return "1 min"
+            case .m2: return "2 min"
             case .m5: return "5 min"
             case .m15: return "15 min"
             }
@@ -358,8 +363,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // AI usage monitoring - opt-in, default off
         aiMonitorClaudeEnabled = defaults.object(forKey: Key.aiMonitorClaude.rawValue) as? Bool ?? false
         aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
-        let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m5.rawValue
-        aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m5
+        let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m2.rawValue
+        aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m2
 
         // 自动检查更新：默认开启。
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true

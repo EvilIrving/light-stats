@@ -11,6 +11,8 @@ import SwiftUI
 struct AIUsageCard: View {
     let provider: AIProvider
     let state: ProviderFetchState
+    let isRefreshing: Bool
+    let retry: () -> Void
 
     var body: some View {
         BentoCard(title: provider.displayName, assetIcon: assetIcon) {
@@ -32,10 +34,14 @@ struct AIUsageCard: View {
                 }
 
             case .error(let error):
-                Text(errorText(error))
-                    .font(.system(size: 11))
-                    .foregroundColor(.labelMuted)
-                    .lineLimit(2)
+                HStack(spacing: 8) {
+                    Text(errorText(error))
+                        .font(.system(size: 11))
+                        .foregroundColor(.labelMuted)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    RetryButton(isRefreshing: isRefreshing, action: retry)
+                }
             }
         }
     }
@@ -75,6 +81,37 @@ struct AIUsageCard: View {
         let minutes = max(0, Int(Date().timeIntervalSince(date)) / 60)
         if minutes < 60 { return "\(minutes)m" }
         return "\(minutes / 60)h \(minutes % 60)m"
+    }
+}
+
+// MARK: - Retry Button
+
+private struct RetryButton: View {
+    let isRefreshing: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            rotatingIcon
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.labelMuted)
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isRefreshing)
+    }
+
+    @ViewBuilder
+    private var rotatingIcon: some View {
+        if isRefreshing {
+            TimelineView(.animation) { context in
+                Image(systemName: "arrow.clockwise")
+                    .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate * 360))
+            }
+        } else {
+            Image(systemName: "arrow.clockwise")
+        }
     }
 }
 

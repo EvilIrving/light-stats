@@ -53,6 +53,9 @@
 "overview.coreUsage" = "Core Usage";
 "overview.processes" = "Processes";
 "overview.diskIO" = "Disk I/O";
+"popover.action.settings" = "Settings";
+"popover.action.about" = "About Light Stats";
+"popover.action.quit" = "Quit Light Stats";
 
 // MARK: - Battery
 "battery.title" = "Battery";

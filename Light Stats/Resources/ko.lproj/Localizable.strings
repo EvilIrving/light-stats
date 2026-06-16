@@ -53,6 +53,9 @@
 "overview.coreUsage" = "코어 사용률";
 "overview.processes" = "프로세스";
 "overview.diskIO" = "디스크 I/O";
+"popover.action.settings" = "설정";
+"popover.action.about" = "Light Stats 정보";
+"popover.action.quit" = "Light Stats 종료";
 
 // MARK: - Battery
 "battery.title" = "배터리";

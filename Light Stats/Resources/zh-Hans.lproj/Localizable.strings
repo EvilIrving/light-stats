@@ -53,6 +53,9 @@
 "overview.coreUsage" = "核心使用率";
 "overview.processes" = "进程";
 "overview.diskIO" = "磁盘 I/O";
+"popover.action.settings" = "设置";
+"popover.action.about" = "关于软件";
+"popover.action.quit" = "退出软件";
 
 // MARK: - Battery
 "battery.title" = "电池";
