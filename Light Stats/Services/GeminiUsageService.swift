@@ -9,6 +9,10 @@ import Foundation
 
 /// Fetches Gemini CLI quota usage using local OAuth credentials.
 /// Credentials are maintained by Gemini CLI in ~/.gemini/oauth_creds.json; we only read and refresh them.
+///
+/// Adds curl fallback for URLSession timeouts — Google Cloud APIs occasionally
+/// trigger NSURLErrorTimedOut on slow connections; retrying via /usr/bin/curl
+/// often succeeds (CodexBar pattern).
 nonisolated enum GeminiUsageService {
 
     private static let quotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota")!
@@ -96,7 +100,7 @@ nonisolated enum GeminiUsageService {
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await fetchWithCurlFallback(request)
         } catch {
             throw AIUsageError.network
         }
@@ -110,6 +114,97 @@ nonisolated enum GeminiUsageService {
         return try parseQuotaResponse(data)
     }
 
+    /// Attempts the request with URLSession; on timeout, retries with /usr/bin/curl.
+    /// Google Cloud APIs sometimes trigger NSURLErrorTimedOut spuriously on macOS;
+    /// curl often succeeds on the same network (CodexBar pattern).
+    private static func fetchWithCurlFallback(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await URLSession.shared.data(for: request)
+        } catch {
+            guard isTimeoutError(error) else { throw error }
+            return try await curlFetch(request)
+        }
+    }
+
+    private static func isTimeoutError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorTimedOut
+    }
+
+    private static func curlFetch(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        guard let url = request.url else {
+            throw AIUsageError.network
+        }
+
+        let fm = FileManager.default
+        let tmpDir = fm.temporaryDirectory
+            .appendingPathComponent("lightstats-gemini-curl-\(UUID().uuidString.prefix(8))")
+        try fm.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tmpDir) }
+
+        let configURL = tmpDir.appendingPathComponent("curl.conf")
+        var config: [String] = [
+            "silent",
+            "show-error",
+            "location",
+            "url = \"\(url.absoluteString)\"",
+            "max-time = \(max(1, Int(ceil(request.timeoutInterval))))",
+        ]
+
+        if let method = request.httpMethod, !method.isEmpty {
+            config.append("request = \"\(method)\"")
+        }
+
+        for (name, value) in (request.allHTTPHeaderFields ?? [:]) {
+            config.append("header = \"\(name): \(value)\"")
+        }
+
+        if let body = request.httpBody {
+            let bodyURL = tmpDir.appendingPathComponent("body")
+            try body.write(to: bodyURL)
+            config.append("data-binary = \"@\(bodyURL.path)\"")
+        }
+
+        let marker = "__LIGHTSTATS_HTTP_STATUS__"
+        config.append("write-out = \"\(marker)%{http_code}\"")
+
+        try config.joined(separator: "\n").write(to: configURL, atomically: true, encoding: .utf8)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+        process.arguments = ["--config", configURL.path]
+
+        let outPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = FileHandle.nullDevice
+
+        guard let _ = try? process.run() else {
+            throw AIUsageError.network
+        }
+        process.waitUntilExit()
+
+        let outputData = outPipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: outputData, encoding: .utf8),
+              let markerRange = output.range(of: marker, options: .backwards) else {
+            throw AIUsageError.network
+        }
+
+        let bodyText = String(output[..<markerRange.lowerBound])
+        let statusText = output[markerRange.upperBound...]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let statusCode = Int(statusText),
+              let response = HTTPURLResponse(
+                  url: url,
+                  statusCode: statusCode,
+                  httpVersion: nil,
+                  headerFields: nil) else {
+            throw AIUsageError.network
+        }
+
+        return (Data(bodyText.utf8), response)
+    }
+
     private static func loadCodeAssistProjectId(accessToken: String) async throws -> String? {
         var request = URLRequest(url: loadCodeAssistURL, timeoutInterval: 10)
         request.httpMethod = "POST"
@@ -117,7 +212,7 @@ nonisolated enum GeminiUsageService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = Data("{\"metadata\":{\"ideType\":\"GEMINI_CLI\",\"pluginType\":\"GEMINI\"}}".utf8)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await fetchWithCurlFallback(request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return nil
@@ -167,7 +262,7 @@ nonisolated enum GeminiUsageService {
 
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await fetchWithCurlFallback(request)
         } catch {
             throw AIUsageError.network
         }
