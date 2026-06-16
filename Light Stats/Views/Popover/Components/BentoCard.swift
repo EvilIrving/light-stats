@@ -46,7 +46,7 @@ struct BentoCard<Content: View, Accessory: View>: View {
                     headerAccessory
                 }
             }
-            
+
             content
         }
         .padding(padding)

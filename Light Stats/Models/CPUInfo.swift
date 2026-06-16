@@ -14,7 +14,7 @@ struct CoreTopology {
     let performanceCores: Int  // P-cores
     let efficiencyCores: Int   // E-cores
     let totalCores: Int
-    
+
     /// Display label like "4P+6E"
     var displayLabel: String {
         if performanceCores > 0 && efficiencyCores > 0 {
@@ -25,7 +25,7 @@ struct CoreTopology {
             return "\(totalCores)\("core.suffix".localized)"
         }
     }
-    
+
     static let unknown = CoreTopology(performanceCores: 0, efficiencyCores: 0, totalCores: 0)
 }
 
@@ -36,12 +36,12 @@ struct LoadAverage {
     let load1: Double
     let load5: Double
     let load15: Double
-    
+
     /// Display string like "3.2 / 2.8 / 2.5"
     var displayString: String {
         String(format: "%.1f / %.1f / %.1f", load1, load5, load15)
     }
-    
+
     static let zero = LoadAverage(load1: 0, load5: 0, load15: 0)
 }
 
@@ -52,7 +52,7 @@ final class CPUInfo: @unchecked Sendable {
     private var previousTicks: (user: UInt64, system: UInt64, idle: UInt64, nice: UInt64) = (0, 0, 0, 0)
     private var previousCoreTicks: [(user: UInt64, system: UInt64, idle: UInt64, nice: UInt64)] = []
     private var isWarmedUp = false
-    
+
     // Cache for core topology (rarely changes)
     private var cachedTopology: CoreTopology?
     private var topologyCacheTime: Date?
@@ -63,22 +63,22 @@ final class CPUInfo: @unchecked Sendable {
         let user: Double
         let system: Double
     }
-    
+
     // MARK: - Warmup
-    
+
     /// Perform warmup sampling to avoid initial data distortion
     func warmup() {
         guard !isWarmedUp else { return }
-        
+
         // First sample to initialize previous ticks
         _ = getCPUUsage()
         _ = getPerCoreUsage()
-        
+
         isWarmedUp = true
     }
 
     // MARK: - CPU Usage
-    
+
     func getCPUUsage() -> CPUUsage {
         var cpuLoad = host_cpu_load_info()
         var count = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info>.size / MemoryLayout<integer_t>.size)
@@ -118,7 +118,7 @@ final class CPUInfo: @unchecked Sendable {
     }
 
     // MARK: - Per-Core Usage
-    
+
     func getPerCoreUsage() -> [Double] {
         var numCPUs: natural_t = 0
         var cpuInfo: processor_info_array_t?
@@ -169,9 +169,9 @@ final class CPUInfo: @unchecked Sendable {
 
         return usages
     }
-    
+
     // MARK: - Core Topology (Apple Silicon)
-    
+
     /// Get P-core and E-core counts using sysctl
     func getCoreTopology() -> CoreTopology {
         // Check cache
@@ -180,10 +180,10 @@ final class CPUInfo: @unchecked Sendable {
            Date().timeIntervalSince(cacheTime) < topologyCacheTTL {
             return cached
         }
-        
+
         var pCores = 0
         var eCores = 0
-        
+
         // Try to get perflevel0 (usually Performance cores on Apple Silicon)
         var level0Count: Int32 = 0
         var level0Size = MemoryLayout<Int32>.size
@@ -200,7 +200,7 @@ final class CPUInfo: @unchecked Sendable {
                 }
             }
         }
-        
+
         // Try to get perflevel1 (usually Efficiency cores on Apple Silicon)
         var level1Count: Int32 = 0
         var level1Size = MemoryLayout<Int32>.size
@@ -216,34 +216,34 @@ final class CPUInfo: @unchecked Sendable {
                 }
             }
         }
-        
+
         // Get total logical CPUs as fallback
         let totalCores = ProcessInfo.processInfo.processorCount
-        
+
         let topology = CoreTopology(
             performanceCores: pCores,
             efficiencyCores: eCores,
             totalCores: totalCores
         )
-        
+
         // Cache the result
         cachedTopology = topology
         topologyCacheTime = Date()
-        
+
         return topology
     }
-    
+
     // MARK: - Load Average
-    
+
     /// Get system load average (1, 5, 15 minutes)
     static func getLoadAverage() -> LoadAverage {
         var loadavg = [Double](repeating: 0, count: 3)
         let count = getloadavg(&loadavg, 3)
-        
+
         guard count == 3 else {
             return .zero
         }
-        
+
         return LoadAverage(
             load1: loadavg[0],
             load5: loadavg[1],

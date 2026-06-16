@@ -45,33 +45,33 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 /// Manages app localization and language switching
 @MainActor
 final class LocalizationManager: ObservableObject {
-    
+
     // MARK: - Singleton
-    
+
     static let shared = LocalizationManager()
-    
+
     // MARK: - Published Properties
-    
+
     @Published private(set) var currentLocale: Locale
     @Published private(set) var currentLanguage: AppLanguage
-    
+
     // MARK: - Private Properties
-    
+
     private let userDefaultsKey = "settings.appLanguage"
-    
+
     // MARK: - Init
-    
+
     private init() {
         // Load saved language preference
         let savedLanguage = UserDefaults.standard.string(forKey: userDefaultsKey) ?? AppLanguage.system.rawValue
         let language = AppLanguage(rawValue: savedLanguage) ?? .system
-        
+
         self.currentLanguage = language
         self.currentLocale = LocalizationManager.resolveLocale(for: language)
     }
-    
+
     // MARK: - Public Methods
-    
+
     /// Set the app language
     func setLanguage(_ language: AppLanguage) {
         currentLanguage = language
@@ -80,7 +80,7 @@ final class LocalizationManager: ObservableObject {
         // Persist the setting
         UserDefaults.standard.set(language.rawValue, forKey: userDefaultsKey)
     }
-    
+
     /// Get localized string for a key. Thread-safe: reads language from UserDefaults.
     nonisolated func localizedString(_ key: String) -> String {
         Self.localizedString(key)
@@ -113,9 +113,9 @@ final class LocalizationManager: ObservableObject {
         let format = localizedString(key)
         return String(format: format, arguments: args)
     }
-    
+
     // MARK: - Private Methods
-    
+
     private static func resolveLocale(for language: AppLanguage) -> Locale {
         switch language {
         case .system:

@@ -148,7 +148,7 @@ struct AppCardView: View {
     private var childProcesses: [TopProcessInfo] {
         cachedChildProcesses
     }
-    
+
     private func updateChildProcesses() {
         cachedChildProcesses = appManager.childProcesses(for: app)
     }

@@ -33,26 +33,26 @@ final class AppMemoryManager: ObservableObject {
     private var isUpdating = false
     private var needsAnotherUpdate = false
     private var activeUpdateTask: Task<Void, Never>?
-    
+
     static let shared = AppMemoryManager()
-    
+
     /// ProcessService 实例
     private let processService: ProcessServiceProtocol
-    
+
     /// 默认图标（缓存）
     private lazy var defaultAppIcon: NSImage = {
         NSImage(systemSymbolName: "app", accessibilityDescription: nil) ?? NSImage()
     }()
-    
+
     private lazy var defaultGearIcon: NSImage = {
         NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil) ?? NSImage()
     }()
-    
+
     private init(processService: ProcessServiceProtocol? = nil) {
         self.processService = processService ?? ProcessService.shared
         totalMemory = ProcessInfo.processInfo.physicalMemory
     }
-    
+
     func startMonitoring(interval: TimeInterval? = nil) {
         let refreshInterval = interval ?? AppConfig.appMemoryRefreshInterval
         let shouldRestartTimer = timer == nil || abs(refreshInterval - monitorInterval) > 0.001
@@ -70,7 +70,7 @@ final class AppMemoryManager: ObservableObject {
             scheduleTimer(interval: refreshInterval)
         }
     }
-    
+
     func stopMonitoring() {
         isMonitoring = false
         timer?.invalidate()
@@ -80,7 +80,7 @@ final class AppMemoryManager: ObservableObject {
         isUpdating = false
         needsAnotherUpdate = false
     }
-    
+
     func updateRunningApps() async {
         queueUpdate()
         await activeUpdateTask?.value
@@ -119,7 +119,7 @@ final class AppMemoryManager: ObservableObject {
     private func updateRunningAppsInternal() async {
         // Step 1: Collect all process memory rows; filtering/aggregation happens after attribution.
         let topProcesses = await processService.getTopMemoryProcesses(count: 0)
-        
+
         // Step 2: Get running GUI apps for icons and bundle identifiers
         let workspace = NSWorkspace.shared
         let guiApps = workspace.runningApplications
@@ -135,25 +135,25 @@ final class AppMemoryManager: ObservableObject {
         totalMemoryUsed = detailedInfo.used
         memoryPressure = detailedInfo.pressureLevel
     }
-    
+
     // MARK: - App Control
-    
+
     /// Trigger system memory cleanup
     func triggerMemoryCleanup() async {
         await processService.triggerMemoryCleanup()
         await updateRunningApps()
     }
-    
+
     /// Terminate an app group
     func terminateApp(_ app: AppGroup) -> Bool {
         processService.terminateApp(app)
     }
-    
+
     /// Force terminate an app group
     func forceTerminateApp(_ app: AppGroup) -> Bool {
         processService.forceTerminateApp(app)
     }
-    
+
     /// Async terminate with reliable two-stage strategy
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
         let success = await processService.terminateAppAsync(app)
@@ -162,7 +162,7 @@ final class AppMemoryManager: ObservableObject {
         }
         return success
     }
-    
+
     /// Check if a process is still running
     func isProcessAlive(_ pid: pid_t) -> Bool {
         processService.isProcessAlive(pid)

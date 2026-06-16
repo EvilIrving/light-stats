@@ -145,7 +145,7 @@ enum ClaudeUsageService {
     // MARK: - Messages API fallback (rate-limit headers)
 
     /// Sends a minimal Messages API request (Haiku, 1 output token) solely to
-    /// read rate-limit response headers. Token cost is negligible (~10 input +
+    /// read rate-limit response headers. Token cost is negligible (~10 input
     /// 1 output token). Only called when the OAuth usage endpoint is unavailable.
     private static func fetchUsageFromHeaders(token: String) async throws -> ProviderUsageSnapshot {
         var request = URLRequest(url: messagesURL, timeoutInterval: 15)

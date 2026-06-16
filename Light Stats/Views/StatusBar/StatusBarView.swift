@@ -261,17 +261,17 @@ final class StatusBarView: NSView {
                     .font: Layout.networkFont,
                     .foregroundColor: textColor
                 ]
-                let lineSpacing: CGFloat = 0 
-                let arrowXOffset: CGFloat = 2 
+                let lineSpacing: CGFloat = 0
+                let arrowXOffset: CGFloat = 2
                 let globalYOffset: CGFloat = -1 // 整体下移 1 单位
 
                 // 绘制上传 (上行)
                 let upArrow = "↑"
                 let upValue = item.value
-                
+
                 let upArrowPoint = NSPoint(x: itemRect.origin.x + arrowXOffset, y: itemRect.midY + lineSpacing + globalYOffset)
                 upArrow.draw(at: upArrowPoint, withAttributes: netAttrs)
-                
+
                 let upValuePoint = NSPoint(
                     x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth,
                     y: itemRect.midY + lineSpacing + globalYOffset
@@ -281,13 +281,13 @@ final class StatusBarView: NSView {
                 // 绘制下载 (下行)
                 let downArrow = "↓"
                 let downValue = item.label
-                
+
                 let textHeight = item.label.size(withAttributes: netAttrs).height
                 let downY = itemRect.midY - textHeight + 1 + globalYOffset
-                
+
                 let downArrowPoint = NSPoint(x: itemRect.origin.x + arrowXOffset, y: downY)
                 downArrow.draw(at: downArrowPoint, withAttributes: netAttrs)
-                
+
                 let downValuePoint = NSPoint(x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth, y: downY)
                 downValue.draw(at: downValuePoint, withAttributes: netAttrs)
             } else {

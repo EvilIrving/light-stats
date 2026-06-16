@@ -41,27 +41,27 @@ struct ProcessBundleInfo {
     let execPath: String?       // 可执行文件完整路径
     let bundlePath: String?     // .app bundle 路径
     let bundleId: String?       // Bundle Identifier
-    
+
     /// 是否在 .app bundle 内
     var isInAppBundle: Bool {
         bundlePath != nil
     }
-    
+
     /// 是否为 Apple 应用
     var isAppleApp: Bool {
         bundleId?.hasPrefix("com.apple.") == true
     }
-    
+
     /// 是否为系统路径（/System/、/usr/、/sbin/、/Library/Apple/、/Library/Developer/ 等）
     var isSystemPath: Bool {
         guard let path = execPath else { return false }
-        return path.hasPrefix("/System/") || 
+        return path.hasPrefix("/System/") ||
                path.hasPrefix("/usr/") ||
                path.hasPrefix("/sbin/") ||
                path.hasPrefix("/Library/Apple/") ||
                path.hasPrefix("/Library/Developer/")
     }
-    
+
     /// 判断是否为系统应用
     /// 系统应用 = 系统路径 或 (/Applications/ 下的 Apple 应用)
     var isSystemApp: Bool {
@@ -92,31 +92,31 @@ struct AppGroup: Identifiable {
     let bundleIdentifier: String?
     let bundlePath: String?       // .app bundle 路径
     let execPath: String?         // 可执行文件路径
-    
+
     /// Display name: shows process count if multiple processes
     var displayName: String {
         processCount > 1 ? "\(name) (\(processCount))" : name
     }
-    
+
     var memoryFormatted: String {
         ByteFormatter.format(totalMemoryBytes)
     }
-    
+
     /// 是否为 Apple 应用
     var isAppleApp: Bool {
         bundleIdentifier?.hasPrefix("com.apple.") == true
     }
-    
+
     /// 是否为系统路径
     var isSystemPath: Bool {
         guard let path = execPath else { return false }
-        return path.hasPrefix("/System/") || 
+        return path.hasPrefix("/System/") ||
                path.hasPrefix("/usr/") ||
                path.hasPrefix("/sbin/") ||
                path.hasPrefix("/Library/Apple/") ||
                path.hasPrefix("/Library/Developer/")
     }
-    
+
     /// 是否为系统应用
     var isSystemApp: Bool {
         if isSystemPath {

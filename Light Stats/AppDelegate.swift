@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let appMemoryManager: AppMemoryManager
-    
+
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared

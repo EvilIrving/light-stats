@@ -31,18 +31,18 @@ protocol ProcessServiceProtocol {
 }
 
 final class ProcessService: ProcessServiceProtocol {
-    
+
     static let shared = ProcessService()
-    
+
     /// Bundle ID 缓存（避免重复读取 Info.plist）
     private var bundleIdCache: [String: String?] = [:]
     private let memoryCleanupLock = NSLock()
     private var isMemoryCleanupRunning = false
-    
+
     private init() {}
-    
+
     // MARK: - Bundle Info Extraction
-    
+
     /// 从进程 PID 获取 Bundle 信息
     /// - Parameter pid: 进程 PID
     /// - Returns: ProcessBundleInfo 包含可执行文件路径、Bundle 路径和 Bundle ID
@@ -50,23 +50,23 @@ final class ProcessService: ProcessServiceProtocol {
         // Step 1: 获取可执行文件完整路径
         var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let pathLength = proc_pidpath(pid, &pathBuffer, UInt32(pathBuffer.count))
-        
+
         guard pathLength > 0 else {
             return ProcessBundleInfo(execPath: nil, bundlePath: nil, bundleId: nil)
         }
-        
+
         let execPath = String(cString: pathBuffer)
-        
+
         // Step 2: 检查是否在 .app bundle 内
         // 路径格式如: /Applications/Safari.app/Contents/MacOS/Safari
         guard let appRange = execPath.range(of: ".app/") else {
             // 不在 .app bundle 内（纯命令行工具或守护进程）
             return ProcessBundleInfo(execPath: execPath, bundlePath: nil, bundleId: nil)
         }
-        
+
         // Step 3: 提取 .app bundle 路径（去掉末尾的 "/"）
         let bundlePath = String(execPath[..<appRange.upperBound].dropLast(1))
-        
+
         // Step 4: 从缓存或 bundle 读取 Bundle ID
         let bundleId: String?
         if let cached = bundleIdCache[bundlePath] {
@@ -76,25 +76,25 @@ final class ProcessService: ProcessServiceProtocol {
             bundleId = bundle?.bundleIdentifier
             bundleIdCache[bundlePath] = bundleId
         }
-        
+
         return ProcessBundleInfo(execPath: execPath, bundlePath: bundlePath, bundleId: bundleId)
     }
-    
+
     /// Get process name for a given PID
     func getProcessName(for pid: pid_t) -> String? {
         var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         let pathLength = proc_pidpath(pid, &pathBuffer, UInt32(pathBuffer.count))
-        
+
         if pathLength > 0 {
             let path = String(cString: pathBuffer)
             return (path as NSString).lastPathComponent
         }
-        
+
         // Fallback: try to get name from kinfo_proc
         var info = kinfo_proc()
         var size = MemoryLayout<kinfo_proc>.size
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
-        
+
         if sysctl(&mib, u_int(mib.count), &info, &size, nil, 0) == 0 && size > 0 {
             let name = withUnsafePointer(to: &info.kp_proc.p_comm) {
                 $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN)) {
@@ -105,12 +105,12 @@ final class ProcessService: ProcessServiceProtocol {
                 return name
             }
         }
-        
+
         return nil
     }
-    
+
     // MARK: - Top Command Execution
-    
+
     /// Get memory usage for processes.
     /// Uses `ps` for full-process coverage, then sorts by physical footprint descending.
     func getTopMemoryProcesses(count: Int) async -> [TopProcessInfo] {
@@ -179,14 +179,14 @@ final class ProcessService: ProcessServiceProtocol {
                     }
                     continuation.resume(returning: processes)
                 } catch {
-                    os_log("ps command execution error: %{public}@", 
+                    os_log("ps command execution error: %{public}@",
                            log: OSLog.default, type: .error, error.localizedDescription)
                     continuation.resume(returning: [])
                 }
             }
         }
     }
-    
+
     private struct ProcessMemoryRow {
         let pid: pid_t
         let parentPid: pid_t
@@ -268,14 +268,14 @@ final class ProcessService: ProcessServiceProtocol {
         guard result == 0, info.ri_phys_footprint > 0 else { return nil }
         return info.ri_phys_footprint
     }
-    
+
     // MARK: - Process Control
-    
+
     /// Check if a process is still alive
     func isProcessAlive(_ pid: pid_t) -> Bool {
         return kill(pid, 0) == 0
     }
-    
+
     /// Kill a process using system kill command (more reliable than NSRunningApplication)
     /// - Parameters:
     ///   - pid: Process ID to kill
@@ -287,7 +287,7 @@ final class ProcessService: ProcessServiceProtocol {
         process.arguments = [force ? "-9" : "-15", String(pid)]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        
+
         do {
             try process.run()
             process.waitUntilExit()
@@ -296,7 +296,7 @@ final class ProcessService: ProcessServiceProtocol {
             return false
         }
     }
-    
+
     /// Gracefully terminate a process with fallback to force kill
     /// Strategy: SIGTERM → wait 500ms → SIGKILL (borrowed from port-killer)
     /// - Parameter pid: Process ID to terminate
@@ -305,19 +305,19 @@ final class ProcessService: ProcessServiceProtocol {
         guard isProcessAlive(pid) else {
             return true
         }
-        
+
         let graceful = killProcessWithCommand(pid: pid, force: false)
         if graceful {
             try? await Task.sleep(for: .milliseconds(500))
         }
-        
+
         guard isProcessAlive(pid) else {
             return true
         }
-        
+
         return killProcessWithCommand(pid: pid, force: true)
     }
-    
+
     /// Async version of terminate that provides reliable process termination
     /// Uses two-stage strategy: graceful first, then force kill
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
@@ -349,7 +349,7 @@ final class ProcessService: ProcessServiceProtocol {
             }
         }
     }
-    
+
     /// Trigger system memory cleanup
     /// Uses memory pressure simulation to encourage system to release purgeable memory
     func triggerMemoryCleanup() async {
@@ -393,7 +393,7 @@ final class ProcessService: ProcessServiceProtocol {
         isMemoryCleanupRunning = false
         memoryCleanupLock.unlock()
     }
-    
+
     /// Terminate an app group (handles single and multi-process apps)
     func terminateApp(_ app: AppGroup) -> Bool {
         // Single process: direct terminate
@@ -403,20 +403,20 @@ final class ProcessService: ProcessServiceProtocol {
             }
             return nsApp.terminate()
         }
-        
+
         // Multi-process: terminate main process first
         guard let mainApp = NSRunningApplication(processIdentifier: app.id) else {
             return false
         }
-        
+
         let mainTerminated = mainApp.terminate()
         return mainTerminated
     }
-    
+
     /// Force terminate an app group (all processes)
     func forceTerminateApp(_ app: AppGroup) -> Bool {
         var allSucceeded = true
-        
+
         // Force terminate main process first
         if let mainApp = NSRunningApplication(processIdentifier: app.id) {
             if !mainApp.forceTerminate() {
@@ -428,7 +428,7 @@ final class ProcessService: ProcessServiceProtocol {
                 allSucceeded = false
             }
         }
-        
+
         // Force terminate all safely attributed child processes
         for pid in app.terminablePids where pid != app.id {
             if let childApp = NSRunningApplication(processIdentifier: pid) {
@@ -442,7 +442,7 @@ final class ProcessService: ProcessServiceProtocol {
                 }
             }
         }
-        
+
         return allSucceeded
     }
 }

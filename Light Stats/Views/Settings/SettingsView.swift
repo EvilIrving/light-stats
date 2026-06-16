@@ -12,7 +12,7 @@ struct SettingsView: View {
     @ObservedObject private var localization = LocalizationManager.shared
     @State private var showMinimumItemAlert = false
     @State private var showExitPrivacyAlert = false
-    
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
@@ -305,7 +305,7 @@ struct SettingsView: View {
         }
         .id(localization.currentLanguage)
     }
-    
+
     private func validateMinimumItems() {
         if !settings.hasAtLeastOneItem {
             settings.ensureAtLeastOneItem()
@@ -386,7 +386,7 @@ struct SettingsGridItem: View {
         }
     }
 }
-    
+
 // MARK: - Health Dimension Button
 
 /// 健康分维度按钮：纯文字，无图标，点击切换开关。

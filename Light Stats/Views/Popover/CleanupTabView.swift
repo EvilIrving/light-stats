@@ -38,7 +38,7 @@ struct CleanupTabView: View {
                         }
                     }
                     .frame(height: 8)
-                    
+
                     // Swap Warning (only show when swap is used)
                     if swapUsed > 0 {
                         HStack(spacing: 6) {
@@ -68,7 +68,7 @@ struct CleanupTabView: View {
             //             .font(.system(size: 18, weight: .bold, design: .rounded))
             //             .foregroundColor(.green)
             //     }
-                
+
             //     // App Used
             //     BentoCard(title: "cleanup.appUsed".localized, icon: "app.dashed") {
             //         Text(ByteFormatter.format(appManager.totalMemoryUsed))
@@ -144,7 +144,7 @@ struct CleanupTabView: View {
         case .critical: return .red
         }
     }
-    
+
     private var swapUsed: UInt64 {
         appManager.detailedMemory?.swapUsed ?? 0
     }
@@ -166,15 +166,15 @@ struct CleanupTabView: View {
     private func terminateApp(_ app: RunningApp) {
         guard app.isTerminable else { return }
         guard !terminatingApps.contains(app.id) else { return }
-        
+
         terminatingApps.insert(app.id)
-        
+
         Task {
             let success = await appManager.terminateAppAsync(app)
-            
+
             await MainActor.run {
                 terminatingApps.remove(app.id)
-                
+
                 if !success && appManager.isProcessAlive(app.id) {
                     appToTerminate = app
                     showForceTerminateAlert = true

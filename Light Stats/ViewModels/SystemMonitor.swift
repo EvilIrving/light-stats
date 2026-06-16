@@ -168,13 +168,13 @@ final class SystemMonitor: ObservableObject {
     @Published var cpuUserUsage: Double = 0
     @Published var cpuSystemUsage: Double = 0
     @Published var coreUsages: [Double] = []
-    
+
     // Core topology (Apple Silicon P/E cores)
     @Published var coreTopology: CoreTopology = .unknown
-    
+
     // Load average (1, 5, 15 minutes)
     @Published var loadAverage: LoadAverage = .zero
-    
+
     // Top CPU processes
     @Published var topCPUProcesses: [TopProcess] = []
 

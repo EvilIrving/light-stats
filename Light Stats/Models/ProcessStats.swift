@@ -15,7 +15,7 @@ struct TopProcess: Identifiable {
     let name: String
     let cpuPercent: Double
     let memPercent: Double
-    
+
     /// Format CPU percentage for display
     var cpuDisplayString: String {
         String(format: "%.1f%%", cpuPercent)
@@ -37,7 +37,7 @@ enum ProcessStats {
             names.insert(name.lowercased())
         }
     }
-    
+
     /// Get top N processes sorted by CPU usage
     /// Uses: ps -Aceo pcpu,pmem,comm -r
     static func getTopCPUProcesses(count: Int = 5) async -> [TopProcess] {
@@ -51,11 +51,11 @@ enum ProcessStats {
                 // -o: output format
                 // -r: sort by CPU (descending)
                 task.arguments = ["-Aceo", "pcpu,pmem,comm", "-r"]
-                
+
                 let pipe = Pipe()
                 task.standardOutput = pipe
                 task.standardError = FileHandle.nullDevice
-                
+
                 do {
                     try task.run()
 
@@ -63,7 +63,7 @@ enum ProcessStats {
                     task.waitUntilExit()
 
                     let output = String(data: data, encoding: .utf8) ?? ""
-                    
+
                     let processes = parseProcessOutput(output, maxCount: count)
                     continuation.resume(returning: processes)
                 } catch {
@@ -72,18 +72,18 @@ enum ProcessStats {
             }
         }
     }
-    
+
     /// Parse ps command output
     /// Format: %CPU %MEM COMMAND
     private static func parseProcessOutput(_ output: String, maxCount: Int) -> [TopProcess] {
         var processes: [TopProcess] = []
         let lines = output.components(separatedBy: "\n")
-        
+
         var lineIndex = 0
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty else { continue }
-            
+
             // Skip header line (contains "CPU" or "%")
             if lineIndex == 0 {
                 lineIndex += 1
@@ -91,17 +91,17 @@ enum ProcessStats {
                     continue
                 }
             }
-            
+
             // Parse data line
             let fields = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
             guard fields.count >= 3 else { continue }
-            
+
             guard let cpuPercent = Double(fields[0]),
                   let memPercent = Double(fields[1]) else { continue }
-            
+
             // Command name is the last field (may contain spaces, take all remaining)
             var name = fields[2..<fields.count].joined(separator: " ")
-            
+
             // Strip path if present (take last component after /)
             if let lastSlash = name.lastIndex(of: "/") {
                 name = String(name[name.index(after: lastSlash)...])
@@ -110,24 +110,24 @@ enum ProcessStats {
             if currentAppProcessNames.contains(name.lowercased()) {
                 continue
             }
-            
+
             // Skip very low CPU processes
             if cpuPercent < 0.1 { continue }
-            
+
             processes.append(TopProcess(
                 name: name,
                 cpuPercent: cpuPercent,
                 memPercent: memPercent
             ))
-            
+
             // Limit results
             if processes.count >= maxCount {
                 break
             }
-            
+
             lineIndex += 1
         }
-        
+
         return processes
     }
 }

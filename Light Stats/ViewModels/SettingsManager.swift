@@ -55,9 +55,9 @@ protocol SettingsManaging: ObservableObject {
 
 @MainActor
 final class SettingsManager: ObservableObject, SettingsManaging {
-    
+
     // MARK: - Status Bar Display Settings
-    
+
     @Published var showLogo: Bool {
         didSet { save(showLogo, for: .showLogo) }
     }
@@ -142,7 +142,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var networkSpeedUnit: NetworkSpeedUnit {
         didSet { save(networkSpeedUnit.rawValue, for: .networkSpeedUnit) }
     }
-    
+
     // MARK: - AI Usage Settings
 
     @Published var aiMonitorClaudeEnabled: Bool {
@@ -177,7 +177,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var exitNodeProvider: ExitNodeProvider {
         didSet { save(exitNodeProvider.rawValue, for: .exitNodeProvider) }
     }
-    
+
     // MARK: - Software Update Settings
 
     /// 启动时与定时自动检查更新。默认开启；用户可在设置关闭。
@@ -192,14 +192,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     // MARK: - Singleton
 
     static let shared = SettingsManager()
-    
+
     // MARK: - Enums
-    
+
     enum RefreshRate: String, CaseIterable {
         case low = "low"       // 5 seconds
         case medium = "medium" // 2 seconds
         case high = "high"     // 1 second
-        
+
         var interval: TimeInterval {
             switch self {
             case .low: return 5.0
@@ -207,7 +207,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             case .high: return 1.0
             }
         }
-        
+
         var displayName: String {
             switch self {
             case .low: return "refreshRate.low".localized
@@ -216,18 +216,18 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             }
         }
     }
-    
+
     enum TemperatureUnit: String, CaseIterable {
         case celsius = "celsius"
         case fahrenheit = "fahrenheit"
-        
+
         var displayName: String {
             switch self {
             case .celsius: return "°C"
             case .fahrenheit: return "°F"
             }
         }
-        
+
         func format(_ celsius: Double) -> String {
             switch self {
             case .celsius:
@@ -238,7 +238,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             }
         }
     }
-    
+
     enum AIRefreshInterval: String, CaseIterable {
         case m1 = "m1"
         case m2 = "m2"
@@ -268,7 +268,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case auto = "auto"
         case kbps = "kbps"
         case mbps = "mbps"
-        
+
         var displayName: String {
             switch self {
             case .auto: return "networkSpeed.auto".localized
@@ -276,7 +276,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             case .mbps: return "MB/s"
             }
         }
-        
+
         func format(_ bytesPerSecond: Double) -> String {
             switch self {
             case .auto:
@@ -288,9 +288,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             }
         }
     }
-    
+
     // MARK: - Keys
-    
+
     private enum Key: String {
         case showLogo = "settings.showLogo"
         case showCPU = "settings.showCPU"
@@ -322,12 +322,12 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
     }
-    
+
     // MARK: - Init
-    
+
     private init() {
         let defaults = UserDefaults.standard
-        
+
         // Status bar items - default all to true except disk/fan
         showLogo = defaults.object(forKey: Key.showLogo.rawValue) as? Bool ?? true
         showCPU = defaults.object(forKey: Key.showCPU.rawValue) as? Bool ?? true
@@ -356,13 +356,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue
         refreshRate = RefreshRate(rawValue: refreshRateStr) ?? .medium
-        
+
         let tempUnitStr = defaults.string(forKey: Key.temperatureUnit.rawValue) ?? TemperatureUnit.celsius.rawValue
         temperatureUnit = TemperatureUnit(rawValue: tempUnitStr) ?? .celsius
-        
+
         let netUnitStr = defaults.string(forKey: Key.networkSpeedUnit.rawValue) ?? NetworkSpeedUnit.auto.rawValue
         networkSpeedUnit = NetworkSpeedUnit(rawValue: netUnitStr) ?? .auto
-        
+
         let langStr = defaults.string(forKey: Key.appLanguage.rawValue) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: langStr) ?? .system
 
@@ -382,23 +382,23 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
     }
-    
+
     // MARK: - Validation
-    
+
     /// Returns true if at least one status bar item is enabled
     var hasAtLeastOneItem: Bool {
         showLogo || showCPU || showGPU || showMemory || showDisk || showNetwork || showFan || showBattery || showHealth
     }
-    
+
     /// Ensures at least one item is shown; if all are off, enable CPU
     func ensureAtLeastOneItem() {
         if !hasAtLeastOneItem {
             showCPU = true
         }
     }
-    
+
     // MARK: - Private
-    
+
     private func save<T>(_ value: T, for key: Key) {
         UserDefaults.standard.set(value, forKey: key.rawValue)
         // 延迟执行以避免在视图更新过程中修改状态

@@ -18,7 +18,7 @@ let systemAppWatchList: [String] = [
     // "com.apple.FileMerge",                 // FileMerge
     // "com.apple.Accessibility-Inspector",   // 辅助功能检查器
     // "com.apple.dt.GPU-Tools",              // GPU 工具
-    
+
     // ===== 核心系统服务（必须过滤）=====
     // "com.apple.dock",                      // 程序坞
     "com.apple.finder",                    // 访达
@@ -28,11 +28,11 @@ let systemAppWatchList: [String] = [
     // "com.apple.notificationcenterui",      // 通知中心
     // "com.apple.Spotlight",                 // 聚焦搜索
     // "com.apple.WindowManager",             // 窗口管理器
-    
+
     // ===== 系统设置 =====
     // "com.apple.Settings",                  // 系统设置 (Ventura+)
     // "com.apple.SystemSettings",            // 系统设置变体
-    
+
     // ===== 系统内置应用 =====
     "com.apple.Safari",                    // Safari 浏览器
     "com.apple.mail",                      // 邮件
@@ -46,7 +46,7 @@ let systemAppWatchList: [String] = [
     "com.apple.stocks",                    // 股市
     "com.apple.Home",                      // 家庭
     "com.apple.freeform",                  // 无边记
-    
+
     // ===== 媒体应用 =====
     "com.apple.Music",                     // 音乐
     "com.apple.TV",                        // TV
@@ -54,11 +54,11 @@ let systemAppWatchList: [String] = [
     "com.apple.iBooksX",                   // 图书
     "com.apple.Photos",                    // 照片
     "com.apple.PhotoBooth",                // Photo Booth
-    
+
     // ===== 通讯应用 =====
     "com.apple.MobileSMS",                 // 信息
     "com.apple.FaceTime",                  // FaceTime
-    
+
     // ===== 工具应用 =====
     "com.apple.Preview",                   // 预览
     "com.apple.TextEdit",                  // 文本编辑
@@ -86,16 +86,16 @@ let systemAppWatchList: [String] = [
 //    "com.apple.Automator",                 // 自动操作
     // "com.apple.MigrateAssistant",          // 迁移助理
     // "com.apple.bootcampassistant",         // 启动转换助理
-    
+
     // ===== iWork 套件 =====
     "com.apple.iWork.Pages",               // Pages
     "com.apple.iWork.Numbers",             // Numbers
     "com.apple.iWork.Keynote",             // Keynote
-    
+
     // ===== 辅助功能 =====
 //    "com.apple.VoiceOver",                 // 旁白
     // "com.apple.accessibility.*",           // 辅助功能相关
-    
+
     // ===== 后台服务 =====
     // "com.apple.bird",                      // iCloud 守护进程
     // "com.apple.cloudd",                    // iCloud 服务
@@ -124,7 +124,7 @@ let hiddenBundleIdSubstrings: [String] = [
 /// - Returns: true 表示应该显示（在观察名单中），false 表示不显示
 func isSystemAppInWatchList(_ bundleId: String?) -> Bool {
     guard let bundleId = bundleId, !bundleId.isEmpty else { return false }
-    
+
     for pattern in systemAppWatchList {
         if pattern.hasSuffix("*") {
             // 通配符匹配
@@ -173,28 +173,28 @@ func shouldShowProcess(_ bundleInfo: ProcessBundleInfo, processName: String? = n
     if bundleInfo.execPath == nil && bundleInfo.bundleId == nil {
         return false
     }
-    
+
     // 过滤应用扩展（Widget、通知扩展等 .appex）
     if let execPath = bundleInfo.execPath, execPath.contains(".appex/") {
         return false
     }
-    
+
     // 过滤 XPC 服务（.xpc）
     if let execPath = bundleInfo.execPath, execPath.contains(".xpc/") {
         return false
     }
-    
+
     // 系统服务（无 .app bundle 的系统进程）
     if bundleInfo.isSystemPath && !bundleInfo.isInAppBundle {
         return false  // 系统服务默认不显示
     }
-    
+
     // 系统应用（有 .app bundle 的 Apple 应用）
     if bundleInfo.isSystemApp {
         // 只有在观察名单中才显示
         return isSystemAppInWatchList(bundleInfo.bundleId)
     }
-    
+
     // 第三方应用：默认显示
     return true
 }

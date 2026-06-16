@@ -33,7 +33,7 @@ struct OverviewTabView: View {
                         }
                         .foregroundColor(colorForUsage(monitor.cpuUsage))
                     }
-                    
+
                     // GPU Card
                     BentoCard(title: "GPU", icon: "square.grid.2x2") {
                         if let gpu = monitor.gpuUsage {
@@ -51,7 +51,7 @@ struct OverviewTabView: View {
                                 .foregroundColor(.labelMuted)
                         }
                     }
-                    
+
                     // MEM Card
                     BentoCard(title: "MEM", icon: "memorychip") {
                         VStack(alignment: .leading, spacing: 2) {
@@ -68,7 +68,7 @@ struct OverviewTabView: View {
                         }
                         .foregroundColor(colorForUsage(monitor.memoryUsage))
                     }
-                    
+
                     // Load Card
                     BentoCard(title: "overview.load".localized, icon: "chart.bar.fill") {
                         Text(monitor.loadAverage.displayString)
@@ -165,7 +165,7 @@ struct OverviewTabView: View {
                         retry: { aiMonitor.retry(.gemini) }
                     )
                 }
-                
+
                 // Network Card: 速率 + 本地代理 + 出口节点
                 BentoCard(title: "overview.network".localized, icon: "network") {
                     VStack(alignment: .leading, spacing: 8) {
@@ -240,12 +240,12 @@ struct OverviewTabView: View {
                                     Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundColor(.labelMuted)
-                                    
+
                                     ZStack(alignment: .bottom) {
                                         RoundedRectangle(cornerRadius: 2)
                                             .fill(Color.primary.opacity(0.05))
                                             .frame(width: 12, height: 30)
-                                        
+
                                         RoundedRectangle(cornerRadius: 2)
                                             .fill(colorForUsage(core.usage))
                                             .frame(width: 12, height: CGFloat(30.0 * (core.usage / 100.0)))
@@ -269,27 +269,27 @@ struct OverviewTabView: View {
     }
 
     // MARK: - Helper: Sorted Cores
-    
+
     private struct CoreInfo {
         let index: Int
         let displayIndex: Int
         let usage: Double
         let type: CoreType
     }
-    
+
     /// Get cores sorted by type: P-cores first (numbered 0..N), then E-cores (numbered 0..M)
     private func getSortedCores() -> [CoreInfo] {
         let topology = monitor.coreTopology
         let usages = monitor.coreUsages
-        
+
         guard !usages.isEmpty else { return [] }
-        
+
         // If we have P/E core info, group them
         if topology.performanceCores > 0 && topology.efficiencyCores > 0 {
             var result: [CoreInfo] = []
             let pCount = topology.performanceCores
             let eCount = topology.efficiencyCores
-            
+
             // P-cores first (assume they are the first N cores)
             for i in 0..<min(pCount, usages.count) {
                 result.append(CoreInfo(
@@ -299,7 +299,7 @@ struct OverviewTabView: View {
                     type: .performance
                 ))
             }
-            
+
             // E-cores after (assume they follow P-cores)
             for i in 0..<min(eCount, usages.count - pCount) {
                 let actualIndex = pCount + i
@@ -312,7 +312,7 @@ struct OverviewTabView: View {
                     ))
                 }
             }
-            
+
             return result
         } else {
             // No P/E info, show all cores with unknown type
@@ -726,7 +726,7 @@ private struct SubStat: View {
 private struct ProcessRow: View {
     let process: TopProcess
     let useFlatColors: Bool
-    
+
     var color: Color {
         guard !useFlatColors else { return .primary }
         if process.cpuPercent < 30 {
@@ -737,7 +737,7 @@ private struct ProcessRow: View {
             return .red
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 8) {
             // Process name
@@ -746,7 +746,7 @@ private struct ProcessRow: View {
                 .foregroundColor(.primary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             // Mini progress bar (5 blocks)
             HStack(spacing: 2) {
                 ForEach(0..<5, id: \.self) { i in
@@ -757,7 +757,7 @@ private struct ProcessRow: View {
                         .cornerRadius(2)
                 }
             }
-            
+
             // CPU percentage
             Text(process.cpuDisplayString)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
