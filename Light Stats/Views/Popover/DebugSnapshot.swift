@@ -27,14 +27,19 @@ enum DebugSnapshot {
     /// 多出的部分会在导出时按实际内容裁掉。
     private static let canvasHeight: CGFloat = 3000
 
-    /// 导出目录：项目内 docs/screenshots（DEBUG 调试工具，硬编码源码路径即可）。
-    /// 目录不存在时回退到 /tmp。
+    /// 导出目录：项目根目录 docs/screenshots（目录不存在则自动创建）。
     private static var outputDirectory: URL {
-        let project = URL(fileURLWithPath: "/Users/cain/Documents/code/swift-menu-stats/docs/screenshots", isDirectory: true)
-        if FileManager.default.fileExists(atPath: project.path) {
-            return project
-        }
-        return URL(fileURLWithPath: "/tmp", isDirectory: true)
+        let sourceFile = URL(fileURLWithPath: #filePath)
+        // DebugSnapshot.swift is at: .../macos-menus-stats/Light Stats/Views/Popover/DebugSnapshot.swift
+        // Project root is 4 levels up from Popover
+        let projectRoot = sourceFile
+            .deletingLastPathComponent()  // Popover
+            .deletingLastPathComponent()  // Views
+            .deletingLastPathComponent()  // Light Stats
+            .deletingLastPathComponent()  // macos-menus-stats
+        let dir = projectRoot.appendingPathComponent("docs/screenshots", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
     }
 
     /// 渲染所有 Tab 的完整内容到 /tmp，并在 Finder 中打开目录。
