@@ -22,7 +22,8 @@
 "settings.healthDimensions" = "健康分维度";
 "settings.healthDimensions.hint" = "选择哪些指标参与健康分计算。";
 "settings.healthDimensions.power" = "电源";
-"settings.refreshRate" = "刷新频率";
+"settings.refreshRate" = "指标刷新频率";
+"settings.refreshRate.label" = "刷新间隔";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
 "settings.networkSpeedUnit" = "网速单位";
@@ -108,7 +109,6 @@
 "network.proxy.none" = "未配置";
 "network.proxy.tun" = "检测到隧道";
 "network.exit.title" = "出口节点";
-"network.exit.disabled" = "出口探测已关闭，可在设置开启";
 "network.exit.failed" = "探测失败";
 "network.route.direct" = "直连";
 "network.route.proxied" = "经代理";

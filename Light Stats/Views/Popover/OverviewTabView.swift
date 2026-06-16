@@ -170,16 +170,18 @@ struct OverviewTabView: View {
                         }
                         .font(.system(size: 11, design: .monospaced))
 
-                        // ③ 出口行
-                        HStack(spacing: 4) {
-                            Image(systemName: "globe")
-                                .foregroundColor(.labelMuted)
-                            Text("network.exit.title".localized)
-                                .foregroundColor(.labelMuted)
-                            Spacer()
-                            exitValueView
+                        // ③ 出口行 — 探测关闭时整行不渲染
+                        if settings.exitNodeDetectionEnabled {
+                            HStack(spacing: 4) {
+                                Image(systemName: "globe")
+                                    .foregroundColor(.labelMuted)
+                                Text("network.exit.title".localized)
+                                    .foregroundColor(.labelMuted)
+                                Spacer()
+                                exitValueView
+                            }
+                            .font(.system(size: 11, design: .monospaced))
                         }
-                        .font(.system(size: 11, design: .monospaced))
                     }
                 }
                 
@@ -315,15 +317,10 @@ struct OverviewTabView: View {
 
     // MARK: - Network Helpers
 
-    /// 出口行内容：随设置开关与探测结果切换三态。
+    /// 出口行内容：探测开启时按结果切换成功/失败两态（关闭时整行不渲染）。
     @ViewBuilder
     private var exitValueView: some View {
-        if !settings.exitNodeDetectionEnabled {
-            Text("network.exit.disabled".localized)
-                .foregroundColor(.labelMuted)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        } else if let exit = monitor.exitNode {
+        if let exit = monitor.exitNode {
             HStack(spacing: 5) {
                 Circle()
                     .fill(routeColor(monitor.route))

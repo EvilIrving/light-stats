@@ -24,12 +24,12 @@ struct AppCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             // 主卡片行
             HStack(spacing: 12) {
-                // 展开区域 + 图标（间距较小，减少展开按钮右侧留白）
+                // 展开区域 + 图标：整个簇（箭头 + 间隙 + 图标）作为一个真实的
+                // 可点击区域，避免依赖溢出 padding（会被图标/应用名覆盖而点不到）
                 HStack(spacing: 6) {
                     Group {
                         if !childProcesses.isEmpty {
                             expandButton
-                                .allowsHitTesting(true)
                         } else {
                             Color.clear
                                 .frame(width: AppCardView.expandColumnWidth, height: AppCardView.expandColumnWidth)
@@ -42,6 +42,12 @@ struct AppCardView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 28, height: 28)
                         .opacity(isTerminating ? 0.5 : 1.0)
+                }
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard !childProcesses.isEmpty else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
                 }
 
                 // App Name
@@ -110,16 +116,10 @@ struct AppCardView: View {
     // MARK: - Subviews
 
     private var expandButton: some View {
-        Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
-        }) {
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(.labelMuted)
-                .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundColor(.labelMuted)
+            .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
     }
 
     @ViewBuilder

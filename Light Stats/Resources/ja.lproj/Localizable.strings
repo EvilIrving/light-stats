@@ -22,7 +22,8 @@
 "settings.healthDimensions" = "健康度の評価項目";
 "settings.healthDimensions.hint" = "健康度の計算に含める指標を選択します。";
 "settings.healthDimensions.power" = "電源";
-"settings.refreshRate" = "更新頻度";
+"settings.refreshRate" = "指標の更新頻度";
+"settings.refreshRate.label" = "更新間隔";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
 "settings.networkSpeedUnit" = "ネット速度単位";
@@ -108,7 +109,6 @@
 "network.proxy.none" = "未設定";
 "network.proxy.tun" = "トンネルを検出";
 "network.exit.title" = "出口ノード";
-"network.exit.disabled" = "出口検出はオフ — 設定で有効化";
 "network.exit.failed" = "検出失敗";
 "network.route.direct" = "直接接続";
 "network.route.proxied" = "プロキシ経由";

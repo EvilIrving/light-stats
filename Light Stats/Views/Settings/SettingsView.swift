@@ -17,13 +17,18 @@ struct SettingsView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 // Status Bar Items Card
-                BentoCard(title: "settings.statusBar".localized, icon: "menubar.rectangle") {
+                BentoCard(title: "settings.statusBar".localized) {
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible()),
                         GridItem(.flexible())
-                    ], spacing: 12) {
-                        SettingsGridItem(title: "settings.logo".localized, isOn: $settings.showLogo, icon: "applelogo") {
+                    ], spacing: 8) {
+                        SettingsGridItem(
+                            title: "settings.logo".localized,
+                            isOn: $settings.showLogo,
+                            icon: "applelogo",
+                            assetIcon: "StatusIcon"
+                        ) {
                             validateMinimumItems()
                         }
                         SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") {
@@ -55,12 +60,12 @@ struct SettingsView: View {
                 }
                 
                 // Health Score Dimensions Card — 哪些维度参与健康分计算
-                BentoCard(title: "settings.healthDimensions".localized, icon: "heart.text.square") {
+                BentoCard(title: "settings.healthDimensions".localized) {
                     LazyVGrid(columns: [
                             GridItem(.flexible()),
                             GridItem(.flexible()),
                             GridItem(.flexible())
-                        ], spacing: 12) {
+                        ], spacing: 8) {
                             SettingsGridItem(
                                 title: "health.dimension.cpu".localized,
                                 isOn: $settings.healthIncludeCPU, icon: "cpu"
@@ -89,19 +94,56 @@ struct SettingsView: View {
                         .padding(.vertical, 4)
                 }
 
-                // Language Card
-                BentoCard(title: "settings.language".localized, icon: "globe") {
-                    Picker("", selection: $settings.appLanguage) {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Text(lang.displayName).tag(lang)
+                // Units Card
+                BentoCard(title: "settings.units".localized) {
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("settings.temperatureUnit".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.temperatureUnit) {
+                                ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
+                                    Text(unit.displayName).tag(unit)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                        }
+
+                        HStack {
+                            Text("settings.networkSpeedUnit".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.networkSpeedUnit) {
+                                ForEach(SettingsManager.NetworkSpeedUnit.allCases, id: \.self) { unit in
+                                    Text(unit.displayName).tag(unit)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
                         }
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
                 }
-                
-                // Refresh Rate Card
-                BentoCard(title: "settings.refreshRate".localized, icon: "timer") {
+
+                // Accessibility Card — 颜色指示器开关在标题栏。
+                BentoCard(title: "settings.accessibility.section".localized,
+                          headerAccessory: {
+                    Toggle("", isOn: $settings.useColorIndicator)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                }) {
+                    Text("settings.accessibility.colorIndicator.hint".localized)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                // Refresh Rate Card — 仅作用于系统指标采样，AI 用量有独立刷新间隔。
+                BentoCard(title: "settings.refreshRate".localized,
+                          headerAccessory: {
                     Picker("", selection: $settings.refreshRate) {
                         ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
                             Text(rate.displayName).tag(rate)
@@ -109,10 +151,13 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                    .fixedSize()
+                }) {
+                    EmptyView()
                 }
-                
+
                 // AI Usage Card
-                BentoCard(title: "settings.aiUsage".localized, icon: "sparkles") {
+                BentoCard(title: "settings.aiUsage".localized) {
                     VStack(spacing: 12) {
                         HStack {
                             Text("aiUsage.claude".localized)
@@ -155,41 +200,8 @@ struct SettingsView: View {
                     }
                 }
 
-                // Units Card
-                BentoCard(title: "settings.units".localized, icon: "ruler") {
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("settings.temperatureUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.temperatureUnit) {
-                                ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
-                                    Text(unit.displayName).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                        }
-                        
-                        HStack {
-                            Text("settings.networkSpeedUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.networkSpeedUnit) {
-                                ForEach(SettingsManager.NetworkSpeedUnit.allCases, id: \.self) { unit in
-                                    Text(unit.displayName).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                        }
-                    }
-                }
-
                 // Exit Node Card — toggle lives in the header, provider picker in body.
-                BentoCard(title: "settings.exitNode.section".localized, icon: "globe",
+                BentoCard(title: "settings.exitNode.section".localized,
                           headerAccessory: {
                     Toggle("", isOn: Binding(
                         get: { settings.exitNodeDetectionEnabled },
@@ -223,22 +235,23 @@ struct SettingsView: View {
                     }
                 }
 
-                // Accessibility Card — 颜色指示器开关在标题栏。
-                BentoCard(title: "settings.accessibility.section".localized, icon: "eye",
+                // Language Card
+                BentoCard(title: "settings.language".localized,
                           headerAccessory: {
-                    Toggle("", isOn: $settings.useColorIndicator)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .labelsHidden()
+                    Picker("", selection: $settings.appLanguage) {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Text(lang.displayName).tag(lang)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }) {
-                    Text("settings.accessibility.colorIndicator.hint".localized)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    EmptyView()
                 }
 
                 // Software Update Card — toggle in header, manual button in body.
-                BentoCard(title: "settings.update.section".localized, icon: "arrow.down.circle",
+                BentoCard(title: "settings.update.section".localized,
                           headerAccessory: {
                     Toggle("", isOn: $settings.autoCheckUpdates)
                         .toggleStyle(.switch)
@@ -257,7 +270,7 @@ struct SettingsView: View {
             }
             .padding(16)
         }
-        .frame(width: 380, height: 520)
+        .frame(width: 430, height: 520)
         .background(Color(nsColor: .windowBackgroundColor))
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
@@ -287,34 +300,50 @@ struct SettingsGridItem: View {
     let title: String
     @Binding var isOn: Bool
     let icon: String
+    /// When set, renders this template asset instead of the `icon` SF Symbol.
+    var assetIcon: String?
     let onChange: () -> Void
-    
+
     var body: some View {
         Button {
             isOn.toggle()
             onChange()
         } label: {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
+            VStack(spacing: 5) {
+                iconView
                     .foregroundColor(isOn ? .blue : .secondary)
-                
+
                 Text(title)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(isOn ? .primary : .secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(isOn ? Color.blue.opacity(0.1) : Color.primary.opacity(0.03))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 8)
                     .stroke(isOn ? Color.blue.opacity(0.2) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        if let assetIcon {
+            Image(assetIcon)
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 15, height: 15)
+        } else {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+        }
     }
 }
     

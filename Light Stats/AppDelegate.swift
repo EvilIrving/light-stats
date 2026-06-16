@@ -134,7 +134,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startMonitoring() {
         monitor.startMonitoring(interval: settings.refreshRate.interval)
-        appMemoryManager.startMonitoring()
+        // 不在启动时常驻开启 appMemoryManager：其全进程扫描（ps -axo + 每进程
+        // proc_pidpath / responsibility 查询，每 5s 一次）仅服务于 Cleanup 标签页。
+        // 改为在面板打开时预热（见 togglePanel），面板关闭即停（见 dismissPanel），
+        // 既消除了面板从未打开时的后台白扫，又保证首次切到 Cleanup 页数据已就绪、不闪空态。
         if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled {
             AIUsageMonitor.shared.start()
         }
@@ -309,6 +312,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         monitor.setPopoverVisible(true)
+        // 面板一打开即预热进程内存扫描，用户从 Overview 切到 Cleanup 时数据已就绪。
+        // Cleanup 页的 onAppear/onDisappear 仍会幂等地接管 start/stop。
+        appMemoryManager.startMonitoring()
         installGlobalClickMonitor()
     }
 

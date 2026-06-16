@@ -22,7 +22,8 @@
 "settings.healthDimensions" = "Health Score Dimensions";
 "settings.healthDimensions.hint" = "Choose which metrics count toward the health score.";
 "settings.healthDimensions.power" = "Power";
-"settings.refreshRate" = "Refresh Rate";
+"settings.refreshRate" = "Metrics Refresh";
+"settings.refreshRate.label" = "Refresh Interval";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
 "settings.networkSpeedUnit" = "Network Speed";
@@ -108,7 +109,6 @@
 "network.proxy.none" = "Not set";
 "network.proxy.tun" = "Tunnel detected";
 "network.exit.title" = "Exit Node";
-"network.exit.disabled" = "Exit detection off — enable in Settings";
 "network.exit.failed" = "Probe failed";
 "network.route.direct" = "Direct";
 "network.route.proxied" = "Proxied";
