@@ -85,15 +85,56 @@ Never: View → Service directly (go through ViewModel). Never: Service → View
 
 CI runs `swiftlint lint --strict`, which **promotes every warning to a hard error** —
 a single warning fails the Build workflow. Before pushing, run `swiftlint lint --strict`
-locally (`brew install swiftlint`) and fix all output. Key thresholds from `.swiftlint.yml`:
+locally (`brew install swiftlint`) and fix all output.
 
-- Line length: **≤ 140 chars** (warning). Wrap long calls/expressions onto multiple lines.
-  Comments and URLs are exempt (`ignores_comments`, `ignores_urls`).
-- Function body ≤ 80 lines, type body ≤ 400, file ≤ 500, cyclomatic complexity ≤ 12.
-- Custom rules: `no_print` (warning) and `no_nslog` (error) — see above.
+**After every code change, run:**
+```bash
+swiftlint lint --strict && swiftlint --fix --strict && swiftlint lint --strict
+```
+This lints, auto-fixes what it can (trailing whitespace, etc.), then re-lints to confirm.
 
-`swiftlint --fix` auto-resolves some violations, but line-length and the custom rules
-must be fixed by hand.
+#### All thresholds (`.swiftlint.yml`)
+
+| Rule | Threshold | Notes |
+|------|-----------|-------|
+| `line_length` | ≤140 chars | Comments, URLs exempt |
+| `function_body_length` | ≤80 lines | |
+| `file_length` | ≤500 lines | |
+| `type_body_length` | ≤400 lines | enum/class/struct/actor body |
+| `cyclomatic_complexity` | ≤12 | |
+| `nesting` | ≤2 levels | Type nesting depth |
+| `function_parameter_count` | ≤5 | |
+| `identifier_name` | ≥2 chars | `id`/`x`/`y`/`i`/`w`/`h` etc. excluded |
+| `large_tuple` | ≤2 members | |
+| `force_cast` | warning | |
+| `force_try` | warning | |
+| `for_where` | prefer `where` | Don't nest `if` inside `for` |
+| `shorthand_operator` | prefer `+=` over `x = x + 1` | |
+| `implicit_optional_initialization` | no `= nil` | `var x: Type?` not `var x: Type? = nil` |
+| `non_optional_string_data_conversion` | `Data(s.utf8)` not `Data?(s.data(using: .utf8))` | |
+| `multiple_closures_with_trailing_closure` | no trailing closure if >1 closures | |
+| `trailing_whitespace` | no trailing spaces | `swiftlint --fix` cleans this |
+| `vertical_whitespace` | max 1 empty line | |
+| `no_print` | **禁止** `print()` | warning; use `os.Logger` |
+| `no_nslog` | **禁止** `NSLog()` | **error**; use `os.Logger` |
+
+#### Daily coding checklist
+
+Every time you write or edit code, check these **before** declaring done:
+
+1. **No `print()` / `NSLog()`** — use `import OSLog` + `let log = Logger(...)`
+2. **Line ≤ 140 chars** — wrap long chains / string literals
+3. **Function ≤ 80 lines** — extract helpers if approaching
+4. **File ≤ 500 lines** — extract new types/files if approaching
+5. **No force-unwrap (`!`)** unless trivially provable + commented
+6. **No `var x: Type? = nil`** — write `var x: Type?`
+7. **`for x in xs where cond {}`** — not `for x in xs { if cond {} }`
+8. **`x += 1`** — not `x = x + 1`
+9. **No `let _ =`** — use `!= nil`
+10. Run `swiftlint lint --strict` locally
+
+`swiftlint --fix` auto-resolves trivial violations (trailing whitespace, redundant optional
+init, etc.), but line-length, complexity, and the custom rules must be fixed by hand.
 
 ### Localization
 
