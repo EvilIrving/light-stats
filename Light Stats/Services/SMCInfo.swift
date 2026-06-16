@@ -617,6 +617,7 @@ enum SMCInfo {
         var status: UInt8 = 0
         var data8: UInt8 = 0
         var data32: UInt32 = 0
+        // swiftlint:disable:next large_tuple
         var bytes: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
                     UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,
                     UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8,

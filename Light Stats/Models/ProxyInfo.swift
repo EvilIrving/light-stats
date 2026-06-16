@@ -53,7 +53,7 @@ nonisolated enum NetworkRoute: Sendable {
 /// 综合本地代理配置与出口节点，给出一致性判断。
 /// - 出口探测关闭/失败（exit == nil）：有本地代理 → `.proxied`，否则 `.unknown`。
 /// - 有出口：出口为机房 IDC 或有本地代理 → `.proxied`，否则 `.direct`。
-/// - TODO: 进阶可比对出口 ASN/国家与本地 ISP，本期暂不做地理比对。
+/// （进阶可比对出口 ASN/国家与本地 ISP，本期暂不做地理比对。）
 ///
 /// 标 `nonisolated`：纯函数，无需主线程隔离，可在采集 actor 上直接同步调用。
 nonisolated func classifyRoute(proxy: ProxyConfig, exit: ExitNode?) -> NetworkRoute {

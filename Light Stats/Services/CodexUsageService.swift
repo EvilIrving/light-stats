@@ -254,7 +254,7 @@ enum CodexUsageService {
         Thread.sleep(forTimeInterval: 0.5)
 
         // Send /status command.
-        _ = try? writeAll(primaryFD, data: "/status\r\n".data(using: .utf8)!)
+        _ = try? writeAll(primaryFD, data: Data("/status\r\n".utf8))
 
         var allOutput = Data()
         let deadline = Date().addingTimeInterval(timeout)
@@ -278,9 +278,9 @@ enum CodexUsageService {
                         // Send down-arrow + Enter to skip the update prompt.
                         _ = try? writeAll(primaryFD, data: Data([0x1B, 0x5B, 0x42]))
                         Thread.sleep(forTimeInterval: 0.12)
-                        _ = try? writeAll(primaryFD, data: "\r".data(using: .utf8)!)
+                        _ = try? writeAll(primaryFD, data: Data("\r".utf8))
                         Thread.sleep(forTimeInterval: 0.15)
-                        _ = try? writeAll(primaryFD, data: "/status\r\n".data(using: .utf8)!)
+                        _ = try? writeAll(primaryFD, data: Data("/status\r\n".utf8))
                         updateDismissed = true
                         allOutput.removeAll()
                         Thread.sleep(forTimeInterval: 0.3)
@@ -407,8 +407,8 @@ enum CodexUsageService {
 
     /// Finds the full line containing a substring.
     private static func lineContaining(_ substring: String, in text: String) -> String? {
-        for line in text.components(separatedBy: .newlines) {
-            if line.localizedCaseInsensitiveContains(substring) { return line }
+        for line in text.components(separatedBy: .newlines) where line.localizedCaseInsensitiveContains(substring) {
+            return line
         }
         return nil
     }

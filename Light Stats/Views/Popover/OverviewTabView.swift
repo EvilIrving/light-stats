@@ -572,6 +572,7 @@ private struct HealthCard: View {
         for (dimension, label) in Self.dimensionLabels {
             guard let score = health.breakdown[dimension.rawValue] else { continue }
             if !isFirst {
+                // swiftlint:disable:next shorthand_operator
                 result = result + Text(verbatim: " · ")
                     .font(.system(size: 22, weight: .bold))
                     .baselineOffset(-4)
@@ -580,6 +581,7 @@ private struct HealthCard: View {
             isFirst = false
             if useColorIndicator {
                 // 颜色模式：直接给维度名上色（绿/黄/红），不再额外画圆点。
+                // swiftlint:disable:next shorthand_operator
                 result = result + Text(verbatim: label).foregroundColor(levelColor(score: score))
             } else {
                 result = result + Text(verbatim: label + " ") + Text(levelText(for: dimension, score: score))
