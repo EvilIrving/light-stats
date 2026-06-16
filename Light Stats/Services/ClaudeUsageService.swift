@@ -11,9 +11,10 @@ import Security
 /// Fetches Claude Code subscription usage.
 /// Credentials are maintained by the Claude Code CLI; we only read them.
 ///
-/// Primary data source: OAuth usage endpoint.
-/// Fallback: when that endpoint returns 404, parse rate-limit headers from a
-/// minimal Messages API call (Haiku, 1 token — negligible cost).
+/// Three-source fallback chain (OAuth → Messages API → CLI PTY):
+/// 1. OAuth usage endpoint (GET api.anthropic.com/api/oauth/usage)
+/// 2. Messages API rate-limit headers (1-token Haiku request)
+/// 3. CLI PTY — launches `claude`, sends `/usage` in a pseudo-terminal, parses output
 ///
 /// Credential sources (tried in order, zero prompts for most users):
 /// 1. `~/.claude/.credentials.json` (file I/O, no authorization prompt)
@@ -90,10 +91,15 @@ enum ClaudeUsageService {
             switch error {
             case .tokenExpired, .credentialsMissing:
                 throw error
-            case .endpointNotFound, .decoding:
-                return try await fetchUsageFromHeaders(token: token)
-            case .network:
-                throw error
+            case .endpointNotFound, .decoding, .network:
+                do {
+                    return try await fetchUsageFromHeaders(token: token)
+                } catch {
+                    // 3. If Messages API also fails, fall back to CLI PTY as last resort.
+                    //    This needs no network — it reads usage from the local `claude` CLI.
+                    _ = error
+                    return try await fetchUsageFromCLI()
+                }
             }
         }
 
@@ -228,6 +234,399 @@ enum ClaudeUsageService {
             windows.append(UsageWindow(label: "7d", usedPercent: used, resetsAt: parseDate(w.resetsAt)))
         }
         return windows
+    }
+
+    // MARK: - CLI PTY fallback (last resort)
+
+    /// Launches `claude` inside a pseudo-terminal, sends `/usage`, and parses
+    /// the TUI-rendered usage panel. This is the ultimate fallback — it requires
+    /// no network access and works as long as `claude` is installed and logged in.
+    ///
+    /// Reference: CodexBar's ClaudeCLISession / ClaudeStatusProbe (steipete/CodexBar).
+    private static let cliTimeout: TimeInterval = 14
+
+    private static func fetchUsageFromCLI() async throws -> ProviderUsageSnapshot {
+        guard let claudePath = resolveClaudeBinary() else {
+            throw AIUsageError.credentialsMissing
+        }
+
+        let output = try await capturePTYOutput(binary: claudePath, timeout: cliTimeout)
+        return try parseCLIOutput(output)
+    }
+
+    private static func resolveClaudeBinary() -> String? {
+        // Check CLAUDE_CLI_PATH env var first, then PATH.
+        if let envPath = ProcessInfo.processInfo.environment["CLAUDE_CLI_PATH"],
+           !envPath.isEmpty,
+           FileManager.default.isExecutableFile(atPath: envPath) {
+            return envPath
+        }
+
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        task.arguments = ["claude"]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+        guard (try? task.run()) != nil else { return nil }
+        task.waitUntilExit()
+        guard task.terminationStatus == 0 else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let path = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return path.isEmpty ? nil : path
+    }
+
+    /// Creates a PTY pair, launches `claude` inside it, sends `/usage`,
+    /// and captures all output until session data appears or timeout.
+    private static func capturePTYOutput(binary: String, timeout: TimeInterval) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try capturePTYSync(binary: binary, timeout: timeout)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private static func capturePTYSync(binary: String, timeout: TimeInterval) throws -> String {
+        var primaryFD: Int32 = -1
+        var secondaryFD: Int32 = -1
+        var win = winsize(ws_row: 50, ws_col: 160, ws_xpixel: 0, ws_ypixel: 0)
+
+        guard openpty(&primaryFD, &secondaryFD, nil, nil, &win) == 0 else {
+            throw AIUsageError.network
+        }
+        // Make primary non-blocking so we can poll.
+        _ = fcntl(primaryFD, F_SETFL, O_NONBLOCK)
+
+        defer {
+            close(primaryFD)
+            close(secondaryFD)
+        }
+
+        let secondaryHandle = FileHandle(fileDescriptor: secondaryFD, closeOnDealloc: false)
+        defer { try? secondaryHandle.close() }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: binary)
+        process.arguments = ["--bare", "--allowed-tools", ""]
+        process.standardInput = secondaryHandle
+        process.standardOutput = secondaryHandle
+        process.standardError = secondaryHandle
+        process.environment = ProcessInfo.processInfo.environment
+
+        // Use a temp directory as working dir so claude doesn't pick up project CLAUDE.md.
+        let workDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("lightstats-claude-probe-\(UUID().uuidString.prefix(8))")
+        try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: workDir) }
+        process.currentDirectoryURL = workDir
+
+        guard let _ = try? process.run() else {
+            throw AIUsageError.network
+        }
+        defer {
+            if process.isRunning {
+                process.terminate()
+                // Escalate after a brief wait.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+                }
+            }
+        }
+
+        // Wait for claude to initialize (CodexBar uses 2s; we use 2.5s for safety).
+        Thread.sleep(forTimeInterval: 2.5)
+
+        // Send /usage command.
+        _ = try? writeToPTY(fd: primaryFD, text: "/usage\r\n")
+
+        // Collect output until we have session data or timeout.
+        var allOutput = Data()
+        let deadline = Date().addingTimeInterval(timeout)
+        var hasSessionData = false
+
+        while Date() < deadline {
+            var buf = [UInt8](repeating: 0, count: 8192)
+            let n = read(primaryFD, &buf, buf.count)
+            if n > 0 {
+                allOutput.append(contentsOf: buf.prefix(n))
+                // Check if we have enough data: look for "Current session" + a percentage.
+                if let text = String(data: allOutput, encoding: .utf8) {
+                    let clean = stripANSICodes(text)
+                    if hasSessionValue(clean) {
+                        hasSessionData = true
+                        // Brief settle period.
+                        Thread.sleep(forTimeInterval: 1.0)
+                        // Final read.
+                        var finalBuf = [UInt8](repeating: 0, count: 8192)
+                        let finalN = read(primaryFD, &finalBuf, finalBuf.count)
+                        if finalN > 0 { allOutput.append(contentsOf: finalBuf.prefix(finalN)) }
+                        break
+                    }
+                }
+            }
+            if !process.isRunning { break }
+            Thread.sleep(forTimeInterval: 0.06)
+        }
+
+        guard hasSessionData,
+              let text = String(data: allOutput, encoding: .utf8),
+              !text.isEmpty else {
+            throw AIUsageError.network
+        }
+
+        return text
+    }
+
+    private static func writeToPTY(fd: Int32, text: String) throws {
+        guard let data = text.data(using: .utf8) else { return }
+        try data.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            var offset = 0
+            while offset < raw.count {
+                let written = write(fd, base.advanced(by: offset), raw.count - offset)
+                if written < 0 {
+                    if errno == EAGAIN || errno == EWOULDBLOCK {
+                        usleep(5000)
+                        continue
+                    }
+                    throw AIUsageError.network
+                }
+                offset += written
+            }
+        }
+    }
+
+    // MARK: - CLI output parsing
+
+    /// Strips ANSI escape sequences (CSI sequences: ESC [ ... ending in 0x40–0x7E).
+    /// Reference: CodexBar TextParsing.stripANSICodes.
+    private static func stripANSICodes(_ text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: "\u{001B}\\[[0-?]*[ -/]*[@-~]") else {
+            return text
+        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
+    }
+
+    /// Returns true when the normalized text contains "Current session" immediately
+    /// followed by a percentage value somewhere after it.
+    private static func hasSessionValue(_ text: String) -> Bool {
+        let normalized = text.lowercased().filter { !$0.isWhitespace }
+        guard let labelRange = normalized.range(of: "currentsession") else { return false }
+        let tail = normalized[labelRange.upperBound...]
+        return tail.range(of: #"[0-9]{1,3}(\.?[0-9]+)?%"#, options: .regularExpression) != nil
+    }
+
+    /// Parses `claude /usage` TUI output into usage windows.
+    /// Handles both "X% used" and "X% left" conventions.
+    private static func parseCLIOutput(_ rawText: String) throws -> ProviderUsageSnapshot {
+        let text = stripANSICodes(rawText)
+
+        // Trim to the last "Settings: … Usage …" panel to avoid earlier screen fragments.
+        let panelText: String
+        if let settingsRange = text.range(of: "Settings:", options: [.caseInsensitive, .backwards]) {
+            let tail = String(text[settingsRange.lowerBound...])
+            panelText = tail.range(of: "Usage", options: .caseInsensitive) != nil ? tail : text
+        } else {
+            panelText = text
+        }
+
+        // Detect error states.
+        let lower = panelText.lowercased()
+        if lower.contains("failed to load usage data") {
+            throw AIUsageError.network
+        }
+        if lower.contains("token") && lower.contains("expired") {
+            throw AIUsageError.tokenExpired
+        }
+        let compact = lower.filter { !$0.isWhitespace }
+        if compact.contains("currentlyusingyoursubscription")
+            && compact.contains("claudecodeusage")
+            && !compact.contains("currentsession") {
+            throw AIUsageError.network
+        }
+
+        // Parse session percentage.
+        guard let sessionPercent = extractPercent(nearLabel: "Current session", in: panelText) else {
+            throw AIUsageError.decoding
+        }
+
+        let weeklyPercent = extractPercent(nearLabel: "Current week (all models)", in: panelText)
+
+        let sessionUsed = sessionPercent.isLeft ? 100 - sessionPercent.value : sessionPercent.value
+        let weeklyUsed = weeklyPercent.map { $0.isLeft ? 100 - $0.value : $0.value }
+
+        let sessionReset = extractReset(nearLabel: "Current session", in: panelText)
+        let weeklyReset = weeklyPercent != nil
+            ? extractReset(nearLabel: "Current week (all models)", in: panelText)
+            : nil
+
+        var windows: [UsageWindow] = [
+            UsageWindow(
+                label: "5h",
+                usedPercent: min(100, max(0, sessionUsed)),
+                resetsAt: parseResetDate(sessionReset)
+            )
+        ]
+        if let wu = weeklyUsed {
+            windows.append(UsageWindow(
+                label: "7d",
+                usedPercent: min(100, max(0, wu)),
+                resetsAt: parseResetDate(weeklyReset)
+            ))
+        }
+
+        return ProviderUsageSnapshot(provider: .claude, windows: windows, fetchedAt: Date())
+    }
+
+    /// Represents a parsed percentage that may be "left" or "used".
+    private struct ParsedPercent: Equatable {
+        let value: Double
+        let isLeft: Bool  // true = remaining, false = used
+    }
+
+    /// Scans lines near a label for a percentage value.
+    private static func extractPercent(nearLabel label: String, in text: String) -> ParsedPercent? {
+        let lines = text.components(separatedBy: .newlines)
+        let normalizedLabel = alphanumericOnly(label.lowercased())
+        let normalizedLines = lines.map { alphanumericOnly($0.lowercased()) }
+
+        guard let idx = normalizedLines.firstIndex(where: { $0.contains(normalizedLabel) }) else {
+            return nil
+        }
+
+        // Scan a window of lines after the label for a percentage.
+        let window = lines.dropFirst(idx).prefix(12)
+        for line in window {
+            if let pct = percentFromCLILine(line) { return pct }
+        }
+        return nil
+    }
+
+    /// Extracts a percentage from a single line.
+    /// Handles both "42% used" and "58% left" conventions.
+    /// Returns nil for lines that look like status context meters (contain model names + |).
+    private static func percentFromCLILine(_ line: String) -> ParsedPercent? {
+        let lower = line.lowercased()
+        // Skip status context lines like "opus | 0%"
+        if lower.contains("|") {
+            let modelTokens = ["opus", "sonnet", "haiku", "default"]
+            if modelTokens.contains(where: lower.contains) { return nil }
+        }
+
+        guard let regex = try? NSRegularExpression(pattern: #"([0-9]{1,3}(?:\.[0-9]+)?)\s*%"#) else {
+            return nil
+        }
+        let range = NSRange(line.startIndex..<line.endIndex, in: line)
+        guard let match = regex.firstMatch(in: line, range: range),
+              match.numberOfRanges >= 2,
+              let valRange = Range(match.range(at: 1), in: line) else {
+            return nil
+        }
+
+        let value = Double(line[valRange]) ?? 0
+        let clamped = max(0, min(100, value))
+
+        let usedKeywords = ["used", "spent", "consumed"]
+        let leftKeywords = ["left", "remaining", "available"]
+
+        if usedKeywords.contains(where: lower.contains) {
+            return ParsedPercent(value: 100 - clamped, isLeft: false)
+        }
+        if leftKeywords.contains(where: lower.contains) {
+            return ParsedPercent(value: clamped, isLeft: true)
+        }
+        // Default: assume the percentage shown is "remaining" (matches Claude's TUI).
+        return ParsedPercent(value: clamped, isLeft: true)
+    }
+
+    /// Strips non-alphanumeric characters from a string. Used for fuzzy label matching
+    /// against PTY output where ANSI codes and spacing vary.
+    private static func alphanumericOnly(_ s: String) -> String {
+        String(s.unicodeScalars.filter(CharacterSet.alphanumerics.contains))
+    }
+
+    /// Extracts a reset description near a label.
+    private static func extractReset(nearLabel label: String, in text: String) -> String? {
+        let lines = text.components(separatedBy: .newlines)
+        let normalizedLabel = alphanumericOnly(label.lowercased())
+        let normalizedLines = lines.map { alphanumericOnly($0.lowercased()) }
+
+        guard let idx = normalizedLines.firstIndex(where: { $0.contains(normalizedLabel) }) else {
+            return nil
+        }
+
+        let window = lines.dropFirst(idx).prefix(14)
+        for line in window {
+            let trimmed = line.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            let normLine = alphanumericOnly(trimmed.lowercased())
+            // Break if we hit the next section label.
+            if normLine.hasPrefix("current"), !normLine.contains(normalizedLabel) { break }
+            if let resetRange = trimmed.range(
+                of: "Resets",
+                options: NSString.CompareOptions.caseInsensitive
+            ) {
+                return String(trimmed[resetRange.lowerBound...])
+                    .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    .trimmingCharacters(in: CharacterSet(charactersIn: " )"))
+            }
+        }
+        return nil
+    }
+
+    /// Parses a reset string like "Resets in 2h 15m" or "Resets Jun 15 at 3:00pm" into a Date.
+    private static func parseResetDate(_ raw: String?) -> Date? {
+        guard var text = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+            return nil
+        }
+        // Strip "Resets" or "Resets:" prefix and "at".
+        text = text.replacingOccurrences(
+            of: #"(?i)^resets?:?\s*"#,
+            with: "",
+            options: .regularExpression)
+        text = text.replacingOccurrences(of: " at ", with: " ", options: .caseInsensitive)
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Parse relative duration like "2h 15m" or "45m".
+        if let relative = parseRelativeReset(text) { return relative }
+
+        return nil
+    }
+
+    /// Parses relative reset strings like "2h 15m", "45m", "3d 4h".
+    private static func parseRelativeReset(_ text: String) -> Date? {
+        let lower = text.lowercased()
+        var totalSeconds: TimeInterval = 0
+
+        // Match patterns like "2h", "15m", "3d"
+        let pattern = #"([0-9]+)\s*(d|h|m|s)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(lower.startIndex..<lower.endIndex, in: lower)
+        let matches = regex.matches(in: lower, range: range)
+        guard !matches.isEmpty else { return nil }
+
+        for match in matches {
+            guard match.numberOfRanges >= 3,
+                  let numRange = Range(match.range(at: 1), in: lower),
+                  let unitRange = Range(match.range(at: 2), in: lower),
+                  let value = Double(lower[numRange]) else { continue }
+            switch lower[unitRange] {
+            case "d": totalSeconds += value * 86400
+            case "h": totalSeconds += value * 3600
+            case "m": totalSeconds += value * 60
+            case "s": totalSeconds += value
+            default: break
+            }
+        }
+
+        guard totalSeconds > 0 else { return nil }
+        return Date().addingTimeInterval(totalSeconds)
     }
 
     // MARK: - Credentials
