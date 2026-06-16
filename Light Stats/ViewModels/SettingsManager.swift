@@ -44,6 +44,7 @@ protocol SettingsManaging: ObservableObject {
     var healthIncludeGPU: Bool { get set }
     var healthIncludePower: Bool { get set }
     var useColorIndicator: Bool { get set }
+    var useFlatColors: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
@@ -124,6 +125,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     /// 监控列表用颜色圆点指示等级（默认开）；关闭后回退到「低/中/高」文字。
     @Published var useColorIndicator: Bool {
         didSet { save(useColorIndicator, for: .useColorIndicator) }
+    }
+    /// 平缓色调：开启后除健康分外所有文本使用普通黑色，不再根据数值动态变色。
+    @Published var useFlatColors: Bool {
+        didSet { save(useFlatColors, for: .useFlatColors) }
     }
 
     // MARK: - Other Settings
@@ -303,6 +308,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case healthIncludeGPU = "settings.healthIncludeGPU"
         case healthIncludePower = "settings.healthIncludePower"
         case useColorIndicator = "settings.useColorIndicator"
+        case useFlatColors = "settings.useFlatColors"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case networkSpeedUnit = "settings.networkSpeedUnit"
@@ -345,6 +351,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
+        useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
 
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue

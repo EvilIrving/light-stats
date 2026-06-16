@@ -26,7 +26,7 @@ struct OverviewTabView: View {
                     BentoCard(title: "CPU", icon: "cpu") {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
                             Text(String(format: "%.0f", monitor.cpuUsage))
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
                             Text("%")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.labelMuted)
@@ -39,7 +39,7 @@ struct OverviewTabView: View {
                         if let gpu = monitor.gpuUsage {
                             HStack(alignment: .lastTextBaseline, spacing: 4) {
                                 Text(String(format: "%.0f", gpu))
-                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
                                 Text("%")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.labelMuted)
@@ -57,7 +57,7 @@ struct OverviewTabView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
-                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
                                 Text("/")
                                     .font(.system(size: 12))
                                     .foregroundColor(.labelMuted)
@@ -72,7 +72,7 @@ struct OverviewTabView: View {
                     // Load Card
                     BentoCard(title: "overview.load".localized, icon: "chart.bar.fill") {
                         Text(monitor.loadAverage.displayString)
-                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                             .foregroundColor(colorForUsage(loadUsagePercent))
@@ -81,7 +81,7 @@ struct OverviewTabView: View {
 
                 // Battery Card: 电量 + 状态 + 剩余时间 + 循环/健康/功耗/温度（无电池则不显示）
                 if monitor.battery.state != .noBattery {
-                    BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit)
+                    BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit, useFlatColors: useFlatColors)
                 }
 
                 // Status Strip
@@ -143,6 +143,7 @@ struct OverviewTabView: View {
                         provider: .claude,
                         state: aiMonitor.claudeState,
                         isRefreshing: aiMonitor.refreshingProviders.contains(.claude),
+                        useFlatColors: useFlatColors,
                         retry: { aiMonitor.retry(.claude) }
                     )
                 }
@@ -151,6 +152,7 @@ struct OverviewTabView: View {
                         provider: .codex,
                         state: aiMonitor.codexState,
                         isRefreshing: aiMonitor.refreshingProviders.contains(.codex),
+                        useFlatColors: useFlatColors,
                         retry: { aiMonitor.retry(.codex) }
                     )
                 }
@@ -159,6 +161,7 @@ struct OverviewTabView: View {
                         provider: .gemini,
                         state: aiMonitor.geminiState,
                         isRefreshing: aiMonitor.refreshingProviders.contains(.gemini),
+                        useFlatColors: useFlatColors,
                         retry: { aiMonitor.retry(.gemini) }
                     )
                 }
@@ -221,7 +224,7 @@ struct OverviewTabView: View {
                     } else {
                         VStack(spacing: 8) {
                             ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
-                                ProcessRow(process: process)
+                                ProcessRow(process: process, useFlatColors: useFlatColors)
                             }
                         }
                     }
@@ -260,7 +263,7 @@ struct OverviewTabView: View {
                 )
             }
             .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.top, 4)
             .padding(.bottom, 16)
         }
     }
@@ -331,7 +334,10 @@ struct OverviewTabView: View {
         return min(100, max(0, monitor.loadAverage.load1 / Double(coreCount) * 100))
     }
 
+    private var useFlatColors: Bool { settings.useFlatColors }
+
     private func colorForUsage(_ usage: Double) -> Color {
+        guard !useFlatColors else { return .primary }
         if usage < 50 {
             return .green
         } else if usage < 80 {
@@ -434,7 +440,7 @@ private struct ActionRow: View {
                 Spacer()
             }
             .padding(.trailing, 12)
-            .padding(.vertical, 7)
+            .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -607,6 +613,7 @@ private struct HealthCard: View {
 private struct BatteryCard: View {
     let battery: BatteryInfo
     let temperatureUnit: SettingsManager.TemperatureUnit
+    let useFlatColors: Bool
 
     var body: some View {
         BentoCard(title: "battery.title".localized, icon: batteryIcon) {
@@ -619,7 +626,7 @@ private struct BatteryCard: View {
                     // 主行：电量大字 + 状态 + 剩余时间
                     HStack(alignment: .lastTextBaseline, spacing: 4) {
                         Text(String(format: "%.0f", battery.percent))
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
                             .foregroundColor(batteryColor)
                         Text("%")
                             .font(.system(size: 12, weight: .medium))
@@ -668,6 +675,7 @@ private struct BatteryCard: View {
     }
 
     private var batteryColor: Color {
+        guard !useFlatColors else { return .primary }
         if battery.state == .charging || battery.state == .charged { return .green }
         if battery.percent < 20 { return .red }
         if battery.percent < 40 { return .yellow }
@@ -717,8 +725,10 @@ private struct SubStat: View {
 
 private struct ProcessRow: View {
     let process: TopProcess
+    let useFlatColors: Bool
     
     var color: Color {
+        guard !useFlatColors else { return .primary }
         if process.cpuPercent < 30 {
             return .green
         } else if process.cpuPercent < 70 {

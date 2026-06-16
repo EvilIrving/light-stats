@@ -10,6 +10,7 @@
 
 // MARK: - Settings View
 "settings.statusBar" = "Status Bar Display";
+"settings.appearance" = "Appearance";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -24,6 +25,7 @@
 "settings.healthDimensions.power" = "Power";
 "settings.refreshRate" = "Metrics Refresh";
 "settings.refreshRate.label" = "Refresh Interval";
+"settings.refreshAndUnits" = "Refresh & Units";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
 "settings.networkSpeedUnit" = "Network Speed";
@@ -138,6 +140,10 @@
 "aiUsage.tokenExpired" = "Token expired — run %@ once to refresh";
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";
+
+// MARK: - Flat Colors
+"settings.flatColors.section" = "Flat Colors";
+"settings.flatColors.hint" = "Use plain text color for all metrics except health score. Turn off dynamic green/yellow/red.";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "Color Indicator";

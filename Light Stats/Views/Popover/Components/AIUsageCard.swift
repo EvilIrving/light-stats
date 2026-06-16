@@ -12,6 +12,7 @@ struct AIUsageCard: View {
     let provider: AIProvider
     let state: ProviderFetchState
     let isRefreshing: Bool
+    let useFlatColors: Bool
     let retry: () -> Void
 
     var body: some View {
@@ -65,7 +66,7 @@ struct AIUsageCard: View {
     private func windowsView(_ snapshot: ProviderUsageSnapshot) -> some View {
         VStack(spacing: 6) {
             ForEach(snapshot.windows, id: \.label) { window in
-                WindowRow(window: window)
+                WindowRow(window: window, useFlatColors: useFlatColors)
             }
         }
     }
@@ -134,6 +135,7 @@ private struct RetryButton: View {
 
 private struct WindowRow: View {
     let window: UsageWindow
+    let useFlatColors: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -148,15 +150,15 @@ private struct WindowRow: View {
                     Capsule()
                         .fill(Color.primary.opacity(0.06))
                     Capsule()
-                        .fill(colorForRemaining(remainingPercent))
+                        .fill(useFlatColors ? Color.primary.opacity(0.4) : colorForRemaining(remainingPercent))
                         .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
                 }
             }
             .frame(height: 5)
 
             Text(String(format: "%.0f%%", remainingPercent))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(colorForRemaining(remainingPercent))
+                .font(.system(size: 11, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+                .foregroundColor(useFlatColors ? .primary : colorForRemaining(remainingPercent))
                 .frame(width: 36, alignment: .trailing)
 
             Text(resetText)

@@ -16,7 +16,7 @@ struct SettingsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                // Status Bar Items Card
+                // 1. Status Bar Items Card
                 BentoCard(title: "settings.statusBar".localized) {
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
@@ -58,45 +58,97 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                
-                // Health Score Dimensions Card — 哪些维度参与健康分计算
-                BentoCard(title: "settings.healthDimensions".localized) {
-                    LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 8) {
-                            SettingsGridItem(
-                                title: "health.dimension.cpu".localized,
-                                isOn: $settings.healthIncludeCPU, icon: "cpu"
-                            ) {}
-                            SettingsGridItem(
-                                title: "health.dimension.memory".localized,
-                                isOn: $settings.healthIncludeMemory, icon: "memorychip"
-                            ) {}
-                            SettingsGridItem(
-                                title: "health.dimension.load".localized,
-                                isOn: $settings.healthIncludeLoad, icon: "gauge.with.dots.needle.50percent"
-                            ) {}
-                            SettingsGridItem(
-                                title: "health.dimension.temperature".localized,
-                                isOn: $settings.healthIncludeTemperature, icon: "thermometer.medium"
-                            ) {}
-                            SettingsGridItem(
-                                title: "health.dimension.gpu".localized,
-                                isOn: $settings.healthIncludeGPU, icon: "square.grid.2x2"
-                            ) {}
-                            SettingsGridItem(
-                                title: "settings.healthDimensions.power".localized,
-                                isOn: $settings.healthIncludePower, icon: "bolt.fill"
-                            ) {}
+
+                // 2. Appearance Card — 平缓色调 + 语言
+                BentoCard(title: "settings.appearance".localized) {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("settings.flatColors.section".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Toggle("", isOn: $settings.useFlatColors)
+                                .toggleStyle(.switch)
+                                .controlSize(.small)
+                                .labelsHidden()
                         }
-                        .padding(.vertical, 4)
+
+                        HStack {
+                            Text("settings.language".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.appLanguage) {
+                                ForEach(AppLanguage.allCases) { lang in
+                                    Text(lang.displayName).tag(lang)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .fixedSize()
+                        }
+                    }
                 }
 
-                // Units Card
-                BentoCard(title: "settings.units".localized) {
-                    VStack(spacing: 16) {
+                // 3. Health Score Card — 颜色指示器开关在标题栏，维度网格在正文。
+                BentoCard(title: "settings.health".localized,
+                          headerAccessory: {
+                    Toggle("", isOn: $settings.useColorIndicator)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                }) {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 8) {
+                        SettingsGridItem(
+                            title: "health.dimension.cpu".localized,
+                            isOn: $settings.healthIncludeCPU, icon: "cpu"
+                        ) {}
+                        SettingsGridItem(
+                            title: "health.dimension.memory".localized,
+                            isOn: $settings.healthIncludeMemory, icon: "memorychip"
+                        ) {}
+                        SettingsGridItem(
+                            title: "health.dimension.load".localized,
+                            isOn: $settings.healthIncludeLoad, icon: "gauge.with.dots.needle.50percent"
+                        ) {}
+                        SettingsGridItem(
+                            title: "health.dimension.temperature".localized,
+                            isOn: $settings.healthIncludeTemperature, icon: "thermometer.medium"
+                        ) {}
+                        SettingsGridItem(
+                            title: "health.dimension.gpu".localized,
+                            isOn: $settings.healthIncludeGPU, icon: "square.grid.2x2"
+                        ) {}
+                        SettingsGridItem(
+                            title: "settings.healthDimensions.power".localized,
+                            isOn: $settings.healthIncludePower, icon: "bolt.fill"
+                        ) {}
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                // 4. Refresh & Units Card
+                BentoCard(title: "settings.refreshAndUnits".localized) {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("settings.refreshRate.label".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.refreshRate) {
+                                ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
+                                    Text(rate.displayName).tag(rate)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .fixedSize()
+                        }
+
                         HStack {
                             Text("settings.temperatureUnit".localized)
                                 .font(.system(size: 12))
@@ -127,36 +179,7 @@ struct SettingsView: View {
                     }
                 }
 
-                // Accessibility Card — 颜色指示器开关在标题栏。
-                BentoCard(title: "settings.accessibility.section".localized,
-                          headerAccessory: {
-                    Toggle("", isOn: $settings.useColorIndicator)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .labelsHidden()
-                }) {
-                    Text("settings.accessibility.colorIndicator.hint".localized)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                // Refresh Rate Card — 仅作用于系统指标采样，AI 用量有独立刷新间隔。
-                BentoCard(title: "settings.refreshRate".localized,
-                          headerAccessory: {
-                    Picker("", selection: $settings.refreshRate) {
-                        ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
-                            Text(rate.displayName).tag(rate)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }) {
-                    EmptyView()
-                }
-
-                // AI Usage Card
+                // 5. AI Usage Card
                 BentoCard(title: "settings.aiUsage".localized) {
                     VStack(spacing: 12) {
                         HStack {
@@ -206,7 +229,7 @@ struct SettingsView: View {
                     }
                 }
 
-                // Exit Node Card — toggle lives in the header, provider picker in body.
+                // 6. Exit Node Card
                 BentoCard(title: "settings.exitNode.section".localized,
                           headerAccessory: {
                     Toggle("", isOn: Binding(
@@ -241,22 +264,7 @@ struct SettingsView: View {
                     }
                 }
 
-                // Language Card
-                BentoCard(title: "settings.language".localized,
-                          headerAccessory: {
-                    Picker("", selection: $settings.appLanguage) {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Text(lang.displayName).tag(lang)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }) {
-                    EmptyView()
-                }
-
-                // Software Update Card — toggle in header, manual button in body.
+                // 7. Software Update Card
                 BentoCard(title: "settings.update.section".localized,
                           headerAccessory: {
                     Toggle("", isOn: $settings.autoCheckUpdates)

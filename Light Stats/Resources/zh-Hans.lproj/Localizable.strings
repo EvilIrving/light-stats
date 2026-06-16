@@ -10,6 +10,7 @@
 
 // MARK: - Settings View
 "settings.statusBar" = "状态栏显示";
+"settings.appearance" = "外观";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -24,6 +25,7 @@
 "settings.healthDimensions.power" = "电源";
 "settings.refreshRate" = "指标刷新频率";
 "settings.refreshRate.label" = "刷新间隔";
+"settings.refreshAndUnits" = "刷新与单位";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
 "settings.networkSpeedUnit" = "网速单位";
@@ -138,6 +140,10 @@
 "aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";
+
+// MARK: - Flat Colors
+"settings.flatColors.section" = "平缓色调";
+"settings.flatColors.hint" = "除健康分外，所有指标文字使用普通颜色，不再根据数值动态变色。";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";

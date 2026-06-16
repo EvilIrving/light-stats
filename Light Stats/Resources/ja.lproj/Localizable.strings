@@ -10,6 +10,7 @@
 
 // MARK: - Settings View
 "settings.statusBar" = "ステータスバー表示";
+"settings.appearance" = "外観";
 "settings.logo" = "ロゴ";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -24,6 +25,7 @@
 "settings.healthDimensions.power" = "電源";
 "settings.refreshRate" = "指標の更新頻度";
 "settings.refreshRate.label" = "更新間隔";
+"settings.refreshAndUnits" = "更新と単位";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
 "settings.networkSpeedUnit" = "ネット速度単位";
@@ -138,6 +140,10 @@
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
+
+// MARK: - Flat Colors
+"settings.flatColors.section" = "フラットカラー";
+"settings.flatColors.hint" = "健康度を除くすべての指標テキストを通常色にし、数値による動的な色変更をオフにします。";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "カラーインジケーター";
