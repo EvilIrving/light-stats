@@ -1,0 +1,163 @@
+/*
+  Localizable.strings (Korean)
+  Light Stats
+*/
+
+// MARK: - Tabs
+"tab.overview" = "개요";
+"tab.cleanup" = "정리";
+"tab.settings" = "설정";
+
+// MARK: - Settings View
+"settings.statusBar" = "메뉴 막대 표시";
+"settings.logo" = "로고";
+"settings.cpu" = "CPU";
+"settings.gpu" = "GPU";
+"settings.memory" = "메모리";
+"settings.disk" = "디스크";
+"settings.network" = "네트워크";
+"settings.fan" = "팬";
+"settings.battery" = "배터리";
+"settings.health" = "건강도";
+"settings.healthDimensions" = "건강도 평가 항목";
+"settings.healthDimensions.hint" = "건강도 점수에 반영할 지표를 선택하세요.";
+"settings.healthDimensions.power" = "전원";
+"settings.refreshRate" = "지표 새로 고침";
+"settings.refreshRate.label" = "새로 고침 간격";
+"settings.units" = "단위 설정";
+"settings.temperatureUnit" = "온도";
+"settings.networkSpeedUnit" = "네트워크 속도";
+"settings.language" = "언어";
+"settings.minimumItemAlert" = "메뉴 막대 항목을 하나 이상 표시해야 합니다";
+"settings.ok" = "확인";
+
+// MARK: - Refresh Rate
+"refreshRate.low" = "낮음 (5초)";
+"refreshRate.medium" = "중간 (2초)";
+"refreshRate.high" = "높음 (1초)";
+
+// MARK: - Network Speed Unit
+"networkSpeed.auto" = "자동";
+
+// MARK: - Language
+"language.system" = "시스템 언어";
+"language.zh-Hans" = "简体中文";
+"language.en" = "English";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+
+// MARK: - Overview Tab
+"overview.load" = "부하";
+"overview.network" = "네트워크";
+"overview.loading" = "불러오는 중...";
+"overview.coreUsage" = "코어 사용률";
+"overview.processes" = "프로세스";
+"overview.diskIO" = "디스크 I/O";
+
+// MARK: - Battery
+"battery.title" = "배터리";
+"battery.na" = "없음";
+"battery.cycles" = "충전 횟수";
+"battery.health" = "상태";
+"battery.power" = "전력";
+"battery.temp" = "온도";
+"battery.timeLeft" = "%@ 남음";
+"battery.timeToFull" = "완전 충전까지 %@";
+"battery.state.charging" = "충전 중";
+"battery.state.discharging" = "배터리 사용";
+"battery.state.charged" = "충전 완료";
+
+// MARK: - Health
+"health.title" = "건강도";
+"health.grade.excellent" = "매우 좋음";
+"health.grade.good" = "좋음";
+"health.grade.fair" = "보통";
+"health.grade.poor" = "저하";
+"health.grade.critical" = "위험";
+"health.dimension.cpu" = "CPU";
+"health.dimension.memory" = "메모리";
+"health.dimension.disk" = "디스크";
+"health.dimension.load" = "부하";
+"health.dimension.temperature" = "온도";
+"health.dimension.battery" = "배터리";
+"health.dimension.gpu" = "GPU";
+"health.dimension.diskIO" = "I/O";
+"health.level.low" = "낮음";
+"health.level.medium" = "중간";
+"health.level.high" = "높음";
+"health.level.normal" = "정상";
+"health.level.warm" = "다소 높음";
+"health.level.hot" = "과열";
+
+// MARK: - Cleanup Tab
+"cleanup.memoryUsage" = "메모리 사용량";
+"cleanup.availableMemory" = "사용 가능";
+"cleanup.appUsed" = "앱 사용 중";
+"cleanup.runningApps" = "실행 중인 앱";
+"cleanup.appCount" = "%d개";
+"cleanup.noApps" = "실행 중인 앱이 없습니다";
+"cleanup.backgroundProcesses" = "백그라운드 프로세스";
+"cleanup.appNotResponding" = "앱이 응답하지 않음";
+"cleanup.forceQuit" = "강제 종료";
+"cleanup.cancel" = "취소";
+"cleanup.forceQuitMessage" = "앱이 응답하지 않습니다. 강제 종료할까요?\n저장하지 않은 데이터가 손실될 수 있습니다.";
+
+// MARK: - Core Topology
+"core.suffix" = " 코어";
+
+// MARK: - Network / Proxy / Exit Node
+"network.proxy.title" = "프록시";
+"network.proxy.none" = "설정 안 됨";
+"network.proxy.tun" = "터널 감지됨";
+"network.exit.title" = "출구 노드";
+"network.exit.failed" = "탐지 실패";
+"network.route.direct" = "직접 연결";
+"network.route.proxied" = "프록시 경유";
+"network.route.unknown" = "알 수 없음";
+
+// MARK: - Settings: Exit Node
+"settings.exitNode.section" = "출구 노드";
+"settings.exitNode.toggle" = "공개 IP 표시";
+"settings.exitNode.toggleHint" = "새로 고침마다 공개 IP를 조회합니다.";
+"settings.exitNode.provider" = "공급자";
+"settings.exitNode.privacyTitle" = "활성화하기 전에";
+"settings.exitNode.privacyMessage" = "Light Stats가 선택한 서비스에 공개 IP와 추정 위치를 조회합니다. 인증 정보는 전송되지 않으며, 결과는 이 기기에만 남습니다.";
+"settings.exitNode.enable" = "활성화";
+"settings.exitNode.cancel" = "취소";
+
+// MARK: - AI Usage
+"settings.aiUsage" = "AI 사용량";
+"settings.aiUsageInterval" = "새로 고침 간격";
+"aiUsage.claude" = "Claude Code";
+"aiUsage.codex" = "Codex";
+"aiUsage.updatedAgo" = "%@ 전 업데이트됨";
+"aiUsage.tokenExpired" = "토큰 만료 — %@ 을(를) 한 번 실행해 갱신하세요";
+"aiUsage.credentialsMissing" = "인증 정보 없음 — 먼저 %@ CLI로 로그인하세요";
+"aiUsage.fetchFailed" = "사용량을 가져오지 못했습니다";
+
+// MARK: - Accessibility
+"settings.accessibility.section" = "색상 표시";
+"settings.accessibility.colorIndicator.hint" = "건강도 수준을 색상 점으로 표시합니다. 끄면 낮음 / 중간 / 높음 텍스트를 사용합니다.";
+
+// MARK: - Software Update
+"update.checkButton" = "지금 확인";
+"settings.update.section" = "자동 업데이트";
+"settings.update.autoCheck" = "자동으로 확인";
+"settings.update.autoCheckHint" = "실행 시와 24시간마다 확인합니다.";
+"update.available.title" = "Light Stats %@ 사용 가능";
+"update.available.message" = "서명 및 공증된 업데이트입니다. 설정은 유지됩니다.";
+"update.action.install" = "지금 업데이트";
+"update.action.later" = "나중에";
+"update.action.skip" = "이 버전 건너뛰기";
+"update.action.ok" = "확인";
+"update.action.openPage" = "다운로드 페이지 열기";
+"update.upToDate.title" = "최신 상태";
+"update.upToDate.message" = "최신 버전을 사용하고 있습니다.";
+"update.progress.downloading" = "다운로드 중…";
+"update.progress.installing" = "확인 중…";
+"update.error.title" = "업데이트 실패";
+"update.error.network" = "GitHub에 연결할 수 없습니다.";
+"update.error.noRelease" = "릴리스를 찾을 수 없습니다.";
+"update.error.download" = "다운로드에 실패했습니다.";
+"update.error.install" = "설치에 실패했습니다.";
+"update.error.verification" = "검증에 실패했습니다.";

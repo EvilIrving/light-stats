@@ -15,9 +15,10 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case zhHans = "zh-Hans"
     case en = "en"
     case ja = "ja"
-    
+    case ko = "ko"
+
     var id: String { rawValue }
-    
+
     /// Display name for the language (always in native language)
     nonisolated var displayName: String {
         switch self {
@@ -25,9 +26,10 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .zhHans: return "简体中文"
         case .en: return "English"
         case .ja: return "日本語"
+        case .ko: return "한국어"
         }
     }
-    
+
     /// Get the actual locale identifier
     nonisolated var localeIdentifier: String? {
         switch self {
@@ -35,6 +37,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .zhHans: return "zh-Hans"
         case .en: return "en"
         case .ja: return "ja"
+        case .ko: return "ko"
         }
     }
 }
@@ -123,6 +126,8 @@ final class LocalizationManager: ObservableObject {
             return Locale(identifier: "en")
         case .ja:
             return Locale(identifier: "ja")
+        case .ko:
+            return Locale(identifier: "ko")
         }
     }
 }

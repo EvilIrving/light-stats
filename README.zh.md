@@ -2,7 +2,7 @@
 
 Light Stats 是一款紧凑的 macOS 菜单栏系统监控应用，可显示 CPU、GPU、内存、磁盘、磁盘 I/O、网络、代理路径、电池、温度、风扇、进程、AI 订阅用量和整体健康分。
 
-> 英文版 README 请查看 [README.md](README.md)
+[English](README.md) · **简体中文** · [日本語](README.ja.md) · [한국어](README.ko.md)
 
 ---
 
@@ -83,7 +83,7 @@ Light Stats 可从环境变量、系统代理设置和活跃隧道接口检测�
 - 网速单位：自动、KB/s 或 MB/s
 - 出口节点探测和 provider 选择
 - AI 监控开关（Claude Code 和 Codex 用量）
-- 语言：简体中文、English、日本語、跟随系统
+- 语言：简体中文、English、日本語、한국어、跟随系统
 
 ---
 

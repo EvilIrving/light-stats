@@ -5,7 +5,7 @@
 
 Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk I/O, network, proxy route, battery, temperature, fan, process, AI subscription usage, and overall system health.
 
-> 中文版请查看 [README.zh.md](README.zh.md)
+**English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
 ---
 
@@ -86,7 +86,7 @@ When exit-node detection is enabled, the app sends a request to the selected geo
 - Network speed unit: Auto, KB/s, or MB/s
 - Exit-node detection and provider selection
 - AI monitoring toggle (Claude Code and Codex usage)
-- Language: Simplified Chinese, English, Japanese, or system language
+- Language: Simplified Chinese, English, Japanese, Korean, or system language
 
 ---
 
@@ -119,7 +119,7 @@ xcodebuild -project "Light Stats.xcodeproj" \
 # Swift style and safety checks
 swiftlint lint --strict
 
-# Localization key coverage across en / zh-Hans / ja
+# Localization key coverage across en / zh-Hans / ja / ko
 ./validate_localization.sh
 ```
 
