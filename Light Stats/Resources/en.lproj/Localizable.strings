@@ -59,7 +59,7 @@
 
 // MARK: - Battery
 "battery.title" = "Battery";
-"battery.na" = "N/A";
+"battery.na" = "—";
 "battery.cycles" = "Cycles";
 "battery.health" = "Health";
 "battery.power" = "Power";

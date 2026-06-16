@@ -59,7 +59,7 @@
 
 // MARK: - Battery
 "battery.title" = "电池";
-"battery.na" = "无电池";
+"battery.na" = "—";
 "battery.cycles" = "循环次数";
 "battery.health" = "健康度";
 "battery.power" = "功耗";

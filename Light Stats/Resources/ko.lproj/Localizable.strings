@@ -59,7 +59,7 @@
 
 // MARK: - Battery
 "battery.title" = "배터리";
-"battery.na" = "없음";
+"battery.na" = "—";
 "battery.cycles" = "충전 횟수";
 "battery.health" = "상태";
 "battery.power" = "전력";

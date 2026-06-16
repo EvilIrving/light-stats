@@ -96,7 +96,7 @@ final class StatusBarView: NSView {
 
         // GPU
         if settings.showGPU {
-            let gpuText = gpu.map { String(format: "%.0f%%", $0) } ?? "N/A"
+            let gpuText = gpu.map { String(format: "%.0f%%", $0) } ?? "—"
             displayItems.append(DisplayItem(
                 value: gpuText,
                 label: "GPU",
@@ -138,7 +138,7 @@ final class StatusBarView: NSView {
 
         // Fan
         if settings.showFan {
-            let fanText = fan.map { "\($0) RPM" } ?? "-- RPM"
+            let fanText = fan.map { "\($0) RPM" } ?? "—"
             displayItems.append(DisplayItem(
                 value: fanText,
                 label: "FAN",
@@ -147,12 +147,12 @@ final class StatusBarView: NSView {
             ))
         }
 
-        // Battery（充电/已充满前缀闪电；无电池显示 N/A）
+        // Battery（充电/已充满前缀闪电；无电池显示横杠）
         if settings.showBattery {
             let batteryText: String
             switch battery.state {
             case .noBattery:
-                batteryText = "N/A"
+                batteryText = "—"
             case .charging, .charged:
                 batteryText = "⚡\(Int(battery.percent.rounded()))%"
             case .discharging:

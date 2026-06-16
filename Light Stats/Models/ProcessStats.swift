@@ -26,6 +26,17 @@ struct TopProcess: Identifiable {
 
 /// Collects top CPU-consuming processes using ps command
 enum ProcessStats {
+    private static var currentAppProcessNames: Set<String> {
+        [
+            Bundle.main.executableURL?.lastPathComponent,
+            Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+        .reduce(into: Set<String>()) { names, name in
+            names.insert(name.lowercased())
+        }
+    }
     
     /// Get top N processes sorted by CPU usage
     /// Uses: ps -Aceo pcpu,pmem,comm -r
@@ -94,6 +105,10 @@ enum ProcessStats {
             // Strip path if present (take last component after /)
             if let lastSlash = name.lastIndex(of: "/") {
                 name = String(name[name.index(after: lastSlash)...])
+            }
+
+            if currentAppProcessNames.contains(name.lowercased()) {
+                continue
             }
             
             // Skip very low CPU processes

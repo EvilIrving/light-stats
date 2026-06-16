@@ -47,7 +47,7 @@ struct OverviewTabView: View {
                             }
                             .foregroundColor(colorForUsage(gpu))
                         } else {
-                            Text("N/A")
+                            Text("—")
                                 .font(.system(size: 20, weight: .bold))
                                 .foregroundColor(.labelMuted)
                         }
@@ -92,7 +92,7 @@ struct OverviewTabView: View {
                             // Temp
                             HStack(spacing: 4) {
                                 Image(systemName: "thermometer.medium")
-                                Text(monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "N/A")
+                                Text(monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "—")
                             }
 
                             Spacer()
@@ -100,7 +100,7 @@ struct OverviewTabView: View {
                             // Fan（图标按转速旋转，封顶避免过快）
                             HStack(spacing: 4) {
                                 SpinningFanIcon(rpm: monitor.fanSpeed)
-                                Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "N/A")
+                                Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
                             }
 
                             Spacer()
@@ -136,6 +136,24 @@ struct OverviewTabView: View {
                     }
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.labelMuted)
+                }
+
+                // AI Usage Cards (hidden entirely when toggled off in settings)
+                if settings.aiMonitorClaudeEnabled {
+                    AIUsageCard(
+                        provider: .claude,
+                        state: aiMonitor.claudeState,
+                        isRefreshing: aiMonitor.refreshingProviders.contains(.claude),
+                        retry: { aiMonitor.retry(.claude) }
+                    )
+                }
+                if settings.aiMonitorCodexEnabled {
+                    AIUsageCard(
+                        provider: .codex,
+                        state: aiMonitor.codexState,
+                        isRefreshing: aiMonitor.refreshingProviders.contains(.codex),
+                        retry: { aiMonitor.retry(.codex) }
+                    )
                 }
                 
                 // Network Card: 速率 + 本地代理 + 出口节点
@@ -185,24 +203,6 @@ struct OverviewTabView: View {
                             .font(.system(size: 11, design: .monospaced))
                         }
                     }
-                }
-                
-                // AI Usage Cards (hidden entirely when toggled off in settings)
-                if settings.aiMonitorClaudeEnabled {
-                    AIUsageCard(
-                        provider: .claude,
-                        state: aiMonitor.claudeState,
-                        isRefreshing: aiMonitor.refreshingProviders.contains(.claude),
-                        retry: { aiMonitor.retry(.claude) }
-                    )
-                }
-                if settings.aiMonitorCodexEnabled {
-                    AIUsageCard(
-                        provider: .codex,
-                        state: aiMonitor.codexState,
-                        isRefreshing: aiMonitor.refreshingProviders.contains(.codex),
-                        retry: { aiMonitor.retry(.codex) }
-                    )
                 }
 
                 // Top Processes Section
@@ -411,14 +411,10 @@ private struct ActionRowsCard: View {
     let quit: () -> Void
 
     var body: some View {
-        BentoCard(padding: 0) {
-            VStack(spacing: 0) {
-                ActionRow(icon: "gearshape", title: "popover.action.settings".localized, action: openSettings)
-                Divider().padding(.leading, 42)
-                ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
-                Divider().padding(.leading, 42)
-                ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit)
-            }
+        VStack(spacing: 0) {
+            ActionRow(icon: "gearshape", title: "popover.action.settings".localized, action: openSettings)
+            ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
+            ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit)
         }
     }
 }
@@ -427,8 +423,6 @@ private struct ActionRow: View {
     let icon: String
     let title: String
     let action: () -> Void
-
-    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
@@ -442,13 +436,11 @@ private struct ActionRow: View {
                     .foregroundColor(.primary)
                 Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.trailing, 12)
+            .padding(.vertical, 7)
             .contentShape(Rectangle())
-            .background(isHovered ? Color.primary.opacity(0.05) : Color.clear)
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
     }
 }
 
@@ -614,7 +606,7 @@ private struct HealthCard: View {
 }
 
 /// 电池概览卡：电量百分比（大字+上色）、状态、剩余时间；副行循环/健康/功耗/温度。
-/// 无电池机型（台式 Mac）优雅显示 N/A。
+/// 无电池机型（台式 Mac）优雅显示横杠。
 private struct BatteryCard: View {
     let battery: BatteryInfo
     let temperatureUnit: SettingsManager.TemperatureUnit

@@ -160,18 +160,38 @@ actor PowerService {
         }
 
         // 实时功耗：InstantAmperage(mA, 有符号) × Voltage(mV) → W。
-        // InstantAmperage 若按无符号读会出现 18446744073709544 这类溢出脏值，
-        // 故用 int64Value（有符号），并对量级做 sanity 检查，异常一律丢弃。
-        let amperage = (dict["InstantAmperage"] as? NSNumber)?.int64Value
-            ?? (dict["Amperage"] as? NSNumber)?.int64Value
         if let voltage = (dict["Voltage"] as? NSNumber)?.doubleValue,
-           let a = amperage, abs(a) <= 30_000 {
+           let a = signedRegistryInteger(dict["InstantAmperage"] ?? dict["Amperage"]),
+           abs(a) <= 30_000 {
             let watts = Double(abs(a)) * voltage / 1_000_000.0
             if watts > 0, watts < 200 {
                 data.powerWatts = watts
             }
         }
 
+        if data.powerWatts == nil,
+           let telemetry = dict["PowerTelemetryData"] as? [String: Any],
+           let batteryPower = signedRegistryInteger(telemetry["BatteryPower"]) {
+            let watts = Double(abs(batteryPower)) / 1_000.0
+            if watts > 0, watts < 200 {
+                data.powerWatts = watts
+            }
+        }
+
         return data
+    }
+
+    /// IORegistry 可能把负电流/功耗作为 UInt64 two's complement 暴露，这里还原成真实有符号值。
+    private func signedRegistryInteger(_ value: Any?) -> Int64? {
+        guard let number = value as? NSNumber else { return nil }
+        let signed = number.int64Value
+        if signed < 0 {
+            return signed
+        }
+        let unsigned = number.uint64Value
+        if unsigned > UInt64(Int64.max) {
+            return Int64(bitPattern: unsigned)
+        }
+        return signed
     }
 }
