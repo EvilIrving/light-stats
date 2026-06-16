@@ -72,7 +72,7 @@ struct AIUsageCard: View {
             return "aiUsage.tokenExpired".localized(cli)
         case .credentialsMissing:
             return "aiUsage.credentialsMissing".localized(cli)
-        case .network, .decoding:
+        case .network, .decoding, .endpointNotFound:
             return "aiUsage.fetchFailed".localized
         }
     }

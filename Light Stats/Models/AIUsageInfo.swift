@@ -39,6 +39,8 @@ enum AIUsageError: Error, Equatable {
     case tokenExpired
     case network
     case decoding
+    /// OAuth usage endpoint returned 404 — endpoint may have moved or been disabled.
+    case endpointNotFound
 }
 
 /// Per-provider fetch state published to the UI

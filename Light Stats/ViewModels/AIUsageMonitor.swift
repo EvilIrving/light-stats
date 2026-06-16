@@ -143,7 +143,7 @@ final class AIUsageMonitor: ObservableObject {
             // Keep last good data visible for transient failures;
             // credential problems need the user's attention.
             switch error {
-            case .network, .decoding:
+            case .network, .decoding, .endpointNotFound:
                 if let previous = state(for: provider).snapshot {
                     newState = .stale(previous)
                 } else {
