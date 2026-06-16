@@ -103,30 +103,36 @@ struct SettingsView: View {
                         GridItem(.flexible()),
                         GridItem(.flexible())
                     ], spacing: 8) {
-                        SettingsGridItem(
+                        HealthDimButton(
                             title: "health.dimension.cpu".localized,
-                            isOn: $settings.healthIncludeCPU, icon: "cpu"
-                        ) {}
-                        SettingsGridItem(
+                            isOn: $settings.healthIncludeCPU,
+                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
+                        )
+                        HealthDimButton(
                             title: "health.dimension.memory".localized,
-                            isOn: $settings.healthIncludeMemory, icon: "memorychip"
-                        ) {}
-                        SettingsGridItem(
+                            isOn: $settings.healthIncludeMemory,
+                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
+                        )
+                        HealthDimButton(
                             title: "health.dimension.load".localized,
-                            isOn: $settings.healthIncludeLoad, icon: "gauge.with.dots.needle.50percent"
-                        ) {}
-                        SettingsGridItem(
+                            isOn: $settings.healthIncludeLoad,
+                            demoLevel: .medium, useColorIndicator: settings.useColorIndicator
+                        )
+                        HealthDimButton(
                             title: "health.dimension.temperature".localized,
-                            isOn: $settings.healthIncludeTemperature, icon: "thermometer.medium"
-                        ) {}
-                        SettingsGridItem(
+                            isOn: $settings.healthIncludeTemperature,
+                            demoLevel: .high, useColorIndicator: settings.useColorIndicator
+                        )
+                        HealthDimButton(
                             title: "health.dimension.gpu".localized,
-                            isOn: $settings.healthIncludeGPU, icon: "square.grid.2x2"
-                        ) {}
-                        SettingsGridItem(
+                            isOn: $settings.healthIncludeGPU,
+                            demoLevel: .medium, useColorIndicator: settings.useColorIndicator
+                        )
+                        HealthDimButton(
                             title: "settings.healthDimensions.power".localized,
-                            isOn: $settings.healthIncludePower, icon: "bolt.fill"
-                        ) {}
+                            isOn: $settings.healthIncludePower,
+                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
+                        )
                     }
                     .padding(.vertical, 4)
                 }
@@ -311,6 +317,26 @@ struct SettingsView: View {
 // MARK: - Settings Grid Item
 
 struct SettingsGridItem: View {
+    enum DemoLevel {
+        case low, medium, high
+
+        var color: Color {
+            switch self {
+            case .low: return .green
+            case .medium: return .yellow
+            case .high: return .red
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .low: return "health.level.low".localized
+            case .medium: return "health.level.medium".localized
+            case .high: return "health.level.high".localized
+            }
+        }
+    }
+
     let title: String
     @Binding var isOn: Bool
     let icon: String
@@ -361,6 +387,47 @@ struct SettingsGridItem: View {
     }
 }
     
+// MARK: - Health Dimension Button
+
+/// 健康分维度按钮：纯文字，无图标，点击切换开关。
+private struct HealthDimButton: View {
+    let title: String
+    @Binding var isOn: Bool
+    let demoLevel: SettingsGridItem.DemoLevel
+    let useColorIndicator: Bool
+
+    var body: some View {
+        Button {
+            isOn.toggle()
+        } label: {
+            Text(demoLabel)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(textColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isOn ? Color.primary.opacity(0.06) : Color.primary.opacity(0.03))
+                )
+        }
+        .buttonStyle(.plain)
+        .focusEffectDisabled()
+    }
+
+    private var demoLabel: String {
+        if useColorIndicator {
+            return title
+        } else {
+            return "\(title) \(demoLevel.label)"
+        }
+    }
+
+    private var textColor: Color {
+        guard isOn else { return .secondary }
+        return useColorIndicator ? demoLevel.color : .primary
+    }
+}
+
 #if DEBUG
 #Preview {
     SettingsView()
