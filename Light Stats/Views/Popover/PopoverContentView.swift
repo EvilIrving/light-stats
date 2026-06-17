@@ -81,9 +81,7 @@ struct PopoverContentView: View {
         .frame(width: 360, height: 780)
         .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes
-        // Globally suppress the blue keyboard focus ring on buttons/rows
-        // (e.g. About / Quit, AI retry) — the panel is mouse-driven.
-        .focusEffectDisabled()
+        .focusable(false)
     }
 
     private func openSettings() {

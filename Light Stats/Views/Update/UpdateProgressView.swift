@@ -32,6 +32,7 @@ struct UpdateProgressView: View {
         .frame(width: 320, alignment: .leading)
         .background(Color(nsColor: .windowBackgroundColor))
         .id(localization.currentLanguage)
+        .focusable(false)
     }
 
     private var title: String {

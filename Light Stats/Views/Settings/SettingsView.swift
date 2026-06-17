@@ -277,6 +277,7 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
+        .focusable(false)
     }
 
     private func validateMinimumItems() {
@@ -342,7 +343,6 @@ struct SettingsGridItem: View {
             )
         }
         .buttonStyle(.plain)
-        .focusEffectDisabled()
     }
 
     @ViewBuilder
@@ -384,7 +384,6 @@ private struct HealthDimButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .focusEffectDisabled()
     }
 
     private var demoLabel: String {
@@ -403,9 +402,8 @@ private struct HealthDimButton: View {
 
 // MARK: - Settings Toggle
 
-/// AppKit-backed switch without the blue keyboard focus ring.
-/// NSSwitch draws its own focus ring at the AppKit layer, unreachable by
-/// `.focusEffectDisabled()`, so we use `.focusable(false)` instead.
+/// Reusable switch component — styling only; focus suppression is handled
+/// globally via `.focusable(false)` on the root ScrollView.
 private struct SettingsToggle: View {
     @Binding var isOn: Bool
 
@@ -414,7 +412,6 @@ private struct SettingsToggle: View {
             .toggleStyle(.switch)
             .controlSize(.small)
             .labelsHidden()
-            .focusable(false)
     }
 }
 

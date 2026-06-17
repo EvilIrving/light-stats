@@ -97,6 +97,7 @@ struct AboutView: View {
         .frame(width: 280)
         .background(Color(nsColor: .windowBackgroundColor))
         .id(localization.currentLanguage)
+        .focusable(false)
     }
 
     private var copyright: String {

@@ -136,6 +136,28 @@ Every time you write or edit code, check these **before** declaring done:
 `swiftlint --fix` auto-resolves trivial violations (trailing whitespace, redundant optional
 init, etc.), but line-length, complexity, and the custom rules must be fixed by hand.
 
+### AppKit Focus Rings
+
+SwiftUI's `.focusEffectDisabled()` does **not** suppress the blue keyboard focus ring on
+AppKit-backed controls (`NSSwitch`, `NSSegmentedControl`, `NSButton`). These controls draw
+their own focus ring at the AppKit layer.
+
+**Fix:** Apply `.focusable(false)` to the **root container** of each window/popover —
+it propagates to all descendants and suppresses focus rings globally for the entire view
+hierarchy.
+
+```swift
+// Settings root
+ScrollView { ... }
+    .focusable(false)
+
+// Popover root
+VStack { ... }
+    .focusable(false)
+```
+
+Use `SettingsToggle` (a styled wrapper) for toggles so the modifier chain stays dry.
+
 ### Localization
 
 Three languages: en, zh-Hans, ja. User-facing strings must use `NSLocalizedString` or `String(localized:)`. When adding a new key, update all three `.lproj/Localizable.strings` files.
