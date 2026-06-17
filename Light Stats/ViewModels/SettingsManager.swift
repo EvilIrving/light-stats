@@ -47,7 +47,6 @@ protocol SettingsManaging: ObservableObject {
     var useFlatColors: Bool { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
-    var networkSpeedUnit: SettingsManager.NetworkSpeedUnit { get set }
     var exitNodeDetectionEnabled: Bool { get set }
     var exitNodeProvider: ExitNodeProvider { get set }
     var autoCheckUpdates: Bool { get set }
@@ -139,10 +138,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var temperatureUnit: TemperatureUnit {
         didSet { save(temperatureUnit.rawValue, for: .temperatureUnit) }
     }
-    @Published var networkSpeedUnit: NetworkSpeedUnit {
-        didSet { save(networkSpeedUnit.rawValue, for: .networkSpeedUnit) }
-    }
-
     // MARK: - AI Usage Settings
 
     @Published var aiMonitorClaudeEnabled: Bool {
@@ -264,31 +259,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
 
-    enum NetworkSpeedUnit: String, CaseIterable {
-        case auto
-        case kbps
-        case mbps
-
-        var displayName: String {
-            switch self {
-            case .auto: return "networkSpeed.auto".localized
-            case .kbps: return "KB/s"
-            case .mbps: return "MB/s"
-            }
-        }
-
-        func format(_ bytesPerSecond: Double) -> String {
-            switch self {
-            case .auto:
-                return ByteFormatter.formatSpeed(bytesPerSecond)
-            case .kbps:
-                return String(format: "%.1f KB/s", bytesPerSecond / 1_000)
-            case .mbps:
-                return String(format: "%.2f MB/s", bytesPerSecond / 1_000_000)
-            }
-        }
-    }
-
     // MARK: - Keys
 
     private enum Key: String {
@@ -311,7 +281,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case useFlatColors = "settings.useFlatColors"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
-        case networkSpeedUnit = "settings.networkSpeedUnit"
         case appLanguage = "settings.appLanguage"
         case exitNodeDetectionEnabled = "settings.exitNodeDetectionEnabled"
         case exitNodeProvider = "settings.exitNodeProvider"
@@ -360,8 +329,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         let tempUnitStr = defaults.string(forKey: Key.temperatureUnit.rawValue) ?? TemperatureUnit.celsius.rawValue
         temperatureUnit = TemperatureUnit(rawValue: tempUnitStr) ?? .celsius
 
-        let netUnitStr = defaults.string(forKey: Key.networkSpeedUnit.rawValue) ?? NetworkSpeedUnit.auto.rawValue
-        networkSpeedUnit = NetworkSpeedUnit(rawValue: netUnitStr) ?? .auto
 
         let langStr = defaults.string(forKey: Key.appLanguage.rawValue) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: langStr) ?? .system

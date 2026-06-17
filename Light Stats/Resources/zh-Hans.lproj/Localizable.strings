@@ -28,18 +28,16 @@
 "settings.refreshAndUnits" = "刷新与单位";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
-"settings.networkSpeedUnit" = "网速单位";
 "settings.language" = "语言";
 "settings.minimumItemAlert" = "状态栏至少需要显示一个系统状态";
 "settings.ok" = "确定";
 
 // MARK: - Refresh Rate
-"refreshRate.low" = "低 (5秒)";
-"refreshRate.medium" = "中 (2秒)";
-"refreshRate.high" = "高 (1秒)";
+"refreshRate.low" = "5秒";
+"refreshRate.medium" = "2秒";
+"refreshRate.high" = "1秒";
 
 // MARK: - Network Speed Unit
-"networkSpeed.auto" = "自动";
 
 // MARK: - Language
 "language.system" = "跟随系统";

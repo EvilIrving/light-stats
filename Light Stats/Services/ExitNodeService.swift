@@ -23,6 +23,15 @@ nonisolated enum ExitNodeProvider: String, CaseIterable, Sendable {
         }
     }
 
+    /// Short label for segmented control (three items side by side).
+    var shortName: String {
+        switch self {
+        case .ipsb: return "ip.sb"
+        case .ipapi: return "IP-API"
+        case .ipinfo: return "ipinfo"
+        }
+    }
+
     var endpoint: URL {
         switch self {
         case .ipsb:

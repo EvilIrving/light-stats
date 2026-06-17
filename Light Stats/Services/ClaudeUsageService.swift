@@ -52,8 +52,7 @@ enum ClaudeUsageService {
         let claudeDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude")
         return [
-            claudeDir.appendingPathComponent(".credentials.json"),
-            claudeDir.appendingPathComponent("credentials.json")
+            claudeDir.appendingPathComponent(".credentials.json")
         ]
     }
 

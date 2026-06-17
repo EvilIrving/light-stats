@@ -28,18 +28,16 @@
 "settings.refreshAndUnits" = "새로고침 및 단위";
 "settings.units" = "단위 설정";
 "settings.temperatureUnit" = "온도";
-"settings.networkSpeedUnit" = "네트워크 속도";
 "settings.language" = "언어";
 "settings.minimumItemAlert" = "메뉴 막대 항목을 하나 이상 표시해야 합니다";
 "settings.ok" = "확인";
 
 // MARK: - Refresh Rate
-"refreshRate.low" = "낮음 (5초)";
-"refreshRate.medium" = "중간 (2초)";
-"refreshRate.high" = "높음 (1초)";
+"refreshRate.low" = "5초";
+"refreshRate.medium" = "2초";
+"refreshRate.high" = "1초";
 
 // MARK: - Network Speed Unit
-"networkSpeed.auto" = "자동";
 
 // MARK: - Language
 "language.system" = "시스템 언어";

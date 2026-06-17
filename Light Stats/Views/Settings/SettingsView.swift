@@ -67,10 +67,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Toggle("", isOn: $settings.useFlatColors)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                            SettingsToggle(isOn: $settings.useFlatColors)
                         }
 
                         HStack {
@@ -86,6 +83,7 @@ struct SettingsView: View {
                             .pickerStyle(.segmented)
                             .labelsHidden()
                             .fixedSize()
+                            .focusable(false)
                         }
                     }
                 }
@@ -93,10 +91,7 @@ struct SettingsView: View {
                 // 3. Health Score Card — 颜色指示器开关在标题栏，维度网格在正文。
                 BentoCard(title: "settings.health".localized,
                           headerAccessory: {
-                    Toggle("", isOn: $settings.useColorIndicator)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .labelsHidden()
+                    SettingsToggle(isOn: $settings.useColorIndicator)
                 }) {
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
@@ -153,6 +148,7 @@ struct SettingsView: View {
                             .pickerStyle(.segmented)
                             .labelsHidden()
                             .fixedSize()
+                            .focusable(false)
                         }
 
                         HStack {
@@ -167,21 +163,9 @@ struct SettingsView: View {
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden()
+                            .focusable(false)
                         }
 
-                        HStack {
-                            Text("settings.networkSpeedUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.networkSpeedUnit) {
-                                ForEach(SettingsManager.NetworkSpeedUnit.allCases, id: \.self) { unit in
-                                    Text(unit.displayName).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                        }
                     }
                 }
 
@@ -193,10 +177,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Toggle("", isOn: $settings.aiMonitorClaudeEnabled)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                            SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
                         }
 
                         HStack {
@@ -204,10 +185,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Toggle("", isOn: $settings.aiMonitorCodexEnabled)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                            SettingsToggle(isOn: $settings.aiMonitorCodexEnabled)
                         }
 
                         HStack {
@@ -215,10 +193,7 @@ struct SettingsView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Toggle("", isOn: $settings.aiMonitorGeminiEnabled)
-                                .toggleStyle(.switch)
-                                .controlSize(.small)
-                                .labelsHidden()
+                            SettingsToggle(isOn: $settings.aiMonitorGeminiEnabled)
                         }
 
                         if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled {
@@ -238,7 +213,7 @@ struct SettingsView: View {
                 // 6. Exit Node Card
                 BentoCard(title: "settings.exitNode.section".localized,
                           headerAccessory: {
-                    Toggle("", isOn: Binding(
+                    SettingsToggle(isOn: Binding(
                         get: { settings.exitNodeDetectionEnabled },
                         set: { newValue in
                             if newValue {
@@ -248,9 +223,6 @@ struct SettingsView: View {
                             }
                         }
                     ))
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .labelsHidden()
                 }) {
                     if settings.exitNodeDetectionEnabled {
                         HStack {
@@ -260,12 +232,13 @@ struct SettingsView: View {
                             Spacer()
                             Picker("", selection: $settings.exitNodeProvider) {
                                 ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
-                                    Text(provider.displayName).tag(provider)
+                                    Text(provider.shortName).tag(provider)
                                 }
                             }
-                            .pickerStyle(.menu)
+                            .pickerStyle(.segmented)
                             .labelsHidden()
-                            .frame(width: 140)
+                            .fixedSize()
+                            .focusable(false)
                         }
                     }
                 }
@@ -304,9 +277,6 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
-        // Globally suppress the blue keyboard focus ring (e.g. on the segmented
-        // language picker) — this app is mouse-driven and the ring is noise.
-        .focusEffectDisabled()
     }
 
     private func validateMinimumItems() {
@@ -428,6 +398,23 @@ private struct HealthDimButton: View {
     private var textColor: Color {
         guard isOn else { return .secondary }
         return useColorIndicator ? demoLevel.color : .primary
+    }
+}
+
+// MARK: - Settings Toggle
+
+/// AppKit-backed switch without the blue keyboard focus ring.
+/// NSSwitch draws its own focus ring at the AppKit layer, unreachable by
+/// `.focusEffectDisabled()`, so we use `.focusable(false)` instead.
+private struct SettingsToggle: View {
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle("", isOn: $isOn)
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .labelsHidden()
+            .focusable(false)
     }
 }
 

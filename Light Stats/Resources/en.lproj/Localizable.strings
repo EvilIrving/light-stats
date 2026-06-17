@@ -28,18 +28,14 @@
 "settings.refreshAndUnits" = "Refresh & Units";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
-"settings.networkSpeedUnit" = "Network Speed";
 "settings.language" = "Language";
 "settings.minimumItemAlert" = "At least one status bar item must be displayed";
 "settings.ok" = "OK";
 
 // MARK: - Refresh Rate
-"refreshRate.low" = "Low (5s)";
-"refreshRate.medium" = "Medium (2s)";
-"refreshRate.high" = "High (1s)";
-
-// MARK: - Network Speed Unit
-"networkSpeed.auto" = "Auto";
+"refreshRate.low" = "5s";
+"refreshRate.medium" = "2s";
+"refreshRate.high" = "1s";
 
 // MARK: - Language
 "language.system" = "System";

@@ -89,7 +89,9 @@ CodexBar 通过统一的 `ProviderDescriptor` 协议支持 40+ AI 服务商。�
 ### 凭证文件直读（解决 Keychain 截断问题）
 macOS Keychain 对单个 item 有 ~2KB 的大小限制。Claude Code 的 OAuth JSON（含 access token + refresh token + scopes + expiry）可能超过此限制，导致 Keychain 返回的 JSON 被截断。
 
-解决方案：优先读 `~/.claude/.credentials.json`（Claude Code 在 `claude login` 时同步写入），Keychain 作为备份。
+解决方案：优先读 `~/.claude/.credentials.json`，Keychain 作为备份。
+
+**⚠️ macOS 注意：** `.credentials.json` 是 **Linux 的默认存储格式**。macOS 上 `claude login` 只写 Keychain，**不会自动生成此文件**。需在无 GUI 场景（SSH / CI）使用时，用户手动从 Keychain 导出。普通 macOS 桌面用户通常无此文件，必然 fallback 到 Keychain → 触发系统授权弹窗。
 
 ### Hashed 服务名发现
 Claude Code v2.1.52+ 将 Keychain 服务名从 `Claude Code-credentials` 改为 `Claude Code-credentials-{HASH}`。该项目通过 `security dump-keychain` 自动发现（带 5 秒超时，且整个生命周期只运行一次）。
