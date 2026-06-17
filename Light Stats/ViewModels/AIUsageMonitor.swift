@@ -4,6 +4,41 @@
 //
 //  Created on 2026/06/10.
 //
+//  Logic chain — AI usage refresh lifecycle:
+//
+//  ┌─ App launch ─────────────────────────────────────────────┐
+//  │  start() → reconfigureTimer(fetchNow: false)             │
+//  │  Timer armed, NO fetch.  Avoids Keychain prompt at boot. │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Popover opens ──────────────────────────────────────────┐
+//  │  AppDelegate.togglePanel() → refreshIfStale()            │
+//  │  If last success > 60s ago → refreshAll()                │
+//  │  This is the FIRST fetch for each enabled provider.      │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Periodic timer (AppConfig.aiUsageRefreshInterval) ───────┐
+//  │  refreshAll() → refresh(provider) for each enabled       │
+//  │  Dedup: skips providers already in-flight.               │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Manual retry (user taps ↻ in error card) ──────────────┐
+//  │  retry(provider) → resetCredentialCache() → refresh()   │
+//  │  Clears cached failure so keychain re-prompts if needed. │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Provider dispatch ──────────────────────────────────────┐
+//  │  .claude → ClaudeUsageService.fetch()                    │
+//  │  .codex  → CodexUsageService.fetch()                     │
+//  │  .gemini → GeminiUsageService.fetch()                    │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Result handling ────────────────────────────────────────┐
+//  │  success      → .loaded(snapshot), cache in UserDefaults │
+//  │  transient    → .stale(previous) if previous exists      │
+//  │  credentials  → .error(error) — needs user attention     │
+//  └──────────────────────────────────────────────────────────┘
+//
 
 import Foundation
 import Combine

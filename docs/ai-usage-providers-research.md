@@ -87,14 +87,29 @@ CodexBar 通过统一的 `ProviderDescriptor` 协议支持 40+ AI 服务商。�
 该项目只做 Claude，但做得很深。几个值得注意的设计：
 
 ### 凭证文件直读（解决 Keychain 截断问题）
+
 macOS Keychain 对单个 item 有 ~2KB 的大小限制。Claude Code 的 OAuth JSON（含 access token + refresh token + scopes + expiry）可能超过此限制，导致 Keychain 返回的 JSON 被截断。
 
-解决方案：优先读 `~/.claude/.credentials.json`，Keychain 作为备份。
+**各项目的凭证读取链（实测源码）：**
 
-**⚠️ macOS 注意：** `.credentials.json` 是 **Linux 的默认存储格式**。macOS 上 `claude login` 只写 Keychain，**不会自动生成此文件**。需在无 GUI 场景（SSH / CI）使用时，用户手动从 Keychain 导出。普通 macOS 桌面用户通常无此文件，必然 fallback 到 Keychain → 触发系统授权弹窗。
+#### CodexBar — 三层优先级
+1. CodexBar 自己的 OAuth 缓存
+2. `~/.claude/.credentials.json`（文件 fallback）
+3. Keychain `Claude Code-credentials`（最后兜底）
+
+#### Claude-Usage-Tracker — 四层 fallback（最值得参考）
+1. `~/.claude/.credentials.json`（带点）
+2. `~/.claude/credentials.json`（无点，legacy 路径）
+3. Keychain 通过 **`/usr/bin/security find-generic-password -s "Claude Code-credentials" -w`**（用 CLI 而非 `SecItemCopyMatching`）
+4. JSON 被截断时正则暴力提取：`"accessToken"\s*:\s*"([^"]+)"`
+
+**关键差异：用 `security` CLI vs `SecItemCopyMatching`**
+Claude-Usage-Tracker 不用 Security framework 的 `SecItemCopyMatching`，而是 fork `/usr/bin/security` 子进程读取钥匙串。CLI 方式不触发 macOS 的「XXX 想访问钥匙串中的 YYY」授权弹窗，是对普通 macOS 桌面用户真正「0 弹窗」的路径。
+
+**⚠️ macOS 注意：** `.credentials.json` 是 **Linux 的默认存储格式**。macOS 上 `claude login` 只写 Keychain，**不会自动生成此文件**。需在无 GUI 场景（SSH / CI）使用时，用户手动从 Keychain 导出。普通 macOS 桌面用户通常无此文件，「优先读文件实现 0 弹窗」的策略对他们不生效。
 
 ### Hashed 服务名发现
-Claude Code v2.1.52+ 将 Keychain 服务名从 `Claude Code-credentials` 改为 `Claude Code-credentials-{HASH}`。该项目通过 `security dump-keychain` 自动发现（带 5 秒超时，且整个生命周期只运行一次）。
+Claude Code v2.1.52+ 可能将 Keychain 服务名从 `Claude Code-credentials` 改为 `Claude Code-credentials-{HASH}`。Claude-Usage-Tracker 通过 `security dump-keychain` 自动发现（5 秒超时，全生命周期只跑一次），带 persisted 缓存。**实测**：v2.1.177 仍使用非 hash 的 `Claude Code-credentials`，此功能为预留防御。
 
 ### Messages API Rate-Limit Header 解析
 当 `/api/oauth/usage` 端点不可用时（历史上确实发生过），发送一个最小成本的 Messages API 调用（Haiku 1 token），从响应头提取用量：
@@ -118,11 +133,13 @@ anthropic-ratelimit-unified-7d-utilization: 0.15   → 15% used
 ## 四、对 Light Stats 的建议
 
 ### 已实施（本次调研后）
-- [x] Claude Code 凭证优先读文件（0 弹窗）
+- [x] Claude Code 凭证优先读文件 → 仅对 Linux / 手动导出文件的 macOS 用户生效；普通 macOS 用户仍 fallback 到 Keychain，改为延后到面板打开时读取以减少打扰
 - [x] Messages API header fallback（OAuth endpoint 不可用时）
 - [x] `endpointNotFound` 错误细化
+- [x] 钥匙串读取失败的永久缓存改为按错误码区分：`errSecItemNotFound` 才永久，用户拒绝/取消保持可重试
 
 ### 短期可做（高价值、低风险）
+- [ ] **改用 `security` CLI 读 Keychain**（~50 行）：将 `SecItemCopyMatching` 替换为 `/usr/bin/security find-generic-password -w`，避免系统授权弹窗。Claude-Usage-Tracker 已证明可行，这是对 macOS 用户真正「0 弹窗」的路径
 - [ ] **Gemini**（~200 行）：读 `~/.gemini/oauth_creds.json`，0 弹窗，和 Claude Code 模式完全一致
 - [ ] **Copilot**（~250 行 + Settings UI）：GitHub Device OAuth，首次浏览器授权一次，之后 0 弹窗
 

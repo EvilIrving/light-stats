@@ -4,9 +4,34 @@
 //
 //  Created on 2026/06/10.
 //
+//  Logic chain — credential reading:
+//
+//  ┌─ readAccessToken() ──────────────────────────────────────┐
+//  │  1. In-memory cache (_cachedToken) → instant hit         │
+//  │  2. ~/.claude/.credentials.json       → file, 0 prompt   │
+//  │  3. ~/.claude/credentials.json        → legacy, no dot   │
+//  │  4. security find-generic-password -w → Keychain CLI     │
+//  │     ^^^ /usr/bin/security subprocess — NO auth dialog    │
+//  │     (unlike SecItemCopyMatching).                        │
+//  │     Reference: Claude-Usage-Tracker                      │
+//  │     (hamed-elfayome/Claude-Usage-Tracker).               │
+//  │  5. Truncated JSON fallback: regex "accessToken":"..."   │
+//  │  6. All failed → _tokenFailed = false (transient,        │
+//  │     manual retry re-probes).                             │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ fetch() — three-source fallback ────────────────────────┐
+//  │  1. GET api.anthropic.com/api/oauth/usage (OAuth API)    │
+//  │     ↓ 404/decoding/network failure                       │
+//  │  2. POST api.anthropic.com/v1/messages (1-token Haiku)   │
+//  │     Parse rate-limit response headers                    │
+//  │     ↓ failure                                            │
+//  │  3. launch `claude` in PTY, send /usage, parse TUI       │
+//  │     (ultimate fallback — no network needed)              │
+//  └──────────────────────────────────────────────────────────┘
+//
 
 import Foundation
-import Security
 import os
 
 /// Fetches Claude Code subscription usage.
@@ -52,7 +77,8 @@ enum ClaudeUsageService {
         let claudeDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".claude")
         return [
-            claudeDir.appendingPathComponent(".credentials.json")
+            claudeDir.appendingPathComponent(".credentials.json"),
+            claudeDir.appendingPathComponent("credentials.json")   // legacy path (no dot)
         ]
     }
 
@@ -662,53 +688,85 @@ enum ClaudeUsageService {
             }
         }
 
-        // 2. Keychain (last resort — one-time macOS auth dialog if the file
-        //    is missing; after user clicks Allow, subsequent calls use cache)
-        let (token, status) = readTokenFromKeychain()
-        if let token {
-            log.info("Claude token read from Keychain")
+        // 2. Keychain via /usr/bin/security CLI (no authorization prompt).
+        //    Claude-Usage-Tracker uses this approach — forking the `security`
+        //    command reads the password without triggering macOS's "XXX wants
+        //    to access keychain" dialog that SecItemCopyMatching would.
+        if let token = readTokenFromKeychainCLI() {
+            log.info("Claude token read from Keychain (security CLI)")
             _cachedToken = token
             return token
         }
 
-        // Only treat a *genuinely missing* item as a permanent failure. If the
-        // user denied/cancelled the auth dialog (errSecUserCanceled /
-        // errSecAuthFailed / errSecInteractionNotAllowed), keep the failure
-        // transient so a manual retry re-prompts instead of failing instantly.
-        let permanent = (status == errSecItemNotFound)
-        log.error("Claude credentials unavailable (keychain status \(status), permanent: \(permanent))")
-        _tokenFailed = permanent
+        // Only treat a *genuinely missing* item as a permanent failure so a
+        // manual retry can re-read the keychain.
+        log.error("Claude credentials unavailable")
+        _tokenFailed = false   // transient — retry will re-probe
         return nil
     }
 
     /// Clears the cached token / failure flag so the next fetch re-reads
-    /// credentials (and may re-prompt for Keychain access). Called on manual retry.
+    /// credentials. Called on manual retry.
     static func resetCredentialCache() {
         _cachedToken = nil
         _tokenFailed = false
     }
 
-    /// Reads the access token from the Keychain, returning the raw OSStatus so
-    /// the caller can distinguish "not found" from "user denied".
-    private static func readTokenFromKeychain() -> (token: String?, status: OSStatus) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+    /// Reads the OAuth access token from the Keychain via `/usr/bin/security`,
+    /// which bypasses the macOS authorization dialog that `SecItemCopyMatching`
+    /// would trigger. Parse the raw JSON directly from stdout.
+    ///
+    /// Reference: Claude-Usage-Tracker's `ClaudeCodeSyncService.readKeychainCredentials()`.
+    private static func readTokenFromKeychainCLI() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = [
+            "find-generic-password",
+            "-s", keychainService,
+            "-w"
         ]
+        process.environment = ProcessInfo.processInfo.environment
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+        process.standardInput = FileHandle.nullDevice
+
+        do {
+            try process.run()
+        } catch {
+            log.error("security CLI launch failed: \(error.localizedDescription)")
+            return nil
+        }
+
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            let errText = String(data: errData, encoding: .utf8) ?? ""
+            log.notice("security CLI exit \(process.terminationStatus): \(errText)")
+            return nil
+        }
+
+        let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        guard !data.isEmpty,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let oauth = json["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String,
               !token.isEmpty else {
-            return (nil, status)
+            // Truncated JSON fallback: regex-extract the access token directly.
+            // Claude-Usage-Tracker uses the same pattern for Keychain truncation recovery.
+            if let text = String(data: data, encoding: .utf8),
+               let regex = try? NSRegularExpression(pattern: #""accessToken"\s*:\s*"([^"]+)""#),
+               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+               match.numberOfRanges >= 2,
+               let captureRange = Range(match.range(at: 1), in: text) {
+                return String(text[captureRange])
+            }
+            return nil
         }
-        return (token, status)
+        return token
     }
 
     /// Reads the access token from an on-disk credential JSON file.

@@ -4,15 +4,35 @@
 //
 //  Created on 2026/06/17.
 //
+//  Logic chain — credential reading (file only, zero prompt):
+//
+//  ┌─ loadCredentials() ───────────────────────────────────────┐
+//  │  ~/.gemini/oauth_creds.json → access_token + refresh_token │
+//  │                                + id_token + expiry_date    │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ Token refresh (when expired or about to expire) ─────────┐
+//  │  findOAuthClient() — walk gemini-cli-core/dist source tree │
+//  │    regex: OAUTH_CLIENT_ID + OAUTH_CLIENT_SECRET            │
+//  │  POST oauth2.googleapis.com/token (refresh_token grant)   │
+//  │  Persist refreshed token back to oauth_creds.json         │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ fetch() — single API + curl fallback ────────────────────┐
+//  │  1. validateAuthType() — reject api-key / vertex-ai modes │
+//  │  2. loadCodeAssistProjectId() — get GCP project           │
+//  │  3. POST cloudcode-pa.googleapis.com/v1internal:          │
+//  │     retrieveUserQuota                                     │
+//  │     ↓ URLSession timeout → retry via /usr/bin/curl        │
+//  │       (Google Cloud APIs spuriously time out on macOS)    │
+//  │  4. Parse: recursive JSON walk for modelId +              │
+//  │     remainingFraction → classify into Pro / Flash / Lite  │
+//  │     Take lowest remaining per model tier as the window.   │
+//  └──────────────────────────────────────────────────────────┘
 
 import Foundation
 
-/// Fetches Gemini CLI quota usage using local OAuth credentials.
-/// Credentials are maintained by Gemini CLI in ~/.gemini/oauth_creds.json; we only read and refresh them.
-///
-/// Adds curl fallback for URLSession timeouts — Google Cloud APIs occasionally
-/// trigger NSURLErrorTimedOut on slow connections; retrying via /usr/bin/curl
-/// often succeeds (CodexBar pattern).
+/// Gemini CLI quota usage — see file header for full logic chain.
 nonisolated enum GeminiUsageService {
 
     private static let quotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota")!

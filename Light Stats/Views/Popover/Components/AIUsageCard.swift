@@ -4,6 +4,28 @@
 //
 //  Created on 2026/06/10.
 //
+//  Logic chain — card display states:
+//
+//  ┌─ .idle ──────────────────────────────────────────────────┐
+//  │  "Loading…" placeholder. Shown before first fetch.       │
+//  └──────────────────────────────────────────────────────────┘
+//                           │ (fetch completes)
+//  ┌─ .loaded(snapshot) ─────────────────────────────────────┐
+//  │  WindowRow × N — progress bar + remaining% + reset time │
+//  │  Colors: green (>25%) / yellow (>10%) / red (≤10%)      │
+//  │  Flat mode: monochrome bars, no semantic color.         │
+//  └──────────────────────────────────────────────────────────┘
+//                           │ (subsequent fetch fails)
+//  ┌─ .stale(snapshot) ──────────────────────────────────────┐
+//  │  Same as .loaded + "Updated Xm ago" subtitle.            │
+//  │  Keeps last good data visible for transient failures.   │
+//  └──────────────────────────────────────────────────────────┘
+//                           │ (credentials missing / token expired)
+//  ┌─ .error(AIUsageError) ──────────────────────────────────┐
+//  │  Red error text + RetryButton (↻ RefreshGlyph).         │
+//  │  Tap retry → AIUsageMonitor.retry(provider).             │
+//  └──────────────────────────────────────────────────────────┘
+//
 
 import SwiftUI
 

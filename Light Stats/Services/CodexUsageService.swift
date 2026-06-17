@@ -4,30 +4,31 @@
 //
 //  Created on 2026/06/10.
 //
+//  Logic chain — credential reading:
+//
+//  ┌─ readCredentials() ──────────────────────────────────────┐
+//  │  ~/.codex/auth.json  →  tokens.access_token              │
+//  │                        + tokens.account_id                │
+//  │  File I/O only, zero authorization prompt.               │
+//  └──────────────────────────────────────────────────────────┘
+//                           │
+//  ┌─ fetch() — two-source fallback ──────────────────────────┐
+//  │  1. No credentials → skip to CLI PTY (step 3)            │
+//  │  2. GET chatgpt.com/backend-api/wham/usage               │
+//  │     Header: Authorization: Bearer <access_token>          │
+//  │             ChatGPT-Account-Id: <account_id>              │
+//  │     ↓ 401 → re-read auth.json (CLI may have refreshed)   │
+//  │       token changed → retry API once                     │
+//  │       token unchanged → fall to CLI PTY                  │
+//  │     ↓ any other error → fall to CLI PTY                  │
+//  │  3. CLI PTY: launch `codex`, send /status, parse TUI     │
+//  │     Auto-dismiss "Update available!" prompts             │
+//  │     Parse: "5h limit X% left" + "Weekly limit X% left"   │
+//  └──────────────────────────────────────────────────────────┘
 
 import Foundation
 
-/// Fetches Codex subscription usage with two-source fallback.
-/// Credentials are maintained by the Codex CLI in ~/.codex/auth.json; we only read them.
-///
-/// Two-source fallback chain (API → CLI PTY):
-/// 1. ChatGPT backend usage endpoint (chatgpt.com/backend-api/wham/usage)
-/// 2. CLI PTY — launches `codex`, sends `/status`, parses TUI output
-///
-/// API contract (undocumented endpoint, verified against a real 200 response on
-/// 2026-06-10 — decode defensively):
-/// - Request:  `GET https://chatgpt.com/backend-api/wham/usage`
-/// - Headers:  `Authorization: Bearer <access_token>`
-///             `ChatGPT-Account-Id: <account_id>`
-///             `Accept: application/json`
-/// - Auth:     `~/.codex/auth.json` → `tokens.access_token` + `tokens.account_id`.
-///             Read-only; on 401 we re-read the file (CLI may have refreshed) and retry once.
-/// - Response: `{ "rate_limit": { "primary_window": Window, "secondary_window": Window } }`
-///             where `Window = { used_percent: 0–100, limit_window_seconds: Int,
-///             reset_at: Unix epoch seconds (NOT ISO8601) }`. `plan_type` also present.
-/// - Errors:   401/403 → token expired. All fields optional so a renamed field
-///             degrades to stale rather than crashing; one window decoding fail
-///             doesn't sink the other.
+/// Codex (ChatGPT) subscription usage — see file header for full logic chain.
 enum CodexUsageService {
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
