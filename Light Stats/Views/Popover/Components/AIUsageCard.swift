@@ -122,11 +122,64 @@ private struct RetryButton: View {
     private var rotatingIcon: some View {
         if isRefreshing {
             TimelineView(.animation) { context in
-                Image(systemName: "arrow.clockwise")
+                RefreshGlyph()
                     .rotationEffect(.degrees(context.date.timeIntervalSinceReferenceDate * 360))
             }
         } else {
-            Image(systemName: "arrow.clockwise")
+            RefreshGlyph()
+        }
+    }
+}
+
+// MARK: - Refresh Glyph
+
+/// A near-complete circular refresh icon: a ~300° ring with an arrowhead at its
+/// open end. Unlike SF Symbol `arrow.clockwise` (a shorter open arc), the long
+/// sweep reads as a continuous loop while spinning. Sized to fill its frame and
+/// tinted via `foregroundColor`, so it drops in where an `Image` would.
+private struct RefreshGlyph: View {
+    /// Where the ring opens (and the arrowhead sits), in degrees. 0° = 3 o'clock.
+    private let gapAngle: Double = -55
+    /// How much of the circle the ring covers.
+    private let sweep: Double = 300
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            let lineWidth = side * 0.11
+            let radius = (side - lineWidth * 2.4) / 2
+            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            let start = Angle.degrees(gapAngle)
+            let end = Angle.degrees(gapAngle + sweep)
+
+            ZStack {
+                Path { path in
+                    path.addArc(center: center, radius: radius,
+                                startAngle: start, endAngle: end, clockwise: false)
+                }
+                .stroke(style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+
+                arrowHead(center: center, radius: radius, lineWidth: lineWidth)
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+
+    /// Filled triangle at the arc's open end, pointing along the sweep tangent.
+    private func arrowHead(center: CGPoint, radius: CGFloat, lineWidth: CGFloat) -> some View {
+        let tip = lineWidth * 1.7
+        let angle = CGFloat(gapAngle * .pi / 180)
+        let point = CGPoint(x: center.x + radius * cos(angle),
+                            y: center.y + radius * sin(angle))
+        // Tangent at the open end (sweep goes counter-clockwise in screen space).
+        let tangent = angle - .pi / 2
+        return Path { path in
+            for offset in stride(from: 0.0, to: 2 * .pi, by: 2 * .pi / 3) {
+                let a = tangent + CGFloat(offset)
+                let p = CGPoint(x: point.x + tip * cos(a), y: point.y + tip * sin(a))
+                if offset == 0 { path.move(to: p) } else { path.addLine(to: p) }
+            }
+            path.closeSubpath()
         }
     }
 }

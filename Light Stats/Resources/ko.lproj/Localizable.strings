@@ -43,6 +43,7 @@
 
 // MARK: - Language
 "language.system" = "시스템 언어";
+"language.system.short" = "시스템";
 "language.zh-Hans" = "简体中文";
 "language.en" = "English";
 "language.ja" = "日本語";

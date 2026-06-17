@@ -30,6 +30,18 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Compact label for the segmented language picker, where the full native
+    /// names ("跟随系统" / "简体中文" / "日本語") are too wide to fit on one row.
+    nonisolated var shortName: String {
+        switch self {
+        case .system: return String(localized: "language.system.short")
+        case .zhHans: return "简体"
+        case .en: return "Eng"
+        case .ja: return "日本"
+        case .ko: return "한국"
+        }
+    }
+
     /// Get the actual locale identifier
     nonisolated var localeIdentifier: String? {
         switch self {

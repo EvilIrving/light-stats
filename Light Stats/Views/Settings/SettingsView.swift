@@ -80,7 +80,7 @@ struct SettingsView: View {
                             Spacer()
                             Picker("", selection: $settings.appLanguage) {
                                 ForEach(AppLanguage.allCases) { lang in
-                                    Text(lang.displayName).tag(lang)
+                                    Text(lang.shortName).tag(lang)
                                 }
                             }
                             .pickerStyle(.segmented)
@@ -304,6 +304,9 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
+        // Globally suppress the blue keyboard focus ring (e.g. on the segmented
+        // language picker) — this app is mouse-driven and the ring is noise.
+        .focusEffectDisabled()
     }
 
     private func validateMinimumItems() {

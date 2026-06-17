@@ -46,11 +46,16 @@ final class AIUsageMonitor: ObservableObject {
         .dropFirst()
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in
-            self?.reconfigureTimer()
+            // A settings change (e.g. user just toggled a provider on) is
+            // user-initiated, so fetching immediately is expected.
+            self?.reconfigureTimer(fetchNow: true)
         }
         .store(in: &cancellables)
 
-        reconfigureTimer()
+        // At launch we only arm the timer — we do NOT fetch eagerly. The first
+        // fetch is deferred to the popover opening (refreshIfStale), so the app
+        // never triggers a Keychain authorization prompt just by launching.
+        reconfigureTimer(fetchNow: false)
     }
 
     func stop() {
@@ -73,6 +78,11 @@ final class AIUsageMonitor: ObservableObject {
 
     func retry(_ provider: AIProvider) {
         guard enabledProviders.contains(provider) else { return }
+        // A manual retry should re-read credentials from scratch — clear any
+        // cached failure so e.g. a previously denied Keychain prompt re-appears.
+        if provider == .claude {
+            ClaudeUsageService.resetCredentialCache()
+        }
         refresh(provider)
     }
 
@@ -86,7 +96,7 @@ final class AIUsageMonitor: ObservableObject {
         return providers
     }
 
-    private func reconfigureTimer() {
+    private func reconfigureTimer(fetchNow: Bool) {
         timer?.invalidate()
         timer = nil
 
@@ -97,7 +107,9 @@ final class AIUsageMonitor: ObservableObject {
                 self?.refreshAll()
             }
         }
-        refreshAll()
+        if fetchNow {
+            refreshAll()
+        }
     }
 
     private func refreshAll() {

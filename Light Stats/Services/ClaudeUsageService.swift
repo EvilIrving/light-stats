@@ -7,6 +7,7 @@
 
 import Foundation
 import Security
+import os
 
 /// Fetches Claude Code subscription usage.
 /// Credentials are maintained by the Claude Code CLI; we only read them.
@@ -39,6 +40,8 @@ import Security
 ///             `anthropic-ratelimit-unified-7d-reset`
 /// - Errors:   401/403 → token expired. All fields optional.
 enum ClaudeUsageService {
+
+    private static let log = Logger(subsystem: "com.lightstats.app", category: "ClaudeUsage")
 
     private static let keychainService = "Claude Code-credentials"
     private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
@@ -654,6 +657,7 @@ enum ClaudeUsageService {
         //    unlike Keychain, files have no size limit and no ACL barrier.
         for fileURL in credentialFileURLs {
             if let token = readTokenFromFile(at: fileURL) {
+                log.info("Claude token read from credential file")
                 _cachedToken = token
                 return token
             }
@@ -661,17 +665,33 @@ enum ClaudeUsageService {
 
         // 2. Keychain (last resort — one-time macOS auth dialog if the file
         //    is missing; after user clicks Allow, subsequent calls use cache)
-        if let token = readTokenFromKeychain() {
+        let (token, status) = readTokenFromKeychain()
+        if let token {
+            log.info("Claude token read from Keychain")
             _cachedToken = token
             return token
         }
 
-        _tokenFailed = true
+        // Only treat a *genuinely missing* item as a permanent failure. If the
+        // user denied/cancelled the auth dialog (errSecUserCanceled /
+        // errSecAuthFailed / errSecInteractionNotAllowed), keep the failure
+        // transient so a manual retry re-prompts instead of failing instantly.
+        let permanent = (status == errSecItemNotFound)
+        log.error("Claude credentials unavailable (keychain status \(status), permanent: \(permanent))")
+        _tokenFailed = permanent
         return nil
     }
 
-    /// Reads the access token from the Keychain.
-    private static func readTokenFromKeychain() -> String? {
+    /// Clears the cached token / failure flag so the next fetch re-reads
+    /// credentials (and may re-prompt for Keychain access). Called on manual retry.
+    static func resetCredentialCache() {
+        _cachedToken = nil
+        _tokenFailed = false
+    }
+
+    /// Reads the access token from the Keychain, returning the raw OSStatus so
+    /// the caller can distinguish "not found" from "user denied".
+    private static func readTokenFromKeychain() -> (token: String?, status: OSStatus) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -687,9 +707,9 @@ enum ClaudeUsageService {
               let oauth = json["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String,
               !token.isEmpty else {
-            return nil
+            return (nil, status)
         }
-        return token
+        return (token, status)
     }
 
     /// Reads the access token from an on-disk credential JSON file.
