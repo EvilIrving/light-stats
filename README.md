@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk I/O, network, proxy route, battery, temperature, fan, process, AI subscription usage, and overall system health.
+Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk I/O, network, proxy route, battery, temperature, fan, process, AI subscription usage, cleaning mode, auto-update, and overall system health.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -54,6 +54,20 @@ The app uses native macOS APIs for routine sampling and keeps network-based diag
 - Normal quit and force quit with confirmation
 - Expandable child process details
 
+### Cleaning Mode
+
+- 60-second keyboard lock for safe keyboard cleaning
+- Full-screen translucent overlay with countdown timer
+- Mouse-only exit button — keyboard input is fully suppressed
+- Uses CGEventTap with Accessibility permission
+
+### Auto-Update
+
+- Checks GitHub Releases for new versions
+- Downloads and verifies DMG: codesign signature, notarization, and Team ID
+- Replaces the running app via a detached shell script after exit
+- Minimal progress window during download and install
+
 ### Network and Proxy
 
 Light Stats detects local proxy configuration from environment variables, system proxy settings, and active tunnel interfaces without sending external requests.
@@ -62,11 +76,11 @@ Public exit-node detection is optional. When enabled, it can query a selected ge
 
 ### AI Subscription Usage
 
-When enabled, Light Stats reads Claude Code and Codex credentials stored locally by their respective CLIs and displays current subscription utilization (5-hour and 7-day windows) in the overview panel. AI monitoring is disabled by default and never transmits credentials to any service other than the provider's own usage endpoint.
+When enabled, Light Stats reads Claude Code, Codex, and Gemini credentials stored locally by their respective CLIs and displays current subscription utilization in the overview panel. AI monitoring is disabled by default and never transmits credentials to any service other than the provider's own usage endpoint.
 
 ### Health Score
 
-The health score summarizes CPU, memory, load average, disk usage, temperature, battery, and disk I/O into a 0-100 score. Optional dimensions are reweighted automatically when a machine does not expose certain sensors.
+The health score summarizes CPU, memory (pressure + swap rate), load average, temperature, GPU, and battery/disk I/O into a 0-100 score. It focuses on real-time pressure signals ("is the Mac sluggish right now") rather than slow-moving capacity numbers. Optional dimensions are reweighted automatically when sensors are absent or toggled off.
 
 ---
 
@@ -86,7 +100,7 @@ When exit-node detection is enabled, the app sends a request to the selected geo
 - Network speed unit: Auto, KB/s, or MB/s
 - Exit-node detection and provider selection
 - AI monitoring toggle (Claude Code and Codex usage)
-- Language: Simplified Chinese, English, Japanese, Korean, or system language
+- Language: English, Simplified Chinese, Japanese, Korean, or system language
 
 ---
 
@@ -151,15 +165,18 @@ Cached or asynchronous collectors, such as exit-node and battery smart-data read
 
 ### Project Layout
 
-- `Light Stats/Models/`: metric data structures
-- `Light Stats/Services/`: system data collection and scoring
-- `Light Stats/ViewModels/`: app state and sampling coordination
+- `Light Stats/Models/`: metric data structures and release info
+- `Light Stats/Services/`: system data collection, scoring, update, and keyboard lock
+- `Light Stats/ViewModels/`: app state, sampling, cleaning mode, and update coordination
 - `Light Stats/Views/StatusBar/`: menu bar rendering
-- `Light Stats/Views/Popover/`: floating panel UI
+- `Light Stats/Views/Popover/`: floating panel UI (overview, cleanup, components)
 - `Light Stats/Views/Settings/`: settings UI
-- `Light Stats/Resources/`: localized strings
+- `Light Stats/Views/About/`: about window
+- `Light Stats/Views/CleaningMode/`: cleaning mode overlay
+- `Light Stats/Views/Update/`: update progress window
+- `Light Stats/Resources/`: localized strings (en, zh-Hans, ja, ko)
 - `LightStatsTests/`: starter XCTest smoke tests
-- `.github/workflows/`: build and release automation
+- `.github/workflows/`: build, deploy, and release automation
 - `.github/ISSUE_TEMPLATE/`: issue forms for bug reports and feature requests
 
 ---
@@ -171,3 +188,4 @@ Cached or asynchronous collectors, such as exit-node and battery smart-data read
 - More detailed network diagnostics
 - Optional menu bar refinements for fan and health indicators
 - Additional validation across Intel, Apple Silicon, laptop, and desktop Macs
+- Per-app network usage tracking

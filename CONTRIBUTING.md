@@ -71,17 +71,18 @@ Full details in [`AGENTS.md`](AGENTS.md).
 - `guard let` over `if let` for early exits
 - `@Observable` (Swift 6) not `@Published` / `ObservableObject`
 - One type per file
-- User-facing strings: `String(localized:)` with entries in all three `.lproj`
+- User-facing strings: `String(localized:)` with entries in all four `.lproj`
 
 ## Localization
 
-Light Stats supports English, Simplified Chinese, and Japanese.
+Light Stats supports English, Simplified Chinese, Japanese, and Korean.
 
 When adding a new string:
 1. Add `String(localized: "key")` in your Swift code
 2. Add the key to `Resources/en.lproj/Localizable.strings`
 3. Add translations to `Resources/zh-Hans.lproj/Localizable.strings`
 4. Add translations to `Resources/ja.lproj/Localizable.strings`
+5. Add translations to `Resources/ko.lproj/Localizable.strings`
 
 ## Pull Request Process
 
@@ -103,11 +104,13 @@ Light Stats/
 ├── Views/
 │   ├── StatusBar/               # Menu bar rendering
 │   ├── Popover/                 # Floating panel
-│   │   └── Components/          # Reusable cards, rows
+│   │   └── Components/          # Reusable cards, rows, tabs
 │   ├── Settings/                # Preferences UI
-│   └── About/                   # About window
+│   ├── About/                   # About window
+│   ├── CleaningMode/            # Keyboard-lock overlay
+│   └── Update/                  # Update progress window
 ├── Utilities/                   # Formatters
-└── Resources/                   # Localizable.strings (en/zh-Hans/ja)
+└── Resources/                   # Localizable.strings (en/zh-Hans/ja/ko)
 ```
 
 ## Questions?

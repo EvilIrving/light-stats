@@ -12,36 +12,41 @@ Target: macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · Xcode 16+
 ## Architecture
 
 ```
-┌─ App Entry ──────────────────────────────────────────┐
-│  LightStatsApp.swift     @main App, Settings scene    │
-│  AppDelegate.swift       Menu bar status item + popover│
-└──────────────────────────────────────────────────────┘
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-    ┌─ ViewModels ────┐ ┌─ Services ───┐ ┌─ Models ──┐
-    │ SystemMonitor    │ │ PowerService │ │ CPUInfo   │
-    │ SettingsManager  │ │ ProcessSvc   │ │ GPUInfo   │
-    │ AIUsageMonitor   │ │ ExitNodeSvc  │ │ MemInfo   │
-    │ AppMemoryManager │ │ DiskIOSvc    │ │ DiskInfo  │
-    │ LocalizationMgr  │ │ HealthScore  │ │ NetInfo   │
-    │ SystemAppFilter  │ │ ProxyDetector│ │ ProxyInfo │
-    └──────────────────┘ │ ClaudeUsage  │ │ BatInfo   │
-                          │ CodexUsage   │ │ HealthSc. │
-                          │ SMCInfo      │ │ ProcStats │
-                          └──────────────┘ │ AIUsageI. │
-                                           │ CoreType  │
-                                           │ AppGroup  │
-                                           └───────────┘
-                           │
-                           ▼
-    ┌─ Views ──────────────────────────────────────────┐
-    │  StatusBar/   StatusBarView — menu bar rendering  │
-    │  Popover/     PopoverContent, Overview, Cleanup   │
-    │  Popover/Components/  BentoCard, AppRow, AIUsage  │
-    │  Settings/    SettingsView                        │
-    │  About/       AboutView                           │
-    └──────────────────────────────────────────────────┘
+┌─ App Entry ────────────────────────────────────────────────────┐
+│  LightStatsApp.swift      @main App, Settings scene             │
+│  AppDelegate.swift        Menu bar status item + popover        │
+└────────────────────────────────────────────────────────────────┘
+                                │
+          ┌─────────────────────┼──────────────────────┐
+          ▼                     ▼                      ▼
+    ┌─ ViewModels ───────┐ ┌─ Services ─────────┐ ┌─ Models ─────┐
+    │ SystemMonitor       │ │ PowerService      │ │ CPUInfo      │
+    │ SettingsManager     │ │ ProcessService    │ │ GPUInfo      │
+    │ AIUsageMonitor      │ │ ExitNodeService   │ │ MemoryInfo   │
+    │ AppMemoryManager    │ │ DiskIOService     │ │ DiskInfo     │
+    │ LocalizationManager │ │ HealthScoreService│ │ NetworkInfo  │
+    │ SystemAppFilter     │ │ ProxyDetector     │ │ ProxyInfo    │
+    │ CleaningModeVM      │ │ ClaudeUsageService│ │ BatteryInfo  │
+    │ UpdateManager       │ │ CodexUsageService │ │ HealthScore  │
+    └─────────────────────┘ │ GeminiUsageService│ │ ProcessStats │
+                            │ UpdateService     │ │ AIUsageInfo  │
+                            │ KeyboardLockSvc   │ │ CoreType     │
+                            │ PageRateService   │ │ AppGroup     │
+                            │ SMCInfo           │ │ ReleaseInfo  │
+                            │ CLIBinaryResolver │ └──────────────┘
+                            └───────────────────┘
+                                │
+                                ▼
+    ┌─ Views ─────────────────────────────────────────────────────┐
+    │  StatusBar/     StatusBarView — menu bar rendering          │
+    │  Popover/       PopoverContentView, OverviewTab, CleanupTab │
+    │  Popover/Comp/  BentoCard, AppRowView, ChildProcessRow,     │
+    │                 AIUsageCard, TabButton, VisualEffectView     │
+    │  Settings/      SettingsView                                │
+    │  About/         AboutView                                   │
+    │  CleaningMode/  CleaningModeOverlay (Controller + View)     │
+    │  Update/        UpdateProgressView                          │
+    └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Layer Rules
@@ -160,7 +165,7 @@ Use `SettingsToggle` (a styled wrapper) for toggles so the modifier chain stays 
 
 ### Localization
 
-Three languages: en, zh-Hans, ja. User-facing strings must use `NSLocalizedString` or `String(localized:)`. When adding a new key, update all three `.lproj/Localizable.strings` files.
+Four languages: en, zh-Hans, ja, ko. User-facing strings must use `NSLocalizedString` or `String(localized:)`. When adding a new key, update all four `.lproj/Localizable.strings` files.
 
 ## Health Score
 
@@ -227,7 +232,7 @@ open "build/DerivedData/Build/Products/Debug/Light Stats.app"
 > then launches old code — you'll think your changes had no effect. Always build and launch from
 > the same `build/DerivedData` path. After editing, force-quit first: `pkill -9 -f "Light Stats"`.
 
-CI: `.github/workflows/build.yml` runs on every push/PR. Release workflow signs, notarizes, and creates a GitHub Release on `v*` tags.
+CI: `.github/workflows/build.yml` runs on every push/PR; `deploy.yml` handles build + DMG upload; `release.yml` signs, notarizes, and creates a GitHub Release on `v*` tags.
 
 ## Key Files
 
@@ -237,10 +242,44 @@ CI: `.github/workflows/build.yml` runs on every push/PR. Release workflow signs,
 | `AppDelegate.swift` | Menu bar status item + popover lifecycle |
 | `SystemMonitor.swift` | Central sampling coordinator, publishes snapshots |
 | `SettingsManager.swift` | UserDefaults-backed preferences |
+| `AIUsageMonitor.swift` | Coordinates Claude/Codex/Gemini usage polling |
+| `HealthScoreService.swift` | Pure health score computation from pressure signals |
+| `UpdateService.swift` | Zero-dependency updater: check, download, verify, install |
+| `UpdateManager.swift` | @MainActor coordinator for update UI flow |
+| `CleaningModeViewModel.swift` | Keyboard-lock cleaning mode lifecycle (60s timeout) |
+| `KeyboardLockService.swift` | CGEventTap-based keyboard input suppression |
 | `build.sh` | CI-compatible build/sign/package/notarize script |
-| `Info.plist` | App metadata & LSUIElement |
-| `LightStats.entitlements` | Hardened Runtime entitlements |
+| `.swiftlint.yml` | Lint rules and thresholds |
+| `validate_localization.sh` | Key coverage check across all lproj files |
+
+## Cleaning Mode
+
+Cleaning Mode locks the keyboard for 60 seconds so the user can wipe the keyboard without
+spurious input. A full-screen translucent overlay appears on every display with a countdown
+and an "End" button (mouse-only exit — keyboard is suppressed).
+
+- `KeyboardLockService` creates a `CGEventTap` that swallows all key-down events. It uses
+the Accessibility permission (`kAXTrustedCheckOptionPrompt`).
+- `CleaningModeViewModel` (`@MainActor`, `ObservableObject`) owns the timer, counts down
+from 60, and auto-exits on timeout — the timer is decoupled from the tap's health so the
+user can never get stuck.
+- `CleaningModeOverlayController` manages per-screen borderless overlay windows;
+`CleaningModeOverlayView` renders the SwiftUI overlay content.
+
+## Auto-Update
+
+The app includes a zero-dependency self-updater that checks GitHub Releases, downloads the
+DMG, verifies it cryptographically, and replaces the running binary via a detached shell
+script after the app exits.
+
+- `UpdateService` (actor): checks `EvilIrving/light-stats` releases, downloads the DMG,
+mounts it, and runs three-stage verification: `codesign` signature, `spctl` notarization,
+and Team ID match (`QZZ878S3NS`). If any check fails the update is rejected.
+- `UpdateManager` (`@MainActor`, `ObservableObject`): drives the UI — version comparison,
+update-available alert, download progress (`Phase.downloading(Double)`), install phase.
+- `ReleaseInfo.swift` / `SemanticVersion`: parse GitHub release JSON and compare versions.
+- `UpdateProgressView`: minimal progress window during download/install.
 
 ## Dependencies
 
-None. Pure Apple frameworks only: SwiftUI, AppKit, Combine, Mach, IOKit, CFNetwork, Network, SMC (IOKit bridge).
+None. Pure Apple frameworks only: SwiftUI, AppKit, Combine, Mach, IOKit, CFNetwork, Network, SMC (IOKit bridge), ApplicationServices, CoreGraphics.

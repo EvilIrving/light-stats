@@ -22,9 +22,9 @@ struct OverviewTabView: View {
 
                 // Main Metrics Grid
                 LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: 12),
-                    GridItem(.flexible(), spacing: 12)
-                ], spacing: 12) {
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ], spacing: 8) {
                     // CPU Card
                     BentoCard(title: "CPU", icon: "cpu", fixedHeight: quickStatCardHeight) {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
@@ -420,7 +420,12 @@ private struct ActionRowsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
-            ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit, foregroundColor: Color(red: 0.70, green: 0.42, blue: 0.40))
+            ActionRow(
+                icon: "power",
+                title: "popover.action.quit".localized,
+                action: quit,
+                foregroundColor: Color(red: 0.70, green: 0.42, blue: 0.40)
+            )
         }
     }
 }
@@ -514,7 +519,7 @@ private struct HealthCard: View {
 
     var body: some View {
         BentoCard(title: "health.title".localized, icon: "heart.text.square") {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .lastTextBaseline, spacing: 5) {
                     Text("\(health.score)")
                         .font(.system(size: 30, weight: .bold, design: .rounded))
