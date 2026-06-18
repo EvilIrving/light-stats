@@ -170,3 +170,12 @@
 "update.error.download" = "ダウンロードが中断されました。再試行してください。";
 "update.error.install" = "インストールが完了しませんでした。現在のバージョンはそのままです。";
 "update.error.verification" = "セキュリティ検証に失敗しました。更新は破棄されました。";
+
+// MARK: - Cleaning Mode
+"cleaning.action.start" = "クリーニングモード";
+"cleaning.overlay.title" = "クリーニングモード — キーボードはロック中";
+"cleaning.overlay.remaining" = "%d 秒後に自動終了";
+"cleaning.overlay.stop" = "クリーニングモードを終了";
+"cleaning.permission.title" = "アクセシビリティ権限が必要です";
+"cleaning.permission.message" = "キーボードをロックするにはアクセシビリティ権限が必要です。システム設定で許可してから再試行してください。";
+"cleaning.permission.openSettings" = "システム設定を開く";

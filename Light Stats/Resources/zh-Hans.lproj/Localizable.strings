@@ -170,3 +170,12 @@
 "update.error.download" = "下载中断，请重试。";
 "update.error.install" = "安装未完成，当前版本未受影响。";
 "update.error.verification" = "安全校验失败，更新已丢弃。";
+
+// MARK: - Cleaning Mode
+"cleaning.action.start" = "清洁模式";
+"cleaning.overlay.title" = "清洁模式 — 键盘已锁定";
+"cleaning.overlay.remaining" = "%d 秒后自动退出";
+"cleaning.overlay.stop" = "结束清洁模式";
+"cleaning.permission.title" = "需要辅助功能权限";
+"cleaning.permission.message" = "锁定键盘需要辅助功能权限。请前往系统设置开启后重试。";
+"cleaning.permission.openSettings" = "打开系统设置";

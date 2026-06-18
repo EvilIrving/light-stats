@@ -170,3 +170,12 @@
 "update.error.download" = "다운로드에 실패했습니다.";
 "update.error.install" = "설치에 실패했습니다.";
 "update.error.verification" = "검증에 실패했습니다.";
+
+// MARK: - Cleaning Mode
+"cleaning.action.start" = "청소 모드";
+"cleaning.overlay.title" = "청소 모드 — 키보드 잠김";
+"cleaning.overlay.remaining" = "%d초 후 자동 종료";
+"cleaning.overlay.stop" = "청소 모드 종료";
+"cleaning.permission.title" = "손쉬운 사용 권한 필요";
+"cleaning.permission.message" = "키보드를 잠그려면 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용한 후 다시 시도하세요.";
+"cleaning.permission.openSettings" = "시스템 설정 열기";

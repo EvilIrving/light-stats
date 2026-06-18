@@ -54,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupPanel()
         startMonitoring()
+        // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
+        _ = CleaningModeOverlayController.shared
 
         NotificationCenter.default.addObserver(
             self,

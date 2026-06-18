@@ -168,3 +168,12 @@
 "update.error.download" = "Download failed.";
 "update.error.install" = "Install failed.";
 "update.error.verification" = "Verification failed.";
+
+// MARK: - Cleaning Mode
+"cleaning.action.start" = "Cleaning Mode";
+"cleaning.overlay.title" = "Cleaning Mode — Keyboard Locked";
+"cleaning.overlay.remaining" = "Exits automatically in %d s";
+"cleaning.overlay.stop" = "End Cleaning Mode";
+"cleaning.permission.title" = "Accessibility Access Needed";
+"cleaning.permission.message" = "Light Stats needs Accessibility permission to lock the keyboard. Enable it in System Settings, then try again.";
+"cleaning.permission.openSettings" = "Open System Settings";

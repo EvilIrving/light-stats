@@ -49,6 +49,18 @@ struct PopoverContentView: View {
                         .onHover { hoveredIcon = $0 ? "snapshot" : nil }
                         .onTapGesture { DebugSnapshot.dumpPanel() }
 #endif
+                    Image("cleaningLock")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 15, height: 15)
+                        .foregroundColor(hoveredIcon == "cleaning" ? .secondary : .secondary.opacity(0.58))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                        .help("cleaning.action.start".localized)
+                        .onHover { hoveredIcon = $0 ? "cleaning" : nil }
+                        .onTapGesture { CleaningModeViewModel.shared.start() }
+
                     Image(systemName: "gearshape")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(hoveredIcon == "settings" ? .secondary : .secondary.opacity(0.58))
