@@ -9,8 +9,9 @@ SRC_SKILLS="$SCRIPT_DIR/.agents/skills"
 # 目标目录数组
 TARGETS=(
   "$SCRIPT_DIR/.claude/skills"
-  "$SCRIPT_DIR/.qwen/skills"
+  "$SCRIPT_DIR/.codex/skills"
   "$SCRIPT_DIR/.cursor/skills"
+  "$SCRIPT_DIR/.pi/skills"
 )
 
 # 遍历每个目标目录

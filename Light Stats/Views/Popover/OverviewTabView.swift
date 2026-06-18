@@ -12,6 +12,9 @@ struct OverviewTabView: View {
     @EnvironmentObject var aiMonitor: AIUsageMonitor
     @ObservedObject private var settings = SettingsManager.shared
 
+    /// CPU/GPU/MEM/负载四张卡共享的固定高度，避免因数字字号不同导致 LazyVGrid 逐行自适应出高矮不一。
+    private let quickStatCardHeight: CGFloat = 70
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 12) {
@@ -23,10 +26,10 @@ struct OverviewTabView: View {
                     GridItem(.flexible(), spacing: 12)
                 ], spacing: 12) {
                     // CPU Card
-                    BentoCard(title: "CPU", icon: "cpu") {
+                    BentoCard(title: "CPU", icon: "cpu", fixedHeight: quickStatCardHeight) {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
                             Text(String(format: "%.0f", monitor.cpuUsage))
-                                .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                                .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
                             Text("%")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.labelMuted)
@@ -35,11 +38,11 @@ struct OverviewTabView: View {
                     }
 
                     // GPU Card
-                    BentoCard(title: "GPU", icon: "square.grid.2x2") {
+                    BentoCard(title: "GPU", icon: "square.grid.2x2", fixedHeight: quickStatCardHeight) {
                         if let gpu = monitor.gpuUsage {
                             HStack(alignment: .lastTextBaseline, spacing: 4) {
                                 Text(String(format: "%.0f", gpu))
-                                    .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                                    .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
                                 Text("%")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(.labelMuted)
@@ -53,7 +56,7 @@ struct OverviewTabView: View {
                     }
 
                     // MEM Card
-                    BentoCard(title: "MEM", icon: "memorychip") {
+                    BentoCard(title: "MEM", icon: "memorychip", fixedHeight: quickStatCardHeight) {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
@@ -70,7 +73,7 @@ struct OverviewTabView: View {
                     }
 
                     // Load Card
-                    BentoCard(title: "overview.load".localized, icon: "chart.bar.fill") {
+                    BentoCard(title: "overview.load".localized, icon: "chart.bar.fill", fixedHeight: quickStatCardHeight) {
                         Text(monitor.loadAverage.displayString)
                             .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
                             .lineLimit(1)
@@ -417,7 +420,7 @@ private struct ActionRowsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
-            ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit)
+            ActionRow(icon: "power", title: "popover.action.quit".localized, action: quit, foregroundColor: Color(red: 0.70, green: 0.42, blue: 0.40))
         }
     }
 }
@@ -426,17 +429,18 @@ private struct ActionRow: View {
     let icon: String
     let title: String
     let action: () -> Void
+    var foregroundColor: Color = .secondary.opacity(0.58)
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.58))
+                    .foregroundColor(foregroundColor)
                     .frame(width: 20)
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary.opacity(0.58))
+                    .foregroundColor(foregroundColor)
                 Spacer()
             }
             .padding(.trailing, 12)

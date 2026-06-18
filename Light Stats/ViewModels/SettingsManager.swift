@@ -329,7 +329,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         let tempUnitStr = defaults.string(forKey: Key.temperatureUnit.rawValue) ?? TemperatureUnit.celsius.rawValue
         temperatureUnit = TemperatureUnit(rawValue: tempUnitStr) ?? .celsius
 
-
         let langStr = defaults.string(forKey: Key.appLanguage.rawValue) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: langStr) ?? .system
 

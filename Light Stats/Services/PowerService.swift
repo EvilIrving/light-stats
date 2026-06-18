@@ -164,7 +164,7 @@ actor PowerService {
            let a = signedRegistryInteger(dict["InstantAmperage"] ?? dict["Amperage"]),
            abs(a) <= 30_000 {
             let watts = Double(abs(a)) * voltage / 1_000_000.0
-            if watts > 0, watts < 200 {
+            if watts >= 0, watts < 200 {
                 data.powerWatts = watts
             }
         }
@@ -173,7 +173,7 @@ actor PowerService {
            let telemetry = dict["PowerTelemetryData"] as? [String: Any],
            let batteryPower = signedRegistryInteger(telemetry["BatteryPower"]) {
             let watts = Double(abs(batteryPower)) / 1_000.0
-            if watts > 0, watts < 200 {
+            if watts >= 0, watts < 200 {
                 data.powerWatts = watts
             }
         }

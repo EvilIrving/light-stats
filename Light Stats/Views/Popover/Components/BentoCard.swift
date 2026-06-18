@@ -8,17 +8,21 @@ struct BentoCard<Content: View, Accessory: View>: View {
     let content: Content
     let headerAccessory: Accessory
     let padding: CGFloat
+    /// 固定高度。设置后卡片不再随内容字号自适应（避免同一网格里不同卡片因文本大小不同而高矮不一）。
+    let fixedHeight: CGFloat?
 
     init(title: String? = nil,
          icon: String? = nil,
          assetIcon: String? = nil,
          padding: CGFloat = 12,
+         fixedHeight: CGFloat? = nil,
          @ViewBuilder headerAccessory: () -> Accessory = { EmptyView() },
          @ViewBuilder content: () -> Content) {
         self.title = title
         self.icon = icon
         self.assetIcon = assetIcon
         self.padding = padding
+        self.fixedHeight = fixedHeight
         self.headerAccessory = headerAccessory()
         self.content = content()
     }
@@ -51,6 +55,7 @@ struct BentoCard<Content: View, Accessory: View>: View {
         }
         .padding(padding)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: fixedHeight)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(nsColor: .controlBackgroundColor).opacity(0.78))
