@@ -89,12 +89,12 @@ enum CodexUsageService {
             // The Codex CLI may have refreshed the token since we read it; re-read and retry once.
             guard let fresh = readCredentials(), fresh.accessToken != creds.accessToken else {
                 // Token expired and not refreshed — fall back to CLI PTY.
-                return try await fetchUsageFromCLI()
+                return try await fetchUsageFromCLI(fallbackError: AIUsageError.tokenExpired)
             }
             return try await fetchOnce(with: fresh)
         } catch {
             // API failed for any other reason — fall back to CLI PTY.
-            return try await fetchUsageFromCLI()
+            return try await fetchUsageFromCLI(fallbackError: error)
         }
     }
 
@@ -161,35 +161,21 @@ enum CodexUsageService {
     /// Reference: CodexBar's CodexCLISession / CodexStatusProbe (steipete/CodexBar).
     private static let cliTimeout: TimeInterval = 10
 
-    private static func fetchUsageFromCLI() async throws -> ProviderUsageSnapshot {
+    private static func fetchUsageFromCLI(fallbackError: Error? = nil) async throws -> ProviderUsageSnapshot {
         guard let codexPath = resolveCodexBinary() else {
-            throw AIUsageError.credentialsMissing
+            throw fallbackError ?? AIUsageError.credentialsMissing
         }
 
-        let output = try await capturePTYOutput(binary: codexPath, timeout: cliTimeout)
-        return try parseCLIOutput(output)
+        do {
+            let output = try await capturePTYOutput(binary: codexPath, timeout: cliTimeout)
+            return try parseCLIOutput(output)
+        } catch {
+            throw fallbackError ?? error
+        }
     }
 
     private static func resolveCodexBinary() -> String? {
-        if let envPath = ProcessInfo.processInfo.environment["CODEX_CLI_PATH"],
-           !envPath.isEmpty,
-           FileManager.default.isExecutableFile(atPath: envPath) {
-            return envPath
-        }
-
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        task.arguments = ["codex"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = FileHandle.nullDevice
-        guard (try? task.run()) != nil else { return nil }
-        task.waitUntilExit()
-        guard task.terminationStatus == 0 else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let path = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return path.isEmpty ? nil : path
+        CLIBinaryResolver.resolveCodexBinary()
     }
 
     /// Creates a PTY pair, launches `codex` inside it, sends `/status`,
@@ -231,7 +217,7 @@ enum CodexUsageService {
         process.standardInput = secondaryHandle
         process.standardOutput = secondaryHandle
         process.standardError = secondaryHandle
-        process.environment = ProcessInfo.processInfo.environment
+        process.environment = CLIBinaryResolver.enrichedEnvironment()
 
         let workDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("lightstats-codex-probe-\(UUID().uuidString.prefix(8))")

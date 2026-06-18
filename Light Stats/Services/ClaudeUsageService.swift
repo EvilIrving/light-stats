@@ -283,26 +283,7 @@ enum ClaudeUsageService {
     }
 
     private static func resolveClaudeBinary() -> String? {
-        // Check CLAUDE_CLI_PATH env var first, then PATH.
-        if let envPath = ProcessInfo.processInfo.environment["CLAUDE_CLI_PATH"],
-           !envPath.isEmpty,
-           FileManager.default.isExecutableFile(atPath: envPath) {
-            return envPath
-        }
-
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        task.arguments = ["claude"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = FileHandle.nullDevice
-        guard (try? task.run()) != nil else { return nil }
-        task.waitUntilExit()
-        guard task.terminationStatus == 0 else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let path = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return path.isEmpty ? nil : path
+        CLIBinaryResolver.resolveClaudeBinary()
     }
 
     /// Creates a PTY pair, launches `claude` inside it, sends `/usage`,
@@ -345,7 +326,7 @@ enum ClaudeUsageService {
         process.standardInput = secondaryHandle
         process.standardOutput = secondaryHandle
         process.standardError = secondaryHandle
-        process.environment = ProcessInfo.processInfo.environment
+        process.environment = CLIBinaryResolver.enrichedEnvironment()
 
         // Use a temp directory as working dir so claude doesn't pick up project CLAUDE.md.
         let workDir = FileManager.default.temporaryDirectory
