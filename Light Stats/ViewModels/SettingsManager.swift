@@ -179,6 +179,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var autoCheckUpdates: Bool {
         didSet { save(autoCheckUpdates, for: .autoCheckUpdates) }
     }
+    /// 独立输入设备滚动方向翻转：仅传统鼠标滚轮反向，触控板保持自然滚动。
+    @Published var scrollReverseEnabled: Bool {
+        didSet { save(scrollReverseEnabled, for: .scrollReverseEnabled) }
+    }
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
@@ -290,6 +294,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
+        case scrollReverseEnabled = "settings.scrollReverseEnabled"
     }
 
     // MARK: - Init
@@ -346,6 +351,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
         // 自动检查更新：默认开启。
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
+        // 滚动方向翻转：默认关闭（opt-in）。
+        scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
     }
 

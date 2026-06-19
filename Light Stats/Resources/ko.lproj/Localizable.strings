@@ -179,3 +179,11 @@
 "cleaning.permission.title" = "손쉬운 사용 권한 필요";
 "cleaning.permission.message" = "키보드를 잠그려면 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용한 후 다시 시도하세요.";
 "cleaning.permission.openSettings" = "시스템 설정 열기";
+
+// MARK: - Input Devices
+"settings.inputDevices" = "입력 장치";
+"settings.scrollReverse" = "마우스 스크롤 방향 반전";
+"settings.scrollReverse.on" = "스크롤 반전: 켬";
+"settings.scrollReverse.off" = "스크롤 반전: 끔";
+"settings.scrollReverse.permissionTitle" = "손쉬운 사용 권한 필요";
+"settings.scrollReverse.permissionMessage" = "스크롤 방향 반전 기능을 사용하려면 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용해 주세요.";

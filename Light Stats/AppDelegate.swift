@@ -42,11 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let appMemoryManager: AppMemoryManager
+    private let scrollService: ScrollReversing
 
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared
         self.appMemoryManager = AppMemoryManager.shared
+        self.scrollService = ScrollDirectionService()
         super.init()
     }
 
@@ -56,6 +58,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startMonitoring()
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
         _ = CleaningModeOverlayController.shared
+
+        // 滚动方向翻转：监听开关变化
+        settings.$scrollReverseEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                guard let self else { return }
+                if enabled {
+                    self.startScrollServiceOrPrompt()
+                } else {
+                    self.scrollService.stop()
+                }
+            }
+            .store(in: &cancellables)
+
+        // 启动时若已启用，尝试启动服务
+        if settings.scrollReverseEnabled {
+            startScrollServiceOrPrompt()
+        }
+
+        // 应用回到前台时复查权限（用户可能已授权但之前 tap 创建失败）。
+        // 权限已满足且开关开启但服务未运行时自动启动。
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
 
         NotificationCenter.default.addObserver(
             self,
@@ -324,6 +354,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
         AIUsageMonitor.shared.stop()
+        scrollService.stop()
         SMCInfo.shutdown()
+    }
+
+    // MARK: - Scroll Direction
+
+    /// 尝试启动滚动方向翻转服务。若 tap 创建失败（缺少 Accessibility 权限），
+    /// 弹出权限引导对话框；保持开关开启，待用户授权后前台激活时自动重试。
+    private func startScrollServiceOrPrompt() {
+        guard !scrollService.isRunning else { return }
+
+        if scrollService.start() {
+            return
+        }
+
+        // 权限不足：先不带弹窗检测一次状态
+        guard scrollService.checkPermission(promptIfNeeded: false) else {
+            presentScrollPermissionAlert()
+            return
+        }
+
+        // 权限已满足但 tap 创建仍失败（罕见：其他系统问题）→ 静默，开关保持 on
+    }
+
+    @objc private func handleAppDidBecomeActive() {
+        guard settings.scrollReverseEnabled, !scrollService.isRunning else { return }
+        _ = scrollService.start()
+    }
+
+    private func presentScrollPermissionAlert() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "settings.scrollReverse.permissionTitle".localized
+        alert.informativeText = "settings.scrollReverse.permissionMessage".localized
+        alert.addButton(withTitle: "cleaning.permission.openSettings".localized)
+        alert.addButton(withTitle: "update.action.later".localized)
+        if alert.runModal() == .alertFirstButtonReturn {
+            guard let url = URL(string:
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
+                return
+            }
+            NSWorkspace.shared.open(url)
+        }
     }
 }

@@ -179,3 +179,11 @@
 "cleaning.permission.title" = "需要辅助功能权限";
 "cleaning.permission.message" = "锁定键盘需要辅助功能权限。请前往系统设置开启后重试。";
 "cleaning.permission.openSettings" = "打开系统设置";
+
+// MARK: - Input Devices
+"settings.inputDevices" = "输入设备";
+"settings.scrollReverse" = "反转鼠标滚动方向";
+"settings.scrollReverse.on" = "滚动反转：开";
+"settings.scrollReverse.off" = "滚动反转：关";
+"settings.scrollReverse.permissionTitle" = "需要辅助功能权限";
+"settings.scrollReverse.permissionMessage" = "滚动方向反转需要辅助功能权限来拦截滚动事件。请前往系统设置开启后使用。";

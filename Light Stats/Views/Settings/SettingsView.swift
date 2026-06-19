@@ -169,7 +169,18 @@ struct SettingsView: View {
                     }
                 }
 
-                // 5. AI Usage Card
+                // 5. Input Devices Card
+                BentoCard(title: "settings.inputDevices".localized) {
+                    HStack {
+                        Text("settings.scrollReverse".localized)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        SettingsToggle(isOn: $settings.scrollReverseEnabled)
+                    }
+                }
+
+                // 6. AI Usage Card
                 BentoCard(title: "settings.aiUsage".localized) {
                     VStack(spacing: 12) {
                         HStack {
