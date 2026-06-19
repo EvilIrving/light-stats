@@ -424,7 +424,7 @@ private struct ActionRowsCard: View {
                 icon: "power",
                 title: "popover.action.quit".localized,
                 action: quit,
-                foregroundColor: Color(red: 0.70, green: 0.42, blue: 0.40)
+                foregroundColor: Color(red: 0.90, green: 0.36, blue: 0.34)
             )
         }
     }
@@ -466,8 +466,8 @@ private struct ActionRow: View {
 private struct SpinningFanIcon: View {
     let rpm: Int?
 
-    /// 视觉封顶：最快每秒 1.5 圈。
-    private let maxRevPerSecond: Double = 1.5
+    /// 视觉封顶：最快每秒 3 圈。
+    private let maxRevPerSecond: Double = 3.0
     /// 达到该转速即封顶（典型笔记本满速约 5000–6000 RPM）。
     private let rpmAtMaxSpeed: Double = 5000
 

@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import QuartzCore
 
 final class StatusBarView: NSView {
 
@@ -16,8 +17,9 @@ final class StatusBarView: NSView {
         static let percentItemWidth: CGFloat = 26  // CPU, GPU, MEM (e.g., "99%")
         static let diskItemWidth: CGFloat = 46     // DISK (e.g., "999 GB")
         static let networkItemWidth: CGFloat = 56  // NET (e.g., "↑0.0 KB/s" / "↓0.0 KB/s")
-        // FAN: 4-digit "9999 RPM" ≈ 56.9pt @ valueFont; +~2.5pt padding/side (matches DISK).
-        static let fanItemWidth: CGFloat = 62
+        // FAN: spinning icon, no number/label → fixed width regardless of RPM (no jitter).
+        static let fanItemWidth: CGFloat = 22
+        static let fanIconSize: CGFloat = 14
         static let batteryItemWidth: CGFloat = 34  // BAT (e.g., "⚡100%")
         // HLT: 3-digit "100" ≈ 21.8pt @ valueFont; +~2.6pt padding/side (matches DISK).
         static let healthItemWidth: CGFloat = 27
@@ -30,6 +32,15 @@ final class StatusBarView: NSView {
         static let labelFont = NSFont.systemFont(ofSize: 8, weight: .medium)
         static let logoFont = NSFont.systemFont(ofSize: 12, weight: .medium)
         static let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
+        // Network unit (KB/s…) draws lighter than the number, matching other stats.
+        static let networkUnitFont = NSFont.systemFont(ofSize: 10, weight: .regular)
+        static let unitAlpha: CGFloat = 0.7
+    }
+
+    /// Fan-spin animation tuning, mirrored from `SpinningFanIcon` in OverviewTabView.
+    private enum Fan {
+        static let maxRevPerSecond: Double = 3.0   // 视觉封顶：最快每秒 3 圈
+        static let rpmAtMaxSpeed: Double = 5000    // 达到该转速即封顶
     }
 
     // MARK: - Data
@@ -42,15 +53,31 @@ final class StatusBarView: NSView {
         let width: CGFloat
         let isLogo: Bool
         let isNetwork: Bool
+        let isFan: Bool
 
-        init(value: String, label: String = "", width: CGFloat, isLogo: Bool, isNetwork: Bool = false) {
+        init(
+            value: String,
+            label: String = "",
+            width: CGFloat,
+            isLogo: Bool,
+            isNetwork: Bool = false,
+            isFan: Bool = false
+        ) {
             self.value = value
             self.label = label
             self.width = width
             self.isLogo = isLogo
             self.isNetwork = isNetwork
+            self.isFan = isFan
         }
     }
+
+    // MARK: - Fan animation state
+
+    private var fanRPM: Int?
+    private var fanAngle: CGFloat = 0
+    private var fanLink: CADisplayLink?
+    private var lastFanTimestamp: CFTimeInterval = 0
 
     // MARK: - Initialization
 
@@ -60,6 +87,10 @@ final class StatusBarView: NSView {
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+    }
+
+    deinit {
+        fanLink?.invalidate()
     }
 
     // MARK: - Public Methods
@@ -150,16 +181,20 @@ final class StatusBarView: NSView {
             ))
         }
 
-        // Fan
+        // Fan（图标按转速旋转，无数字/标签 → 固定宽度，不抖动）
         if settings.showFan {
-            let fanText = fan.map { "\($0) RPM" } ?? "—"
             displayItems.append(DisplayItem(
-                value: fanText,
-                label: "FAN",
+                value: "",
+                label: "",
                 width: Layout.fanItemWidth,
-                isLogo: false
+                isLogo: false,
+                isFan: true
             ))
+            fanRPM = fan
+        } else {
+            fanRPM = nil
         }
+        updateFanAnimation()
 
         // Battery（充电/已充满前缀闪电；无电池显示横杠）
         if settings.showBattery {
@@ -237,63 +272,18 @@ final class StatusBarView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
-        // Get appearance-aware colors
         let textColor = NSColor.labelColor
-        _ = NSColor.secondaryLabelColor
-
         var xOffset: CGFloat = 0
 
         for (index, item) in displayItems.enumerated() {
             let itemRect = NSRect(x: xOffset, y: 0, width: item.width, height: bounds.height)
 
             if item.isLogo {
-                // Draw logo icon from Assets
-                if let image = NSImage(named: "StatusIcon") {
-                    image.isTemplate = true  // Adapt to light/dark mode
-                    let iconSize: CGFloat = 16
-                    let iconRect = NSRect(
-                        x: itemRect.midX - iconSize / 2,
-                        y: itemRect.midY - iconSize / 2,
-                        width: iconSize,
-                        height: iconSize
-                    )
-                    image.draw(in: iconRect)
-                }
+                drawLogo(in: itemRect)
+            } else if item.isFan {
+                drawFan(in: itemRect)
             } else if item.isNetwork {
-                // 网络项特殊绘制：箭头固定，数值等宽
-                let netAttrs: [NSAttributedString.Key: Any] = [
-                    .font: Layout.networkFont,
-                    .foregroundColor: textColor
-                ]
-                let lineSpacing: CGFloat = 0
-                let arrowXOffset: CGFloat = 2
-                let globalYOffset: CGFloat = -1 // 整体下移 1 单位
-
-                // 绘制上传 (上行)
-                let upArrow = "↑"
-                let upValue = item.value
-
-                let upArrowPoint = NSPoint(x: itemRect.origin.x + arrowXOffset, y: itemRect.midY + lineSpacing + globalYOffset)
-                upArrow.draw(at: upArrowPoint, withAttributes: netAttrs)
-
-                let upValuePoint = NSPoint(
-                    x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth,
-                    y: itemRect.midY + lineSpacing + globalYOffset
-                )
-                upValue.draw(at: upValuePoint, withAttributes: netAttrs)
-
-                // 绘制下载 (下行)
-                let downArrow = "↓"
-                let downValue = item.label
-
-                let textHeight = item.label.size(withAttributes: netAttrs).height
-                let downY = itemRect.midY - textHeight + 1 + globalYOffset
-
-                let downArrowPoint = NSPoint(x: itemRect.origin.x + arrowXOffset, y: downY)
-                downArrow.draw(at: downArrowPoint, withAttributes: netAttrs)
-
-                let downValuePoint = NSPoint(x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth, y: downY)
-                downValue.draw(at: downValuePoint, withAttributes: netAttrs)
+                drawNetwork(item, in: itemRect, textColor: textColor)
             } else {
                 drawStat(item, in: itemRect, textColor: textColor)
             }
@@ -307,6 +297,76 @@ final class StatusBarView: NSView {
         }
     }
 
+    /// Draws the app logo from Assets, template-tinted to the menu-bar colour.
+    private func drawLogo(in itemRect: NSRect) {
+        guard let image = NSImage(named: "StatusIcon") else { return }
+        image.isTemplate = true  // Adapt to light/dark mode
+        let iconSize: CGFloat = 16
+        let iconRect = NSRect(
+            x: itemRect.midX - iconSize / 2,
+            y: itemRect.midY - iconSize / 2,
+            width: iconSize,
+            height: iconSize
+        )
+        image.draw(in: iconRect)
+    }
+
+    /// 网络项特殊绘制：箭头固定，数值等宽；单位（KB/s…）弱化为细体 + 淡灰，与其他项一致。
+    private func drawNetwork(_ item: DisplayItem, in itemRect: NSRect, textColor: NSColor) {
+        let arrowAttrs: [NSAttributedString.Key: Any] = [
+            .font: Layout.networkFont,
+            .foregroundColor: textColor
+        ]
+        let arrowXOffset: CGFloat = 2
+        let globalYOffset: CGFloat = -1 // 整体下移 1 单位
+        let valueX = itemRect.origin.x + arrowXOffset + Layout.arrowWidth
+
+        // 上传 (上行)
+        let upY = itemRect.midY + globalYOffset
+        "↑".draw(at: NSPoint(x: itemRect.origin.x + arrowXOffset, y: upY), withAttributes: arrowAttrs)
+        networkValue(item.value, textColor: textColor).draw(at: NSPoint(x: valueX, y: upY))
+
+        // 下载 (下行)
+        let textHeight = item.label.size(withAttributes: arrowAttrs).height
+        let downY = itemRect.midY - textHeight + 1 + globalYOffset
+        "↓".draw(at: NSPoint(x: itemRect.origin.x + arrowXOffset, y: downY), withAttributes: arrowAttrs)
+        networkValue(item.label, textColor: textColor).draw(at: NSPoint(x: valueX, y: downY))
+    }
+
+    /// Builds a network speed string with the numeric part full-weight and the unit de-emphasised.
+    private func networkValue(_ value: String, textColor: NSColor) -> NSAttributedString {
+        let (number, unit) = Self.splitValue(value)
+        let result = NSMutableAttributedString(
+            string: number,
+            attributes: [.font: Layout.networkFont, .foregroundColor: textColor]
+        )
+        if !unit.isEmpty {
+            result.append(NSAttributedString(
+                string: unit,
+                attributes: [
+                    .font: Layout.networkUnitFont,
+                    .foregroundColor: textColor.withAlphaComponent(Layout.unitAlpha)
+                ]
+            ))
+        }
+        return result
+    }
+
+    /// Draws the fan as a `fanblades.fill` glyph rotated to the current animation angle.
+    /// Spin speed tracks RPM (see `Fan`); RPM 0 / unknown → static glyph.
+    private func drawFan(in itemRect: NSRect) {
+        guard let image = NSImage(systemSymbolName: "fanblades.fill", accessibilityDescription: "Fan") else { return }
+        image.isTemplate = true
+        let size = Layout.fanIconSize
+        NSGraphicsContext.saveGraphicsState()
+        let transform = NSAffineTransform()
+        transform.translateX(by: itemRect.midX, yBy: itemRect.midY)
+        transform.rotate(byDegrees: -fanAngle) // 负角度 → 顺时针
+        transform.concat()
+        image.draw(in: NSRect(x: -size / 2, y: -size / 2, width: size, height: size))
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
     /// Draws a value+label stat. The numeric part is emphasised (semibold, full colour);
     /// the trailing unit (%, RPM, GB…) is de-emphasised (regular weight, dimmer).
     private func drawStat(_ item: DisplayItem, in itemRect: NSRect, textColor: NSColor) {
@@ -318,7 +378,7 @@ final class StatusBarView: NSView {
         if !unit.isEmpty {
             value.append(NSAttributedString(
                 string: unit,
-                attributes: [.font: Layout.unitFont, .foregroundColor: textColor.withAlphaComponent(0.7)]
+                attributes: [.font: Layout.unitFont, .foregroundColor: textColor.withAlphaComponent(Layout.unitAlpha)]
             ))
         }
         let valueSize = value.size()
@@ -327,7 +387,7 @@ final class StatusBarView: NSView {
         // Label (bottom) - clearer font, tighter spacing
         let labelAttrs: [NSAttributedString.Key: Any] = [
             .font: Layout.labelFont,
-            .foregroundColor: textColor.withAlphaComponent(0.7)
+            .foregroundColor: textColor.withAlphaComponent(Layout.unitAlpha)
         ]
         let labelSize = item.label.size(withAttributes: labelAttrs)
         let labelPoint = NSPoint(
@@ -335,6 +395,44 @@ final class StatusBarView: NSView {
             y: itemRect.height / 2 - labelSize.height - 2
         )
         item.label.draw(at: labelPoint, withAttributes: labelAttrs)
+    }
+
+    // MARK: - Fan animation
+
+    /// Starts/pauses the per-frame spin link: run only when the fan is shown and RPM > 0.
+    private func updateFanAnimation() {
+        guard (fanRPM ?? 0) > 0 else {
+            fanLink?.isPaused = true
+            return
+        }
+        ensureFanLink().isPaused = false
+    }
+
+    private func ensureFanLink() -> CADisplayLink {
+        if let fanLink { return fanLink }
+        let link = displayLink(target: self, selector: #selector(stepFan(_:)))
+        link.add(to: .main, forMode: .common)
+        lastFanTimestamp = 0
+        fanLink = link
+        return link
+    }
+
+    /// Accumulates rotation each frame, skipping abnormal gaps (display sleep/resume) to avoid jumps.
+    @objc private func stepFan(_ link: CADisplayLink) {
+        let now = link.timestamp
+        defer { lastFanTimestamp = now }
+        guard lastFanTimestamp > 0 else { return }
+        let dt = now - lastFanTimestamp
+        guard dt > 0, dt < 1 else { return }
+        fanAngle = (fanAngle + Self.fanDegreesPerSecond(fanRPM) * dt).truncatingRemainder(dividingBy: 360)
+        needsDisplay = true
+    }
+
+    /// 当前角速度（度/秒）：RPM 线性映射并封顶。
+    private static func fanDegreesPerSecond(_ rpm: Int?) -> CGFloat {
+        guard let rpm, rpm > 0 else { return 0 }
+        let revPerSec = min(Double(rpm) / Fan.rpmAtMaxSpeed, 1.0) * Fan.maxRevPerSecond
+        return CGFloat(revPerSec * 360.0)
     }
 
     /// Splits a value like "2501 RPM" / "38%" / "⚡100%" into (number, unit).
