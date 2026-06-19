@@ -1,7 +1,5 @@
 # Contributing to Light Stats
 
-Thanks for contributing!
-
 ## Prerequisites
 
 | Dependency | Version | Check |
@@ -9,110 +7,92 @@ Thanks for contributing!
 | macOS | 14+ | System Settings → About |
 | Xcode | 16+ | `xcodebuild -version` |
 | Swift | 5.9+ | `swift --version` |
+| SwiftLint | latest | `brew install swiftlint` |
 
 ## Getting Started
 
 ```bash
 git clone git@github.com:EvilIrving/light-stats.git
-cd swift-menu-stats
+cd light-stats
 open "Light Stats.xcodeproj"
 ```
 
-Select the **Light Stats** scheme, pick **My Mac** as destination, and press ⌘R.
+Select the **Light Stats** scheme, pick **My Mac** as destination, press ⌘R.
 
-## Development
-
-### Build
+## Build
 
 ```bash
-# Debug build (CLI)
-xcodebuild -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" \
-  -configuration Debug build
+# Debug (CLI)
+xcodebuild -project "Light Stats.xcodeproj" -scheme "Light Stats" \
+  -configuration Debug -derivedDataPath build/DerivedData build
+open "build/DerivedData/Build/Products/Debug/Light Stats.app"
 
-# Release + DMG (with optional signing)
+# Release DMG
 ./build.sh
 ```
+
+The app runs as a menu bar agent (`LSUIElement = YES`). After building, force-quit any running instance first: `pkill -9 -f "Light Stats"`.
+
+## Before Submitting
+
+### Daily checklist
+
+Run through these before declaring a change done:
+
+1. No `print()` / `NSLog()` — use `import OSLog` + `let log = Logger(...)`
+2. Line ≤ 140 chars
+3. Function ≤ 80 lines — extract helpers if approaching
+4. File ≤ 500 lines — extract new types/files if approaching
+5. No force-unwrap (`!`) unless trivially provable + commented
+6. `var x: Type?` not `var x: Type? = nil`
+7. `for x in xs where cond {}` not `for x in xs { if cond {} }`
+8. `x += 1` not `x = x + 1`
+9. No `let _ = someOptional` — use `!= nil`
 
 ### Lint
 
 ```bash
-# Install SwiftLint
-brew install swiftlint
-
-# Run
-swiftlint lint --strict
-
-# Auto-fix
-swiftlint --fix
+swiftlint lint --strict && swiftlint --fix --strict && swiftlint lint --strict
 ```
 
-### Run
+CI runs `swiftlint lint --strict` — every warning is a hard error.
 
-The app runs as a menu bar agent (`LSUIElement = YES`). After building, open `build/output/Light Stats.app` or run from Xcode.
+### Localization
+
+```bash
+./validate_localization.sh
+```
+
+When adding a user-facing string:
+1. Use `String(localized: "key")` in Swift code
+2. Add the key to `Resources/en.lproj/Localizable.strings`
+3. Add translations to `zh-Hans`, `ja`, and `ko` lproj files
+
+### Tests
+
+```bash
+xcodebuild test -project "Light Stats.xcodeproj" \
+  -scheme "Light Stats" -destination 'platform=macOS'
+```
 
 ## Architecture
 
 ```
-Models/        Pure data structs — no logic, no service imports
-Services/      System data collection — Mach, IOKit, SMC, CFNetwork
-ViewModels/    @Observable classes — coordinates sampling, publishes state
-Views/         SwiftUI (panel/settings) + AppKit (menu bar)
+Views → ViewModels → Services → Models
+         Utilities ↗
 ```
 
-Key rule: Views → ViewModels → Services → Models. Never skip a layer.
+- **Models:** Pure data structs. No logic, no imports of Services/ViewModels.
+- **Services:** System data collection. Actors for cached/async; nonisolated classes for sync syscalls.
+- **ViewModels:** `@Observable` (Swift 6) or `ObservableObject`. `@MainActor` for UI-bound ones.
+- **Views:** SwiftUI (panels/settings) + AppKit (menu bar). Receive ViewModels via `@Environment` or `@ObservedObject`.
 
-Full details in [`AGENTS.md`](AGENTS.md).
-
-## Code Style
-
-- No `print()` or `NSLog()` — use `os.Logger`
-- No force-unwrap without a safety comment
-- `guard let` over `if let` for early exits
-- `@Observable` (Swift 6) not `@Published` / `ObservableObject`
-- One type per file
-- User-facing strings: `String(localized:)` with entries in all four `.lproj`
-
-## Localization
-
-Light Stats supports English, Simplified Chinese, Japanese, and Korean.
-
-When adding a new string:
-1. Add `String(localized: "key")` in your Swift code
-2. Add the key to `Resources/en.lproj/Localizable.strings`
-3. Add translations to `Resources/zh-Hans.lproj/Localizable.strings`
-4. Add translations to `Resources/ja.lproj/Localizable.strings`
-5. Add translations to `Resources/ko.lproj/Localizable.strings`
+Full contract in [`AGENTS.md`](AGENTS.md).
 
 ## Pull Request Process
 
 1. Fork and create a feature branch
-2. Run `swiftlint lint --strict` before pushing
+2. Run the daily checklist + `swiftlint lint --strict`
 3. Build and test on your Mac
 4. Open a PR against `main` with a clear description
-5. CI will run the build automatically
-
-## Project Layout
-
-```
-Light Stats/
-├── LightStatsApp.swift          # @main entry
-├── AppDelegate.swift            # Menu bar + popover
-├── Models/                      # Data types (CPUInfo, MemoryInfo, ...)
-├── Services/                    # System data collection
-├── ViewModels/                  # State management + sampling
-├── Views/
-│   ├── StatusBar/               # Menu bar rendering
-│   ├── Popover/                 # Floating panel
-│   │   └── Components/          # Reusable cards, rows, tabs
-│   ├── Settings/                # Preferences UI
-│   ├── About/                   # About window
-│   ├── CleaningMode/            # Keyboard-lock overlay
-│   └── Update/                  # Update progress window
-├── Utilities/                   # Formatters
-└── Resources/                   # Localizable.strings (en/zh-Hans/ja/ko)
-```
-
-## Questions?
-
-Open a [Discussion](https://github.com/EvilIrving/light-stats/discussions) or an issue.
+5. CI runs lint + build automatically

@@ -1,3 +1,29 @@
+## 修复 Claude 用量隔夜必失败：token 被永久缓存死 + 401 跳过降级 · 2026-06-19 12:09 · claude-opus-4-8
+
+**现象**：Claude 用量「放着不动，第二天必显示获取失败」，定时器的自动重试从来不成功，只有重启 app 或手动重置缓存才恢复。Codex（read-only）独立核过根因与修法。
+
+**根因（两个叠加）**：
+1. OAuth access token 只活几小时（凭证 JSON 里 `claudeAiOauth.expiresAt` 是毫秒 epoch，实测约 3h 窗口）。CLI 会用 refreshToken 刷新并写回 Keychain，但 `ClaudeUsageService` 把 token 进程级永久缓存在 `_cachedToken`，只有手动 `resetCredentialCache()` 才清。菜单栏 app 常驻数天 → 一直喂死 token → 永久 401。
+2. `fetch()` 收到 `.tokenExpired` 直接 `throw`，**跳过了写好的 Messages API + CLI-PTY 三层降级**。而 CLI-PTY 兜底恰恰会启动 `claude`、读 CLI 自己刚刷新的凭证——是唯一不依赖那个死 token 的真·恢复路径，却在最该用的时候被绕过。因果接反了：`.tokenExpired` 本该是触发降级的头号信号，却被当成终止降级的开关。
+
+对照组：`CodexUsageService` 一直是对的（每次现读凭证、401→重读比对→重试一次→CLI 兜底）。6/17 给 Claude 堆三层降级时，唯独漏了 Codex 早验证过的这个环节。
+
+**修法**：
+- `ClaudeUsageService.fetch()` 的 `.tokenExpired` 改为 `recoverFromExpiredToken()`：失效缓存→重读→token 真变了重试 API 一次→否则走 CLI-PTY。不再拿已知过期 token 白敲 Messages API。
+- token 缓存换成 `ClaudeTokenCache` actor（消除静态可变缓存的数据竞争），存 `token + expiresAt`，过期前 60s 自动失效。**保留 401 强制失效**——截断凭证/缺 expiresAt/提前吊销靠时间判断不出来，两道机制并存。
+- `AIUsageMonitor.handle()`：`tokenExpired` 有旧快照时走 `.stale` 而非 `.error`，不再一过期就甩红脸；仅 `.credentialsMissing`（登出）才报错。
+- Gemini 同类轻症（每次现读、无永久缓存，但早 401 不强制刷新）：`fetch()` catch `.tokenExpired` → `forceRefreshAccessToken()` 绕过过期时钟强制刷新重试一次。
+
+**注意的坑**：
+- `type_body_length` 限 500（CLAUDE.md 写的 800 是 file_length，别混）。`CachedCredential`/`ClaudeTokenCache`/`parseClaudeCredential`/`parseClaudeExpiry` 都移到了文件作用域（私有顶层，紧耦合 helper 豁免），就是为了把行数移出 enum body。
+- 弹窗安全：恢复路径坚持「先读文件 + `/usr/bin/security` 子进程」，不碰会弹授权框的 `SecItemCopyMatching`，不会把之前消掉的 Keychain 弹窗带回来。
+- **没法在本机验证隔夜恢复**——要等真实 token 过期才触发。逻辑链已双人核过，但最终判据是装新版放一夜看次日能否自愈。
+- 顺手修了 `AIUsageCard.swift:201` 一个预存的 `p` 变量名 lint 红线（改 `vertex`，197 行已占 `point`）——它之前就 commit 进去了，main 的 strict lint 本来是红的。
+
+构建 BUILD SUCCEEDED，全项目 `swiftlint --strict` 0 违规。
+
+---
+
 ## 修复状态栏弹窗不显示：NSPanel canBecomeKey · 2026-06-07 11:13 · claude-opus-4-8
 
 点击状态栏图标无弹窗，控制台刷 `makeKeyWindow … canBecomeKeyWindow NO` 警告。
