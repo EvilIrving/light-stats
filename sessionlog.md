@@ -1,3 +1,20 @@
+## 滚动反转全系统死机修复 + 水平反转/步长倍率扩展 · 2026-06-20 02:05 · claude-opus-4-8
+
+新功能 `ScrollDirectionService`（鼠标滚轮方向反转）开启后，一滚动整台电脑就卡死，触控板也连带卡。
+
+**根因（架构性，非笔误）**：tap 是 `.cgSessionEventTap` + `.defaultTap` —— 会话级「主动」同步 tap，WindowServer 会**同步等待回调返回**才把滚动事件派发给任何 App。原代码把 run loop source 挂在 `CFRunLoopGetCurrent()` = **主 RunLoop**（`start()` 由 `@MainActor` AppDelegate 调用）。而本 app 主线程每秒被 `SystemMonitor` 的 `proc_listallpids`+逐进程 `task_info` 阻塞几十~几百 ms，期间 tap 得不到服务 → WindowServer 卡住全系统滚动输入。卡的是**事件派发链路**不是翻转逻辑，所以只翻鼠标 delta 却连触控板一起卡。`KeyboardLockService` 用同样主线程模式没事，是因为它只在 60s 清洁模式短暂存在；**常驻 tap 绝不能共用繁忙主 RunLoop**。
+
+**修法**：tap 移到专用 `Thread`（`.userInteractive`）跑自己的 `CFRunLoop`，与主线程监控负载彻底解耦（Scroll Reverser / Mac Mouse Fix 的标准架构）。跨线程状态用 `NSLock` 守护，`while isRunning` + `CFRunLoopStop` 兜住「刚 start 又 stop」竞态，确保关开关时 tap 一定被 disable（否则会「关了还在反转」）。权限先在主线程同步 `AXIsProcessTrusted` 检查，避免后台线程才发现失败还要跨线程回传。
+
+**随后按用户要求扩展**（先被要求删 popover 顶栏的冗余反转图标，只留设置入口；再要求补齐水平反转 + 阻尼）：
+- 配置驱动：新增 `ScrollConfig{reverseVertical, reverseHorizontal, stepMultiplier}`，`stateLock` 守护 + `updateConfig()` 热更新（改倍率不重启 tap）。`handle()` 对 Axis1/Axis2 各自独立施加「翻转×倍率」，每轴处理三个 delta 字段（整数行/定点数/点数）。整数行步进 `keepDirectionFloor`：低倍率舍入到 0 但原值非 0 时保留结果方向 ±1，否则按行滚动的 App 在 0.25× 完全滚不动。
+- 用户拍板的三个决策：水平反转=**独立开关**；阻尼=**步长倍率 0.25×–3×**默认 1×作用于双轴；**阻尼依附反转开关**（tap 仅在 `垂直∨水平反转` 开启时运行，单独调倍率不启动 tap，设置里滑块在两反转都关时禁用+淡化）。
+- AppDelegate `syncScrollService()` 监听三个偏好任一变更 → 推配置 + 按 `垂直∨水平` 决定起停。
+
+**坑**：`CFMachPortCreateRunLoopSource` 返回 optional 要解包。仅作用于 `!isContinuous`（传统鼠标滚轮），触控板/Magic Mouse 直通——若日后要让 Magic Mouse 也反转需另判（它走连续滚动，当前归为「自然」）。**无法在本机验证死机是否真消除**——需用户开开关+授权辅助功能后亲手滚动确认。全程 `swiftlint --strict` 0 违规、`validate_localization.sh` 151 键 ×4 语言全覆盖、debug-run 构建通过。
+
+---
+
 ## 修复 Claude 用量隔夜必失败：token 被永久缓存死 + 401 跳过降级 · 2026-06-19 12:09 · claude-opus-4-8
 
 **现象**：Claude 用量「放着不动，第二天必显示获取失败」，定时器的自动重试从来不成功，只有重启 app 或手动重置缓存才恢复。Codex（read-only）独立核过根因与修法。

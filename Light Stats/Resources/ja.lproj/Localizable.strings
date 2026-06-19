@@ -183,6 +183,8 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "入力デバイス";
 "settings.scrollReverse" = "マウスのスクロール方向を反転";
+"settings.scrollReverseHorizontal" = "マウスの水平スクロールを反転";
+"settings.scrollStep" = "スクロール量の倍率";
 "settings.scrollReverse.on" = "スクロール反転：オン";
 "settings.scrollReverse.off" = "スクロール反転：オフ";
 "settings.scrollReverse.permissionTitle" = "アクセシビリティ権限が必要です";

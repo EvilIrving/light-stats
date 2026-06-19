@@ -59,24 +59,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
         _ = CleaningModeOverlayController.shared
 
-        // 滚动方向翻转：监听开关变化
-        settings.$scrollReverseEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] enabled in
-                guard let self else { return }
-                if enabled {
-                    self.startScrollServiceOrPrompt()
-                } else {
-                    self.scrollService.stop()
-                }
-            }
-            .store(in: &cancellables)
-
-        // 启动时若已启用，尝试启动服务
-        if settings.scrollReverseEnabled {
-            startScrollServiceOrPrompt()
+        // 滚动处理：垂直反转 / 水平反转 / 步长倍率任一变更都重新同步服务。
+        let scrollPublishers: [AnyPublisher<Void, Never>] = [
+            settings.$scrollReverseEnabled.map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollReverseHorizontalEnabled.map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollStepMultiplier.map { _ in () }.eraseToAnyPublisher()
+        ]
+        for publisher in scrollPublishers {
+            publisher
+                .dropFirst()
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] in self?.syncScrollService() }
+                .store(in: &cancellables)
         }
+
+        // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
+        syncScrollService()
 
         // 应用回到前台时复查权限（用户可能已授权但之前 tap 创建失败）。
         // 权限已满足且开关开启但服务未运行时自动启动。
@@ -379,8 +377,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleAppDidBecomeActive() {
-        guard settings.scrollReverseEnabled, !scrollService.isRunning else { return }
+        guard settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled,
+              !scrollService.isRunning else { return }
+        scrollService.updateConfig(currentScrollConfig())
         _ = scrollService.start()
+    }
+
+    private func currentScrollConfig() -> ScrollConfig {
+        ScrollConfig(
+            reverseVertical: settings.scrollReverseEnabled,
+            reverseHorizontal: settings.scrollReverseHorizontalEnabled,
+            stepMultiplier: settings.scrollStepMultiplier
+        )
+    }
+
+    /// 同步滚动服务：热更新配置；按「垂直∨水平反转」决定 tap 起停。步长倍率依附
+    /// 反转开关 —— 仅在 tap 运行时生效，单独调整倍率不会启动 tap。
+    private func syncScrollService() {
+        let config = currentScrollConfig()
+        scrollService.updateConfig(config)
+        if config.reverseVertical || config.reverseHorizontal {
+            startScrollServiceOrPrompt()
+        } else {
+            scrollService.stop()
+        }
     }
 
     private func presentScrollPermissionAlert() {

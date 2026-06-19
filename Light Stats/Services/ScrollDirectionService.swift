@@ -17,10 +17,21 @@ import CoreFoundation
 import CoreGraphics
 import OSLog
 
+/// 滚动处理参数。仅作用于传统鼠标滚轮事件；垂直/水平反转互相独立，步长倍率
+/// 同时缩放两个轴的滚动像素量。
+struct ScrollConfig: Sendable, Equatable {
+    var reverseVertical: Bool
+    var reverseHorizontal: Bool
+    var stepMultiplier: Double
+
+    static let identity = ScrollConfig(reverseVertical: false, reverseHorizontal: false, stepMultiplier: 1.0)
+}
+
 protocol ScrollReversing: AnyObject {
     func checkPermission(promptIfNeeded: Bool) -> Bool
     func start() -> Bool
     func stop()
+    func updateConfig(_ config: ScrollConfig)
     var isRunning: Bool { get }
 }
 
@@ -38,6 +49,7 @@ final class ScrollDirectionService: ScrollReversing {
     private let stateLock = NSLock()
     private var running = false
     private var tapRunLoop: CFRunLoop?
+    private var config = ScrollConfig.identity
 
     // 仅在主线程（start/stop）访问。
     private var tapThread: Thread?
@@ -156,10 +168,21 @@ final class ScrollDirectionService: ScrollReversing {
         tapRunLoop = loop
     }
 
+    /// 由调用方（AppDelegate）在设置变更时调用，热更新处理参数；无需重启 tap。
+    func updateConfig(_ newConfig: ScrollConfig) {
+        stateLock.lock(); defer { stateLock.unlock() }
+        config = newConfig
+    }
+
+    private func currentConfig() -> ScrollConfig {
+        stateLock.lock(); defer { stateLock.unlock() }
+        return config
+    }
+
     // MARK: - Event Handler
 
-    /// 对非连续滚动事件（传统鼠标滚轮）翻转所有纵向 delta 字段，确保不同应用读取
-    /// 不同字段时方向一致。连续滚动事件（触控板/Magic Mouse）直通。回调跑在 tap 线程。
+    /// 对非连续滚动事件（传统鼠标滚轮）按当前配置翻转方向并缩放步长。连续滚动事件
+    /// （触控板/Magic Mouse）直通。回调跑在 tap 线程，配置经 stateLock 读取快照。
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let eventTap {
@@ -173,24 +196,38 @@ final class ScrollDirectionService: ScrollReversing {
             return Unmanaged.passUnretained(event)
         }
 
-        // 翻转整数像素步进（传统鼠标滚轮的主要载体）
-        let dy = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
-        if dy != 0 {
-            event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: -dy)
-        }
-
-        // 翻转定点数步进（高分辨率鼠标可能同时设置此字段）
-        let fdy = event.getIntegerValueField(.scrollWheelEventFixedPtDeltaAxis1)
-        if fdy != 0 {
-            event.setIntegerValueField(.scrollWheelEventFixedPtDeltaAxis1, value: -fdy)
-        }
-
-        // 翻转点数步进（部分应用/框架从中读取滚动量）
-        let pdy = event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1)
-        if pdy != 0 {
-            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: -pdy)
-        }
-
+        let cfg = currentConfig()
+        applyAxis(event, vertical: true, reverse: cfg.reverseVertical, multiplier: cfg.stepMultiplier)
+        applyAxis(event, vertical: false, reverse: cfg.reverseHorizontal, multiplier: cfg.stepMultiplier)
         return Unmanaged.passUnretained(event)
+    }
+
+    /// 对单个滚动轴的三个 delta 字段（整数行步进、定点数、点数）统一施加「翻转 × 倍率」。
+    /// 不同应用读取不同字段，全部处理以保证行为一致。
+    private func applyAxis(_ event: CGEvent, vertical: Bool, reverse: Bool, multiplier: Double) {
+        let factor = (reverse ? -1.0 : 1.0) * multiplier
+        guard factor != 1.0 else { return } // 既不翻转也不缩放：原样放行
+
+        let lineField: CGEventField = vertical ? .scrollWheelEventDeltaAxis1 : .scrollWheelEventDeltaAxis2
+        let fixedField: CGEventField = vertical ? .scrollWheelEventFixedPtDeltaAxis1 : .scrollWheelEventFixedPtDeltaAxis2
+        let pointField: CGEventField = vertical ? .scrollWheelEventPointDeltaAxis1 : .scrollWheelEventPointDeltaAxis2
+
+        // 整数行步进量化为整数：缩放后若舍入为 0 但原值非 0，保留结果方向的最小 ±1，
+        // 否则按行滚动的应用会在低倍率下完全失去滚动。
+        scaleField(event, lineField, by: factor, keepDirectionFloor: true)
+        scaleField(event, fixedField, by: factor, keepDirectionFloor: false)
+        scaleField(event, pointField, by: factor, keepDirectionFloor: false)
+    }
+
+    private func scaleField(_ event: CGEvent, _ field: CGEventField, by factor: Double, keepDirectionFloor: Bool) {
+        let raw = event.getIntegerValueField(field)
+        guard raw != 0 else { return }
+
+        let product = Double(raw) * factor
+        var scaled = Int64(product.rounded())
+        if keepDirectionFloor && scaled == 0 {
+            scaled = product > 0 ? 1 : -1
+        }
+        event.setIntegerValueField(field, value: scaled)
     }
 }

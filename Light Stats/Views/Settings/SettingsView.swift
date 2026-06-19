@@ -171,12 +171,24 @@ struct SettingsView: View {
 
                 // 5. Input Devices Card
                 BentoCard(title: "settings.inputDevices".localized) {
-                    HStack {
-                        Text("settings.scrollReverse".localized)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        SettingsToggle(isOn: $settings.scrollReverseEnabled)
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("settings.scrollReverse".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.scrollReverseEnabled)
+                        }
+
+                        HStack {
+                            Text("settings.scrollReverseHorizontal".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.scrollReverseHorizontalEnabled)
+                        }
+
+                        scrollStepRow
                     }
                 }
 
@@ -289,6 +301,27 @@ struct SettingsView: View {
         }
         .id(localization.currentLanguage)
         .focusable(false)
+    }
+
+    /// 步长倍率滑块。阻尼依附反转开关：两个反转都关闭时滑块禁用并淡化，提示其当前不生效。
+    private var scrollStepRow: some View {
+        let active = settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("settings.scrollStep".localized)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(String(format: "%.2f×", settings.scrollStepMultiplier))
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+                    .foregroundColor(.secondary)
+            }
+            Slider(value: $settings.scrollStepMultiplier, in: 0.25...3.0, step: 0.05)
+                .controlSize(.small)
+                .focusable(false)
+        }
+        .disabled(!active)
+        .opacity(active ? 1 : 0.45)
     }
 
     private func validateMinimumItems() {

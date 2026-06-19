@@ -183,6 +183,8 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "입력 장치";
 "settings.scrollReverse" = "마우스 스크롤 방향 반전";
+"settings.scrollReverseHorizontal" = "마우스 가로 스크롤 방향 반전";
+"settings.scrollStep" = "스크롤 단계 배율";
 "settings.scrollReverse.on" = "스크롤 반전: 켬";
 "settings.scrollReverse.off" = "스크롤 반전: 끔";
 "settings.scrollReverse.permissionTitle" = "손쉬운 사용 권한 필요";

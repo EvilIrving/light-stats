@@ -181,6 +181,8 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "Input Devices";
 "settings.scrollReverse" = "Reverse Scroll Direction (Mouse Only)";
+"settings.scrollReverseHorizontal" = "Reverse Horizontal Scroll (Mouse Only)";
+"settings.scrollStep" = "Scroll Step Multiplier";
 "settings.scrollReverse.on" = "Scroll Reverse: On";
 "settings.scrollReverse.off" = "Scroll Reverse: Off";
 "settings.scrollReverse.permissionTitle" = "Accessibility Access Needed";

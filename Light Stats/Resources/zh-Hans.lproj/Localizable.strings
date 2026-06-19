@@ -172,10 +172,10 @@
 "update.error.verification" = "安全校验失败，更新已丢弃。";
 
 // MARK: - Cleaning Mode
-"cleaning.action.start" = "清洁模式";
-"cleaning.overlay.title" = "清洁模式 — 键盘已锁定";
+"cleaning.action.start" = "擦屏模式";
+"cleaning.overlay.title" = "擦屏模式 — 键盘已锁定";
 "cleaning.overlay.remaining" = "%d 秒后自动退出";
-"cleaning.overlay.stop" = "结束清洁模式";
+"cleaning.overlay.stop" = "结束擦屏模式";
 "cleaning.permission.title" = "需要辅助功能权限";
 "cleaning.permission.message" = "锁定键盘需要辅助功能权限。请前往系统设置开启后重试。";
 "cleaning.permission.openSettings" = "打开系统设置";
@@ -183,6 +183,8 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "输入设备";
 "settings.scrollReverse" = "反转鼠标滚动方向";
+"settings.scrollReverseHorizontal" = "反转鼠标水平滚动";
+"settings.scrollStep" = "滚动步长倍率";
 "settings.scrollReverse.on" = "滚动反转：开";
 "settings.scrollReverse.off" = "滚动反转：关";
 "settings.scrollReverse.permissionTitle" = "需要辅助功能权限";

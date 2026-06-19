@@ -179,9 +179,17 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var autoCheckUpdates: Bool {
         didSet { save(autoCheckUpdates, for: .autoCheckUpdates) }
     }
-    /// 独立输入设备滚动方向翻转：仅传统鼠标滚轮反向，触控板保持自然滚动。
+    /// 独立输入设备滚动方向翻转：仅传统鼠标滚轮垂直反向，触控板保持自然滚动。
     @Published var scrollReverseEnabled: Bool {
         didSet { save(scrollReverseEnabled, for: .scrollReverseEnabled) }
+    }
+    /// 水平滚动方向翻转：与垂直独立，同样仅作用于传统鼠标滚轮。
+    @Published var scrollReverseHorizontalEnabled: Bool {
+        didSet { save(scrollReverseHorizontalEnabled, for: .scrollReverseHorizontalEnabled) }
+    }
+    /// 滚动步长倍率：缩放鼠标滚轮单次滚动的像素量，范围 0.25×–3×，默认 1×（不改变）。
+    @Published var scrollStepMultiplier: Double {
+        didSet { save(scrollStepMultiplier, for: .scrollStepMultiplier) }
     }
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
@@ -295,6 +303,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
+        case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
+        case scrollStepMultiplier = "settings.scrollStepMultiplier"
     }
 
     // MARK: - Init
@@ -353,6 +363,11 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
         // 滚动方向翻转：默认关闭（opt-in）。
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
+        scrollReverseHorizontalEnabled =
+            defaults.object(forKey: Key.scrollReverseHorizontalEnabled.rawValue) as? Bool ?? false
+        // 步长倍率：默认 1×；夹取到 0.25–3× 防御历史/异常值。
+        let storedMultiplier = defaults.object(forKey: Key.scrollStepMultiplier.rawValue) as? Double ?? 1.0
+        scrollStepMultiplier = min(max(storedMultiplier, 0.25), 3.0)
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
     }
 
