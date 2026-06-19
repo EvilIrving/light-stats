@@ -16,13 +16,17 @@ final class StatusBarView: NSView {
         static let percentItemWidth: CGFloat = 26  // CPU, GPU, MEM (e.g., "99%")
         static let diskItemWidth: CGFloat = 46     // DISK (e.g., "999 GB")
         static let networkItemWidth: CGFloat = 56  // NET (e.g., "↑0.0 KB/s" / "↓0.0 KB/s")
-        static let fanItemWidth: CGFloat = 50      // FAN (e.g., "9999 RPM")
+        // FAN: 4-digit "9999 RPM" ≈ 56.9pt @ valueFont; +~2.5pt padding/side (matches DISK).
+        static let fanItemWidth: CGFloat = 62
         static let batteryItemWidth: CGFloat = 34  // BAT (e.g., "⚡100%")
-        static let healthItemWidth: CGFloat = 30   // HLT (e.g., "87")
+        // HLT: 3-digit "100" ≈ 21.8pt @ valueFont; +~2.6pt padding/side (matches DISK).
+        static let healthItemWidth: CGFloat = 27
         static let separatorWidth: CGFloat = 2
         static let itemHeight: CGFloat = 22
         static let arrowWidth: CGFloat = 8         // 箭头固定宽度
         static let valueFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
+        // Units (%, RPM, GB…) draw lighter than the number: regular weight, same size.
+        static let unitFont = NSFont.systemFont(ofSize: 11, weight: .regular)
         static let labelFont = NSFont.systemFont(ofSize: 8, weight: .medium)
         static let logoFont = NSFont.systemFont(ofSize: 12, weight: .medium)
         static let networkFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium)
@@ -81,6 +85,16 @@ final class StatusBarView: NSView {
                 label: "",
                 width: Layout.logoWidth,
                 isLogo: true
+            ))
+        }
+
+        // Health（默认关闭）：显示 0-100 总分。放在最前（Logo 之后、CPU 之前）。
+        if settings.showHealth {
+            displayItems.append(DisplayItem(
+                value: "\(health.score)",
+                label: "HLT",
+                width: Layout.healthItemWidth,
+                isLogo: false
             ))
         }
 
@@ -162,16 +176,6 @@ final class StatusBarView: NSView {
                 value: batteryText,
                 label: "BAT",
                 width: Layout.batteryItemWidth,
-                isLogo: false
-            ))
-        }
-
-        // Health（默认关闭）：显示 0-100 总分。
-        if settings.showHealth {
-            displayItems.append(DisplayItem(
-                value: "\(health.score)",
-                label: "HLT",
-                width: Layout.healthItemWidth,
                 isLogo: false
             ))
         }
@@ -291,29 +295,7 @@ final class StatusBarView: NSView {
                 let downValuePoint = NSPoint(x: itemRect.origin.x + arrowXOffset + Layout.arrowWidth, y: downY)
                 downValue.draw(at: downValuePoint, withAttributes: netAttrs)
             } else {
-                // Draw value (top) - larger font, positioned closer to center
-                let valueAttrs: [NSAttributedString.Key: Any] = [
-                    .font: Layout.valueFont,
-                    .foregroundColor: textColor
-                ]
-                let valueSize = item.value.size(withAttributes: valueAttrs)
-                let valuePoint = NSPoint(
-                    x: itemRect.midX - valueSize.width / 2,
-                    y: itemRect.height / 2 - 2
-                )
-                item.value.draw(at: valuePoint, withAttributes: valueAttrs)
-
-                // Draw label (bottom) - clearer font, tighter spacing
-                let labelAttrs: [NSAttributedString.Key: Any] = [
-                    .font: Layout.labelFont,
-                    .foregroundColor: textColor.withAlphaComponent(0.7)
-                ]
-                let labelSize = item.label.size(withAttributes: labelAttrs)
-                let labelPoint = NSPoint(
-                    x: itemRect.midX - labelSize.width / 2,
-                    y: itemRect.height / 2 - labelSize.height - 2
-                )
-                item.label.draw(at: labelPoint, withAttributes: labelAttrs)
+                drawStat(item, in: itemRect, textColor: textColor)
             }
 
             xOffset += item.width
@@ -323,5 +305,47 @@ final class StatusBarView: NSView {
                 xOffset += Layout.separatorWidth
             }
         }
+    }
+
+    /// Draws a value+label stat. The numeric part is emphasised (semibold, full colour);
+    /// the trailing unit (%, RPM, GB…) is de-emphasised (regular weight, dimmer).
+    private func drawStat(_ item: DisplayItem, in itemRect: NSRect, textColor: NSColor) {
+        let (number, unit) = Self.splitValue(item.value)
+        let value = NSMutableAttributedString(
+            string: number,
+            attributes: [.font: Layout.valueFont, .foregroundColor: textColor]
+        )
+        if !unit.isEmpty {
+            value.append(NSAttributedString(
+                string: unit,
+                attributes: [.font: Layout.unitFont, .foregroundColor: textColor.withAlphaComponent(0.7)]
+            ))
+        }
+        let valueSize = value.size()
+        value.draw(at: NSPoint(x: itemRect.midX - valueSize.width / 2, y: itemRect.height / 2 - 2))
+
+        // Label (bottom) - clearer font, tighter spacing
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .font: Layout.labelFont,
+            .foregroundColor: textColor.withAlphaComponent(0.7)
+        ]
+        let labelSize = item.label.size(withAttributes: labelAttrs)
+        let labelPoint = NSPoint(
+            x: itemRect.midX - labelSize.width / 2,
+            y: itemRect.height / 2 - labelSize.height - 2
+        )
+        item.label.draw(at: labelPoint, withAttributes: labelAttrs)
+    }
+
+    /// Splits a value like "2501 RPM" / "38%" / "⚡100%" into (number, unit).
+    /// Leading digits, separators and the charging bolt stay with the number; the rest is the unit.
+    /// A purely non-numeric value (e.g. "—") is returned whole as the number so it stays full-weight.
+    private static func splitValue(_ value: String) -> (number: String, unit: String) {
+        let numberChars: Set<Character> = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", ",", "⚡"]
+        guard let splitIdx = value.firstIndex(where: { !numberChars.contains($0) }),
+              splitIdx != value.startIndex else {
+            return (value, "")
+        }
+        return (String(value[..<splitIdx]), String(value[splitIdx...]))
     }
 }
