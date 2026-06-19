@@ -189,6 +189,22 @@ struct SettingsView: View {
                         }
 
                         scrollStepRow
+
+                        HStack {
+                            Text("settings.windowHotKeys".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.magnetHotKeysEnabled)
+                        }
+
+                        HStack {
+                            Text("settings.titlebarGestures".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.titlebarGesturesEnabled)
+                        }
                     }
                 }
 

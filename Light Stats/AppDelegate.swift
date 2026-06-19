@@ -30,6 +30,7 @@ final class KeyablePanel: NSPanel {
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem?
+    private var windowControlsStatusItem: NSStatusItem?
     private var panel: NSPanel?
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
@@ -43,17 +44,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor: SystemMonitor
     private let appMemoryManager: AppMemoryManager
     private let scrollService: ScrollReversing
+    private let windowSnappingService: WindowSnappingService
+    private let magnetHotKeyService: MagnetHotKeyControlling
+    private let titlebarGestureService: TitlebarGestureControlling
+    private let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
+        (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf),
+        (5, .topLeft), (6, .topRight), (7, .bottomLeft), (8, .bottomRight),
+        (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
+        (12, .rightTwoThirds), (13, .rightThird),
+        (14, .previousDisplay), (15, .nextDisplay),
+        (16, .maximize), (17, .center), (18, .restore), (19, .minimize)
+    ]
 
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared
         self.appMemoryManager = AppMemoryManager.shared
         self.scrollService = ScrollDirectionService()
+        let windowSnappingService = WindowSnappingService()
+        self.windowSnappingService = windowSnappingService
+        self.magnetHotKeyService = MagnetHotKeyService(snappingService: windowSnappingService)
+        self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
         super.init()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
+        setupWindowControlsStatusItem()
         setupPanel()
         startMonitoring()
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
@@ -73,8 +90,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .store(in: &cancellables)
         }
 
+        settings.$magnetHotKeysEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncWindowControlServices() }
+            .store(in: &cancellables)
+
+        settings.$titlebarGesturesEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncWindowControlServices() }
+            .store(in: &cancellables)
+
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
         syncScrollService()
+        syncWindowControlServices()
 
         // 应用回到前台时复查权限（用户可能已授权但之前 tap 创建失败）。
         // 权限已满足且开关开启但服务未运行时自动启动。
@@ -121,6 +151,114 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePanel)
             button.target = self
         }
+    }
+
+    // MARK: - Window Controls Status Item
+
+    private func setupWindowControlsStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let button = item.button {
+            button.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "settings.windowControls".localized)
+            button.image?.isTemplate = true
+        }
+        item.menu = makeWindowControlsMenu()
+        windowControlsStatusItem = item
+    }
+
+    private func makeWindowControlsMenu() -> NSMenu {
+        let menu = NSMenu()
+        addWindowMenuItem("window.action.left".localized, action: .leftHalf, key: "←", to: menu)
+        addWindowMenuItem("window.action.right".localized, action: .rightHalf, key: "→", to: menu)
+        addWindowMenuItem("window.action.top".localized, action: .topHalf, key: "↑", to: menu)
+        addWindowMenuItem("window.action.bottom".localized, action: .bottomHalf, key: "↓", to: menu)
+        menu.addItem(.separator())
+        addWindowMenuItem("window.action.topLeft".localized, action: .topLeft, key: "u", to: menu)
+        addWindowMenuItem("window.action.topRight".localized, action: .topRight, key: "i", to: menu)
+        addWindowMenuItem("window.action.bottomLeft".localized, action: .bottomLeft, key: "j", to: menu)
+        addWindowMenuItem("window.action.bottomRight".localized, action: .bottomRight, key: "k", to: menu)
+        menu.addItem(.separator())
+        addWindowMenuItem("window.action.leftThird".localized, action: .leftThird, key: "d", to: menu)
+        addWindowMenuItem("window.action.leftTwoThirds".localized, action: .leftTwoThirds, key: "e", to: menu)
+        addWindowMenuItem("window.action.centerThird".localized, action: .centerThird, key: "f", to: menu)
+        addWindowMenuItem("window.action.rightTwoThirds".localized, action: .rightTwoThirds, key: "t", to: menu)
+        addWindowMenuItem("window.action.rightThird".localized, action: .rightThird, key: "g", to: menu)
+        menu.addItem(.separator())
+        addWindowMenuItem(
+            "window.action.previousDisplay".localized,
+            action: .previousDisplay,
+            key: "←",
+            modifiers: [.control, .option, .command],
+            to: menu
+        )
+        addWindowMenuItem(
+            "window.action.nextDisplay".localized,
+            action: .nextDisplay,
+            key: "→",
+            modifiers: [.control, .option, .command],
+            to: menu
+        )
+        menu.addItem(.separator())
+        addWindowMenuItem("window.action.maximize".localized, action: .maximize, key: "\r", to: menu)
+        addWindowMenuItem("window.action.center".localized, action: .center, key: "c", to: menu)
+        addWindowMenuItem("window.action.restore".localized, action: .restore, key: "\u{8}", to: menu)
+        menu.addItem(.separator())
+        addWindowToggleItem("settings.windowHotKeys".localized, selector: #selector(toggleMagnetHotKeys), to: menu)
+        addWindowToggleItem("settings.titlebarGestures".localized, selector: #selector(toggleTitlebarGestures), to: menu)
+        updateWindowControlsMenuStates(menu)
+        return menu
+    }
+
+    private func addWindowMenuItem(
+        _ title: String,
+        action: WindowSnapAction,
+        key: String,
+        modifiers: NSEvent.ModifierFlags = [.control, .option],
+        to menu: NSMenu
+    ) {
+        let item = NSMenuItem(title: title, action: #selector(performWindowMenuAction(_:)), keyEquivalent: key)
+        item.target = self
+        item.keyEquivalentModifierMask = modifiers
+        item.tag = tag(for: action)
+        menu.addItem(item)
+    }
+
+    private func addWindowToggleItem(_ title: String, selector: Selector, to menu: NSMenu) {
+        let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+        item.target = self
+        menu.addItem(item)
+    }
+
+    private func updateWindowControlsStatusItemVisibility() {
+        windowControlsStatusItem?.isVisible = settings.magnetHotKeysEnabled
+        if let menu = windowControlsStatusItem?.menu {
+            updateWindowControlsMenuStates(menu)
+        }
+    }
+
+    private func updateWindowControlsMenuStates(_ menu: NSMenu) {
+        menu.item(withTitle: "settings.windowHotKeys".localized)?.state = settings.magnetHotKeysEnabled ? .on : .off
+        menu.item(withTitle: "settings.titlebarGestures".localized)?.state = settings.titlebarGesturesEnabled ? .on : .off
+    }
+
+    @objc private func performWindowMenuAction(_ sender: NSMenuItem) {
+        guard let action = action(for: sender.tag) else { return }
+        windowSnappingService.perform(action)
+    }
+
+    @objc private func toggleMagnetHotKeys() {
+        settings.magnetHotKeysEnabled.toggle()
+    }
+
+    @objc private func toggleTitlebarGestures() {
+        settings.titlebarGesturesEnabled.toggle()
+    }
+
+    private func tag(for action: WindowSnapAction) -> Int {
+        windowMenuActions.first { $0.action == action }?.tag ?? 0
+    }
+
+    private func action(for tag: Int) -> WindowSnapAction? {
+        windowMenuActions.first { $0.tag == tag }?.action
     }
 
     // MARK: - Panel Setup
@@ -353,6 +491,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMemoryManager.stopMonitoring()
         AIUsageMonitor.shared.stop()
         scrollService.stop()
+        magnetHotKeyService.stop()
+        titlebarGestureService.stop()
         SMCInfo.shutdown()
     }
 
@@ -377,10 +517,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleAppDidBecomeActive() {
-        guard settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled,
-              !scrollService.isRunning else { return }
-        scrollService.updateConfig(currentScrollConfig())
-        _ = scrollService.start()
+        if settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled, !scrollService.isRunning {
+            scrollService.updateConfig(currentScrollConfig())
+            _ = scrollService.start()
+        }
+        syncWindowControlServices()
     }
 
     private func currentScrollConfig() -> ScrollConfig {
@@ -389,6 +530,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             reverseHorizontal: settings.scrollReverseHorizontalEnabled,
             stepMultiplier: settings.scrollStepMultiplier
         )
+    }
+
+    private func syncWindowControlServices() {
+        if settings.magnetHotKeysEnabled {
+            startMagnetHotKeysOrPrompt()
+        } else {
+            magnetHotKeyService.stop()
+        }
+
+        if settings.titlebarGesturesEnabled {
+            startTitlebarGesturesOrPrompt()
+        } else {
+            titlebarGestureService.stop()
+        }
+        updateWindowControlsStatusItemVisibility()
+    }
+
+    private func startMagnetHotKeysOrPrompt() {
+        guard !magnetHotKeyService.isRunning else { return }
+        if magnetHotKeyService.start() { return }
+        presentWindowControlPermissionAlert()
+    }
+
+    private func startTitlebarGesturesOrPrompt() {
+        guard !titlebarGestureService.isRunning else { return }
+        if titlebarGestureService.start() { return }
+        presentWindowControlPermissionAlert()
     }
 
     /// 同步滚动服务：热更新配置；按「垂直∨水平反转」决定 tap 起停。步长倍率依附
@@ -404,10 +572,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentScrollPermissionAlert() {
+        presentAccessibilityAlert(
+            title: "settings.scrollReverse.permissionTitle".localized,
+            message: "settings.scrollReverse.permissionMessage".localized
+        )
+    }
+
+    private func presentWindowControlPermissionAlert() {
+        presentAccessibilityAlert(
+            title: "settings.windowControl.permissionTitle".localized,
+            message: "settings.windowControl.permissionMessage".localized
+        )
+    }
+
+    private func presentAccessibilityAlert(title: String, message: String) {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "settings.scrollReverse.permissionTitle".localized
-        alert.informativeText = "settings.scrollReverse.permissionMessage".localized
+        alert.messageText = title
+        alert.informativeText = message
         alert.addButton(withTitle: "cleaning.permission.openSettings".localized)
         alert.addButton(withTitle: "update.action.later".localized)
         if alert.runModal() == .alertFirstButtonReturn {

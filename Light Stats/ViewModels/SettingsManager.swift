@@ -50,6 +50,8 @@ protocol SettingsManaging: ObservableObject {
     var exitNodeDetectionEnabled: Bool { get set }
     var exitNodeProvider: ExitNodeProvider { get set }
     var autoCheckUpdates: Bool { get set }
+    var magnetHotKeysEnabled: Bool { get set }
+    var titlebarGesturesEnabled: Bool { get set }
 }
 
 @MainActor
@@ -183,6 +185,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var scrollReverseEnabled: Bool {
         didSet { save(scrollReverseEnabled, for: .scrollReverseEnabled) }
     }
+    /// Magnet 风格全局窗口快捷键，默认关闭，需辅助功能权限移动其他 App 窗口。
+    @Published var magnetHotKeysEnabled: Bool {
+        didSet { save(magnetHotKeysEnabled, for: .magnetHotKeysEnabled) }
+    }
+    /// 标题栏触控板滑动手势，默认关闭，需辅助功能权限命中并移动窗口。
+    @Published var titlebarGesturesEnabled: Bool {
+        didSet { save(titlebarGesturesEnabled, for: .titlebarGesturesEnabled) }
+    }
     /// 水平滚动方向翻转：与垂直独立，同样仅作用于传统鼠标滚轮。
     @Published var scrollReverseHorizontalEnabled: Bool {
         didSet { save(scrollReverseHorizontalEnabled, for: .scrollReverseHorizontalEnabled) }
@@ -303,6 +313,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
+        case magnetHotKeysEnabled = "settings.magnetHotKeysEnabled"
+        case titlebarGesturesEnabled = "settings.titlebarGesturesEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
     }
@@ -363,6 +375,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
         // 滚动方向翻转：默认关闭（opt-in）。
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
+        // 窗口管理入口：默认关闭（opt-in）。
+        magnetHotKeysEnabled = defaults.object(forKey: Key.magnetHotKeysEnabled.rawValue) as? Bool ?? false
+        titlebarGesturesEnabled = defaults.object(forKey: Key.titlebarGesturesEnabled.rawValue) as? Bool ?? false
         scrollReverseHorizontalEnabled =
             defaults.object(forKey: Key.scrollReverseHorizontalEnabled.rawValue) as? Bool ?? false
         // 步长倍率：默认 1×；夹取到 0.25–3× 防御历史/异常值。
