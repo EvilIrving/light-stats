@@ -6,8 +6,9 @@
 //
 //  Logic chain — credential reading:
 //
-//  ┌─ readAccessToken() ──────────────────────────────────────┐
-//  │  1. In-memory cache (_cachedToken) → instant hit         │
+//  ┌─ readAccessToken() — actor-cached, expiry-aware ─────────┐
+//  │  1. TokenCache.valid() → cache hit unless within 60s of  │
+//  │     expiresAt (token lives only a few hours).            │
 //  │  2. ~/.claude/.credentials.json       → file, 0 prompt   │
 //  │  3. ~/.claude/credentials.json        → legacy, no dot   │
 //  │  4. security find-generic-password -w → Keychain CLI     │
@@ -16,12 +17,13 @@
 //  │     Reference: Claude-Usage-Tracker                      │
 //  │     (hamed-elfayome/Claude-Usage-Tracker).               │
 //  │  5. Truncated JSON fallback: regex "accessToken":"..."   │
-//  │  6. All failed → _tokenFailed = false (transient,        │
-//  │     manual retry re-probes).                             │
+//  │     (expiry unknown → recovery relies on the 401 signal).│
 //  └──────────────────────────────────────────────────────────┘
 //                           │
 //  ┌─ fetch() — three-source fallback ────────────────────────┐
 //  │  1. GET api.anthropic.com/api/oauth/usage (OAuth API)    │
+//  │     ↓ 401/403 → recoverFromExpiredToken():               │
+//  │       invalidate cache → re-read → retry once → CLI PTY  │
 //  │     ↓ 404/decoding/network failure                       │
 //  │  2. POST api.anthropic.com/v1/messages (1-token Haiku)   │
 //  │     Parse rate-limit response headers                    │
@@ -64,6 +66,66 @@ import os
 ///             `anthropic-ratelimit-unified-5h-reset` (Unix epoch)
 ///             `anthropic-ratelimit-unified-7d-reset`
 /// - Errors:   401/403 → token expired. All fields optional.
+
+private struct CachedCredential {
+    let token: String
+    let expiresAt: Date?   // nil when unknown (e.g. truncated Keychain JSON)
+}
+
+/// Parses the `claudeAiOauth` credential JSON into a token + expiry.
+/// Falls back to a regex extraction when the JSON is truncated (Keychain limit);
+/// in that case the expiry is unknown and recovery relies on the 401 signal.
+/// Reference: Claude-Usage-Tracker's Keychain truncation recovery.
+private func parseClaudeCredential(from data: Data) -> CachedCredential? {
+    guard !data.isEmpty else { return nil }
+    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+       let oauth = json["claudeAiOauth"] as? [String: Any],
+       let token = oauth["accessToken"] as? String, !token.isEmpty {
+        return CachedCredential(token: token, expiresAt: parseClaudeExpiry(oauth["expiresAt"]))
+    }
+    if let text = String(data: data, encoding: .utf8),
+       let regex = try? NSRegularExpression(pattern: #""accessToken"\s*:\s*"([^"]+)""#),
+       let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+       match.numberOfRanges >= 2,
+       let range = Range(match.range(at: 1), in: text) {
+        return CachedCredential(token: String(text[range]), expiresAt: nil)
+    }
+    return nil
+}
+
+/// Converts the millisecond-epoch `expiresAt` field into a Date.
+private func parseClaudeExpiry(_ value: Any?) -> Date? {
+    guard let milliseconds = value as? Double, milliseconds > 0 else { return nil }
+    return Date(timeIntervalSince1970: milliseconds / 1000)
+}
+
+/// Serialises access to the cached OAuth token (eliminates the data race on a
+/// shared mutable static). The token is short-lived — it expires every few hours
+/// and the Claude Code CLI refreshes it on disk/Keychain. We cache to avoid
+/// re-reading on every poll, but honour `expiresAt` (with a 60s margin) and allow
+/// forced invalidation when the server rejects a token early.
+private actor ClaudeTokenCache {
+    private var token: String?
+    private var expiresAt: Date?
+    private let margin: TimeInterval = 60
+
+    func valid() -> String? {
+        guard let token, !token.isEmpty else { return nil }
+        if let expiresAt, Date() >= expiresAt.addingTimeInterval(-margin) { return nil }
+        return token
+    }
+
+    func store(_ credential: CachedCredential) {
+        token = credential.token
+        expiresAt = credential.expiresAt
+    }
+
+    func invalidate() {
+        token = nil
+        expiresAt = nil
+    }
+}
+
 enum ClaudeUsageService {
 
     private static let log = Logger(subsystem: "com.lightstats.app", category: "ClaudeUsage")
@@ -107,31 +169,56 @@ enum ClaudeUsageService {
     // MARK: - Fetch
 
     static func fetch() async throws -> ProviderUsageSnapshot {
-        guard let token = readAccessToken() else {
+        guard let token = await readAccessToken() else {
             throw AIUsageError.credentialsMissing
         }
 
         // 1. Try the OAuth usage endpoint.
         let oauthResult = await fetchOAuthUsage(token: token)
 
-        // 2. If the endpoint moved or the response shape changed, fall back to Messages API headers.
         if case .failure(let error) = oauthResult {
             switch error {
-            case .tokenExpired, .credentialsMissing:
+            case .credentialsMissing:
                 throw error
+            case .tokenExpired:
+                // The token we read is stale. The CLI may have refreshed it on
+                // disk/Keychain since; re-read and retry, then fall through to the
+                // CLI PTY (which reads the CLI's own fresh credentials). Sending the
+                // known-expired token to the Messages API would only 401 again.
+                return try await recoverFromExpiredToken(previousToken: token)
             case .endpointNotFound, .decoding, .network:
+                // 2. Endpoint moved / response shape changed: read rate-limit headers.
                 do {
                     return try await fetchUsageFromHeaders(token: token)
                 } catch {
-                    // 3. If Messages API also fails, fall back to CLI PTY as last resort.
-                    //    This needs no network — it reads usage from the local `claude` CLI.
-                    _ = error
+                    // 3. Messages API also failed — last resort is the CLI PTY,
+                    //    which needs no network and reads usage from local `claude`.
                     return try await fetchUsageFromCLI()
                 }
             }
         }
 
         return try oauthResult.get()
+    }
+
+    /// Recovers from a rejected (expired/revoked) token. Invalidates the cache,
+    /// re-reads credentials, and — if the CLI has since refreshed the token —
+    /// retries the OAuth endpoint once. Otherwise falls back to the CLI PTY,
+    /// which launches `claude` and reads its own freshly-refreshed credentials.
+    private static func recoverFromExpiredToken(previousToken: String) async throws -> ProviderUsageSnapshot {
+        await tokenCache.invalidate()
+
+        if let fresh = await readAccessToken(), fresh != previousToken {
+            let retry = await fetchOAuthUsage(token: fresh)
+            if case .success(let snapshot) = retry { return snapshot }
+            // Refreshed token failed for a non-auth reason — try the header path.
+            if case .failure(let err) = retry, err != .tokenExpired,
+               let snapshot = try? await fetchUsageFromHeaders(token: fresh) {
+                return snapshot
+            }
+        }
+
+        return try await fetchUsageFromCLI()
     }
 
     // MARK: - OAuth usage endpoint
@@ -640,72 +727,46 @@ enum ClaudeUsageService {
 
     // MARK: - Credentials
 
-    /// In-memory cache of the OAuth access token so we only hit the Keychain
-    /// once per process lifetime. Keychain access to another app's item
-    /// triggers a macOS authorization prompt; caching avoids repeated prompts.
-    private static var _cachedToken: String?
-    private static var _tokenFailed: Bool = false
+    private static let tokenCache = ClaudeTokenCache()
 
-    /// Reads the OAuth access token from the Claude Code CLI credentials.
-    /// Tries on-disk credential files first, then Keychain as a fallback.
-    /// Keychain access may trigger a one-time authorization prompt;
-    /// subsequent calls return the in-memory copy.
-    private static func readAccessToken() -> String? {
-        if let token = _cachedToken {
-            return token
-        }
-        if _tokenFailed {
-            return nil
-        }
+    /// Reads the OAuth access token: in-memory cache first, then on-disk credential
+    /// files (zero prompt), then the Keychain via `/usr/bin/security` (no auth
+    /// dialog, unlike `SecItemCopyMatching`). The cache self-expires near `expiresAt`,
+    /// so a stale token is never returned across the token's few-hour lifetime.
+    private static func readAccessToken() async -> String? {
+        if let token = await tokenCache.valid() { return token }
 
-        // 1. On-disk credential files — zero authorization prompts.
-        //    Claude Code writes the full OAuth JSON here on every login;
-        //    unlike Keychain, files have no size limit and no ACL barrier.
         for fileURL in credentialFileURLs {
-            if let token = readTokenFromFile(at: fileURL) {
+            if let data = try? Data(contentsOf: fileURL), let cred = parseClaudeCredential(from: data) {
+                await tokenCache.store(cred)
                 log.info("Claude token read from credential file")
-                _cachedToken = token
-                return token
+                return cred.token
             }
         }
 
-        // 2. Keychain via /usr/bin/security CLI (no authorization prompt).
-        //    Claude-Usage-Tracker uses this approach — forking the `security`
-        //    command reads the password without triggering macOS's "XXX wants
-        //    to access keychain" dialog that SecItemCopyMatching would.
-        if let token = readTokenFromKeychainCLI() {
+        if let data = readKeychainData(), let cred = parseClaudeCredential(from: data) {
+            await tokenCache.store(cred)
             log.info("Claude token read from Keychain (security CLI)")
-            _cachedToken = token
-            return token
+            return cred.token
         }
 
-        // Only treat a *genuinely missing* item as a permanent failure so a
-        // manual retry can re-read the keychain.
         log.error("Claude credentials unavailable")
-        _tokenFailed = false   // transient — retry will re-probe
         return nil
     }
 
-    /// Clears the cached token / failure flag so the next fetch re-reads
-    /// credentials. Called on manual retry.
+    /// Clears the cached token so the next fetch re-reads credentials. Called on
+    /// manual retry. The fetch path also self-recovers on a 401, so this is a
+    /// best-effort nudge — the brief async gap before invalidation is benign.
     static func resetCredentialCache() {
-        _cachedToken = nil
-        _tokenFailed = false
+        Task { await tokenCache.invalidate() }
     }
 
-    /// Reads the OAuth access token from the Keychain via `/usr/bin/security`,
-    /// which bypasses the macOS authorization dialog that `SecItemCopyMatching`
-    /// would trigger. Parse the raw JSON directly from stdout.
-    ///
-    /// Reference: Claude-Usage-Tracker's `ClaudeCodeSyncService.readKeychainCredentials()`.
-    private static func readTokenFromKeychainCLI() -> String? {
+    /// Reads the raw Keychain credential blob via `/usr/bin/security`, which
+    /// bypasses the macOS authorization dialog that `SecItemCopyMatching` triggers.
+    private static func readKeychainData() -> Data? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = [
-            "find-generic-password",
-            "-s", keychainService,
-            "-w"
-        ]
+        process.arguments = ["find-generic-password", "-s", keychainService, "-w"]
         process.environment = ProcessInfo.processInfo.environment
 
         let stdoutPipe = Pipe()
@@ -724,43 +785,12 @@ enum ClaudeUsageService {
         process.waitUntilExit()
 
         guard process.terminationStatus == 0 else {
-            let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            let errText = String(data: errData, encoding: .utf8) ?? ""
+            let errText = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             log.notice("security CLI exit \(process.terminationStatus): \(errText)")
             return nil
         }
 
         let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        guard !data.isEmpty,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String,
-              !token.isEmpty else {
-            // Truncated JSON fallback: regex-extract the access token directly.
-            // Claude-Usage-Tracker uses the same pattern for Keychain truncation recovery.
-            if let text = String(data: data, encoding: .utf8),
-               let regex = try? NSRegularExpression(pattern: #""accessToken"\s*:\s*"([^"]+)""#),
-               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-               match.numberOfRanges >= 2,
-               let captureRange = Range(match.range(at: 1), in: text) {
-                return String(text[captureRange])
-            }
-            return nil
-        }
-        return token
-    }
-
-    /// Reads the access token from an on-disk credential JSON file.
-    /// Uses the same JSON structure as the Keychain item.
-    private static func readTokenFromFile(at url: URL) -> String? {
-        guard FileManager.default.fileExists(atPath: url.path),
-              let data = try? Data(contentsOf: url),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any],
-              let token = oauth["accessToken"] as? String,
-              !token.isEmpty else {
-            return nil
-        }
-        return token
+        return data.isEmpty ? nil : data
     }
 }

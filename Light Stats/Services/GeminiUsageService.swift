@@ -70,9 +70,28 @@ nonisolated enum GeminiUsageService {
         var credentials = try loadCredentials()
         let token = try await validAccessToken(from: &credentials)
         let projectId = try? await loadCodeAssistProjectId(accessToken: token)
-        let snapshot = try await fetchQuota(accessToken: token, projectId: projectId)
 
-        return snapshot
+        do {
+            return try await fetchQuota(accessToken: token, projectId: projectId)
+        } catch AIUsageError.tokenExpired {
+            // The server rejected a token our local expiry clock still considered
+            // valid (early revocation or clock skew). Force a refresh ignoring the
+            // expiry date and retry once before surfacing the failure.
+            let freshToken = try await forceRefreshAccessToken(from: &credentials)
+            let freshProjectId = try? await loadCodeAssistProjectId(accessToken: freshToken)
+            return try await fetchQuota(accessToken: freshToken, projectId: freshProjectId)
+        }
+    }
+
+    /// Refreshes the access token unconditionally (bypassing the expiry-date check
+    /// in `validAccessToken`) for the case where the server rejects a token we
+    /// still believe is valid. Persists the refreshed token back to disk.
+    private static func forceRefreshAccessToken(from credentials: inout Credentials) async throws -> String {
+        guard let refreshToken = credentials.refreshToken, !refreshToken.isEmpty,
+              let client = findOAuthClient() else {
+            throw AIUsageError.tokenExpired
+        }
+        return try await refreshAccessToken(refreshToken: refreshToken, client: client, credentials: &credentials)
     }
 
     private static func validateAuthType() throws {

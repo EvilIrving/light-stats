@@ -13,7 +13,7 @@ struct OverviewTabView: View {
     @ObservedObject private var settings = SettingsManager.shared
 
     /// CPU/GPU/MEM/负载四张卡共享的固定高度，避免因数字字号不同导致 LazyVGrid 逐行自适应出高矮不一。
-    private let quickStatCardHeight: CGFloat = 70
+    private let quickStatCardHeight: CGFloat = 62
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -518,7 +518,7 @@ private struct HealthCard: View {
     let useColorIndicator: Bool
 
     var body: some View {
-        BentoCard(title: "health.title".localized, icon: "heart.text.square") {
+        BentoCard(title: "health.title".localized, icon: "heart.text.square", padding: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .lastTextBaseline, spacing: 5) {
                     Text("\(health.score)")

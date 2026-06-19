@@ -198,8 +198,8 @@ private struct RefreshGlyph: View {
         return Path { path in
             for offset in stride(from: 0.0, to: 2 * .pi, by: 2 * .pi / 3) {
                 let a = tangent + CGFloat(offset)
-                let p = CGPoint(x: point.x + tip * cos(a), y: point.y + tip * sin(a))
-                if offset == 0 { path.move(to: p) } else { path.addLine(to: p) }
+                let vertex = CGPoint(x: point.x + tip * cos(a), y: point.y + tip * sin(a))
+                if offset == 0 { path.move(to: vertex) } else { path.addLine(to: vertex) }
             }
             path.closeSubpath()
         }

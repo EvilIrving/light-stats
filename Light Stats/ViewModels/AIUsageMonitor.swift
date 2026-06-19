@@ -191,16 +191,20 @@ final class AIUsageMonitor: ObservableObject {
             cacheSnapshot(snapshot)
             newState = .loaded(snapshot)
         case .failure(let error):
-            // Keep last good data visible for transient failures;
-            // credential problems need the user's attention.
+            // Keep last good data visible for transient failures. The service
+            // already exhausts its internal recovery (re-read + CLI PTY) before
+            // surfacing tokenExpired, so a token failure with prior data is
+            // treated as stale rather than an alarming error — the timer will
+            // refresh once recovery succeeds. Only a genuine credentials-missing
+            // (logged out) state demands the user's attention.
             switch error {
-            case .network, .decoding, .endpointNotFound:
+            case .network, .decoding, .endpointNotFound, .tokenExpired:
                 if let previous = state(for: provider).snapshot {
                     newState = .stale(previous)
                 } else {
                     newState = .error(error)
                 }
-            case .tokenExpired, .credentialsMissing:
+            case .credentialsMissing:
                 newState = .error(error)
             }
         }
