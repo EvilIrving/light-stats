@@ -111,6 +111,10 @@ jobs:
         with:
           name: Light Stats ${{ steps.version.outputs.tag }}
           body_path: CHANGELOG.md
+          # 含连字符的 SemVer 预发布 tag（如 v1.6.0-beta.1）标为 prerelease。
+          # 客户端走 /releases/latest，该 endpoint 会跳过 prerelease，
+          # 因此 beta 版只构建+公证、可手动下载，但不会推给正式用户。
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: |
             build/output/*.dmg
         env:
