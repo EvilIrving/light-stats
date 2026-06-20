@@ -140,33 +140,27 @@ struct OverviewTabView: View {
                     .foregroundColor(.labelMuted)
                 }
 
-                // AI Usage Cards (hidden entirely when toggled off in settings)
-                if settings.aiMonitorClaudeEnabled {
-                    AIUsageCard(
-                        provider: .claude,
-                        state: aiMonitor.claudeState,
-                        isRefreshing: aiMonitor.refreshingProviders.contains(.claude),
-                        useFlatColors: useFlatColors,
-                        retry: { aiMonitor.retry(.claude) }
-                    )
-                }
-                if settings.aiMonitorCodexEnabled {
-                    AIUsageCard(
-                        provider: .codex,
-                        state: aiMonitor.codexState,
-                        isRefreshing: aiMonitor.refreshingProviders.contains(.codex),
-                        useFlatColors: useFlatColors,
-                        retry: { aiMonitor.retry(.codex) }
-                    )
-                }
-                if settings.aiMonitorGeminiEnabled {
-                    AIUsageCard(
-                        provider: .gemini,
-                        state: aiMonitor.geminiState,
-                        isRefreshing: aiMonitor.refreshingProviders.contains(.gemini),
-                        useFlatColors: useFlatColors,
-                        retry: { aiMonitor.retry(.gemini) }
-                    )
+                // AI Usage Card — all enabled providers in one card
+                let aiProviders: [(AIProvider, ProviderFetchState)] = [
+                    settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
+                    settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
+                    settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
+                ].compactMap { $0 }
+
+                if !aiProviders.isEmpty {
+                    BentoCard {
+                        VStack(spacing: 10) {
+                            ForEach(aiProviders, id: \.0.rawValue) { provider, state in
+                                AIProviderCompactRow(
+                                    provider: provider,
+                                    state: state,
+                                    isRefreshing: aiMonitor.refreshingProviders.contains(provider),
+                                    useFlatColors: useFlatColors,
+                                    retry: { aiMonitor.retry(provider) }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Network Card: 速率 + 本地代理 + 出口节点

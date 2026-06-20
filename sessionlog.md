@@ -1,3 +1,27 @@
+## 滚动反转「方向翻不动」彻底修复：IOHID 时序 + 读写顺序 · 2026-06-20 08:55 · claude-opus-4-8
+
+承接死机修复后，功能仍**完全不反转**（怎么调开关、浏览器里都没反应）。逆向了本机 `/Applications/Scroll Reverser.app`（开源 pilotmoon/Scroll-Reverser，Apache-2.0，整份 `MouseTap.m` 拉下来对照）后定位。Scroll Reverser 信息：entitlements 全空、非沙盒、Developer ID 签名；运行期要 Accessibility + Input Monitoring(`kIOHIDRequestTypeListenEvent`)；IOHID 字段 `kIOHIDEventTypeScroll=6`、`Base=6<<16=0x60000`、`ScrollX=0x60000`/`ScrollY=0x60001`。
+
+**最终验证有效的方案**（浏览器 + 终端两类应用方向均正确）：
+1. tap 仍跑专用线程（死机修复保留）。仅处理 `!isContinuous`（传统鼠标滚轮），触控板/Magic Mouse 直通。
+2. **必须改底层 IOHIDEvent 浮点值**：开 Natural Scrolling 后方向权威来源是 IOHIDEvent，仅改 CGEvent delta 字段会被系统从 IOHID 重新派生覆盖、翻不动。经 `CGEventCopyIOHIDEvent` 取出改 `ScrollX/ScrollY`。
+3. **所有原始 delta 写前一次性读完，再统一写**。先写 `DeltaAxis` 会触发系统按固定倍率重算 `FixedPt/PointDelta`；边读边写则后续字段读到重算值、×负乘数被二次翻转回原方向。
+4. **改完 CGEvent 后重新 `CGEventCopyIOHIDEvent` 再写 IOHID**——改 CGEvent 会重建底层 IOHIDEvent，沿用旧拷贝写入打水漂。原始 IOHID 值在改 CGEvent 之前读、改之后用新拷贝写。
+5. 每轴顺序：行步进(整数)→定点数(Double)→点数(整数)→IOHID(最后)。
+
+**踩过的坑（按发现顺序）**：
+- **崩溃元凶=诊断代码，不是逻辑**。上一轮逆向时在同步 tap 回调里塞了大量 `FileHandle.standardError.write` + 未文档化 SPI `IOHIDEventGetChildren`（Get 语义却 `takeRetainedValue` → 过度释放）。同步 tap 回调里几十~几百次 stderr I/O 直接冻死全系统输入。回调必须零 I/O、零日志、零危险 SPI。
+- **被陈旧上下文坑两次**：会话起始注入的文件快照（379 行）与磁盘真实文件（233 行）不一致。是 `/codex-collab` 挑战计划时读实时文件才发现「崩溃代码早已删除、IOHID 方案也被整个删掉」。教训：动手前必重新读真实文件、看 `git status`。
+- **`IOHIDFloat` ABI**：64 位 Mac 上是 `double`。旧代码按 `Float`(32 位)声明 `IOHIDEventGet/SetFloatValue`，取到错位垃圾值——即使不崩溃功能也是坏的。`@_silgen_name` 必须按 Double 声明、field 用 UInt32。
+- **`FixedPtDelta` 必须用 Double 接口**：用整数接口读会把亚整数值(0.3)截断成 0、被 `guard !=0` 跳过，方向永不翻。
+- **只改 CGEvent 不够**（见方案 2），但**只靠 isContinuous 判设备不可靠**（它是像素/行滚动之分，非鼠标/触控板之分；高分辨率鼠标可能走连续路径被放行）——当前按「只翻传统鼠标」明确限定。
+- **症状定位关键数据**：修到一半时浏览器对、终端错。原因正是坑 3（读写顺序）——浏览器读 IOHID(已反转→对)，终端读 FixedPt/Point(被二次翻转回原样→错)。改成「全读完再写」后两者一致。
+- **诊断方法**：`os_log` 在该环境 `log show`/`log stream` 都抓不到（debug 签名 notice 不落盘）；最终靠**往 `/tmp` 写文件**绕开 os_log 拿到真相，且文件写只在启动路径(跑一次)和回调前 5 个事件，不会复现冻机。还用「全字段清零」做决定性测试区分「写入被忽略 vs 写入逻辑错」——清零后滚动停止 → 证明写入生效、是逻辑问题。
+
+验证完已移除全部诊断代码；`swiftlint --strict` 0 违规、debug-run 构建通过、用户实机确认浏览器+终端方向均正确。正确逻辑的「为什么」已写入 `ScrollDirectionService.swift` 文件头。
+
+---
+
 ## 滚动反转全系统死机修复 + 水平反转/步长倍率扩展 · 2026-06-20 02:05 · claude-opus-4-8
 
 新功能 `ScrollDirectionService`（鼠标滚轮方向反转）开启后，一滚动整台电脑就卡死，触控板也连带卡。

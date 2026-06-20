@@ -77,11 +77,7 @@ struct AIUsageCard: View {
         }
     }
 
-    private var symbolIcon: String? {
-        switch provider {
-        case .claude, .codex, .gemini: return nil
-        }
-    }
+    private var symbolIcon: String? { nil }
 
     // MARK: - Windows
 
@@ -269,6 +265,110 @@ private struct WindowRow: View {
             return .yellow
         } else {
             return .red
+        }
+    }
+}
+
+// MARK: - Compact Provider Row (for consolidated AI Usage card)
+
+/// A single provider's state rendered as a compact row group (no BentoCard wrapper).
+/// Shows the provider logo + name as a header, then its usage windows underneath.
+struct AIProviderCompactRow: View {
+    let provider: AIProvider
+    let state: ProviderFetchState
+    let isRefreshing: Bool
+    let useFlatColors: Bool
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Provider header
+            HStack(spacing: 4) {
+                Image(provider.assetIconName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 11, height: 11)
+                Text(provider.displayName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Spacer()
+            }
+
+            // Provider content
+            switch state {
+            case .idle:
+                Text("overview.loading".localized)
+                    .font(.system(size: 10))
+                    .foregroundColor(.labelMuted)
+                    .padding(.leading, 15)
+
+            case .loaded(let snapshot):
+                windowsRows(snapshot)
+
+            case .stale(let snapshot):
+                VStack(alignment: .leading, spacing: 2) {
+                    windowsRows(snapshot)
+                    Text("aiUsage.updatedAgo".localized(agoString(since: snapshot.fetchedAt)))
+                        .font(.system(size: 9))
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .padding(.leading, 15)
+                }
+
+            case .error(let error):
+                HStack(spacing: 6) {
+                    Text(AIProviderCompactRow.errorText(error, cli: providerCLIName))
+                        .font(.system(size: 10))
+                        .foregroundColor(.labelMuted)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    RetryButton(isRefreshing: isRefreshing, action: retry)
+                }
+                .padding(.leading, 15)
+            }
+        }
+    }
+
+    private func windowsRows(_ snapshot: ProviderUsageSnapshot) -> some View {
+        VStack(spacing: 4) {
+            ForEach(snapshot.windows, id: \.label) { window in
+                WindowRow(window: window, useFlatColors: useFlatColors)
+            }
+        }
+        .padding(.leading, 15)
+    }
+
+    private var providerCLIName: String {
+        switch provider {
+        case .claude: return "claude"
+        case .codex: return "codex"
+        case .gemini: return "gemini"
+        }
+    }
+
+    private func agoString(since date: Date) -> String {
+        let minutes = max(0, Int(Date().timeIntervalSince(date)) / 60)
+        if minutes < 60 { return "\(minutes)m" }
+        return "\(minutes / 60)h \(minutes % 60)m"
+    }
+
+    static func errorText(_ error: AIUsageError, cli: String) -> String {
+        switch error {
+        case .tokenExpired:
+            return "aiUsage.tokenExpired".localized(cli)
+        case .credentialsMissing:
+            return "aiUsage.credentialsMissing".localized(cli)
+        case .network, .decoding, .endpointNotFound:
+            return "aiUsage.fetchFailed".localized
+        }
+    }
+}
+
+private extension AIProvider {
+    var assetIconName: String {
+        switch self {
+        case .claude: return "claudeLogo"
+        case .codex: return "codexLogo"
+        case .gemini: return "geminiLogo"
         }
     }
 }
