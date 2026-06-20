@@ -40,35 +40,23 @@ struct PopoverContentView: View {
 
                 HStack(spacing: 4) {
 #if DEBUG
-                    Image(systemName: "camera.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(hoveredIcon == "snapshot" ? .secondary : .secondary.opacity(0.5))
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                        .help("导出完整面板截图到 docs/screenshots（DEBUG）")
-                        .onHover { hoveredIcon = $0 ? "snapshot" : nil }
-                        .onTapGesture { DebugSnapshot.dumpPanel() }
+                    toolbarIcon(
+                        systemName: "camera.circle.fill",
+                        key: "snapshot"
+                    ) { DebugSnapshot.dumpPanel() }
 #endif
-                    Image("cleaningLock")
-                        .renderingMode(.template)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 15, height: 15)
-                        .foregroundColor(hoveredIcon == "cleaning" ? .secondary : .secondary.opacity(0.58))
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                        .help("cleaning.action.start".localized)
-                        .onHover { hoveredIcon = $0 ? "cleaning" : nil }
-                        .onTapGesture { CleaningModeViewModel.shared.start() }
+                    toolbarIcon(
+                        image: "cleaningLock",
+                        key: "cleaning",
+                        iconSize: 15
+                    ) { CleaningModeViewModel.shared.start() }
 
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(hoveredIcon == "settings" ? .secondary : .secondary.opacity(0.58))
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                        .help("popover.action.settings".localized)
-                        .onHover { hoveredIcon = $0 ? "settings" : nil }
-                        .onTapGesture { openSettings() }
+                    toolbarIcon(
+                        systemName: "gearshape",
+                        key: "settings",
+                        iconSize: 15,
+                        weight: .medium
+                    ) { openSettings() }
                 }
             }
             .padding(.horizontal, 16)
@@ -94,6 +82,51 @@ struct PopoverContentView: View {
         .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes
         .focusable(false)
+        .overlayPreferenceValue(ToolbarIconBoundsKey.self) { anchors in
+            GeometryReader { proxy in
+                if let key = hoveredIcon,
+                   let text = tooltipText(for: key),
+                   let anchor = anchors[key] {
+                    let rect = proxy[anchor]
+                    tooltipLabel(text)
+                        .position(x: rect.midX, y: rect.maxY + tooltipGap)
+                        .transition(.opacity)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    // MARK: - Tooltip (root-level overlay, positioned from measured icon anchors)
+
+    /// tooltip 与图标底边的垂直间距——唯一可调常量，水平/垂直定位均由 anchor 实测。
+    private var tooltipGap: CGFloat { 16 }
+
+    private func tooltipLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundColor(.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+            )
+            .fixedSize()
+    }
+
+    private func tooltipText(for key: String) -> String? {
+        switch key {
+        case "snapshot": return "导出截图"
+        case "cleaning": return "cleaning.action.start".localized
+        case "settings": return "popover.action.settings".localized
+        default: return nil
+        }
     }
 
     private func openSettings() {
@@ -101,6 +134,49 @@ struct PopoverContentView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             openSettingsAction()
         }
+    }
+
+    // MARK: - Toolbar Icons (hover only, tooltip rendered at root level)
+
+    private func toolbarIcon(
+        systemName: String? = nil,
+        image: String? = nil,
+        key: String,
+        iconSize: CGFloat = 16,
+        weight: Font.Weight = .regular,
+        action: @escaping () -> Void
+    ) -> some View {
+        Group {
+            if let systemName {
+                Image(systemName: systemName)
+                    .font(.system(size: iconSize, weight: weight))
+            } else if let image {
+                Image(image)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: iconSize, height: iconSize)
+            }
+        }
+        .foregroundColor(hoveredIcon == key ? .secondary : .secondary.opacity(0.58))
+        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+        .anchorPreference(key: ToolbarIconBoundsKey.self, value: .bounds) { [key: $0] }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                hoveredIcon = hovering ? key : nil
+            }
+        }
+        .onTapGesture(perform: action)
+    }
+}
+
+/// 收集每个工具栏图标在根坐标空间中的实测边界，供根层 tooltip overlay 精确定位。
+private struct ToolbarIconBoundsKey: PreferenceKey {
+    static let defaultValue: [String: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [String: Anchor<CGRect>],
+                       nextValue: () -> [String: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, new in new }
     }
 }
 
