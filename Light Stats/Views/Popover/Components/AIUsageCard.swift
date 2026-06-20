@@ -127,9 +127,9 @@ private struct RetryButton: View {
     var body: some View {
         Button(action: action) {
             rotatingIcon
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.labelMuted)
-                .frame(width: 24, height: 24)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.58))
+                .frame(width: 14, height: 14)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
