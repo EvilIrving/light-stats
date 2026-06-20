@@ -1,3 +1,23 @@
+## 发布灰度通道解耦 + 工具栏 tooltip 改 anchor 实测定位 · 2026-06-20 10:05 · claude-opus-4-8
+
+两件事，都为 v1.6.0 发布做准备。
+
+**1. 发布与用户更新链路解耦（已提交并推送 beta tag）**
+诉求：打 tag 一定触发线上发布，但希望 beta 版别推给正式用户。关键事实——客户端 `UpdateService.fetchLatest()` 打的是 GitHub `/releases/latest`，该 endpoint **官方定义就是「最新的非 prerelease、非 draft release」**，天然跳过 prerelease。所以解法是最小改动：`release.yml` 的 `action-gh-release` 加一行 `prerelease: ${{ contains(steps.version.outputs.tag, '-') }}`——含连字符的 SemVer 预发布 tag（`v1.6.0-beta.1`）自动标为 prerelease，照样签名+公证+传 DMG、可手动下载，但正式用户收不到。放弃了「双通道客户端开关」（要改 SettingsManager + 四语言本地化，过重）和「draft release」（beta 测试者拿不到下载链接）。已提交 `ci(release): 预发布 tag 标为 prerelease 以隔离用户更新`、推送 main、并打 `v1.6.0-beta.1` 触发发布。
+
+**版本号坑**：工程 `project.pbxproj` 里 `MARKETING_VERSION` 还停在 `1.0.2`，但 tag 已到 v1.5.2——因为 `build.sh:79` 构建时用 `MARKETING_VERSION="$VERSION"` 覆盖，`$VERSION` 来自 `git describe --tags --exact-match`。**版本号唯一真实来源是 git tag，永远不要手改 pbxproj 那个值。**
+
+**2. PopoverContentView 工具栏 tooltip 重做（未提交，待用户视觉确认）**
+擦屏/设置/截图三个右上角图标的 hover tooltip。原 `.help()` 系统 tooltip 被弃用（延迟 ~1.2s、黄底样式不搭毛玻璃审美）；上一版自定义 overlay 用 `tooltipCenterX` 硬编码几何（写死 360 宽/图标间距/`y:42`），定位算不准且对布局变化脆弱。
+
+为什么 tooltip 必须挂根层：图标在 header 右上，tooltip 只能向下展开（顶部仅 12px padding，向上被 popover 裁掉），一展开就进入紧贴 header 下方的 `HealthCard` 区域——挂 header 子树会被**后绘制**的内容区盖住（这就是「被健康分挡住」的真正原因）。
+
+新方案：`ToolbarIconBoundsKey: PreferenceKey` 收集每个图标 `.anchorPreference(value: .bounds)` 的实测边界 → 根层 `.overlayPreferenceValue` + `GeometryReader` 用 `proxy[anchor]` 取 `rect`，`.position(x: rect.midX, y: rect.maxY + tooltipGap)` 居中贴图标下方。删光硬编码几何，唯一常量 `tooltipGap=16`（纯间距）。overlay 加 `.allowsHitTesting(false)`，`.onHover` 包 `withAnimation` 让淡入淡出生效。截图 tooltip 文案按用户要求精简为「导出截图」。swiftlint --strict 0 违规、build 通过。
+
+**后续注意**：tooltip 改动还在工作区未提交；若要进 v1.6.0 正式版，必须在打 `v1.6.0` tag 前提交。当前 main 上未提交的还有 AGENTS.md/CLAUDE.md 改动与未跟踪的 deepseek-collab skill 目录（与本次发布无关）。
+
+---
+
 ## 滚动反转「方向翻不动」彻底修复：IOHID 时序 + 读写顺序 · 2026-06-20 08:55 · claude-opus-4-8
 
 承接死机修复后，功能仍**完全不反转**（怎么调开关、浏览器里都没反应）。逆向了本机 `/Applications/Scroll Reverser.app`（开源 pilotmoon/Scroll-Reverser，Apache-2.0，整份 `MouseTap.m` 拉下来对照）后定位。Scroll Reverser 信息：entitlements 全空、非沙盒、Developer ID 签名；运行期要 Accessibility + Input Monitoring(`kIOHIDRequestTypeListenEvent`)；IOHID 字段 `kIOHIDEventTypeScroll=6`、`Base=6<<16=0x60000`、`ScrollX=0x60000`/`ScrollY=0x60001`。
