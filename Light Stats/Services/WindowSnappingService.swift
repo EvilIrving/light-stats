@@ -66,6 +66,11 @@ final class WindowSnappingService {
         perform(action, on: window)
     }
 
+    func previewFrame(for action: WindowSnapAction, at axPoint: CGPoint) -> CGRect? {
+        guard checkPermission(promptIfNeeded: false), let window = titlebarWindow(at: axPoint) else { return nil }
+        return previewFrame(for: action, on: window)
+    }
+
     private func perform(_ action: WindowSnapAction, on window: AXUIElement) {
         switch action {
         case .restore:
@@ -157,13 +162,27 @@ final class WindowSnappingService {
     }
 
     private func snap(_ window: AXUIElement, action: WindowSnapAction) {
-        guard let currentFrame = frame(of: window), let screen = screen(containingAXFrame: currentFrame) else { return }
-        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
-        let targetFrame = targetFrame(for: action, visibleFrame: visibleFrame, currentSize: currentFrame.size)
+        guard let currentFrame = frame(of: window), let targetFrame = targetFrame(for: action, currentFrame: currentFrame) else { return }
 
         saveFrameIfNeeded(currentFrame, for: window)
         guard setFrame(targetFrame, for: window) else { return }
         performHapticFeedback()
+    }
+
+    private func previewFrame(for action: WindowSnapAction, on window: AXUIElement) -> CGRect? {
+        guard let currentFrame = frame(of: window), let targetFrame = targetFrame(for: action, currentFrame: currentFrame) else {
+            return nil
+        }
+        return cocoaRect(fromAXRect: targetFrame)
+    }
+
+    private func targetFrame(for action: WindowSnapAction, currentFrame: CGRect) -> CGRect? {
+        guard let screen = screen(containingAXFrame: currentFrame) else { return nil }
+        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
+        if action == .minimize {
+            return minimizePreviewFrame(in: visibleFrame)
+        }
+        return targetFrame(for: action, visibleFrame: visibleFrame, currentSize: currentFrame.size)
     }
 
     private func targetFrame(for action: WindowSnapAction, visibleFrame: CGRect, currentSize: CGSize) -> CGRect {
@@ -205,6 +224,15 @@ final class WindowSnappingService {
         case .nextDisplay, .previousDisplay, .restore, .minimize:
             return visibleFrame
         }
+    }
+
+    private func minimizePreviewFrame(in visibleFrame: CGRect) -> CGRect {
+        CGRect(
+            x: visibleFrame.midX - 80,
+            y: visibleFrame.maxY - 56,
+            width: 160,
+            height: 36
+        )
     }
 
     private func centeredFrame(size: CGSize, in visibleFrame: CGRect) -> CGRect {

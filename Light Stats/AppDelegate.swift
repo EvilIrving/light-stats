@@ -39,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panelAutoClosedAt: Date?
     // 面板打开时监听面板外的全局点击（含别的菜单栏图标），点外部即关闭
     private var globalClickMonitor: Any?
+    private var windowControlPermissionAlertShown = false
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -47,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let windowSnappingService: WindowSnappingService
     private let magnetHotKeyService: MagnetHotKeyControlling
     private let titlebarGestureService: TitlebarGestureControlling
-    private let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
+    private static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
         (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf),
         (5, .topLeft), (6, .topRight), (7, .bottomLeft), (8, .bottomRight),
         (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
@@ -93,13 +94,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.$magnetHotKeysEnabled
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.syncWindowControlServices() }
+            .sink { [weak self] _ in
+                self?.windowControlPermissionAlertShown = false
+                self?.syncWindowControlServices()
+            }
             .store(in: &cancellables)
 
         settings.$titlebarGesturesEnabled
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.syncWindowControlServices() }
+            .sink { [weak self] _ in
+                self?.windowControlPermissionAlertShown = false
+                self?.syncWindowControlServices()
+            }
             .store(in: &cancellables)
 
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
@@ -254,11 +261,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func tag(for action: WindowSnapAction) -> Int {
-        windowMenuActions.first { $0.action == action }?.tag ?? 0
+        Self.windowMenuActions.first { $0.action == action }?.tag ?? 0
     }
 
     private func action(for tag: Int) -> WindowSnapAction? {
-        windowMenuActions.first { $0.tag == tag }?.action
+        Self.windowMenuActions.first { $0.tag == tag }?.action
     }
 
     // MARK: - Panel Setup
@@ -579,6 +586,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func presentWindowControlPermissionAlert() {
+        guard !windowControlPermissionAlertShown else { return }
+        windowControlPermissionAlertShown = true
         presentAccessibilityAlert(
             title: "settings.windowControl.permissionTitle".localized,
             message: "settings.windowControl.permissionMessage".localized

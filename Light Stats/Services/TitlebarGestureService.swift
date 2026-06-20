@@ -7,6 +7,7 @@
 //  Accessibility queries inside the tap callback.
 //
 
+import AppKit
 import ApplicationServices
 import CoreFoundation
 import CoreGraphics
@@ -20,15 +21,26 @@ protocol TitlebarGestureControlling: AnyObject {
 }
 
 final class TitlebarGestureService: TitlebarGestureControlling {
+    private enum GestureEvent {
+        case threshold(WindowSnapAction, CGPoint)
+        case ready(WindowSnapAction, CGPoint)
+        case commit(WindowSnapAction, CGPoint)
+        case cancel
+    }
+
     private struct GestureState {
         var deltaX: Double = 0
         var deltaY: Double = 0
+        var thresholdAction: WindowSnapAction?
+        var readyAction: WindowSnapAction?
+        var lastPoint: CGPoint?
         var lastEventAt: TimeInterval = 0
         var lastTriggeredAt: TimeInterval = 0
     }
 
     private let logger = Logger(subsystem: "com.lightstats", category: "TitlebarGestures")
     private let snappingService: WindowSnappingService
+    private let previewService = WindowSnapPreviewService()
     private let stateLock = NSLock()
     private var running = false
     private var tapRunLoop: CFRunLoop?
@@ -38,9 +50,11 @@ final class TitlebarGestureService: TitlebarGestureControlling {
     private var runLoopSource: CFRunLoopSource?
     private var gestureState = GestureState()
 
-    private let threshold: Double = 36
+    private let resistanceThreshold: Double = 20
+    private let hapticThreshold: Double = 40
+    private let completionThreshold: Double = 60
     private let dominanceRatio: Double = 1.45
-    private let resetInterval: TimeInterval = 0.25
+    private let resetInterval: TimeInterval = 0.9
     private let triggerCooldown: TimeInterval = 0.55
 
     var isRunning: Bool {
@@ -155,42 +169,106 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
         guard isContinuous else { return }
 
+        if isReleaseEvent(event) {
+            handleGestureEvent(releaseGesture())
+            return
+        }
+
         let point = event.location
         let deltaY = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
         let deltaX = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
         guard deltaX != 0 || deltaY != 0 else { return }
 
-        if let action = registerGesture(deltaX: deltaX, deltaY: deltaY) {
+        handleGestureEvent(registerGesture(deltaX: deltaX, deltaY: deltaY, point: point))
+    }
+
+    private func handleGestureEvent(_ event: GestureEvent?) {
+        switch event {
+        case .threshold(let action, let point):
+            performElasticThresholdFeedback()
+            showPreview(for: action, at: point)
+        case .ready(let action, let point):
+            showPreview(for: action, at: point)
+        case .commit(let action, let point):
+            hidePreview()
             Task { [weak self] in
                 self?.snappingService.perform(action, at: point)
             }
+        case .cancel:
+            hidePreview()
+        case nil:
+            break
         }
     }
 
-    private func registerGesture(deltaX: Double, deltaY: Double) -> WindowSnapAction? {
+    private func registerGesture(deltaX: Double, deltaY: Double, point: CGPoint) -> GestureEvent? {
         let now = ProcessInfo.processInfo.systemUptime
         stateLock.lock()
         defer { stateLock.unlock() }
 
         if now - gestureState.lastEventAt > resetInterval {
-            gestureState.deltaX = 0
-            gestureState.deltaY = 0
+            let shouldCancel = gestureState.thresholdAction != nil || gestureState.readyAction != nil
+            gestureState = GestureState()
+            if shouldCancel {
+                return .cancel
+            }
         }
         gestureState.lastEventAt = now
         gestureState.deltaX += deltaX
         gestureState.deltaY += deltaY
+        gestureState.lastPoint = point
+
+        guard dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: resistanceThreshold) != nil else {
+            return nil
+        }
+
+        if let action = dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: hapticThreshold),
+           gestureState.thresholdAction != action {
+            gestureState.thresholdAction = action
+            return .threshold(action, point)
+        }
 
         guard now - gestureState.lastTriggeredAt >= triggerCooldown else { return nil }
-        let action = dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY)
-        if action != nil {
-            gestureState.deltaX = 0
-            gestureState.deltaY = 0
-            gestureState.lastTriggeredAt = now
+        guard let action = dominantAction(
+            deltaX: gestureState.deltaX,
+            deltaY: gestureState.deltaY,
+            threshold: completionThreshold
+        ) else {
+            return nil
         }
-        return action
+
+        if gestureState.readyAction != action {
+            gestureState.readyAction = action
+            return .ready(action, point)
+        }
+        return nil
     }
 
-    private func dominantAction(deltaX: Double, deltaY: Double) -> WindowSnapAction? {
+    private func releaseGesture() -> GestureEvent? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
+        guard let point = gestureState.lastPoint else { return nil }
+        if let action = gestureState.readyAction {
+            gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+            return .commit(action, point)
+        }
+        if gestureState.thresholdAction != nil {
+            gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+            return .cancel
+        }
+        gestureState = GestureState()
+        return nil
+    }
+
+    private func isReleaseEvent(_ event: CGEvent) -> Bool {
+        let endedOrCancelledMask: Int64 = 0x1C
+        let scrollPhase = event.getIntegerValueField(.scrollWheelEventScrollPhase)
+        let momentumPhase = event.getIntegerValueField(.scrollWheelEventMomentumPhase)
+        return scrollPhase & endedOrCancelledMask != 0 || momentumPhase & endedOrCancelledMask != 0
+    }
+
+    private func dominantAction(deltaX: Double, deltaY: Double, threshold: Double) -> WindowSnapAction? {
         let absX = abs(deltaX)
         let absY = abs(deltaY)
 
@@ -201,5 +279,28 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             return deltaY > 0 ? .minimize : .maximize
         }
         return nil
+    }
+
+    private func showPreview(for action: WindowSnapAction, at point: CGPoint) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard let frame = snappingService.previewFrame(for: action, at: point) else {
+                previewService.hide()
+                return
+            }
+            previewService.show(frame: frame)
+        }
+    }
+
+    private func hidePreview() {
+        Task { @MainActor [weak self] in
+            self?.previewService.hide()
+        }
+    }
+
+    private func performElasticThresholdFeedback() {
+        Task { @MainActor in
+            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        }
     }
 }
