@@ -10,6 +10,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var updateManager = UpdateManager.shared
     @State private var showMinimumItemAlert = false
     @State private var showExitPrivacyAlert = false
 
@@ -291,13 +292,19 @@ struct SettingsView: View {
                         .labelsHidden()
                 }) {
                     Button {
-                        UpdateManager.shared.checkForUpdates(userInitiated: true)
+                        UpdateManager.shared.check(userInitiated: true)
                     } label: {
-                        Text("update.checkButton".localized)
-                            .font(.system(size: 12, weight: .medium))
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 6) {
+                            if updateManager.isChecking {
+                                ProgressView().controlSize(.small).scaleEffect(0.8)
+                            }
+                            Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .controlSize(.large)
+                    .disabled(updateManager.isChecking)
                 }
             }
             .padding(16)

@@ -150,6 +150,8 @@
 
 // MARK: - Software Update
 "update.checkButton" = "지금 확인";
+"update.window.title" = "소프트웨어 업데이트";
+"update.checking" = "확인 중…";
 "settings.update.section" = "자동 업데이트";
 "settings.update.autoCheck" = "자동으로 확인";
 "settings.update.autoCheckHint" = "실행 시와 24시간마다 확인합니다.";

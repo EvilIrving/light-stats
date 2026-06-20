@@ -3,6 +3,7 @@ import AppKit
 
 struct AboutView: View {
     @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var updateManager = UpdateManager.shared
 
     private let appName: String = {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -56,13 +57,19 @@ struct AboutView: View {
 
             // Check for Updates
             Button {
-                UpdateManager.shared.checkForUpdates(userInitiated: true)
+                UpdateManager.shared.check(userInitiated: true)
             } label: {
-                Text("update.checkButton".localized)
-                    .font(.system(size: 11, weight: .medium))
+                HStack(spacing: 5) {
+                    if updateManager.isChecking {
+                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                    }
+                    Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
+                        .font(.system(size: 11, weight: .medium))
+                }
             }
             .buttonStyle(.borderless)
             .foregroundColor(.accentColor)
+            .disabled(updateManager.isChecking)
 
             Spacer().frame(height: 24)
 

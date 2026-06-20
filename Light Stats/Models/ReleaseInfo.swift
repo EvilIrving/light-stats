@@ -44,7 +44,7 @@ nonisolated struct SemanticVersion: Comparable, Sendable, CustomStringConvertibl
 }
 
 /// 一个可安装的发布版本：版本号、更新说明、DMG 下载地址、Release 页面地址。
-nonisolated struct ReleaseInfo: Sendable {
+nonisolated struct ReleaseInfo: Sendable, Equatable {
     let tagName: String
     let version: SemanticVersion
     let releaseNotes: String
