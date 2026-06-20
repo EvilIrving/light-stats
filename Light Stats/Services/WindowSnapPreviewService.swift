@@ -10,8 +10,10 @@ import AppKit
 @MainActor
 final class WindowSnapPreviewService {
     private var overlayWindow: NSWindow?
+    private var animationToken: UInt64 = 0
 
     func show(frame: CGRect) {
+        animationToken += 1
         let window = overlayWindow ?? makeOverlayWindow()
         overlayWindow = window
         window.setFrame(frame, display: true)
@@ -29,12 +31,23 @@ final class WindowSnapPreviewService {
 
     func hide() {
         guard let window = overlayWindow else { return }
+        animationToken += 1
+        let token = animationToken
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.1
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             window.animator().alphaValue = 0
-        } completionHandler: {
-            window.orderOut(nil)
+        } completionHandler: { [weak self, weak window] in
+            Task { @MainActor [weak self, weak window] in
+                guard self?.animationToken == token else { return }
+                window?.orderOut(nil)
+            }
+        }
+        Task { @MainActor [weak self, weak window] in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard self?.animationToken == token else { return }
+            window?.alphaValue = 0
+            window?.orderOut(nil)
         }
     }
 

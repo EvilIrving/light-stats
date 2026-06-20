@@ -49,12 +49,15 @@ final class TitlebarGestureService: TitlebarGestureControlling {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var gestureState = GestureState()
+    private var previewTimeoutTask: Task<Void, Never>?
+    private var previewToken: UInt64 = 0
 
     private let resistanceThreshold: Double = 20
     private let hapticThreshold: Double = 40
     private let completionThreshold: Double = 60
     private let dominanceRatio: Double = 1.45
     private let resetInterval: TimeInterval = 0.9
+    private let previewIdleTimeout: TimeInterval = 0.45
     private let triggerCooldown: TimeInterval = 0.55
 
     var isRunning: Bool {
@@ -85,6 +88,10 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         running = false
         let loop = tapRunLoop
         stateLock.unlock()
+
+        cancelPreviewTimeout()
+        invalidatePreviewToken()
+        hidePreview()
 
         if let loop {
             CFRunLoopStop(loop)
@@ -160,6 +167,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
 
     private func handle(type: CGEventType, event: CGEvent) {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            resetGestureAndHidePreview()
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
             }
@@ -179,22 +187,29 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         let deltaX = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
         guard deltaX != 0 || deltaY != 0 else { return }
 
-        handleGestureEvent(registerGesture(deltaX: deltaX, deltaY: deltaY, point: point))
+        let gestureEvent = registerGesture(deltaX: deltaX, deltaY: deltaY, point: point)
+        if gestureEvent == nil && hasActivePreviewGesture() {
+            schedulePreviewTimeout()
+        }
+        handleGestureEvent(gestureEvent)
     }
 
     private func handleGestureEvent(_ event: GestureEvent?) {
         switch event {
         case .threshold(let action, let point):
-            performElasticThresholdFeedback()
-            showPreview(for: action, at: point)
+            schedulePreviewTimeout()
+            showPreview(for: action, at: point, feedback: true)
         case .ready(let action, let point):
+            schedulePreviewTimeout()
             showPreview(for: action, at: point)
         case .commit(let action, let point):
+            cancelPreviewTimeout()
             hidePreview()
             Task { [weak self] in
                 self?.snappingService.perform(action, at: point)
             }
         case .cancel:
+            cancelPreviewTimeout()
             hidePreview()
         case nil:
             break
@@ -210,6 +225,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             let shouldCancel = gestureState.thresholdAction != nil || gestureState.readyAction != nil
             gestureState = GestureState()
             if shouldCancel {
+                previewToken += 1
                 return .cancel
             }
         }
@@ -244,6 +260,12 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return nil
     }
 
+    private func hasActivePreviewGesture() -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return gestureState.thresholdAction != nil || gestureState.readyAction != nil
+    }
+
     private func releaseGesture() -> GestureEvent? {
         stateLock.lock()
         defer { stateLock.unlock() }
@@ -251,10 +273,12 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         guard let point = gestureState.lastPoint else { return nil }
         if let action = gestureState.readyAction {
             gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+            previewToken += 1
             return .commit(action, point)
         }
         if gestureState.thresholdAction != nil {
             gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+            previewToken += 1
             return .cancel
         }
         gestureState = GestureState()
@@ -281,14 +305,88 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return nil
     }
 
-    private func showPreview(for action: WindowSnapAction, at point: CGPoint) {
+    private func showPreview(for action: WindowSnapAction, at point: CGPoint, feedback: Bool = false) {
+        let token = currentPreviewToken()
         Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self, isPreviewTokenCurrent(token) else { return }
             guard let frame = snappingService.previewFrame(for: action, at: point) else {
-                previewService.hide()
+                if isPreviewTokenCurrent(token) {
+                    previewService.hide()
+                }
                 return
             }
+            guard isPreviewTokenCurrent(token) else { return }
+            if feedback {
+                performElasticThresholdFeedback()
+            }
             previewService.show(frame: frame)
+        }
+    }
+
+    private func currentPreviewToken() -> UInt64 {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return previewToken
+    }
+
+    private func isPreviewTokenCurrent(_ token: UInt64) -> Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return previewToken == token
+    }
+
+    private func invalidatePreviewToken() {
+        stateLock.lock()
+        previewToken += 1
+        gestureState = GestureState()
+        stateLock.unlock()
+    }
+
+    private func resetGestureAndHidePreview() {
+        cancelPreviewTimeout()
+        invalidatePreviewToken()
+        hidePreview()
+    }
+
+    private func schedulePreviewTimeout() {
+        let context = previewContext()
+        let timeout = UInt64(previewIdleTimeout * 1_000_000_000)
+        stateLock.lock()
+        previewTimeoutTask?.cancel()
+        previewTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: timeout)
+            guard !Task.isCancelled else { return }
+            self?.cancelIdlePreview(lastEventAt: context.lastEventAt, token: context.token)
+        }
+        stateLock.unlock()
+    }
+
+    private func previewContext() -> (lastEventAt: TimeInterval, token: UInt64) {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return (gestureState.lastEventAt, previewToken)
+    }
+
+    private func cancelPreviewTimeout() {
+        stateLock.lock()
+        previewTimeoutTask?.cancel()
+        previewTimeoutTask = nil
+        stateLock.unlock()
+    }
+
+    private func cancelIdlePreview(lastEventAt: TimeInterval, token: UInt64) {
+        stateLock.lock()
+        let shouldCancel = previewToken == token
+            && gestureState.lastEventAt == lastEventAt
+            && (gestureState.thresholdAction != nil || gestureState.readyAction != nil)
+        if shouldCancel {
+            previewToken += 1
+            gestureState = GestureState()
+            previewTimeoutTask = nil
+        }
+        stateLock.unlock()
+        if shouldCancel {
+            hidePreview()
         }
     }
 

@@ -27,7 +27,7 @@ final class KeyablePanel: NSPanel {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private var statusItem: NSStatusItem?
     private var windowControlsStatusItem: NSStatusItem?
@@ -179,35 +179,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         addWindowMenuItem("window.action.top".localized, action: .topHalf, key: "↑", to: menu)
         addWindowMenuItem("window.action.bottom".localized, action: .bottomHalf, key: "↓", to: menu)
         menu.addItem(.separator())
-        addWindowMenuItem("window.action.topLeft".localized, action: .topLeft, key: "u", to: menu)
-        addWindowMenuItem("window.action.topRight".localized, action: .topRight, key: "i", to: menu)
-        addWindowMenuItem("window.action.bottomLeft".localized, action: .bottomLeft, key: "j", to: menu)
-        addWindowMenuItem("window.action.bottomRight".localized, action: .bottomRight, key: "k", to: menu)
+        addWindowMenuItem("window.action.topLeft".localized, action: .topLeft, to: menu)
+        addWindowMenuItem("window.action.topRight".localized, action: .topRight, to: menu)
+        addWindowMenuItem("window.action.bottomLeft".localized, action: .bottomLeft, to: menu)
+        addWindowMenuItem("window.action.bottomRight".localized, action: .bottomRight, to: menu)
         menu.addItem(.separator())
-        addWindowMenuItem("window.action.leftThird".localized, action: .leftThird, key: "d", to: menu)
-        addWindowMenuItem("window.action.leftTwoThirds".localized, action: .leftTwoThirds, key: "e", to: menu)
-        addWindowMenuItem("window.action.centerThird".localized, action: .centerThird, key: "f", to: menu)
-        addWindowMenuItem("window.action.rightTwoThirds".localized, action: .rightTwoThirds, key: "t", to: menu)
-        addWindowMenuItem("window.action.rightThird".localized, action: .rightThird, key: "g", to: menu)
+        addWindowMenuItem("window.action.leftThird".localized, action: .leftThird, to: menu)
+        addWindowMenuItem("window.action.leftTwoThirds".localized, action: .leftTwoThirds, to: menu)
+        addWindowMenuItem("window.action.centerThird".localized, action: .centerThird, to: menu)
+        addWindowMenuItem("window.action.rightTwoThirds".localized, action: .rightTwoThirds, to: menu)
+        addWindowMenuItem("window.action.rightThird".localized, action: .rightThird, to: menu)
         menu.addItem(.separator())
         addWindowMenuItem(
             "window.action.previousDisplay".localized,
             action: .previousDisplay,
-            key: "←",
-            modifiers: [.control, .option, .command],
             to: menu
         )
         addWindowMenuItem(
             "window.action.nextDisplay".localized,
             action: .nextDisplay,
-            key: "→",
-            modifiers: [.control, .option, .command],
             to: menu
         )
         menu.addItem(.separator())
-        addWindowMenuItem("window.action.maximize".localized, action: .maximize, key: "\r", to: menu)
-        addWindowMenuItem("window.action.center".localized, action: .center, key: "c", to: menu)
-        addWindowMenuItem("window.action.restore".localized, action: .restore, key: "\u{8}", to: menu)
+        addWindowMenuItem("window.action.maximize".localized, action: .maximize, to: menu)
+        addWindowMenuItem("window.action.center".localized, action: .center, to: menu)
+        addWindowMenuItem("window.action.restore".localized, action: .restore, to: menu)
         menu.addItem(.separator())
         addWindowToggleItem("settings.windowHotKeys".localized, selector: #selector(toggleMagnetHotKeys), to: menu)
         addWindowToggleItem("settings.titlebarGestures".localized, selector: #selector(toggleTitlebarGestures), to: menu)
@@ -218,14 +214,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func addWindowMenuItem(
         _ title: String,
         action: WindowSnapAction,
-        key: String,
+        key: String = "",
         modifiers: NSEvent.ModifierFlags = [.control, .option],
         to menu: NSMenu
     ) {
         let item = NSMenuItem(title: title, action: #selector(performWindowMenuAction(_:)), keyEquivalent: key)
         item.target = self
-        item.keyEquivalentModifierMask = modifiers
+        item.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
         item.tag = tag(for: action)
+        item.image = WindowSnapIconProvider.icon(for: action)
         menu.addItem(item)
     }
 
@@ -250,6 +247,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func performWindowMenuAction(_ sender: NSMenuItem) {
         guard let action = action(for: sender.tag) else { return }
         windowSnappingService.perform(action)
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        guard menuItem.action == #selector(performWindowMenuAction(_:)) else { return true }
+        guard let action = action(for: menuItem.tag) else { return false }
+        return windowSnappingService.canPerform(action)
     }
 
     @objc private func toggleMagnetHotKeys() {

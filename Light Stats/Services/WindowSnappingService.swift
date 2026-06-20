@@ -16,7 +16,7 @@ struct WindowSnapHotKey: Sendable {
     var action: WindowSnapAction
 }
 
-enum WindowSnapAction: Sendable, Equatable {
+enum WindowSnapAction: Sendable, Hashable {
     case leftHalf
     case rightHalf
     case topHalf
@@ -66,12 +66,19 @@ final class WindowSnappingService {
         perform(action, on: window)
     }
 
+    func canPerform(_ action: WindowSnapAction) -> Bool {
+        guard checkPermission(promptIfNeeded: false), let window = focusedWindow() else { return false }
+        return canPerform(action, on: window)
+    }
+
     func previewFrame(for action: WindowSnapAction, at axPoint: CGPoint) -> CGRect? {
         guard checkPermission(promptIfNeeded: false), let window = titlebarWindow(at: axPoint) else { return nil }
+        guard canPerform(action, on: window) else { return nil }
         return previewFrame(for: action, on: window)
     }
 
     private func perform(_ action: WindowSnapAction, on window: AXUIElement) {
+        guard canPerform(action, on: window) else { return }
         switch action {
         case .restore:
             restore(window)
@@ -161,8 +168,42 @@ final class WindowSnappingService {
         return nil
     }
 
+    private func canPerform(_ action: WindowSnapAction, on window: AXUIElement) -> Bool {
+        switch action {
+        case .restore:
+            return canRestore(window)
+        case .minimize:
+            return isMinimized(window) != true
+        case .nextDisplay, .previousDisplay:
+            return canMoveToAdjacentDisplay(window)
+        default:
+            return canSnap(window, action: action)
+        }
+    }
+
+    private func canSnap(_ window: AXUIElement, action: WindowSnapAction) -> Bool {
+        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else {
+            return false
+        }
+        return !framesApproximatelyEqual(currentFrame, targetFrame)
+    }
+
+    private func canMoveToAdjacentDisplay(_ window: AXUIElement) -> Bool {
+        guard let currentFrame = frame(of: window), screen(containingAXFrame: currentFrame) != nil else { return false }
+        return NSScreen.screens.count > 1
+    }
+
+    private func canRestore(_ window: AXUIElement) -> Bool {
+        guard let identity = identity(for: window) else { return false }
+        return savedFrames[identity] != nil
+    }
+
+    private func isMinimized(_ window: AXUIElement) -> Bool? {
+        copyAttribute(kAXMinimizedAttribute, from: window)
+    }
+
     private func snap(_ window: AXUIElement, action: WindowSnapAction) {
-        guard let currentFrame = frame(of: window), let targetFrame = targetFrame(for: action, currentFrame: currentFrame) else { return }
+        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else { return }
 
         saveFrameIfNeeded(currentFrame, for: window)
         guard setFrame(targetFrame, for: window) else { return }
@@ -170,10 +211,16 @@ final class WindowSnappingService {
     }
 
     private func previewFrame(for action: WindowSnapAction, on window: AXUIElement) -> CGRect? {
-        guard let currentFrame = frame(of: window), let targetFrame = targetFrame(for: action, currentFrame: currentFrame) else {
-            return nil
-        }
+        guard let targetFrame = snapTargetFrame(for: action, window: window) else { return nil }
         return cocoaRect(fromAXRect: targetFrame)
+    }
+
+    private func snapTargetFrame(for action: WindowSnapAction, window: AXUIElement) -> CGRect? {
+        guard let currentFrame = frame(of: window) else { return nil }
+        if action == .center {
+            return centeredFrame(for: window, currentFrame: currentFrame)
+        }
+        return targetFrame(for: action, currentFrame: currentFrame)
     }
 
     private func targetFrame(for action: WindowSnapAction, currentFrame: CGRect) -> CGRect? {
@@ -246,6 +293,13 @@ final class WindowSnappingService {
         )
     }
 
+    private func centeredFrame(for window: AXUIElement, currentFrame: CGRect) -> CGRect? {
+        guard let screen = screen(containingAXFrame: currentFrame) else { return nil }
+        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
+        let size = savedFrame(for: window)?.size ?? currentFrame.size
+        return centeredFrame(size: size, in: visibleFrame)
+    }
+
     private func moveToAdjacentDisplay(_ window: AXUIElement, direction: Int) {
         guard let currentFrame = frame(of: window), let currentScreen = screen(containingAXFrame: currentFrame) else { return }
         let sortedScreens = NSScreen.screens.sorted { $0.frame.minX < $1.frame.minX }
@@ -281,6 +335,11 @@ final class WindowSnappingService {
         guard setFrame(savedFrame, for: window) else { return }
         savedFrames.removeValue(forKey: identity)
         performHapticFeedback()
+    }
+
+    private func savedFrame(for window: AXUIElement) -> CGRect? {
+        guard let identity = identity(for: window) else { return nil }
+        return savedFrames[identity]
     }
 
     private func saveFrameIfNeeded(_ frame: CGRect, for window: AXUIElement) {
@@ -335,6 +394,14 @@ final class WindowSnappingService {
     private func cocoaRect(fromAXRect rect: CGRect) -> CGRect {
         let maxY = desktopMaxY()
         return CGRect(x: rect.minX, y: maxY - rect.maxY, width: rect.width, height: rect.height)
+    }
+
+    private func framesApproximatelyEqual(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
+        let tolerance: CGFloat = 1
+        return abs(lhs.minX - rhs.minX) <= tolerance
+            && abs(lhs.minY - rhs.minY) <= tolerance
+            && abs(lhs.width - rhs.width) <= tolerance
+            && abs(lhs.height - rhs.height) <= tolerance
     }
 
     private func desktopMaxY() -> CGFloat {

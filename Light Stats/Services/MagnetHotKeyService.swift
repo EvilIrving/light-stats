@@ -139,27 +139,11 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
     private static let signature: OSType = 0x4C53574B
 
     private static let baseModifiers = UInt32(controlKey | optionKey)
-    private static let displayModifiers = UInt32(controlKey | optionKey | cmdKey)
 
     static let defaultHotKeys: [WindowSnapHotKey] = [
         WindowSnapHotKey(keyCode: UInt32(kVK_LeftArrow), modifiers: baseModifiers, action: .leftHalf),
         WindowSnapHotKey(keyCode: UInt32(kVK_RightArrow), modifiers: baseModifiers, action: .rightHalf),
         WindowSnapHotKey(keyCode: UInt32(kVK_UpArrow), modifiers: baseModifiers, action: .topHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_DownArrow), modifiers: baseModifiers, action: .bottomHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_U), modifiers: baseModifiers, action: .topLeft),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_I), modifiers: baseModifiers, action: .topRight),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_J), modifiers: baseModifiers, action: .bottomLeft),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_K), modifiers: baseModifiers, action: .bottomRight),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_D), modifiers: baseModifiers, action: .leftThird),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_E), modifiers: baseModifiers, action: .leftTwoThirds),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_F), modifiers: baseModifiers, action: .centerThird),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_T), modifiers: baseModifiers, action: .rightTwoThirds),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_G), modifiers: baseModifiers, action: .rightThird),
-        WindowSnapHotKey(keyCode: UInt32(kVK_RightArrow), modifiers: displayModifiers, action: .nextDisplay),
-        WindowSnapHotKey(keyCode: UInt32(kVK_LeftArrow), modifiers: displayModifiers, action: .previousDisplay),
-        WindowSnapHotKey(keyCode: UInt32(kVK_Return), modifiers: baseModifiers, action: .maximize),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_C), modifiers: baseModifiers, action: .center),
-        WindowSnapHotKey(keyCode: UInt32(kVK_Delete), modifiers: baseModifiers, action: .restore),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ForwardDelete), modifiers: baseModifiers, action: .restore)
+        WindowSnapHotKey(keyCode: UInt32(kVK_DownArrow), modifiers: baseModifiers, action: .bottomHalf)
     ]
 }
