@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk I/O, network, proxy route, battery, temperature, fan, process, AI subscription usage, cleaning mode, auto-update, and overall system health.
+Light Stats is a native macOS menu bar instrument for CPU, GPU, memory pressure, disk, disk I/O, network, proxy route, battery, temperature, fan, processes, AI subscription usage, keyboard cleaning mode, window controls, self-update, and an overall 0-100 health score.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -19,9 +19,9 @@ Light Stats is a compact macOS menu bar monitor for CPU, GPU, memory, disk, disk
 
 ## Overview
 
-Light Stats keeps core system metrics visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for users who want quick status checks without keeping Activity Monitor open, and for developers who want a native SwiftUI/AppKit reference for menu bar monitoring.
+Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for users who want quick status checks without keeping Activity Monitor open, and for developers who want a native SwiftUI/AppKit reference for menu bar monitoring.
 
-The app uses native macOS APIs for routine sampling and keeps network-based diagnostics opt-in.
+The app uses native macOS APIs for routine sampling, has no third-party runtime dependencies, and keeps network-based diagnostics opt-in.
 
 ---
 
@@ -29,44 +29,57 @@ The app uses native macOS APIs for routine sampling and keeps network-based diag
 
 ### Menu Bar
 
-- Compact two-line status items
-- Fixed-width values to avoid layout jumping
-- Optional items for Logo, CPU, GPU, MEM, Disk, Net, Fan, Battery, and Health
-- Network upload and download speed display
-- Optional health score display
+- Compact two-line status item with fixed-width values to avoid layout jumping
+- Optional items for Logo, CPU, GPU, memory, disk, network, fan, battery, and health
+- Upload and download speed display
+- Fan indicator with a rotating visual style
+- Optional 0-100 health score display
 
 ### Overview Panel
 
-- CPU, GPU, memory, and load average
-- Battery status, charge level, cycle count, health, power, and temperature when available
-- Disk usage and aggregate disk I/O speed
+- CPU, GPU, memory pressure, swap activity, and load average
+- P/E core usage charts and top CPU processes
+- Battery status, charge level, cycle count, health, power draw, and temperature when available
+- Disk capacity and aggregate disk I/O speed
 - Network speed, local proxy state, and optional public exit-node information
-- Temperature, fan, and disk status strip
-- Top CPU processes and P/E core usage charts
-- System health score with dimension-level summary
-- Claude Code and Codex subscription usage when AI monitoring is enabled
+- Temperature, fan, thermal state, and disk status strip
+- System health score with dimension-level summary and toggles
+- Claude Code, Codex, and Gemini subscription usage when AI monitoring is enabled
 
 ### Memory Cleanup
 
-- Memory pressure overview
-- Swap warning
+- Memory pressure overview and swap warning
 - App list sorted by memory usage
 - Normal quit and force quit with confirmation
 - Expandable child process details
+
+### Window Controls
+
+- Optional menu bar window-control menu with designer-provided action icons
+- Left, right, top, and bottom half shortcuts for high-frequency window placement
+- Additional menu actions for corners, thirds, display movement, maximize, center, restore, and minimize
+- Titlebar trackpad gestures for quick snapping with preview overlay and haptic feedback
+- Accessibility permission is required for window control, global hotkeys, and titlebar gestures
+
+### Scroll Direction Control
+
+- Optional vertical and horizontal scroll-direction reversal
+- Step multiplier for fine-tuning scroll feel
+- Uses an event tap only when a scroll feature is enabled
 
 ### Cleaning Mode
 
 - 60-second keyboard lock for safe keyboard cleaning
 - Full-screen translucent overlay with countdown timer
-- Mouse-only exit button — keyboard input is fully suppressed
+- Mouse-only exit button, while keyboard input is suppressed
 - Uses CGEventTap with Accessibility permission
 
 ### Auto-Update
 
 - Checks GitHub Releases for new versions
-- Downloads and verifies DMG: codesign signature, notarization, and Team ID
-- Replaces the running app via a detached shell script after exit
-- Minimal progress window during download and install
+- Downloads and verifies DMG with codesign, notarization, and Team ID checks
+- Replaces the running app via a detached script after exit
+- Shows a minimal progress window during download and install
 
 ### Network and Proxy
 
@@ -76,19 +89,23 @@ Public exit-node detection is optional. When enabled, it can query a selected ge
 
 ### AI Subscription Usage
 
-When enabled, Light Stats reads Claude Code, Codex, and Gemini credentials stored locally by their respective CLIs and displays current subscription utilization in the overview panel. AI monitoring is disabled by default and never transmits credentials to any service other than the provider's own usage endpoint.
+When enabled, Light Stats reads credentials stored locally by Claude Code, Codex, and Gemini CLIs, then displays current subscription utilization in the overview panel. AI monitoring is disabled by default and never transmits credentials to any service other than the provider's own usage endpoint.
 
 ### Health Score
 
-The health score summarizes CPU, memory (pressure + swap rate), load average, temperature, GPU, and battery/disk I/O into a 0-100 score. It focuses on real-time pressure signals ("is the Mac sluggish right now") rather than slow-moving capacity numbers. Optional dimensions are reweighted automatically when sensors are absent or toggled off.
+The health score summarizes CPU, memory pressure and swap, load average, temperature, GPU, and power into a 0-100 score. It focuses on real-time responsiveness pressure rather than slow-moving capacity numbers. On laptops, the power dimension uses battery state; on desktops, it uses disk I/O pressure. Missing or disabled dimensions are reweighted automatically.
 
 ---
 
 ## Privacy
 
-Exit-node detection is disabled by default. Local proxy detection does not contact any external service.
+Light Stats has no remote telemetry. Local system metrics, local proxy detection, process lists, scroll behavior, and window control stay on the Mac.
 
-When exit-node detection is enabled, the app sends a request to the selected geo-IP provider to identify the current public IP and network owner. The result is cached for 60 seconds and failures degrade silently.
+Exit-node detection is disabled by default. When enabled, the app sends a request to the selected geo-IP provider to identify the current public IP and network owner. The result is cached for 60 seconds and failures degrade silently.
+
+AI usage monitoring is disabled by default. When enabled, requests go only to the selected provider's own usage endpoint using credentials already stored by that provider's CLI.
+
+Update checks contact GitHub Releases.
 
 ---
 
@@ -99,7 +116,10 @@ When exit-node detection is enabled, the app sends a request to the selected geo
 - Temperature unit: Celsius or Fahrenheit
 - Network speed unit: Auto, KB/s, or MB/s
 - Exit-node detection and provider selection
-- AI monitoring toggle (Claude Code and Codex usage)
+- AI monitoring toggles for Claude Code, Codex, and Gemini
+- Scroll reversal, horizontal reversal, and step multiplier
+- Window hotkeys and titlebar gestures
+- Health score dimension toggles
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
 ---
@@ -110,7 +130,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ### Requirements
 
-- macOS 14+ (macOS 26 Liquid Glass visual style supported)
+- macOS 14+
 - Xcode 16 or newer recommended
 - Swift 5.9+
 - SwiftLint for local linting (`brew install swiftlint`)
@@ -118,22 +138,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 ### Build
 
 ```bash
-# Debug build
+# Debug build and launch the fresh app bundle
+./debug-run.sh
+
+# Manual Debug build
 xcodebuild -project "Light Stats.xcodeproj" \
   -scheme "Light Stats" \
-  -configuration Debug build
+  -configuration Debug \
+  -derivedDataPath build/DerivedData build
 
-# Release DMG (with optional signing/notarization via env vars)
+# Release DMG
 ./build.sh
 ```
 
 ### Quality Checks
 
 ```bash
-# Swift style and safety checks
 swiftlint lint --strict
-
-# Localization key coverage across en / zh-Hans / ja / ko
 ./validate_localization.sh
 ```
 
@@ -141,7 +162,7 @@ GitHub Actions runs SwiftLint, localization validation, release build, artifact 
 
 ### Tests
 
-A starter XCTest suite lives in `LightStatsTests/LightStatsSmokeTests.swift`. Add it once in Xcode as a Unit Testing Bundle target named `LightStatsTests`, then run:
+A starter XCTest suite lives in `LightStatsTests/LightStatsSmokeTests.swift`.
 
 ```bash
 xcodebuild test \
@@ -152,40 +173,39 @@ xcodebuild test \
 
 ### Tech Stack
 
-- SwiftUI for panel and settings
-- AppKit for menu bar integration and custom drawing
+- SwiftUI for panels and settings
+- AppKit for menu bar integration, popovers, overlays, and custom views
 - Combine and Swift Concurrency
-- Mach API, IOKit, CFNetwork, Network, SMC, and getifaddrs
+- Mach API, IOKit, Accessibility, Core Graphics event taps, CFNetwork, Network, SMC, and getifaddrs
+- Zero third-party runtime dependencies
 
 ### Architecture
 
-The app separates metrics into models, services, view models, and views. `SystemMonitor` coordinates sampling and publishes snapshots to the UI, while service types collect data for each metric area.
+The app separates metrics into models, services, view models, and views. `SystemMonitor` coordinates sampling and publishes snapshots to the UI, while services collect data for each metric area.
 
-Cached or asynchronous collectors, such as exit-node and battery smart-data readers, use actors. Lightweight local helpers stay synchronous where appropriate.
+Cached or asynchronous collectors, such as exit-node lookup and AI usage providers, use actors. UI-bound state stays on the main actor. Fast syscall helpers remain synchronous where appropriate.
 
 ### Project Layout
 
-- `Light Stats/Models/`: metric data structures and release info
-- `Light Stats/Services/`: system data collection, scoring, update, and keyboard lock
-- `Light Stats/ViewModels/`: app state, sampling, cleaning mode, and update coordination
+- `Light Stats/Models/`: metric data structures, health score, release info
+- `Light Stats/Services/`: system collectors, scoring, update, scroll, window control, keyboard lock, AI usage
+- `Light Stats/ViewModels/`: app state, sampling, settings, cleaning mode, update coordination
 - `Light Stats/Views/StatusBar/`: menu bar rendering
-- `Light Stats/Views/Popover/`: floating panel UI (overview, cleanup, components)
+- `Light Stats/Views/Popover/`: floating panel UI and reusable components
 - `Light Stats/Views/Settings/`: settings UI
 - `Light Stats/Views/About/`: about window
 - `Light Stats/Views/CleaningMode/`: cleaning mode overlay
 - `Light Stats/Views/Update/`: update progress window
-- `Light Stats/Resources/`: localized strings (en, zh-Hans, ja, ko)
+- `Light Stats/Resources/`: localized strings and window-control icons
 - `LightStatsTests/`: starter XCTest smoke tests
 - `.github/workflows/`: build, deploy, and release automation
-- `.github/ISSUE_TEMPLATE/`: issue forms for bug reports and feature requests
 
 ---
 
 ## Roadmap
 
-- External disk classification and system-volume filtering
-- Full unit-setting coverage across every visible value
 - More detailed network diagnostics
-- Optional menu bar refinements for fan and health indicators
 - Additional validation across Intel, Apple Silicon, laptop, and desktop Macs
 - Per-app network usage tracking
+- More granular cleanup recommendations
+- Continued tuning for window gestures and menu bar density
