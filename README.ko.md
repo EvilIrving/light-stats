@@ -8,11 +8,7 @@ Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 �
 
 ## 데모
 
-<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
-     to get a https://github.com/user-attachments/assets/... URL, then replace the
-     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
-
-> 🎥 **데모 영상 자리표시자** — 영상 URL은 추후 추가 예정입니다.
+https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---
 

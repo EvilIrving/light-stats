@@ -8,11 +8,7 @@ Light Stats は、「いま Mac に負荷がかかっているか」を示すネ
 
 ## デモ
 
-<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
-     to get a https://github.com/user-attachments/assets/... URL, then replace the
-     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
-
-> 🎥 **デモ動画プレースホルダー** — 動画 URL は後ほど追加します。
+https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---
 

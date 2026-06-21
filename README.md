@@ -11,11 +11,7 @@ Light Stats is a native macOS menu bar system monitor that shows whether your Ma
 
 ## Demo
 
-<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
-     to get a https://github.com/user-attachments/assets/... URL, then replace the
-     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
-
-> 🎥 **Demo video placeholder** — video URL coming soon.
+https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---
 

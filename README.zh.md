@@ -8,11 +8,7 @@ Light Stats 是一款原生 macOS 菜单栏系统监控工具，关注的是「�
 
 ## 演示
 
-<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
-     to get a https://github.com/user-attachments/assets/... URL, then replace the
-     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
-
-> 🎥 **演示视频占位** — 视频链接稍后补上。
+https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---
 
