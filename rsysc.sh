@@ -11,7 +11,7 @@ TARGETS=(
   "$SCRIPT_DIR/.claude/skills"
   "$SCRIPT_DIR/.codex/skills"
   "$SCRIPT_DIR/.cursor/skills"
-  "$SCRIPT_DIR/.pi/skills"
+
 )
 
 # 遍历每个目标目录
