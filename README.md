@@ -9,8 +9,6 @@ Light Stats is a native macOS menu bar system monitor that shows whether your Ma
 
 ---
 
-## Demo
-
 https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---

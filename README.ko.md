@@ -6,8 +6,6 @@ Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 �
 
 ---
 
-## 데모
-
 https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---

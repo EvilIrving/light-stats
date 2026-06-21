@@ -6,8 +6,6 @@ Light Stats 是一款原生 macOS 菜单栏系统监控工具，关注的是「�
 
 ---
 
-## 演示
-
 https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ---

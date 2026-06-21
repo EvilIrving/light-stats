@@ -118,27 +118,36 @@
     }
     .btn.primary { background: var(--action); color: oklch(99% 0.01 255); }
     .btn.primary:hover { filter: brightness(1.08); text-decoration: none; }
-    .btn .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
+    .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+    .btn.ghost:hover { background: var(--sunken); text-decoration: none; }
+    .actions .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
 
-    .shot {
-      justify-self: center; max-width: 280px; width: 100%;
-      border-radius: 22px; padding: 0; overflow: hidden;
-      background: var(--surface); border: 1px solid var(--line);
+    /* ── Hero media (demo video) ─────────────── */
+    .hero-media {
+      justify-self: center; width: 100%; max-width: 360px;
+      border-radius: 14px; overflow: hidden;
+      background: var(--sunken); border: 1px solid var(--line);
       box-shadow: 0 1px 1px oklch(22% 0.012 260 / 0.04), 0 18px 40px -18px oklch(22% 0.05 260 / 0.28);
     }
-    .shot img { display: block; width: 100%; height: auto; }
-
-    /* ── Demo video ──────────────────────────── */
-    .demo {
-      margin-top: clamp(3rem, 7vw, 5rem);
-      border-radius: 16px; overflow: hidden;
-      background: var(--surface); border: 1px solid var(--line);
-      box-shadow: 0 1px 1px oklch(22% 0.012 260 / 0.04), 0 18px 40px -18px oklch(22% 0.05 260 / 0.28);
+    .hero-media video {
+      display: block; width: 100%; aspect-ratio: 1512 / 982; height: auto;
+      background: var(--sunken);
     }
-    .demo video { display: block; width: 100%; height: auto; background: var(--sunken); }
-    .demo figcaption {
-      font-family: var(--mono); font-size: 0.72rem; color: var(--faint);
-      letter-spacing: 0.02em; padding: 0.6rem 0.95rem; border-top: 1px solid var(--line);
+
+    /* ── Screenshot pair ─────────────────────── */
+    .shots { margin-top: clamp(3.5rem, 8vw, 6rem); }
+    .shots-head { display: flex; align-items: baseline; gap: 0.75rem; border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; margin-bottom: 1.5rem; }
+    .shots-head h2 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+    .shots-head .count { margin-left: auto; }
+    .shots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.75rem, 2vw, 1.25rem); max-width: 480px; }
+    .shots figure {
+      border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--line);
+      box-shadow: 0 1px 1px oklch(22% 0.012 260 / 0.04), 0 14px 32px -18px oklch(22% 0.05 260 / 0.25);
+    }
+    .shots img { display: block; width: 100%; height: auto; }
+    .shots figcaption {
+      font-family: var(--mono); font-size: 0.7rem; color: var(--faint);
+      letter-spacing: 0.02em; padding: 0.5rem 0.7rem; border-top: 1px solid var(--line);
     }
 
     /* ── Readout grid ────────────────────────── */
@@ -162,8 +171,6 @@
     .feature h3 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; margin-bottom: 0.55rem; }
     .feature p { color: var(--muted); max-width: 60ch; }
     .feature p + p { margin-top: 0.7rem; }
-    .feature .shot-inline { margin-top: 1.4rem; max-width: 260px; border-radius: 20px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 14px 32px -18px oklch(22% 0.05 260 / 0.25); }
-    .feature .shot-inline img { display: block; width: 100%; height: auto; }
     .feature .tag { display: inline-block; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--live-strong); background: oklch(70% 0.16 150 / 0.1); padding: 0.18rem 0.5rem; border-radius: 5px; margin-bottom: 0.7rem; }
 
     /* ── Prose (privacy / support) ───────────── */
@@ -273,25 +280,41 @@
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
               <p class="lede reveal d2">Eleven live signals from the menu bar, folded into one health score. No windows to manage, no setup, no data leaving your machine.</p>
               <div class="actions reveal d3">
-                <a class="btn primary" href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">
+                <a class="btn primary" href="https://github.com/EvilIrving/light-stats/releases/latest" target="_blank" rel="noopener">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+                  Download
+                </a>
+                <a class="btn ghost" href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
                   View on GitHub
                 </a>
-                <span class="meta">MIT licensed · no dependencies</span>
+                <span class="meta">MIT · macOS 14+ · no dependencies</span>
               </div>
             </div>
-            <div class="shot reveal d2">
-              <img src="screenshots/popover-overview.png" alt="The Light Stats panel: health score 100, CPU 15%, GPU 38%, memory 14.4 of 32 GB, load, temperature, fan, disk I/O, network throughput, proxy and exit node, Claude Code and Codex usage, top processes, and per-core CPU bars.">
+            <div class="hero-media reveal d2">
+              <video src="light-stats-readme.mp4"
+                     controls muted loop playsinline preload="metadata"
+                     aria-label="Light Stats demo: menu bar item, detail panel, memory cleanup, and settings"></video>
             </div>
           </div>
 
-          <!-- Demo video -->
-          <figure class="demo reveal d2">
-            <video src="light-stats-readme.mp4" poster="screenshots/popover-overview.png"
-                   controls muted loop playsinline preload="metadata"
-                   aria-label="Light Stats demo: menu bar item, detail panel, memory cleanup, and settings"></video>
-            <figcaption>Demo — menu bar readout, detail panel, memory cleanup, and settings.</figcaption>
-          </figure>
+          <!-- Screenshot pair -->
+          <div class="shots">
+            <div class="shots-head">
+              <h2>The panel</h2>
+              <span class="eyebrow count">Overview · Memory</span>
+            </div>
+            <div class="shots-grid">
+              <figure>
+                <img src="screenshots/popover-overview.png" alt="The Light Stats overview panel: health score 100, CPU 15%, GPU 38%, memory 14.4 of 32 GB, load, temperature, fan, disk I/O, network throughput, proxy and exit node, Claude Code and Codex usage, top processes, and per-core CPU bars.">
+                <figcaption>Overview</figcaption>
+              </figure>
+              <figure>
+                <img src="screenshots/popover-cleanup.png" alt="The Memory tab: 14.4 GB of 32 GB used, with running apps listed by memory footprint, from Google Chrome at 4.02 GB down to background processes, each with a force-quit button.">
+                <figcaption>Memory</figcaption>
+              </figure>
+            </div>
+          </div>
 
           <!-- Readout spec grid -->
           <div class="readout">
@@ -383,9 +406,6 @@
               <div>
                 <h3>See what's eating RAM, quit it in one click</h3>
                 <p>The Memory tab lists running apps sorted by footprint, with grouped processes and a force-quit button on each row. A confirmation guards against losing unsaved work.</p>
-                <div class="shot-inline">
-                  <img src="screenshots/popover-cleanup.png" alt="The Memory tab: 14.4 GB of 32 GB used, with running apps listed by memory footprint, from Google Chrome at 4.02 GB down to background processes, each with a force-quit button.">
-                </div>
               </div>
             </div>
 
