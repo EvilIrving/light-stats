@@ -1,8 +1,18 @@
 # Light Stats
 
-Light Stats는 CPU, GPU, 메모리 압박, 디스크, 디스크 I/O, 네트워크, 프록시 경로, 배터리, 온도, 팬, 프로세스, AI 구독 사용량, 키보드 청소 모드, 창 제어, 자동 업데이트, 0-100 시스템 건강도를 보여주는 네이티브 macOS 메뉴 막대 계측 앱입니다.
+Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 네이티브 macOS 메뉴 막대 시스템 모니터입니다. 사용량이 얼마나 찼는지가 아니라 응답성 압박에 초점을 둡니다. 0-100 건강도와 CPU, GPU, 메모리 압박 등 실시간 신호가 메뉴 막대에 상주하며, 팝오버를 열면 전체 그림(디스크 및 디스크 I/O, 네트워크, 프록시 및 출구 노드 상태, 배터리, 온도, 팬, 상위 프로세스, AI CLI 사용량)을 확인할 수 있습니다.
 
 [English](README.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **한국어**
+
+---
+
+## 데모
+
+<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
+     to get a https://github.com/user-attachments/assets/... URL, then replace the
+     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
+
+> 🎥 **데모 영상 자리표시자** — 영상 URL은 추후 추가 예정입니다.
 
 ---
 

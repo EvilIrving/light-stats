@@ -3,9 +3,19 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a native macOS menu bar instrument for CPU, GPU, memory pressure, disk, disk I/O, network, proxy route, battery, temperature, fan, processes, AI subscription usage, keyboard cleaning mode, window controls, self-update, and an overall 0-100 health score.
+Light Stats is a native macOS menu bar system monitor that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; a popover opens the full picture: disk and disk I/O, network, proxy and exit-node state, battery, temperature, fan, top processes, and AI CLI usage.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+
+---
+
+## Demo
+
+<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
+     to get a https://github.com/user-attachments/assets/... URL, then replace the
+     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
+
+> 🎥 **Demo video placeholder** — video URL coming soon.
 
 ---
 

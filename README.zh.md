@@ -1,8 +1,18 @@
 # Light Stats
 
-Light Stats 是一款原生 macOS 菜单栏系统监控工具，可显示 CPU、GPU、内存压力、磁盘、磁盘 I/O、网络、代理路径、电池、温度、风扇、进程、AI 订阅用量、键盘清洁模式、窗口控制、自更新和 0-100 系统健康分。
+Light Stats 是一款原生 macOS 菜单栏系统监控工具，关注的是「你的 Mac 此刻是否吃紧」，而不只是占用了多少。0-100 健康分和 CPU、GPU、内存压力等实时信号常驻菜单栏；点开弹窗即可看到完整画面：磁盘与磁盘 I/O、网络、代理与出口节点状态、电池、温度、风扇、占用最高的进程，以及 AI CLI 用量。
 
 [English](README.md) · **简体中文** · [日本語](README.ja.md) · [한국어](README.ko.md)
+
+---
+
+## 演示
+
+<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
+     to get a https://github.com/user-attachments/assets/... URL, then replace the
+     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
+
+> 🎥 **演示视频占位** — 视频链接稍后补上。
 
 ---
 

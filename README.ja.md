@@ -1,8 +1,18 @@
 # Light Stats
 
-Light Stats は、CPU・GPU・メモリ圧迫・ディスク・ディスク I/O・ネットワーク・プロキシ経路・バッテリー・温度・ファン・プロセス・AI サブスクリプション使用量・キーボード清掃モード・ウィンドウ操作・自動更新・0〜100 のシステム健康度を表示する、ネイティブ macOS メニューバー計測アプリです。
+Light Stats は、「いま Mac に負荷がかかっているか」を示すネイティブ macOS メニューバー型システムモニターです。使用量の多寡ではなく応答性の圧迫に注目します。0〜100 の健康度と CPU・GPU・メモリ圧迫などのリアルタイム信号がメニューバーに常駐し、ポップオーバーを開けば全体像（ディスクとディスク I/O、ネットワーク、プロキシと出口ノードの状態、バッテリー、温度、ファン、上位プロセス、AI CLI 使用量）を確認できます。
 
 [English](README.md) · [简体中文](README.zh.md) · **日本語** · [한국어](README.ko.md)
+
+---
+
+## デモ
+
+<!-- DEMO VIDEO: upload docs/light-stats-readme.mp4 to a GitHub issue/release/comment box
+     to get a https://github.com/user-attachments/assets/... URL, then replace the
+     placeholder line below with that bare URL (GitHub renders a bare video URL as a player). -->
+
+> 🎥 **デモ動画プレースホルダー** — 動画 URL は後ほど追加します。
 
 ---
 
