@@ -112,14 +112,13 @@
     .hero h1 em { font-style: normal; color: var(--live-strong); }
     .hero p.lede { color: var(--muted); max-width: 34ch; font-size: 1.0625rem; }
     .hero .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1.75rem; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500;
-      padding: 0.6rem 1.1rem; border-radius: 9px; transition: filter 0.15s ease;
+    .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunken); border-radius: 9px; border: 1px solid var(--line); }
+    .seg a {
+      display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.8125rem; font-weight: 500;
+      padding: 0.4rem 0.9rem; border-radius: 7px; color: var(--muted);
+      transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
     }
-    .btn.primary { background: var(--action); color: oklch(99% 0.01 255); }
-    .btn.primary:hover { filter: brightness(1.08); text-decoration: none; }
-    .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
-    .btn.ghost:hover { background: var(--sunken); text-decoration: none; }
+    .seg a:hover { color: var(--ink); background: var(--surface); box-shadow: 0 1px 2px oklch(22% 0.012 260 / 0.08); text-decoration: none; }
     .actions .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
 
     /* ── Hero media (demo video) ─────────────── */
@@ -280,14 +279,16 @@
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
               <p class="lede reveal d2">Eleven live signals from the menu bar, folded into one health score. No windows to manage, no setup, no data leaving your machine.</p>
               <div class="actions reveal d3">
-                <a class="btn primary" href="https://github.com/EvilIrving/light-stats/releases/latest" target="_blank" rel="noopener">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
-                  Download
-                </a>
-                <a class="btn ghost" href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
-                  View on GitHub
-                </a>
+                <div class="seg">
+                  <a href="https://github.com/EvilIrving/light-stats/releases/latest" target="_blank" rel="noopener">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+                    Download
+                  </a>
+                  <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0z"/></svg>
+                    View on GitHub
+                  </a>
+                </div>
                 <span class="meta">MIT · macOS 14+ · no dependencies</span>
               </div>
             </div>
