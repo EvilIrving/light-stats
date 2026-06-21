@@ -190,10 +190,10 @@
 "settings.scrollReverse.permissionTitle" = "Accessibility Access Needed";
 "settings.scrollReverse.permissionMessage" = "Scroll direction reversal needs Accessibility permission to intercept scroll events. Enable it in System Settings to use this feature.";
 "settings.windowControls" = "Window Controls";
-"settings.windowHotKeys" = "Magnet Shortcuts";
-"settings.titlebarGestures" = "Titlebar Trackpad Gestures";
+"settings.windowHotKeys" = "Window Snap Shortcuts";
+"settings.titlebarGestures" = "Swipe Titlebar to Snap";
 "settings.windowControl.permissionTitle" = "Accessibility Access Needed";
-"settings.windowControl.permissionMessage" = "Window controls need Accessibility permission to move and resize other app windows. Enable it in System Settings to use shortcuts and titlebar gestures.";
+"settings.windowControl.permissionMessage" = "Window controls need Accessibility permission to move and resize other app windows. Enable it in System Settings to use snap shortcuts and titlebar swipe snapping.";
 "window.action.left" = "Left";
 "window.action.right" = "Right";
 "window.action.top" = "Top";

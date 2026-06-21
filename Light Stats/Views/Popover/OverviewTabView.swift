@@ -557,22 +557,26 @@ private struct HealthCard: View {
         }
     }
 
-    private static let dimensionLabels: [(HealthScore.Dimension, String)] = [
-        (.cpu, "health.dimension.cpu".localized),
-        (.memory, "health.dimension.memory".localized),
-        (.load, "health.dimension.load".localized),
-        (.temperature, "health.dimension.temperature".localized),
-        (.gpu, "health.dimension.gpu".localized),
-        (.battery, "health.dimension.battery".localized),
-        (.diskIO, "health.dimension.diskIO".localized)
-    ]
+    // 计算属性而非 static let：static let 只在首次访问时求值并永久缓存，
+    // 切换语言后标签会停留在首次渲染时的语言。每次渲染重新读取 `.localized`。
+    private var dimensionLabels: [(HealthScore.Dimension, String)] {
+        [
+            (.cpu, "health.dimension.cpu".localized),
+            (.memory, "health.dimension.memory".localized),
+            (.load, "health.dimension.load".localized),
+            (.temperature, "health.dimension.temperature".localized),
+            (.gpu, "health.dimension.gpu".localized),
+            (.battery, "health.dimension.battery".localized),
+            (.diskIO, "health.dimension.diskIO".localized)
+        ]
+    }
 
     /// 各维度等级一览。颜色模式用圆点（`circle.fill` 内嵌进 Text，保留换行排版），
     /// 文字模式用「低/中/高」。两套并存，由设置项 `useColorIndicator` 决定。
     private var summaryText: Text {
         var result = Text(verbatim: "")
         var isFirst = true
-        for (dimension, label) in Self.dimensionLabels {
+        for (dimension, label) in dimensionLabels {
             guard let score = health.breakdown[dimension.rawValue] else { continue }
             if !isFirst {
                 // swiftlint:disable:next shorthand_operator

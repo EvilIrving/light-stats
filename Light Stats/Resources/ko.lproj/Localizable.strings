@@ -192,8 +192,8 @@
 "settings.scrollReverse.permissionTitle" = "손쉬운 사용 권한 필요";
 "settings.scrollReverse.permissionMessage" = "스크롤 방향 반전 기능을 사용하려면 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용해 주세요.";
 "settings.windowControls" = "윈도우 제어";
-"settings.windowHotKeys" = "Magnet 단축키";
-"settings.titlebarGestures" = "제목 막대 트랙패드 제스처";
+"settings.windowHotKeys" = "윈도우 분할 단축키";
+"settings.titlebarGestures" = "제목 막대 스와이프 분할";
 "settings.windowControl.permissionTitle" = "손쉬운 사용 권한 필요";
 "settings.windowControl.permissionMessage" = "윈도우 제어 기능은 다른 앱의 윈도우를 이동하고 크기를 조절하기 위해 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용해 주세요.";
 "window.action.left" = "왼쪽";

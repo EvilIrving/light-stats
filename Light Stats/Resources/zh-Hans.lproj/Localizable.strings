@@ -192,10 +192,10 @@
 "settings.scrollReverse.permissionTitle" = "需要辅助功能权限";
 "settings.scrollReverse.permissionMessage" = "滚动方向反转需要辅助功能权限来拦截滚动事件。请前往系统设置开启后使用。";
 "settings.windowControls" = "窗口控制";
-"settings.windowHotKeys" = "Magnet 快捷键";
-"settings.titlebarGestures" = "标题栏触控手势";
+"settings.windowHotKeys" = "窗口分屏快捷键";
+"settings.titlebarGestures" = "标题栏滑动分屏";
 "settings.windowControl.permissionTitle" = "需要辅助功能权限";
-"settings.windowControl.permissionMessage" = "窗口控制需要辅助功能权限来移动和调整其他 App 的窗口。请前往系统设置开启后使用快捷键和标题栏手势。";
+"settings.windowControl.permissionMessage" = "窗口控制需要辅助功能权限来移动和调整其他 App 的窗口。请前往系统设置开启后使用分屏快捷键和标题栏滑动分屏。";
 "window.action.left" = "左";
 "window.action.right" = "右";
 "window.action.top" = "上";

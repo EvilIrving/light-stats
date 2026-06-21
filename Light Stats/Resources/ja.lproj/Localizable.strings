@@ -192,8 +192,8 @@
 "settings.scrollReverse.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.scrollReverse.permissionMessage" = "スクロール方向の反転にはアクセシビリティ権限が必要です。システム設定で許可してください。";
 "settings.windowControls" = "ウィンドウ操作";
-"settings.windowHotKeys" = "Magnet ショートカット";
-"settings.titlebarGestures" = "タイトルバーのトラックパッドジェスチャ";
+"settings.windowHotKeys" = "ウィンドウ分割ショートカット";
+"settings.titlebarGestures" = "タイトルバーのスワイプ分割";
 "settings.windowControl.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.windowControl.permissionMessage" = "ウィンドウ操作には、他のアプリのウィンドウを移動・サイズ変更するためのアクセシビリティ権限が必要です。システム設定で許可してください。";
 "window.action.left" = "左";
