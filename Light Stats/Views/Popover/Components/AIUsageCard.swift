@@ -7,7 +7,9 @@
 //  Logic chain — card display states:
 //
 //  ┌─ .idle ──────────────────────────────────────────────────┐
-//  │  "Loading…" placeholder. Shown before first fetch.       │
+//  │  "Fetching…" placeholder. Shown before the first fetch   │
+//  │  and after a transient failure (timer keeps retrying).   │
+//  │  The app never shows stale/last-session data.            │
 //  └──────────────────────────────────────────────────────────┘
 //                           │ (fetch completes)
 //  ┌─ .loaded(snapshot) ─────────────────────────────────────┐
@@ -15,12 +17,7 @@
 //  │  Colors: green (>25%) / yellow (>10%) / red (≤10%)      │
 //  │  Flat mode: monochrome bars, no semantic color.         │
 //  └──────────────────────────────────────────────────────────┘
-//                           │ (subsequent fetch fails)
-//  ┌─ .stale(snapshot) ──────────────────────────────────────┐
-//  │  Same as .loaded + "Updated Xm ago" subtitle.            │
-//  │  Keeps last good data visible for transient failures.   │
-//  └──────────────────────────────────────────────────────────┘
-//                           │ (credentials missing / token expired)
+//                           │ (credentials missing / logged out)
 //  ┌─ .error(AIUsageError) ──────────────────────────────────┐
 //  │  Red error text + RetryButton (↻ RefreshGlyph).         │
 //  │  Tap retry → AIUsageMonitor.retry(provider).             │
@@ -41,20 +38,12 @@ struct AIUsageCard: View {
         BentoCard(title: provider.displayName, icon: symbolIcon, assetIcon: assetIcon) {
             switch state {
             case .idle:
-                Text("overview.loading".localized)
+                Text("aiUsage.fetching".localized)
                     .font(.system(size: 11))
                     .foregroundColor(.labelMuted)
 
             case .loaded(let snapshot):
                 windowsView(snapshot)
-
-            case .stale(let snapshot):
-                VStack(alignment: .leading, spacing: 6) {
-                    windowsView(snapshot)
-                    Text("aiUsage.updatedAgo".localized(agoString(since: snapshot.fetchedAt)))
-                        .font(.system(size: 9))
-                        .foregroundColor(.secondary.opacity(0.7))
-                }
 
             case .error(let error):
                 HStack(spacing: 8) {
@@ -109,12 +98,6 @@ struct AIUsageCard: View {
         case .codex: return "codex"
         case .gemini: return "gemini"
         }
-    }
-
-    private func agoString(since date: Date) -> String {
-        let minutes = max(0, Int(Date().timeIntervalSince(date)) / 60)
-        if minutes < 60 { return "\(minutes)m" }
-        return "\(minutes / 60)h \(minutes % 60)m"
     }
 }
 
@@ -297,22 +280,13 @@ struct AIProviderCompactRow: View {
             // Provider content
             switch state {
             case .idle:
-                Text("overview.loading".localized)
+                Text("aiUsage.fetching".localized)
                     .font(.system(size: 10))
                     .foregroundColor(.labelMuted)
                     .padding(.leading, 15)
 
             case .loaded(let snapshot):
                 windowsRows(snapshot)
-
-            case .stale(let snapshot):
-                VStack(alignment: .leading, spacing: 2) {
-                    windowsRows(snapshot)
-                    Text("aiUsage.updatedAgo".localized(agoString(since: snapshot.fetchedAt)))
-                        .font(.system(size: 9))
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .padding(.leading, 15)
-                }
 
             case .error(let error):
                 HStack(spacing: 6) {
@@ -343,12 +317,6 @@ struct AIProviderCompactRow: View {
         case .codex: return "codex"
         case .gemini: return "gemini"
         }
-    }
-
-    private func agoString(since date: Date) -> String {
-        let minutes = max(0, Int(Date().timeIntervalSince(date)) / 60)
-        if minutes < 60 { return "\(minutes)m" }
-        return "\(minutes / 60)h \(minutes % 60)m"
     }
 
     static func errorText(_ error: AIUsageError, cli: String) -> String {

@@ -79,6 +79,14 @@ final class StatusBarView: NSView {
     private var fanLink: CADisplayLink?
     private var lastFanTimestamp: CFTimeInterval = 0
 
+    // MARK: - Render target
+
+    /// The status-item button we push the rendered template image to. Rendering as a
+    /// template image (rather than drawing into this view directly) lets AppKit tint the
+    /// content to match the *menu bar background*, not just the system light/dark setting —
+    /// so text stays legible on a dark wallpaper-tinted menu bar, exactly like template icons.
+    private weak var hostButton: NSButton?
+
     // MARK: - Initialization
 
     override init(frame frameRect: NSRect) {
@@ -92,6 +100,12 @@ final class StatusBarView: NSView {
     deinit {
         fanLink?.invalidate()
     }
+
+    /// This view is a transparent host: it no longer draws on screen (it renders a template
+    /// image into `button.image`) and stays in the button's hierarchy only so its
+    /// `displayLink` (fan spin) has a window/display to sync to. Returning nil ensures it never
+    /// intercepts clicks meant for the status-item button — all events pass through.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     // MARK: - Public Methods
 
@@ -215,7 +229,13 @@ final class StatusBarView: NSView {
             ))
         }
 
-        needsDisplay = true
+        renderAndApply()
+    }
+
+    /// Connects the view to its status-item button and renders an initial image.
+    func attach(to button: NSButton) {
+        hostButton = button
+        renderAndApply()
     }
 
     static func calculateWidth(settings: any SettingsManaging) -> CGFloat {
@@ -269,10 +289,40 @@ final class StatusBarView: NSView {
 
     // MARK: - Drawing
 
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
+    /// Width of the rendered image, derived from the items (not the view frame) so it is
+    /// independent of layout/autoresize timing.
+    private var renderWidth: CGFloat {
+        guard !displayItems.isEmpty else { return 20 }
+        let items = displayItems.reduce(0) { $0 + $1.width }
+        let separators = CGFloat(displayItems.count - 1) * Layout.separatorWidth
+        return max(items + separators, 20)
+    }
 
-        let textColor = NSColor.labelColor
+    /// Renders the current items into a template image and hands it to the button. AppKit
+    /// then tints it to the menu-bar foreground colour (white on a dark bar, black on a light
+    /// one), so text adapts identically to the logo/fan template icons.
+    private func renderAndApply() {
+        hostButton?.image = renderImage()
+    }
+
+    private func renderImage() -> NSImage {
+        let size = NSSize(width: renderWidth, height: Layout.itemHeight)
+        // Resolution-independent: AppKit invokes the drawing handler at the backing scale of
+        // whichever display the menu bar is on, so the image stays crisp on Retina. The
+        // deprecated `lockFocus()` baked a single scale at capture time and rendered soft when
+        // the menu bar lived on a higher-scale display than the one focused at render.
+        let image = NSImage(size: size, flipped: false) { [weak self] rect in
+            self?.drawContents(in: rect)
+            return true
+        }
+        image.isTemplate = true  // alpha is the tint mask; preserves dimmed units/labels
+        return image
+    }
+
+    private func drawContents(in bounds: NSRect) {
+        // Opaque base colour: template tinting ignores RGB and keys off alpha, so the
+        // de-emphasised units/labels keep their 0.7 alpha while the colour itself is replaced.
+        let textColor = NSColor.black
         var xOffset: CGFloat = 0
 
         for (index, item) in displayItems.enumerated() {
@@ -425,7 +475,7 @@ final class StatusBarView: NSView {
         let dt = now - lastFanTimestamp
         guard dt > 0, dt < 1 else { return }
         fanAngle = (fanAngle + Self.fanDegreesPerSecond(fanRPM) * dt).truncatingRemainder(dividingBy: 360)
-        needsDisplay = true
+        renderAndApply()
     }
 
     /// 当前角速度（度/秒）：RPM 线性映射并封顶。

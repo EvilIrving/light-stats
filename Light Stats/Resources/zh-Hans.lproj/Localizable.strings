@@ -135,7 +135,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
-"aiUsage.updatedAgo" = "%@ 前更新";
+"aiUsage.fetching" = "获取中...";
 "aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";

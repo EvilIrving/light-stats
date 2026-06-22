@@ -133,7 +133,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
-"aiUsage.updatedAgo" = "updated %@ ago";
+"aiUsage.fetching" = "Fetching...";
 "aiUsage.tokenExpired" = "Token expired — run %@ once to refresh";
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";

@@ -70,6 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Create the monitoring item first: macOS parks each newly-created status item to the
+        // left of the previous one, so creating the monitor first and the window-controls item
+        // second places the split-screen icon to the RIGHT of the monitoring numbers by default.
         setupStatusItem()
         setupWindowControlsStatusItem()
         setupPanel()
@@ -151,9 +154,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             // Create custom status bar view
             let view = StatusBarView(frame: NSRect(x: 0, y: 0, width: initialWidth, height: 22))
             statusBarView = view
+            // Kept in the button's view hierarchy so its CADisplayLink (fan spin) fires; it no
+            // longer draws on screen — it renders a template image into button.image instead.
             button.addSubview(view)
             view.frame = button.bounds
             view.autoresizingMask = [.width, .height]
+            button.imagePosition = .imageOnly
+            view.attach(to: button)
 
             button.action = #selector(togglePanel)
             button.target = self

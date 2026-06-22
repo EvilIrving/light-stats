@@ -34,8 +34,8 @@
 //  └──────────────────────────────────────────────────────────┘
 //                           │
 //  ┌─ Result handling ────────────────────────────────────────┐
-//  │  success      → .loaded(snapshot), cache in UserDefaults │
-//  │  transient    → .stale(previous) if previous exists      │
+//  │  success      → .loaded(snapshot)                        │
+//  │  transient    → .idle ("fetching…"), never stale data    │
 //  │  credentials  → .error(error) — needs user attention     │
 //  └──────────────────────────────────────────────────────────┘
 //
@@ -65,9 +65,7 @@ final class AIUsageMonitor: ObservableObject {
     /// Refresh triggered by popover opening only if data is older than this
     private let popoverStaleThreshold: TimeInterval = 60
 
-    private init() {
-        restoreCachedSnapshots()
-    }
+    private init() {}
 
     // MARK: - Lifecycle
 
@@ -188,22 +186,17 @@ final class AIUsageMonitor: ObservableObject {
         switch result {
         case .success(let snapshot):
             lastSuccessAt[provider] = snapshot.fetchedAt
-            cacheSnapshot(snapshot)
             newState = .loaded(snapshot)
         case .failure(let error):
-            // Keep last good data visible for transient failures. The service
-            // already exhausts its internal recovery (re-read + CLI PTY) before
-            // surfacing tokenExpired, so a token failure with prior data is
-            // treated as stale rather than an alarming error — the timer will
-            // refresh once recovery succeeds. Only a genuine credentials-missing
+            // Never show stale/last-session data. The services already exhaust
+            // their internal recovery (re-read credentials + CLI PTY) before
+            // surfacing a transient failure, and the timer keeps retrying — so a
+            // transient failure drops back to `.idle` ("fetching…") rather than
+            // showing an old snapshot. Only a genuine credentials-missing
             // (logged out) state demands the user's attention.
             switch error {
             case .network, .decoding, .endpointNotFound, .tokenExpired:
-                if let previous = state(for: provider).snapshot {
-                    newState = .stale(previous)
-                } else {
-                    newState = .error(error)
-                }
+                newState = .idle
             case .credentialsMissing:
                 newState = .error(error)
             }
@@ -225,27 +218,6 @@ final class AIUsageMonitor: ObservableObject {
         case .claude: claudeState = state
         case .codex: codexState = state
         case .gemini: geminiState = state
-        }
-    }
-
-    // MARK: - Snapshot cache (show last data on launch while first fetch runs)
-
-    private func cacheKey(for provider: AIProvider) -> String {
-        "aiUsage.snapshot.\(provider.rawValue)"
-    }
-
-    private func cacheSnapshot(_ snapshot: ProviderUsageSnapshot) {
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        UserDefaults.standard.set(data, forKey: cacheKey(for: snapshot.provider))
-    }
-
-    private func restoreCachedSnapshots() {
-        for provider in AIProvider.allCases {
-            guard let data = UserDefaults.standard.data(forKey: cacheKey(for: provider)),
-                  let snapshot = try? JSONDecoder().decode(ProviderUsageSnapshot.self, from: data) else {
-                continue
-            }
-            setState(.stale(snapshot), for: provider)
         }
     }
 }

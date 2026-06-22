@@ -45,17 +45,19 @@ enum AIUsageError: Error, Equatable {
     case endpointNotFound
 }
 
-/// Per-provider fetch state published to the UI
+/// Per-provider fetch state published to the UI.
+/// No `stale` case: the app never shows last-session data. A failed refresh
+/// drops back to `.idle` (which renders "fetching…"), so the user only ever
+/// sees fresh data, a fetching placeholder, or an explicit error — never an
+/// old snapshot.
 enum ProviderFetchState: Equatable {
     case idle
     case loaded(ProviderUsageSnapshot)
-    /// Last good snapshot retained after a failed refresh
-    case stale(ProviderUsageSnapshot)
     case error(AIUsageError)
 
     var snapshot: ProviderUsageSnapshot? {
         switch self {
-        case .loaded(let s), .stale(let s): return s
+        case .loaded(let s): return s
         case .idle, .error: return nil
         }
     }

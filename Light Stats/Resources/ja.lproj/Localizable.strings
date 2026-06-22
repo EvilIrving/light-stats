@@ -135,7 +135,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
-"aiUsage.updatedAgo" = "%@前に更新";
+"aiUsage.fetching" = "取得中...";
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
