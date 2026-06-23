@@ -195,6 +195,9 @@ final class SystemMonitor: ObservableObject {
     @Published var fanSpeed: Int?
     @Published var health: HealthScore = .perfect
 
+    /// 各指标最近一段时间的取值序列，供弹窗 sparkline 折线读取（只读）。
+    @Published private(set) var trends: MetricTrends = .empty
+
     // Phase 2: 电池/功耗 + 磁盘 IO
     @Published var battery: BatteryInfo = .noBattery
     @Published var diskIO: DiskIOStats = .zero
@@ -211,6 +214,14 @@ final class SystemMonitor: ObservableObject {
     private let sampler = MonitorSampler()
     private var updateTask: Task<Void, Never>?
     private var pendingUpdate = false
+
+    // 趋势历史：环形缓冲在 ViewModel 内私有保存，每轮采样 push 后汇成只读的 `trends` 快照。
+    private var cpuHistory = MetricHistory()
+    private var memoryHistory = MetricHistory()
+    private var gpuHistory = MetricHistory()
+    private var loadHistory = MetricHistory()
+    private var netUpHistory = MetricHistory()
+    private var netDownHistory = MetricHistory()
 
     /// 弹窗是否可见：进程榜只在弹窗内展示，关闭时不采集。
     private var popoverVisible = false
@@ -325,5 +336,32 @@ final class SystemMonitor: ObservableObject {
         primaryIP = snapshot.primaryIP
         exitNode = snapshot.exitNode
         route = snapshot.route
+        pushTrends(snapshot)
+    }
+
+    /// 把本轮采样点追加进各环形缓冲，再汇成只读的 `trends` 快照供 sparkline 读取。
+    private func pushTrends(_ snapshot: SystemSnapshot) {
+        cpuHistory.push(snapshot.cpuUsage)
+        memoryHistory.push(snapshot.memoryUsage)
+        gpuHistory.push(snapshot.gpuUsage ?? 0)
+        loadHistory.push(loadUsagePercent(snapshot))
+        netUpHistory.push(snapshot.networkUpload)
+        netDownHistory.push(snapshot.networkDownload)
+        trends = MetricTrends(
+            cpu: cpuHistory.values,
+            memory: memoryHistory.values,
+            gpu: gpuHistory.values,
+            load: loadHistory.values,
+            networkUp: netUpHistory.values,
+            networkDown: netDownHistory.values
+        )
+    }
+
+    /// 负载占用百分比：load1 ÷ 核心数，封顶 0–100。与 OverviewTabView 的口径一致。
+    private func loadUsagePercent(_ snapshot: SystemSnapshot) -> Double {
+        let coreCount = snapshot.coreTopology.totalCores > 0
+            ? snapshot.coreTopology.totalCores
+            : max(snapshot.coreUsages.count, 1)
+        return min(100, max(0, snapshot.loadAverage.load1 / Double(coreCount) * 100))
     }
 }

@@ -26,7 +26,7 @@ struct OverviewTabView: View {
                     GridItem(.flexible(), spacing: 10)
                 ], spacing: 8) {
                     // CPU Card
-                    BentoCard(title: "CPU", icon: "cpu", fixedHeight: quickStatCardHeight) {
+                    QuickStatCard(title: "CPU", icon: "cpu", height: quickStatCardHeight, trend: cpuTrend) {
                         HStack(alignment: .lastTextBaseline, spacing: 4) {
                             Text(String(format: "%.0f", monitor.cpuUsage))
                                 .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
@@ -38,7 +38,7 @@ struct OverviewTabView: View {
                     }
 
                     // GPU Card
-                    BentoCard(title: "GPU", icon: "square.grid.2x2", fixedHeight: quickStatCardHeight) {
+                    QuickStatCard(title: "GPU", icon: "square.grid.2x2", height: quickStatCardHeight, trend: gpuTrend) {
                         if let gpu = monitor.gpuUsage {
                             HStack(alignment: .lastTextBaseline, spacing: 4) {
                                 Text(String(format: "%.0f", gpu))
@@ -56,7 +56,7 @@ struct OverviewTabView: View {
                     }
 
                     // MEM Card
-                    BentoCard(title: "MEM", icon: "memorychip", fixedHeight: quickStatCardHeight) {
+                    QuickStatCard(title: "MEM", icon: "memorychip", height: quickStatCardHeight, trend: memoryTrend) {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(alignment: .lastTextBaseline, spacing: 2) {
                                 Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
@@ -73,7 +73,8 @@ struct OverviewTabView: View {
                     }
 
                     // Load Card
-                    BentoCard(title: "overview.load".localized, icon: "chart.bar.fill", fixedHeight: quickStatCardHeight) {
+                    QuickStatCard(title: "overview.load".localized, icon: "chart.bar.fill",
+                                  height: quickStatCardHeight, trend: loadTrend) {
                         Text(monitor.loadAverage.displayString)
                             .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
                             .lineLimit(1)
@@ -166,20 +167,30 @@ struct OverviewTabView: View {
                 // Network Card: 速率 + 本地代理 + 出口节点
                 BentoCard(title: "overview.network".localized, icon: "network") {
                     VStack(alignment: .leading, spacing: 8) {
-                        // ① 速率行
+                        // ① 速率行 —— 上/下行各自配色，与下方双线趋势一一对应。
                         HStack {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.up")
                                 Text(ByteFormatter.formatSpeed(monitor.networkUpload))
                             }
+                            .foregroundColor(.orange)
                             Spacer()
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.down")
                                 Text(ByteFormatter.formatSpeed(monitor.networkDownload))
                             }
+                            .foregroundColor(.cyan)
                         }
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.cyan)
+
+                        // 上/下行速率双线趋势：共享纵轴，直接看出哪个方向在跑、是否突发。
+                        if monitor.trends.networkUp.count > 1 {
+                            Sparkline(series: [
+                                SparklineSeries(values: monitor.trends.networkDown, color: .cyan),
+                                SparklineSeries(values: monitor.trends.networkUp, color: .orange)
+                            ])
+                            .frame(height: 24)
+                        }
 
                         Divider()
 
@@ -331,6 +342,25 @@ struct OverviewTabView: View {
         return min(100, max(0, monitor.loadAverage.load1 / Double(coreCount) * 100))
     }
 
+    // MARK: - Quick-stat trend series
+
+    // 折线用「当前值」决定线色，与卡片大字的配色一致；flat 模式下保持中性灰。
+    private var cpuTrend: SparklineSeries {
+        SparklineSeries(values: monitor.trends.cpu, color: colorForUsage(monitor.cpuUsage))
+    }
+
+    private var gpuTrend: SparklineSeries {
+        SparklineSeries(values: monitor.trends.gpu, color: colorForUsage(monitor.gpuUsage ?? 0))
+    }
+
+    private var memoryTrend: SparklineSeries {
+        SparklineSeries(values: monitor.trends.memory, color: colorForUsage(monitor.memoryUsage))
+    }
+
+    private var loadTrend: SparklineSeries {
+        SparklineSeries(values: monitor.trends.load, color: colorForUsage(loadUsagePercent))
+    }
+
     private var useFlatColors: Bool { settings.useFlatColors }
 
     private func colorForUsage(_ usage: Double) -> Color {
@@ -447,59 +477,6 @@ private struct ActionRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Spinning Fan Icon
-
-/// 风扇图标：按当前转速持续旋转。转速越高转得越快，但封顶到 `maxRevPerSecond`，
-/// 避免高转速时「转的飞起」糊成一团。转速为 0 / 未知时静止。
-///
-/// 用 `TimelineView(.animation)` 逐帧累积角度（而非 repeatForever 动画），
-/// 这样转速随 RPM 变化时平滑过渡、无跳变；面板隐藏时 timeline 自动停摆，不耗电。
-private struct SpinningFanIcon: View {
-    let rpm: Int?
-
-    /// 视觉封顶：最快每秒 3 圈。
-    private let maxRevPerSecond: Double = 3.0
-    /// 达到该转速即封顶（典型笔记本满速约 5000–6000 RPM）。
-    private let rpmAtMaxSpeed: Double = 5000
-
-    @State private var angle: Double = 0
-    @State private var lastDate: Date = .now
-
-    var body: some View {
-        if degreesPerSecond > 0 {
-            TimelineView(.animation) { context in
-                fanImage
-                    .rotationEffect(.degrees(angle))
-                    .onChange(of: context.date) { _, now in
-                        advance(to: now)
-                    }
-            }
-            .onAppear { lastDate = .now }
-        } else {
-            fanImage
-        }
-    }
-
-    private var fanImage: some View {
-        Image(systemName: "fanblades.fill")
-    }
-
-    /// 当前角速度（度/秒）：RPM 线性映射并封顶。
-    private var degreesPerSecond: Double {
-        guard let rpm, rpm > 0 else { return 0 }
-        let revPerSec = min(Double(rpm) / rpmAtMaxSpeed, 1.0) * maxRevPerSecond
-        return revPerSec * 360.0
-    }
-
-    /// 按帧间隔累积角度。跳过异常间隔（面板重新显示等）避免突跳。
-    private func advance(to now: Date) {
-        let dt = now.timeIntervalSince(lastDate)
-        lastDate = now
-        guard dt > 0, dt < 1 else { return }
-        angle = (angle + degreesPerSecond * dt).truncatingRemainder(dividingBy: 360)
     }
 }
 
