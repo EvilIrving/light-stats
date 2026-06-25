@@ -146,6 +146,7 @@
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";
+"settings.colorIndicator" = "颜色指示器";
 "settings.accessibility.colorIndicator.hint" = "用颜色圆点显示健康等级。关闭后改用「低 / 中 / 高」文字。";
 
 // MARK: - Software Update

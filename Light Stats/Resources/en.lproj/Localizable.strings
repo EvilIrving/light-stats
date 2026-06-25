@@ -144,6 +144,7 @@
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "Color Indicator";
+"settings.colorIndicator" = "Color Indicator";
 "settings.accessibility.colorIndicator.hint" = "Show health levels as colored dots. Turn off to use Low / Medium / High text.";
 
 // MARK: - Software Update

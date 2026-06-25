@@ -17,58 +17,15 @@ struct SettingsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                // 1. Status Bar Items Card
-                BentoCard(title: "settings.statusBar".localized) {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 8) {
-                        SettingsGridItem(
-                            title: "settings.logo".localized,
-                            isOn: $settings.showLogo,
-                            icon: "applelogo",
-                            assetIcon: "StatusIcon"
-                        ) {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.gpu".localized, isOn: $settings.showGPU, icon: "square.grid.2x2") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.memory".localized, isOn: $settings.showMemory, icon: "memorychip") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") {
-                            validateMinimumItems()
-                        }
-                        SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") {
-                            validateMinimumItems()
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                // 2. Appearance Card — 平缓色调 + 语言
-                BentoCard(title: "settings.appearance".localized) {
+                // 1. General Card — 开机启动 / 语言 / 软件更新
+                BentoCard(title: "settings.general".localized) {
                     VStack(spacing: 12) {
                         HStack {
-                            Text("settings.flatColors.section".localized)
+                            Text("settings.launchAtLogin".localized)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                             Spacer()
-                            SettingsToggle(isOn: $settings.useFlatColors)
+                            SettingsToggle(isOn: $settings.launchAtLogin)
                         }
 
                         HStack {
@@ -86,14 +43,131 @@ struct SettingsView: View {
                             .fixedSize()
                             .focusable(false)
                         }
+
+                        HStack {
+                            Text("settings.update.autoCheck".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.autoCheckUpdates)
+                        }
+
+                        Button {
+                            UpdateManager.shared.check(userInitiated: true)
+                        } label: {
+                            HStack(spacing: 6) {
+                                if updateManager.isChecking {
+                                    ProgressView().controlSize(.small).scaleEffect(0.8)
+                                }
+                                Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .controlSize(.large)
+                        .disabled(updateManager.isChecking)
                     }
                 }
 
-                // 3. Health Score Card — 颜色指示器开关在标题栏，维度网格在正文。
-                BentoCard(title: "settings.health".localized,
-                          headerAccessory: {
-                    SettingsToggle(isOn: $settings.useColorIndicator)
-                }) {
+                // 2. Status Bar Card — 显示项网格 + 刷新频率 + 温度单位
+                BentoCard(title: "settings.statusBar".localized) {
+                    VStack(spacing: 12) {
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 8) {
+                            SettingsGridItem(
+                                title: "settings.logo".localized,
+                                isOn: $settings.showLogo,
+                                icon: "applelogo",
+                                assetIcon: "StatusIcon"
+                            ) {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.gpu".localized, isOn: $settings.showGPU, icon: "square.grid.2x2") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.memory".localized, isOn: $settings.showMemory, icon: "memorychip") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") {
+                                validateMinimumItems()
+                            }
+                            SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") {
+                                validateMinimumItems()
+                            }
+                        }
+                        .padding(.vertical, 4)
+
+                        HStack {
+                            Text("settings.refreshRate.label".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.refreshRate) {
+                                ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
+                                    Text(rate.displayName).tag(rate)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .fixedSize()
+                            .focusable(false)
+                        }
+
+                        HStack {
+                            Text("settings.temperatureUnit".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Picker("", selection: $settings.temperatureUnit) {
+                                ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
+                                    Text(unit.displayName).tag(unit)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .focusable(false)
+                        }
+                    }
+                }
+
+                // 3. Appearance Card — 平缓色调 + 颜色指示器
+                BentoCard(title: "settings.appearance".localized) {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("settings.flatColors.section".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.useFlatColors)
+                        }
+
+                        HStack {
+                            Text("settings.colorIndicator".localized)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            SettingsToggle(isOn: $settings.useColorIndicator)
+                        }
+                    }
+                }
+
+                // 4. Health Score Card — 维度网格（颜色指示器开关已移至「外观」）。
+                BentoCard(title: "settings.health".localized) {
                     LazyVGrid(columns: [
                         GridItem(.flexible()),
                         GridItem(.flexible()),
@@ -131,43 +205,6 @@ struct SettingsView: View {
                         )
                     }
                     .padding(.vertical, 4)
-                }
-
-                // 4. Refresh & Units Card
-                BentoCard(title: "settings.refreshAndUnits".localized) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("settings.refreshRate.label".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.refreshRate) {
-                                ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
-                                    Text(rate.displayName).tag(rate)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .fixedSize()
-                            .focusable(false)
-                        }
-
-                        HStack {
-                            Text("settings.temperatureUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.temperatureUnit) {
-                                ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
-                                    Text(unit.displayName).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .focusable(false)
-                        }
-
-                    }
                 }
 
                 // 5. Input Devices Card
@@ -250,7 +287,7 @@ struct SettingsView: View {
                     }
                 }
 
-                // 6. Exit Node Card
+                // 7. Exit Node Card
                 BentoCard(title: "settings.exitNode.section".localized,
                           headerAccessory: {
                     SettingsToggle(isOn: Binding(
@@ -281,30 +318,6 @@ struct SettingsView: View {
                             .focusable(false)
                         }
                     }
-                }
-
-                // 7. Software Update Card
-                BentoCard(title: "settings.update.section".localized,
-                          headerAccessory: {
-                    Toggle("", isOn: $settings.autoCheckUpdates)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .labelsHidden()
-                }) {
-                    Button {
-                        UpdateManager.shared.check(userInitiated: true)
-                    } label: {
-                        HStack(spacing: 6) {
-                            if updateManager.isChecking {
-                                ProgressView().controlSize(.small).scaleEffect(0.8)
-                            }
-                            Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
-                    .disabled(updateManager.isChecking)
                 }
             }
             .padding(16)

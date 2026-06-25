@@ -146,6 +146,7 @@
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "색상 표시";
+"settings.colorIndicator" = "색상 표시기";
 "settings.accessibility.colorIndicator.hint" = "건강도 수준을 색상 점으로 표시합니다. 끄면 낮음 / 중간 / 높음 텍스트를 사용합니다.";
 
 // MARK: - Software Update

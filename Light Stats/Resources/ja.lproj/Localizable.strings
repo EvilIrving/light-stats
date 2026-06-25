@@ -146,6 +146,7 @@
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "カラーインジケーター";
+"settings.colorIndicator" = "カラーインジケーター";
 "settings.accessibility.colorIndicator.hint" = "健康度のレベルを色付きドットで表示します。オフにすると「低 / 中 / 高」のテキストを使用します。";
 
 // MARK: - Software Update
