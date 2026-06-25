@@ -126,9 +126,7 @@ final class ScrollDirectionService: ScrollReversing {
     }
 
     func checkPermission(promptIfNeeded: Bool) -> Bool {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options = [key: promptIfNeeded] as CFDictionary
-        return AXIsProcessTrustedWithOptions(options)
+        AccessibilityPermission.isTrusted(prompt: promptIfNeeded)
     }
 
     // MARK: - Lifecycle

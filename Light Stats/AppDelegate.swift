@@ -605,18 +605,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     private func presentAccessibilityAlert(title: String, message: String) {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.addButton(withTitle: "cleaning.permission.openSettings".localized)
-        alert.addButton(withTitle: "update.action.later".localized)
-        if alert.runModal() == .alertFirstButtonReturn {
-            guard let url = URL(string:
-                "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
-                return
-            }
-            NSWorkspace.shared.open(url)
-        }
+        AccessibilityPermission.presentSettingsAlert(title: title, message: message)
     }
 }

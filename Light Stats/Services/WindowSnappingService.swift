@@ -49,9 +49,7 @@ final class WindowSnappingService {
     private var savedFrames: [WindowIdentity: CGRect] = [:]
 
     func checkPermission(promptIfNeeded: Bool) -> Bool {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options = [key: promptIfNeeded] as CFDictionary
-        return AXIsProcessTrustedWithOptions(options)
+        AccessibilityPermission.isTrusted(prompt: promptIfNeeded)
     }
 
     func perform(_ action: WindowSnapAction) {

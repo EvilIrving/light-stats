@@ -85,21 +85,9 @@ final class CleaningModeViewModel: ObservableObject {
     // MARK: - 权限提示
 
     private func presentPermissionAlert() {
-        NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "cleaning.permission.title".localized
-        alert.informativeText = "cleaning.permission.message".localized
-        alert.addButton(withTitle: "cleaning.permission.openSettings".localized)
-        alert.addButton(withTitle: "update.action.later".localized)
-        if alert.runModal() == .alertFirstButtonReturn {
-            openAccessibilitySettings()
-        }
-    }
-
-    private func openAccessibilitySettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else {
-            return
-        }
-        NSWorkspace.shared.open(url)
+        AccessibilityPermission.presentSettingsAlert(
+            title: "cleaning.permission.title".localized,
+            message: "cleaning.permission.message".localized
+        )
     }
 }
