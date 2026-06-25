@@ -150,6 +150,8 @@
 "update.checkButton" = "Check Now";
 "update.window.title" = "Software Update";
 "update.checking" = "Checking…";
+"settings.general" = "General";
+"settings.launchAtLogin" = "Launch at Login";
 "settings.update.section" = "Auto Update";
 "settings.update.autoCheck" = "Check automatically";
 "settings.update.autoCheckHint" = "Checks on launch & every 24h.";

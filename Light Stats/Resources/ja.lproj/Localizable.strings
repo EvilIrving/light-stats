@@ -152,6 +152,8 @@
 "update.checkButton" = "今すぐ確認";
 "update.window.title" = "ソフトウェアアップデート";
 "update.checking" = "確認中…";
+"settings.general" = "一般";
+"settings.launchAtLogin" = "ログイン時に起動";
 "settings.update.section" = "自動アップデート";
 "settings.update.autoCheck" = "自動的に確認";
 "settings.update.autoCheckHint" = "起動時と24時間ごとに確認";

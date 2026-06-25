@@ -134,6 +134,22 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
     // MARK: - Other Settings
 
+    /// 开机启动。真相源是系统登录项（`SMAppService`），不落 UserDefaults。
+    /// `didSet` 注册/注销登录项；失败时回滚到系统实际状态，避免 UI 与登录项不一致。
+    @Published var launchAtLogin: Bool {
+        didSet {
+            guard !isSyncingLaunchAtLogin else { return }
+            do {
+                try LaunchAtLoginService.setEnabled(launchAtLogin)
+            } catch {
+                isSyncingLaunchAtLogin = true
+                launchAtLogin = LaunchAtLoginService.isEnabled
+                isSyncingLaunchAtLogin = false
+            }
+        }
+    }
+    private var isSyncingLaunchAtLogin = false
+
     @Published var refreshRate: RefreshRate {
         didSet { save(refreshRate.rawValue, for: .refreshRate) }
     }
@@ -348,6 +364,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
+
+        // 开机启动：以系统登录项注册状态为唯一真相源。
+        launchAtLogin = LaunchAtLoginService.isEnabled
 
         // Other settings
         let refreshRateStr = defaults.string(forKey: Key.refreshRate.rawValue) ?? RefreshRate.medium.rawValue

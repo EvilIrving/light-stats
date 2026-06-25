@@ -152,6 +152,8 @@
 "update.checkButton" = "立即检查";
 "update.window.title" = "软件更新";
 "update.checking" = "正在检查…";
+"settings.general" = "通用";
+"settings.launchAtLogin" = "开机启动";
 "settings.update.section" = "自动更新";
 "settings.update.autoCheck" = "自动检查更新";
 "settings.update.autoCheckHint" = "启动及每日检查";
