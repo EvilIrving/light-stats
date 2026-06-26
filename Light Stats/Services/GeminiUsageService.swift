@@ -393,7 +393,10 @@ nonisolated enum GeminiUsageService {
         let resetTime: Date?
     }
 
-    private static func parseQuotaResponse(_ data: Data) throws -> ProviderUsageSnapshot {
+    /// Testable seam (also the live parse path): decode the Code Assist quota
+    /// JSON body into a usage snapshot, with no network. Throws `.decoding` on
+    /// malformed JSON or when no usable model quota / window can be derived.
+    static func parseQuotaResponse(_ data: Data) throws -> ProviderUsageSnapshot {
         guard let json = try? JSONSerialization.jsonObject(with: data) else {
             throw AIUsageError.decoding
         }

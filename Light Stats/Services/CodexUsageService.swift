@@ -117,6 +117,17 @@ enum CodexUsageService {
         }
         guard (200..<300).contains(http.statusCode) else { throw AIUsageError.network }
 
+        let windows = try parseUsageJSON(data)
+        guard !windows.isEmpty else { throw AIUsageError.decoding }
+
+        return ProviderUsageSnapshot(provider: .codex, windows: windows, fetchedAt: Date())
+    }
+
+    /// Testable seam: decode the usage JSON body into usage windows, with no
+    /// network. Mirrors the decode + window-building step inside `fetchOnce`.
+    /// Throws `.decoding` on malformed JSON; returns `[]` when neither rate-limit
+    /// window is present (caller decides whether empty is an error).
+    static func parseUsageJSON(_ data: Data) throws -> [UsageWindow] {
         guard let decoded = try? JSONDecoder().decode(UsageResponse.self, from: data) else {
             throw AIUsageError.decoding
         }
@@ -128,10 +139,7 @@ enum CodexUsageService {
         if let w = decoded.rateLimit?.secondaryWindow, let used = w.usedPercent {
             windows.append(usageWindow(from: w, usedPercent: used))
         }
-
-        guard !windows.isEmpty else { throw AIUsageError.decoding }
-
-        return ProviderUsageSnapshot(provider: .codex, windows: windows, fetchedAt: Date())
+        return windows
     }
 
     private static func usageWindow(from window: UsageResponse.Window, usedPercent: Double) -> UsageWindow {
@@ -167,7 +175,7 @@ enum CodexUsageService {
         }
 
         do {
-            let output = try await capturePTYOutput(binary: codexPath, timeout: cliTimeout)
+            let output = try await PTYProbe.capture(binary: codexPath, timeout: cliTimeout, config: cliProbeConfig())
             return try parseCLIOutput(output)
         } catch {
             throw fallbackError ?? error
@@ -178,161 +186,47 @@ enum CodexUsageService {
         CLIBinaryResolver.resolveCodexBinary()
     }
 
-    /// Creates a PTY pair, launches `codex` inside it, sends `/status`,
-    /// and captures all output until we have status data or timeout.
-    private static func capturePTYOutput(binary: String, timeout: TimeInterval) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let result = try capturePTYSync(binary: binary, timeout: timeout)
-                    continuation.resume(returning: result)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
-    }
-
-    private static func capturePTYSync(binary: String, timeout: TimeInterval) throws -> String {
-        var primaryFD: Int32 = -1
-        var secondaryFD: Int32 = -1
-        var win = winsize(ws_row: 60, ws_col: 200, ws_xpixel: 0, ws_ypixel: 0)
-
-        guard openpty(&primaryFD, &secondaryFD, nil, nil, &win) == 0 else {
-            throw AIUsageError.network
-        }
-        _ = fcntl(primaryFD, F_SETFL, O_NONBLOCK)
-
-        defer {
-            close(primaryFD)
-            close(secondaryFD)
-        }
-
-        let secondaryHandle = FileHandle(fileDescriptor: secondaryFD, closeOnDealloc: false)
-        defer { try? secondaryHandle.close() }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: binary)
-        process.arguments = []
-        process.standardInput = secondaryHandle
-        process.standardOutput = secondaryHandle
-        process.standardError = secondaryHandle
-        process.environment = CLIBinaryResolver.enrichedEnvironment()
-
-        let workDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("lightstats-codex-probe-\(UUID().uuidString.prefix(8))")
-        try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: workDir) }
-        process.currentDirectoryURL = workDir
-
-        guard (try? process.run()) != nil else {
-            throw AIUsageError.network
-        }
-        defer {
-            if process.isRunning {
-                process.terminate()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if process.isRunning { kill(process.processIdentifier, SIGKILL) }
-                }
-            }
-        }
-
-        // Wait for codex to initialize.
-        Thread.sleep(forTimeInterval: 0.5)
-
-        // Send /status command.
-        _ = try? writeAll(primaryFD, data: Data("/status\r\n".utf8))
-
-        var allOutput = Data()
-        let deadline = Date().addingTimeInterval(timeout)
-        var hasStatus = false
+    /// PTY config for `codex /status`: send `/status`, dismiss an "update
+    /// available" banner if it appears (down-arrow → Enter → re-send `/status`),
+    /// and complete once a limit/credits marker is on screen.
+    private static func cliProbeConfig() -> PTYProbe.Config {
         var updateDismissed = false
-
-        while Date() < deadline {
-            var buf = [UInt8](repeating: 0, count: 8192)
-            let n = read(primaryFD, &buf, buf.count)
-            if n > 0 {
-                allOutput.append(contentsOf: buf.prefix(n))
-
-                if let text = String(data: allOutput, encoding: .utf8) {
-                    let clean = stripANSICodes(text)
-                    let lower = clean.lowercased()
-
-                    // Auto-dismiss update prompts ("Update available! Run bun install …").
-                    if !updateDismissed,
-                       lower.contains("update available"),
-                       lower.contains("codex") {
-                        // Send down-arrow + Enter to skip the update prompt.
-                        _ = try? writeAll(primaryFD, data: Data([0x1B, 0x5B, 0x42]))
-                        Thread.sleep(forTimeInterval: 0.12)
-                        _ = try? writeAll(primaryFD, data: Data("\r".utf8))
-                        Thread.sleep(forTimeInterval: 0.15)
-                        _ = try? writeAll(primaryFD, data: Data("/status\r\n".utf8))
-                        updateDismissed = true
-                        allOutput.removeAll()
-                        Thread.sleep(forTimeInterval: 0.3)
-                        continue
-                    }
-
-                    // Detect status markers.
-                    if lower.contains("5h limit") || lower.contains("5-hour limit")
-                        || lower.contains("weekly limit") || lower.contains("credits:") {
-                        hasStatus = true
-                        // Settle period.
-                        Thread.sleep(forTimeInterval: 1.0)
-                        var finalBuf = [UInt8](repeating: 0, count: 8192)
-                        let finalN = read(primaryFD, &finalBuf, finalBuf.count)
-                        if finalN > 0 { allOutput.append(contentsOf: finalBuf.prefix(finalN)) }
-                        break
-                    }
+        return PTYProbe.Config(
+            arguments: [],
+            winsize: winsize(ws_row: 60, ws_col: 200, ws_xpixel: 0, ws_ypixel: 0),
+            initialDelay: 0.5,
+            command: "/status\r\n",
+            pollInterval: 0.12,
+            settleDelay: 1.0,
+            workDirPrefix: "lightstats-codex-probe-",
+            onOutput: { clean, write in
+                let lower = clean.lowercased()
+                // Auto-dismiss update prompts ("Update available! Run bun install …").
+                if !updateDismissed, lower.contains("update available"), lower.contains("codex") {
+                    write("\u{1B}[B")   // down-arrow
+                    Thread.sleep(forTimeInterval: 0.12)
+                    write("\r")
+                    Thread.sleep(forTimeInterval: 0.15)
+                    write("/status\r\n")
+                    updateDismissed = true
+                    Thread.sleep(forTimeInterval: 0.3)
+                    return .reset
                 }
-            }
-            if !process.isRunning { break }
-            Thread.sleep(forTimeInterval: 0.12)
-        }
-
-        guard hasStatus,
-              let text = String(data: allOutput, encoding: .utf8),
-              !text.isEmpty else {
-            throw AIUsageError.network
-        }
-
-        return text
-    }
-
-    private static func writeAll(_ fd: Int32, data: Data) throws {
-        try data.withUnsafeBytes { raw in
-            guard let base = raw.baseAddress else { return }
-            var offset = 0
-            while offset < raw.count {
-                let written = write(fd, base.advanced(by: offset), raw.count - offset)
-                if written < 0 {
-                    if errno == EAGAIN || errno == EWOULDBLOCK {
-                        usleep(5000)
-                        continue
-                    }
-                    throw AIUsageError.network
+                if lower.contains("5h limit") || lower.contains("5-hour limit")
+                    || lower.contains("weekly limit") || lower.contains("credits:") {
+                    return .complete
                 }
-                offset += written
+                return .keepReading
             }
-        }
+        )
     }
 
     // MARK: - CLI output parsing
 
-    /// Strips ANSI escape sequences.
-    private static func stripANSICodes(_ text: String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: "\u{001B}\\[[0-?]*[ -/]*[@-~]") else {
-            return text
-        }
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
-    }
-
     /// Parses `codex /status` TUI output into usage windows.
     /// Handles "5h limit" / "5-hour limit" and "Weekly limit" rows.
     private static func parseCLIOutput(_ rawText: String) throws -> ProviderUsageSnapshot {
-        let text = stripANSICodes(rawText)
+        let text = PTYProbe.stripANSICodes(rawText)
         let lower = text.lowercased()
 
         if lower.contains("data not available yet") {

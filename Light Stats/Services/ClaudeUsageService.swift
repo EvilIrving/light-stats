@@ -247,12 +247,9 @@ enum ClaudeUsageService {
         }
         guard (200..<300).contains(http.statusCode) else { return .failure(.network) }
 
-        guard let decoded = try? JSONDecoder().decode(UsageResponse.self, from: data) else {
+        guard let windows = try? parseUsageJSON(data), !windows.isEmpty else {
             return .failure(.decoding)
         }
-
-        let windows = parseWindows(from: decoded)
-        guard !windows.isEmpty else { return .failure(.decoding) }
 
         return .success(ProviderUsageSnapshot(provider: .claude, windows: windows, fetchedAt: Date()))
     }
@@ -335,6 +332,12 @@ enum ClaudeUsageService {
 
     private static let isoParserNoFraction = ISO8601DateFormatter()
 
+    /// Testable seam (also the live decode path): JSON body → usage windows, no network.
+    static func parseUsageJSON(_ data: Data) throws -> [UsageWindow] {
+        guard let decoded = try? JSONDecoder().decode(UsageResponse.self, from: data) else { throw AIUsageError.decoding }
+        return parseWindows(from: decoded)
+    }
+
     private static func parseWindows(from response: UsageResponse) -> [UsageWindow] {
         func parseDate(_ string: String?) -> Date? {
             guard let string else { return nil }
@@ -365,7 +368,7 @@ enum ClaudeUsageService {
             throw AIUsageError.credentialsMissing
         }
 
-        let output = try await capturePTYOutput(binary: claudePath, timeout: cliTimeout)
+        let output = try await PTYProbe.capture(binary: claudePath, timeout: cliTimeout, config: cliProbeConfig())
         return try parseCLIOutput(output)
     }
 
@@ -373,142 +376,22 @@ enum ClaudeUsageService {
         CLIBinaryResolver.resolveClaudeBinary()
     }
 
-    /// Creates a PTY pair, launches `claude` inside it, sends `/usage`,
-    /// and captures all output until session data appears or timeout.
-    private static func capturePTYOutput(binary: String, timeout: TimeInterval) async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    let result = try capturePTYSync(binary: binary, timeout: timeout)
-                    continuation.resume(returning: result)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
-    }
-
-    private static func capturePTYSync(binary: String, timeout: TimeInterval) throws -> String {
-        var primaryFD: Int32 = -1
-        var secondaryFD: Int32 = -1
-        var win = winsize(ws_row: 50, ws_col: 160, ws_xpixel: 0, ws_ypixel: 0)
-
-        guard openpty(&primaryFD, &secondaryFD, nil, nil, &win) == 0 else {
-            throw AIUsageError.network
-        }
-        // Make primary non-blocking so we can poll.
-        _ = fcntl(primaryFD, F_SETFL, O_NONBLOCK)
-
-        defer {
-            close(primaryFD)
-            close(secondaryFD)
-        }
-
-        let secondaryHandle = FileHandle(fileDescriptor: secondaryFD, closeOnDealloc: false)
-        defer { try? secondaryHandle.close() }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: binary)
-        process.arguments = ["--bare", "--allowed-tools", ""]
-        process.standardInput = secondaryHandle
-        process.standardOutput = secondaryHandle
-        process.standardError = secondaryHandle
-        process.environment = CLIBinaryResolver.enrichedEnvironment()
-
-        // Use a temp directory as working dir so claude doesn't pick up project CLAUDE.md.
-        let workDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("lightstats-claude-probe-\(UUID().uuidString.prefix(8))")
-        try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: workDir) }
-        process.currentDirectoryURL = workDir
-
-        guard (try? process.run()) != nil else {
-            throw AIUsageError.network
-        }
-        defer {
-            if process.isRunning {
-                process.terminate()
-                // Escalate after a brief wait.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if process.isRunning { kill(process.processIdentifier, SIGKILL) }
-                }
-            }
-        }
-
-        // Wait for claude to initialize (CodexBar uses 2s; we use 2.5s for safety).
-        Thread.sleep(forTimeInterval: 2.5)
-
-        // Send /usage command.
-        _ = try? writeToPTY(fd: primaryFD, text: "/usage\r\n")
-
-        // Collect output until we have session data or timeout.
-        var allOutput = Data()
-        let deadline = Date().addingTimeInterval(timeout)
-        var hasSessionData = false
-
-        while Date() < deadline {
-            var buf = [UInt8](repeating: 0, count: 8192)
-            let n = read(primaryFD, &buf, buf.count)
-            if n > 0 {
-                allOutput.append(contentsOf: buf.prefix(n))
-                // Check if we have enough data: look for "Current session" + a percentage.
-                if let text = String(data: allOutput, encoding: .utf8) {
-                    let clean = stripANSICodes(text)
-                    if hasSessionValue(clean) {
-                        hasSessionData = true
-                        // Brief settle period.
-                        Thread.sleep(forTimeInterval: 1.0)
-                        // Final read.
-                        var finalBuf = [UInt8](repeating: 0, count: 8192)
-                        let finalN = read(primaryFD, &finalBuf, finalBuf.count)
-                        if finalN > 0 { allOutput.append(contentsOf: finalBuf.prefix(finalN)) }
-                        break
-                    }
-                }
-            }
-            if !process.isRunning { break }
-            Thread.sleep(forTimeInterval: 0.06)
-        }
-
-        guard hasSessionData,
-              let text = String(data: allOutput, encoding: .utf8),
-              !text.isEmpty else {
-            throw AIUsageError.network
-        }
-
-        return text
-    }
-
-    private static func writeToPTY(fd: Int32, text: String) throws {
-        guard let data = text.data(using: .utf8) else { return }
-        try data.withUnsafeBytes { raw in
-            guard let base = raw.baseAddress else { return }
-            var offset = 0
-            while offset < raw.count {
-                let written = write(fd, base.advanced(by: offset), raw.count - offset)
-                if written < 0 {
-                    if errno == EAGAIN || errno == EWOULDBLOCK {
-                        usleep(5000)
-                        continue
-                    }
-                    throw AIUsageError.network
-                }
-                offset += written
-            }
-        }
+    /// PTY config for `claude /usage`: launch headless (`--bare`), send `/usage`,
+    /// and complete once the "Current session … N%" panel has rendered.
+    private static func cliProbeConfig() -> PTYProbe.Config {
+        PTYProbe.Config(
+            arguments: ["--bare", "--allowed-tools", ""],
+            winsize: winsize(ws_row: 50, ws_col: 160, ws_xpixel: 0, ws_ypixel: 0),
+            initialDelay: 2.5,
+            command: "/usage\r\n",
+            pollInterval: 0.06,
+            settleDelay: 1.0,
+            workDirPrefix: "lightstats-claude-probe-",
+            onOutput: { clean, _ in hasSessionValue(clean) ? .complete : .keepReading }
+        )
     }
 
     // MARK: - CLI output parsing
-
-    /// Strips ANSI escape sequences (CSI sequences: ESC [ ... ending in 0x40–0x7E).
-    /// Reference: CodexBar TextParsing.stripANSICodes.
-    private static func stripANSICodes(_ text: String) -> String {
-        guard let regex = try? NSRegularExpression(pattern: "\u{001B}\\[[0-?]*[ -/]*[@-~]") else {
-            return text
-        }
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "")
-    }
 
     /// Returns true when the normalized text contains "Current session" immediately
     /// followed by a percentage value somewhere after it.
@@ -522,7 +405,7 @@ enum ClaudeUsageService {
     /// Parses `claude /usage` TUI output into usage windows.
     /// Handles both "X% used" and "X% left" conventions.
     private static func parseCLIOutput(_ rawText: String) throws -> ProviderUsageSnapshot {
-        let text = stripANSICodes(rawText)
+        let text = PTYProbe.stripANSICodes(rawText)
 
         // Trim to the last "Settings: … Usage …" panel to avoid earlier screen fragments.
         let panelText: String
@@ -761,36 +644,9 @@ enum ClaudeUsageService {
         Task { await tokenCache.invalidate() }
     }
 
-    /// Reads the raw Keychain credential blob via `/usr/bin/security`, which
-    /// bypasses the macOS authorization dialog that `SecItemCopyMatching` triggers.
+    /// Reads the raw Keychain credential blob via the shared `security` CLI
+    /// reader (no auth dialog, unlike `SecItemCopyMatching`).
     private static func readKeychainData() -> Data? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = ["find-generic-password", "-s", keychainService, "-w"]
-        process.environment = ProcessInfo.processInfo.environment
-
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-        process.standardInput = FileHandle.nullDevice
-
-        do {
-            try process.run()
-        } catch {
-            log.error("security CLI launch failed: \(error.localizedDescription)")
-            return nil
-        }
-
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            let errText = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            log.notice("security CLI exit \(process.terminationStatus): \(errText)")
-            return nil
-        }
-
-        let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        return data.isEmpty ? nil : data
+        KeychainCredentialReader.readGenericPassword(service: keychainService)
     }
 }
