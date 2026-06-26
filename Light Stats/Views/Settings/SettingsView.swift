@@ -69,6 +69,9 @@ struct SettingsView: View {
                     }
                 }
 
+                // ── 监控（核心）─────────────────────────────
+                sectionHeader("settings.section.monitoring")
+
                 // 2. Status Bar Card — 显示项网格 + 刷新频率 + 温度单位
                 BentoCard(title: "settings.statusBar".localized) {
                     VStack(spacing: 12) {
@@ -207,7 +210,10 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
 
-                // 5. Input Devices Card
+                // ── 附加工具（默认关闭）──────────────────────
+                sectionHeader("settings.section.extras")
+
+                // 5. Input Devices Card — 仅滚动方向/步长
                 BentoCard(title: "settings.inputDevices".localized) {
                     VStack(spacing: 12) {
                         HStack {
@@ -227,23 +233,19 @@ struct SettingsView: View {
                         }
 
                         scrollStepRow
-
-                        HStack {
-                            Text("settings.windowHotKeys".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.magnetHotKeysEnabled)
-                        }
-
-                        HStack {
-                            Text("settings.titlebarGestures".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.titlebarGesturesEnabled)
-                        }
                     }
+                }
+
+                // 5b. Window Management Card — 单一总开关：图标 + 快捷键 + 手势一起起停
+                BentoCard(title: "settings.windowManagement".localized,
+                          headerAccessory: {
+                    SettingsToggle(isOn: $settings.windowManagementEnabled)
+                }) {
+                    Text("settings.windowManagement.description".localized)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 // 6. AI Usage Card
@@ -337,6 +339,17 @@ struct SettingsView: View {
         }
         .id(localization.currentLanguage)
         .focusable(false)
+    }
+
+    /// 分区标题：把卡片划为「监控（核心）」与「附加工具（默认关闭）」两组，
+    /// 让用户一眼看出哪些是可选的越界能力。
+    private func sectionHeader(_ key: String) -> some View {
+        Text(key.localized)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.secondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
     }
 
     /// 步长倍率滑块。阻尼依附反转开关：两个反转都关闭时滑块禁用并淡化，提示其当前不生效。

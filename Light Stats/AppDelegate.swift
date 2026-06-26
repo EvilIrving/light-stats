@@ -73,8 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Create the monitoring item first: macOS parks each newly-created status item to the
         // left of the previous one, so creating the monitor first and the window-controls item
         // second places the split-screen icon to the RIGHT of the monitoring numbers by default.
+        // The window-controls item is created lazily by syncWindowControlServices() below, and
+        // only when windowManagementEnabled is on — pure-monitoring users never see it.
         setupStatusItem()
-        setupWindowControlsStatusItem()
         setupPanel()
         startMonitoring()
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
@@ -94,16 +95,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 .store(in: &cancellables)
         }
 
-        settings.$magnetHotKeysEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.windowControlPermissionAlertShown = false
-                self?.syncWindowControlServices()
-            }
-            .store(in: &cancellables)
-
-        settings.$titlebarGesturesEnabled
+        // 窗口管理总开关：单一开关同时驱动菜单栏图标、快捷键、标题栏手势的起停。
+        settings.$windowManagementEnabled
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
@@ -169,7 +162,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Window Controls Status Item
 
-    private func setupWindowControlsStatusItem() {
+    /// 仅当窗口管理开启时创建菜单栏图标；已存在则幂等返回。
+    private func ensureWindowControlsStatusItem() {
+        guard windowControlsStatusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
             button.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "settings.windowControls".localized)
@@ -177,6 +172,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         item.menu = makeWindowControlsMenu()
         windowControlsStatusItem = item
+    }
+
+    /// 关闭窗口管理时彻底移除图标（而非仅隐藏），不留菜单栏占位。
+    private func removeWindowControlsStatusItem() {
+        guard let item = windowControlsStatusItem else { return }
+        NSStatusBar.system.removeStatusItem(item)
+        windowControlsStatusItem = nil
     }
 
     private func makeWindowControlsMenu() -> NSMenu {
@@ -211,10 +213,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         addWindowMenuItem("window.action.maximize".localized, action: .maximize, to: menu)
         addWindowMenuItem("window.action.center".localized, action: .center, to: menu)
         addWindowMenuItem("window.action.restore".localized, action: .restore, to: menu)
-        menu.addItem(.separator())
-        addWindowToggleItem("settings.windowHotKeys".localized, selector: #selector(toggleMagnetHotKeys), to: menu)
-        addWindowToggleItem("settings.titlebarGestures".localized, selector: #selector(toggleTitlebarGestures), to: menu)
-        updateWindowControlsMenuStates(menu)
         return menu
     }
 
@@ -233,24 +231,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         menu.addItem(item)
     }
 
-    private func addWindowToggleItem(_ title: String, selector: Selector, to menu: NSMenu) {
-        let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
-        item.target = self
-        menu.addItem(item)
-    }
-
-    private func updateWindowControlsStatusItemVisibility() {
-        windowControlsStatusItem?.isVisible = settings.magnetHotKeysEnabled
-        if let menu = windowControlsStatusItem?.menu {
-            updateWindowControlsMenuStates(menu)
-        }
-    }
-
-    private func updateWindowControlsMenuStates(_ menu: NSMenu) {
-        menu.item(withTitle: "settings.windowHotKeys".localized)?.state = settings.magnetHotKeysEnabled ? .on : .off
-        menu.item(withTitle: "settings.titlebarGestures".localized)?.state = settings.titlebarGesturesEnabled ? .on : .off
-    }
-
     @objc private func performWindowMenuAction(_ sender: NSMenuItem) {
         guard let action = action(for: sender.tag) else { return }
         windowSnappingService.perform(action)
@@ -260,14 +240,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         guard menuItem.action == #selector(performWindowMenuAction(_:)) else { return true }
         guard let action = action(for: menuItem.tag) else { return false }
         return windowSnappingService.canPerform(action)
-    }
-
-    @objc private func toggleMagnetHotKeys() {
-        settings.magnetHotKeysEnabled.toggle()
-    }
-
-    @objc private func toggleTitlebarGestures() {
-        settings.titlebarGesturesEnabled.toggle()
     }
 
     private func tag(for action: WindowSnapAction) -> Int {
@@ -549,19 +521,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
     }
 
+    /// 窗口管理总开关统一驱动：开 → 图标 + 快捷键 + 手势全起；关 → 三者一起停。
     private func syncWindowControlServices() {
-        if settings.magnetHotKeysEnabled {
+        if settings.windowManagementEnabled {
+            ensureWindowControlsStatusItem()
             startMagnetHotKeysOrPrompt()
-        } else {
-            magnetHotKeyService.stop()
-        }
-
-        if settings.titlebarGesturesEnabled {
             startTitlebarGesturesOrPrompt()
         } else {
+            magnetHotKeyService.stop()
             titlebarGestureService.stop()
+            removeWindowControlsStatusItem()
         }
-        updateWindowControlsStatusItemVisibility()
     }
 
     private func startMagnetHotKeysOrPrompt() {

@@ -193,8 +193,10 @@
 "settings.scrollReverse.permissionTitle" = "Accessibility Access Needed";
 "settings.scrollReverse.permissionMessage" = "Scroll direction reversal needs Accessibility permission to intercept scroll events. Enable it in System Settings to use this feature.";
 "settings.windowControls" = "Window Controls";
-"settings.windowHotKeys" = "Window Snap Shortcuts";
-"settings.titlebarGestures" = "Swipe Titlebar to Snap";
+"settings.windowManagement" = "Window Management";
+"settings.windowManagement.description" = "Enable window snap shortcuts, titlebar swipe snapping, and the menu bar icon.";
+"settings.section.monitoring" = "Monitoring";
+"settings.section.extras" = "Extra Tools (off by default)";
 "settings.windowControl.permissionTitle" = "Accessibility Access Needed";
 "settings.windowControl.permissionMessage" = "Window controls need Accessibility permission to move and resize other app windows. Enable it in System Settings to use snap shortcuts and titlebar swipe snapping.";
 "window.action.left" = "Left";
