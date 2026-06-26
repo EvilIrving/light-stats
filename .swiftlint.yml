@@ -21,7 +21,7 @@ opt_in_rules:
   - overridden_super_call
   - private_outlet
   - prohibited_super_call
-  - unowned_guard
+  - unowned_variable_capture
   - yoda_condition
 
 line_length:

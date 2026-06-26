@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for users who want quick status checks without keeping Activity Monitor open, and for developers who want a native SwiftUI/AppKit reference for menu bar monitoring.
 
-The app uses native macOS APIs for routine sampling, has no third-party runtime dependencies, and keeps network-based diagnostics opt-in.
+The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; every capability beyond it — window management, scroll reversal, exit-node detection, AI usage — is **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, and no outbound request except the (disableable) update check.
 
 ---
 
@@ -57,13 +57,14 @@ The app uses native macOS APIs for routine sampling, has no third-party runtime 
 - Normal quit and force quit with confirmation
 - Expandable child process details
 
-### Window Controls
+### Window Management
 
-- Optional menu bar window-control menu with designer-provided action icons
+- A single **Window Management** switch (off by default) turns everything on together: the menu bar window-control icon, the global snap shortcuts, and the titlebar gestures — there are no separate sub-toggles
+- Menu bar window-control menu with designer-provided action icons
 - Left, right, top, and bottom half shortcuts for high-frequency window placement
 - Additional menu actions for corners, thirds, display movement, maximize, center, restore, and minimize
 - Titlebar trackpad gestures for quick snapping with preview overlay and haptic feedback
-- Accessibility permission is required for window control, global hotkeys, and titlebar gestures
+- Turning the switch off removes the icon and stops all window-control event taps immediately; Accessibility permission is requested only when you turn it on
 
 ### Scroll Direction Control
 
@@ -122,8 +123,10 @@ Update checks contact GitHub Releases.
 - Exit-node detection and provider selection
 - AI monitoring toggles for Claude Code, Codex, and Gemini
 - Scroll reversal, horizontal reversal, and step multiplier
-- Window hotkeys and titlebar gestures
+- Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures)
 - Health score dimension toggles
+
+Settings are grouped into **Monitoring** (the core readout) and **Extra Tools (off by default)** so it is obvious which capabilities are optional.
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
 ---
@@ -166,7 +169,11 @@ GitHub Actions runs SwiftLint, localization validation, release build, artifact 
 
 ### Tests
 
-A starter XCTest suite lives in `LightStatsTests/LightStatsSmokeTests.swift`.
+The XCTest suite lives in `LightStatsTests/` and is wired into the Xcode project (the
+`LightStatsTests` unit-test target on the shared `Light Stats` scheme), so CI and the command
+below run it. Coverage focuses on the pure, regression-prone logic: the `HealthScoreService`
+scoring curves, the default-off settings contract, and the three AI-usage JSON parsers (via
+fixtures under `LightStatsTests/Fixtures/`).
 
 ```bash
 xcodebuild test \
@@ -192,7 +199,7 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 ### Project Layout
 
 - `Light Stats/Models/`: metric data structures, health score, release info
-- `Light Stats/Services/`: system collectors, scoring, update, scroll, window control, keyboard lock, AI usage
+- `Light Stats/Services/`: system collectors, scoring, update, scroll reversal, window snapping, hotkeys, titlebar gestures, keyboard lock, AI usage
 - `Light Stats/ViewModels/`: app state, sampling, settings, cleaning mode, update coordination
 - `Light Stats/Views/StatusBar/`: menu bar rendering
 - `Light Stats/Views/Popover/`: floating panel UI and reusable components
