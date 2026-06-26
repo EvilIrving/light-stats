@@ -39,6 +39,14 @@ jobs:
           chmod +x validate_localization.sh
           ./validate_localization.sh
 
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project "Light Stats.xcodeproj" \
+            -scheme "Light Stats" \
+            -destination 'platform=macOS' \
+            -derivedDataPath build/DerivedData
+
       - name: Build App
         run: |
           chmod +x build.sh

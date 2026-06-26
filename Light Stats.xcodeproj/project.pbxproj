@@ -6,7 +6,18 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		EF6FEED7ED57B120986EF218 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A4163D412EFBC3DB0013ED8C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A4163D482EFBC3DB0013ED8C;
+			remoteInfo = "Light Stats";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		7C473C581872387215E268E4 /* LightStatsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LightStatsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A4163D492EFBC3DB0013ED8C /* Light Stats.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Light Stats.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A475FD742F164E9000806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A475FDC32F165B3900806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
@@ -27,6 +38,13 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = LightStatsTests;
+			sourceTree = "<group>";
+		};
 		A4163D4B2EFBC3DB0013ED8C /* Light Stats */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -38,6 +56,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2355D6DD73130BE018864AE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A4163D462EFBC3DB0013ED8C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -53,6 +78,7 @@
 			children = (
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
 				A4163D4A2EFBC3DB0013ED8C /* Products */,
+				52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -60,43 +86,77 @@
 			isa = PBXGroup;
 			children = (
 				A4163D492EFBC3DB0013ED8C /* Light Stats.app */,
+				7C473C581872387215E268E4 /* LightStatsTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A475FD762F164E9000806CD9 /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A475FDC52F165B3900806CD9 /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A475FF102F175DC600806CD9 /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A4C320C12F1615F600BA764B /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A4C321942F16296600BA764B /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 		A4C321DB2F16306D00BA764B /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2DBF011A75D43B2B5DCC0246 /* LightStatsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E980368FEF4F8D93349110B7 /* Build configuration list for PBXNativeTarget "LightStatsTests" */;
+			buildPhases = (
+				88C3A800182FBF4D17784CC2 /* Sources */,
+				2355D6DD73130BE018864AE6 /* Frameworks */,
+				A86BC955A1B9895FA4D0B8E1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2EE38886E357FC53245DFCF1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */,
+			);
+			name = LightStatsTests;
+			productName = LightStatsTests;
+			productReference = 7C473C581872387215E268E4 /* LightStatsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		A4163D482EFBC3DB0013ED8C /* Light Stats */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A4163D562EFBC3DC0013ED8C /* Build configuration list for PBXNativeTarget "Light Stats" */;
@@ -113,8 +173,6 @@
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
 			);
 			name = "Light Stats";
-			packageProductDependencies = (
-			);
 			productName = "Light Stats";
 			productReference = A4163D492EFBC3DB0013ED8C /* Light Stats.app */;
 			productType = "com.apple.product-type.application";
@@ -178,6 +236,7 @@
 			projectRoot = "";
 			targets = (
 				A4163D482EFBC3DB0013ED8C /* Light Stats */,
+				2DBF011A75D43B2B5DCC0246 /* LightStatsTests */,
 			);
 		};
 /* End PBXProject section */
@@ -190,9 +249,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A86BC955A1B9895FA4D0B8E1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		88C3A800182FBF4D17784CC2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A4163D452EFBC3DB0013ED8C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -202,7 +275,71 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2EE38886E357FC53245DFCF1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Light Stats";
+			target = A4163D482EFBC3DB0013ED8C /* Light Stats */;
+			targetProxy = EF6FEED7ED57B120986EF218 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		27B86FB89AFD7271A602A7AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Light Stats.app/Contents/MacOS/Light Stats";
+			};
+			name = Release;
+		};
+		48499D521F5C0518AC36073E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Light Stats.app/Contents/MacOS/Light Stats";
+			};
+			name = Debug;
+		};
 		A4163D542EFBC3DC0013ED8C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -458,6 +595,15 @@
 			buildConfigurations = (
 				A4163D572EFBC3DC0013ED8C /* Debug */,
 				A4163D582EFBC3DC0013ED8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E980368FEF4F8D93349110B7 /* Build configuration list for PBXNativeTarget "LightStatsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27B86FB89AFD7271A602A7AD /* Release */,
+				48499D521F5C0518AC36073E /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

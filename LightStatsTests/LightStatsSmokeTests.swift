@@ -1,103 +1,52 @@
-//  LightStatsTests.swift
+//
+//  LightStatsSmokeTests.swift
 //  Light Stats Tests
 //
-//  Smoke tests — validates core model types and services compile & behave correctly.
-//  To add to Xcode: File → New → Target → Unit Testing Bundle → name "LightStatsTests".
-//  CI runs: xcodebuild test -project "Light Stats.xcodeproj" -scheme "Light Stats" -destination 'platform=macOS'
-//  (requires the test target added to the Xcode project once).
+//  Smoke tests — a thin "does the test bundle link against the app and can it
+//  touch real types" check. Substantive coverage lives in the dedicated
+//  HealthScoreServiceTests / SettingsDefaultsTests / AIUsageParsingTests files.
+//
 
 import XCTest
 @testable import Light_Stats
 
 final class LightStatsSmokeTests: XCTestCase {
 
-    // MARK: - Models
+    // MARK: - Model sentinels
 
-    func testCPUInfoDefault() {
-        let cpu = CPUInfo()
-        XCTAssertEqual(cpu.usage, 0)
-        XCTAssertEqual(cpu.cores, 0)
+    func testBatteryNoBatterySentinel() {
+        XCTAssertEqual(BatteryInfo.noBattery.state, .noBattery)
     }
 
-    func testMemoryInfoDefault() {
-        let mem = MemoryInfo()
-        XCTAssertEqual(mem.used, 0)
-        XCTAssertEqual(mem.total, 0)
+    func testProxyConfigNoneIsDisabled() {
+        XCTAssertFalse(ProxyConfig.none.isEnabled)
     }
 
-    func testBatteryInfoDefault() {
-        let bat = BatteryInfo()
-        XCTAssertFalse(bat.isPresent)
-        XCTAssertEqual(bat.charge, 0)
+    func testDiskIOZero() {
+        XCTAssertEqual(DiskIOStats.zero.readMBs, 0)
+        XCTAssertEqual(DiskIOStats.zero.writeMBs, 0)
     }
 
-    func testDiskInfoDefault() {
-        let disk = DiskInfo()
-        XCTAssertEqual(disk.used, 0)
-        XCTAssertEqual(disk.total, 0)
+    func testHealthScorePerfect() {
+        XCTAssertEqual(HealthScore.perfect.score, 100)
+        XCTAssertEqual(HealthScore.perfect.grade, .excellent)
     }
 
-    func testGPUInfoDefault() {
-        let gpu = GPUInfo()
-        XCTAssertEqual(gpu.usage, 0)
-    }
-
-    func testNetworkInfoDefault() {
-        let net = NetworkInfo()
-        XCTAssertEqual(net.downloadSpeed, 0)
-        XCTAssertEqual(net.uploadSpeed, 0)
-    }
-
-    func testProxyInfoDefault() {
-        let proxy = ProxyInfo()
-        XCTAssertFalse(proxy.isActive)
-    }
-
-    func testHealthScoreRange() {
-        let score = HealthScore()
-        XCTAssertGreaterThanOrEqual(score.value, 0)
-        XCTAssertLessThanOrEqual(score.value, 100)
-    }
-
-    func testProcessStatsDefault() {
-        let proc = ProcessStats()
-        XCTAssertEqual(proc.totalCPU, 0)
-        XCTAssertTrue(proc.topProcesses.isEmpty)
-    }
-
-    func testAIUsageInfoDefault() {
-        let ai = AIUsageInfo()
-        XCTAssertFalse(ai.isAvailable)
-    }
-
-    func testCoreTypeIsHashable() {
-        let core = CoreType.performance
-        _ = core.hashValue  // compiles = confirmed Hashable
-    }
-
-    func testAppGroupDefault() {
-        let group = AppGroup(label: "Test", processes: [])
-        XCTAssertEqual(group.label, "Test")
-        XCTAssertTrue(group.processes.isEmpty)
+    func testAIProviderHasThreeCases() {
+        XCTAssertEqual(Set(AIProvider.allCases), [.claude, .codex, .gemini])
     }
 
     // MARK: - Utilities
 
-    func testByteFormatterCompact() {
-        XCTAssertEqual(ByteFormatter.format(bytes: 0), "0 B")
-        XCTAssertEqual(ByteFormatter.format(bytes: 1024), "1.0 KB")
-    }
-
-    func testByteFormatterIsIdempotent() {
-        let a = ByteFormatter.format(bytes: 1_073_741_824)
-        let b = ByteFormatter.format(bytes: 1_073_741_824)
+    func testByteFormatterProducesNonEmptyDeterministicOutput() {
+        XCTAssertFalse(ByteFormatter.format(0).isEmpty)
+        let a = ByteFormatter.format(1_073_741_824)
+        let b = ByteFormatter.format(1_073_741_824)
         XCTAssertEqual(a, b)
+        XCTAssertTrue(a.contains("GB"), "1 GiB should format with a GB unit, got \(a)")
     }
 
-    // MARK: - ViewModel existence
-
-    func testSettingsManagerExists() {
-        _ = SettingsManager()
-        // Defaults must load without crashing
+    func testDiskFormatterRoundsUp() {
+        XCTAssertEqual(ByteFormatter.formatDisk(1_500_000_000), "2 GB")
     }
 }
