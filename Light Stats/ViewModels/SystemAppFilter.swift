@@ -125,18 +125,20 @@ let hiddenBundleIdSubstrings: [String] = [
 func isSystemAppInWatchList(_ bundleId: String?) -> Bool {
     guard let bundleId = bundleId, !bundleId.isEmpty else { return false }
 
+    // Bundle ID 在 macOS 上本就大小写不敏感，统一转小写比较，
+    // 避免名单里的大小写笔误（如 com.apple.appstore vs com.apple.AppStore）误伤。
+    let lowerBundleId = bundleId.lowercased()
     for pattern in systemAppWatchList {
-        if pattern.hasSuffix("*") {
+        let lowerPattern = pattern.lowercased()
+        if lowerPattern.hasSuffix("*") {
             // 通配符匹配
-            let prefix = String(pattern.dropLast())
-            if bundleId.hasPrefix(prefix) {
+            let prefix = String(lowerPattern.dropLast())
+            if lowerBundleId.hasPrefix(prefix) {
                 return true
             }
-        } else {
+        } else if lowerBundleId == lowerPattern {
             // 精确匹配
-            if bundleId == pattern {
-                return true
-            }
+            return true
         }
     }
     return false
