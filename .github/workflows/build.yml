@@ -45,7 +45,11 @@ jobs:
             -project "Light Stats.xcodeproj" \
             -scheme "Light Stats" \
             -destination 'platform=macOS' \
-            -derivedDataPath build/DerivedData
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
 
       - name: Build App
         run: |
