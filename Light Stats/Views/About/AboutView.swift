@@ -102,7 +102,10 @@ struct AboutView: View {
             Spacer().frame(height: 28)
         }
         .frame(width: 280)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(
+            GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
+                .ignoresSafeArea()
+        )
         .id(localization.currentLanguage)
         .focusable(false)
     }

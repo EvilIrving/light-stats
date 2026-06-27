@@ -23,7 +23,10 @@ struct UpdateWindowView: View {
             .multilineTextAlignment(.center)
             .frame(width: contentWidth)
             .padding(24)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(
+                GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
+                    .ignoresSafeArea()
+            )
             .id(localization.currentLanguage)
     }
 
