@@ -4,328 +4,113 @@
 //
 //  Created on 2024/12/24.
 //
+//  List-detail 设置面板：左侧 SettingsCategory 侧栏，右侧按选中分类切换的详情面板。
+//  用普通 HStack 而非 NavigationSplitView——后者在 `Settings { }` scene 里有尺寸 /
+//  侧栏折叠 / 焦点环传播的坑（详见方案评审）。选中项用 @AppStorage 持久化，使
+//  `.id(language)` 重建语言时不丢选中、不出现空白详情。
+//
 
 import SwiftUI
+
+// MARK: - Category
+
+/// 设置分类。三组分区对应「通用 / 监控（核心）/ 附加工具（默认关闭）」，保留旧版的
+/// opt-in 分组语义，让用户一眼看出哪些是可选的越界能力。
+enum SettingsCategory: String, CaseIterable, Identifiable {
+    case general, menuBar, health
+    case scroll, windowManagement, finderMenu, aiUsage, network
+
+    var id: String { rawValue }
+
+    enum Group { case general, monitoring, extras }
+
+    var group: Group {
+        switch self {
+        case .general: return .general
+        case .menuBar, .health: return .monitoring
+        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network: return .extras
+        }
+    }
+
+    /// 侧栏标题的本地化 key（尽量复用旧卡片标题，减少新增键）。
+    var titleKey: String {
+        switch self {
+        case .general: return "settings.general"
+        case .menuBar: return "settings.statusBar"
+        case .health: return "settings.health"
+        case .scroll: return "settings.inputDevices"
+        case .windowManagement: return "settings.windowManagement"
+        case .finderMenu: return "settings.finderMenu"
+        case .aiUsage: return "settings.aiUsage"
+        case .network: return "settings.exitNode.section"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .menuBar: return "menubar.rectangle"
+        case .health: return "heart.text.square"
+        case .scroll: return "arrow.up.arrow.down"
+        case .windowManagement: return "macwindow"
+        case .finderMenu: return "filemenu.and.cursorarrow"
+        case .aiUsage: return "sparkles"
+        case .network: return "network"
+        }
+    }
+
+    static func items(in group: Group) -> [SettingsCategory] {
+        allCases.filter { $0.group == group }
+    }
+
+    /// 该 opt-in 工具当前是否处于启用状态——用于侧栏的绿色「live」信号点。
+    /// 监控核心（general/menuBar/health）永远返回 false：它们不是可开关的越界能力。
+    func isActive(_ settings: SettingsManager) -> Bool {
+        switch self {
+        case .scroll:
+            return settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
+        case .windowManagement:
+            return settings.windowManagementEnabled
+        case .finderMenu:
+            return settings.finderMenuEnabled
+        case .aiUsage:
+            return settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled
+        case .network:
+            return settings.exitNodeDetectionEnabled
+        case .general, .menuBar, .health:
+            return false
+        }
+    }
+}
+
+// MARK: - Root
 
 struct SettingsView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var updateManager = UpdateManager.shared
+    @AppStorage("settings.selectedCategory") private var selectedRaw = SettingsCategory.general.rawValue
     @State private var showMinimumItemAlert = false
     @State private var showExitPrivacyAlert = false
 
+    private var selectedCategory: SettingsCategory {
+        SettingsCategory(rawValue: selectedRaw) ?? .general
+    }
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 16) {
-                // 1. General Card — 开机启动 / 语言 / 软件更新
-                BentoCard(title: "settings.general".localized) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("settings.launchAtLogin".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.launchAtLogin)
-                        }
-
-                        HStack {
-                            Text("settings.language".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.appLanguage) {
-                                ForEach(AppLanguage.allCases) { lang in
-                                    Text(lang.shortName).tag(lang)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .fixedSize()
-                            .focusable(false)
-                        }
-
-                        HStack {
-                            Text("settings.update.autoCheck".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.autoCheckUpdates)
-                        }
-
-                        Button {
-                            UpdateManager.shared.check(userInitiated: true)
-                        } label: {
-                            HStack(spacing: 6) {
-                                if updateManager.isChecking {
-                                    ProgressView().controlSize(.small).scaleEffect(0.8)
-                                }
-                                Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .controlSize(.large)
-                        .disabled(updateManager.isChecking)
-                    }
-                }
-
-                // ── 监控（核心）─────────────────────────────
-                sectionHeader("settings.section.monitoring")
-
-                // 2. Status Bar Card — 显示项网格 + 刷新频率 + 温度单位
-                BentoCard(title: "settings.statusBar".localized) {
-                    VStack(spacing: 12) {
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 8) {
-                            SettingsGridItem(
-                                title: "settings.logo".localized,
-                                isOn: $settings.showLogo,
-                                icon: "applelogo",
-                                assetIcon: "StatusIcon"
-                            ) {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.cpu".localized, isOn: $settings.showCPU, icon: "cpu") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.gpu".localized, isOn: $settings.showGPU, icon: "square.grid.2x2") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.memory".localized, isOn: $settings.showMemory, icon: "memorychip") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.disk".localized, isOn: $settings.showDisk, icon: "internaldrive") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.network".localized, isOn: $settings.showNetwork, icon: "network") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.fan".localized, isOn: $settings.showFan, icon: "fanblades") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.battery".localized, isOn: $settings.showBattery, icon: "battery.100") {
-                                validateMinimumItems()
-                            }
-                            SettingsGridItem(title: "settings.health".localized, isOn: $settings.showHealth, icon: "heart.text.square") {
-                                validateMinimumItems()
-                            }
-                        }
-                        .padding(.vertical, 4)
-
-                        HStack {
-                            Text("settings.refreshRate.label".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.refreshRate) {
-                                ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
-                                    Text(rate.displayName).tag(rate)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .fixedSize()
-                            .focusable(false)
-                        }
-
-                        HStack {
-                            Text("settings.temperatureUnit".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.temperatureUnit) {
-                                ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
-                                    Text(unit.displayName).tag(unit)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .focusable(false)
-                        }
-                    }
-                }
-
-                // 3. Appearance Card — 平缓色调 + 颜色指示器
-                BentoCard(title: "settings.appearance".localized) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("settings.flatColors.section".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.useFlatColors)
-                        }
-
-                        HStack {
-                            Text("settings.colorIndicator".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.useColorIndicator)
-                        }
-                    }
-                }
-
-                // 4. Health Score Card — 维度网格（颜色指示器开关已移至「外观」）。
-                BentoCard(title: "settings.health".localized) {
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 8) {
-                        HealthDimButton(
-                            title: "health.dimension.cpu".localized,
-                            isOn: $settings.healthIncludeCPU,
-                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
-                        )
-                        HealthDimButton(
-                            title: "health.dimension.memory".localized,
-                            isOn: $settings.healthIncludeMemory,
-                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
-                        )
-                        HealthDimButton(
-                            title: "health.dimension.load".localized,
-                            isOn: $settings.healthIncludeLoad,
-                            demoLevel: .medium, useColorIndicator: settings.useColorIndicator
-                        )
-                        HealthDimButton(
-                            title: "health.dimension.temperature".localized,
-                            isOn: $settings.healthIncludeTemperature,
-                            demoLevel: .high, useColorIndicator: settings.useColorIndicator
-                        )
-                        HealthDimButton(
-                            title: "health.dimension.gpu".localized,
-                            isOn: $settings.healthIncludeGPU,
-                            demoLevel: .medium, useColorIndicator: settings.useColorIndicator
-                        )
-                        HealthDimButton(
-                            title: "settings.healthDimensions.power".localized,
-                            isOn: $settings.healthIncludePower,
-                            demoLevel: .low, useColorIndicator: settings.useColorIndicator
-                        )
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                // ── 附加工具（默认关闭）──────────────────────
-                sectionHeader("settings.section.extras")
-
-                // 5. Input Devices Card — 仅滚动方向/步长
-                BentoCard(title: "settings.inputDevices".localized) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("settings.scrollReverse".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.scrollReverseEnabled)
-                        }
-
-                        HStack {
-                            Text("settings.scrollReverseHorizontal".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.scrollReverseHorizontalEnabled)
-                        }
-
-                        scrollStepRow
-                    }
-                }
-
-                // 5b. Window Management Card — 单一总开关：图标 + 快捷键 + 手势一起起停
-                BentoCard(title: "settings.windowManagement".localized,
-                          headerAccessory: {
-                    SettingsToggle(isOn: $settings.windowManagementEnabled)
-                }) {
-                    Text("settings.windowManagement.description".localized)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                // 6. AI Usage Card
-                BentoCard(title: "settings.aiUsage".localized) {
-                    VStack(spacing: 12) {
-                        HStack {
-                            Text("aiUsage.claude".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
-                        }
-
-                        HStack {
-                            Text("aiUsage.codex".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.aiMonitorCodexEnabled)
-                        }
-
-                        HStack {
-                            Text("aiUsage.gemini".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            SettingsToggle(isOn: $settings.aiMonitorGeminiEnabled)
-                        }
-
-                        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled {
-                            HStack {
-                                Text("settings.aiUsageInterval".localized)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(SettingsManager.AIRefreshInterval.m2.displayName)
-                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-
-                // 7. Exit Node Card
-                BentoCard(title: "settings.exitNode.section".localized,
-                          headerAccessory: {
-                    SettingsToggle(isOn: Binding(
-                        get: { settings.exitNodeDetectionEnabled },
-                        set: { newValue in
-                            if newValue {
-                                showExitPrivacyAlert = true
-                            } else {
-                                settings.exitNodeDetectionEnabled = false
-                            }
-                        }
-                    ))
-                }) {
-                    if settings.exitNodeDetectionEnabled {
-                        HStack {
-                            Text("settings.exitNode.provider".localized)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Picker("", selection: $settings.exitNodeProvider) {
-                                ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
-                                    Text(provider.shortName).tag(provider)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden()
-                            .fixedSize()
-                            .focusable(false)
-                        }
-                    }
-                }
-            }
-            .padding(16)
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(width: 430, height: 676)
-        .background(Color(nsColor: .windowBackgroundColor))
+        // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
+        // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
+        .frame(width: 480, height: 620)
+        .background(
+            GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
+                .ignoresSafeArea()
+        )
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
@@ -341,43 +126,167 @@ struct SettingsView: View {
         .focusable(false)
     }
 
-    /// 分区标题：把卡片划为「监控（核心）」与「附加工具（默认关闭）」两组，
-    /// 让用户一眼看出哪些是可选的越界能力。
-    private func sectionHeader(_ key: String) -> some View {
-        Text(key.localized)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.secondary)
-            .textCase(.uppercase)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 4)
+    // MARK: Sidebar
+
+    private var sidebar: some View {
+        List(selection: Binding<SettingsCategory?>(
+            get: { selectedCategory },
+            set: { if let value = $0 { selectedRaw = value.rawValue } }
+        )) {
+            sidebarSection(.general, header: "settings.section.general")
+            sidebarSection(.monitoring, header: "settings.section.monitoring")
+            sidebarSection(.extras, header: "settings.section.extras")
+        }
+        .listStyle(.sidebar)
+        .frame(width: 160)
+        .focusable(false)
     }
 
-    /// 步长倍率滑块。阻尼依附反转开关：两个反转都关闭时滑块禁用并淡化，提示其当前不生效。
-    private var scrollStepRow: some View {
-        let active = settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("settings.scrollStep".localized)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(String(format: "%.2f×", settings.scrollStepMultiplier))
-                    .font(.system(size: 12, weight: .medium).monospacedDigit())
-                    .foregroundColor(.secondary)
+    @ViewBuilder
+    private func sidebarSection(_ group: SettingsCategory.Group, header: String) -> some View {
+        Section {
+            ForEach(SettingsCategory.items(in: group)) { category in
+                HStack(spacing: 8) {
+                    Image(systemName: category.icon)
+                        .font(.system(size: 13))
+                        .frame(width: 18)
+                    Text(category.titleKey.localized)
+                        .font(.system(size: 12))
+                    Spacer(minLength: 4)
+                    // 绿色 live 信号点：仅当该 opt-in 工具正在运行时出现，一眼看清哪些
+                    // 越界能力被打开了（呼应「opt-in by construction」的产品原则）。
+                    if category.isActive(settings) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .tag(category)
             }
-            Slider(value: $settings.scrollStepMultiplier, in: 0.25...3.0, step: 0.05)
-                .controlSize(.small)
-                .focusable(false)
+        } header: {
+            Text(header.localized)
+                .font(.system(size: 10, weight: .semibold))
+                .textCase(.uppercase)
+                .tracking(0.6)
+                .foregroundStyle(.tertiary)
         }
-        .disabled(!active)
-        .opacity(active ? 1 : 0.45)
     }
+
+    // MARK: Detail
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selectedCategory {
+        case .general:
+            GeneralDetail(settings: settings, updateManager: updateManager)
+        case .menuBar:
+            MenuBarDetail(settings: settings, onValidate: validateMinimumItems)
+        case .health:
+            HealthDetail(settings: settings)
+        case .scroll:
+            ScrollDetail(settings: settings)
+        case .windowManagement:
+            WindowManagementDetail(settings: settings)
+        case .finderMenu:
+            FinderMenuDetail(settings: settings, openSettings: openLoginItemsAndExtensionsSettings)
+        case .aiUsage:
+            AIUsageDetail(settings: settings)
+        case .network:
+            NetworkDetail(settings: settings, showPrivacyAlert: $showExitPrivacyAlert)
+        }
+    }
+
+    // MARK: Helpers
 
     private func validateMinimumItems() {
         if !settings.hasAtLeastOneItem {
             settings.ensureAtLeastOneItem()
             showMinimumItemAlert = true
         }
+    }
+
+    /// 打开「系统设置 › 登录项与扩展」，引导用户启用 Finder 扩展。沙盒 App 不能用
+    /// pluginkit 自注册，启用只能由用户手动完成。
+    private func openLoginItemsAndExtensionsSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else { return }
+        NSWorkspace.shared.open(url)
+    }
+}
+
+// MARK: - Detail scaffold
+
+/// 详情面板骨架：标题（可带右侧开关等附件）+ 内容，统一内边距。取代旧的 BentoCard，
+/// 用留白与发丝分隔线表达层级，而非嵌套卡片。
+struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
+    private let title: String
+    private let accessory: Accessory
+    private let content: Content
+
+    init(_ title: String,
+         @ViewBuilder accessory: () -> Accessory = { EmptyView() },
+         @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.accessory = accessory()
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(title).font(.system(size: 16, weight: .semibold))
+                Spacer()
+                accessory
+            }
+            .padding(.bottom, 12)
+            Divider()
+            VStack(alignment: .leading, spacing: 14) {
+                content
+            }
+            .padding(.top, 16)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// 分组容器：把相关行收进一个下沉、发丝边框的圆角面板（macOS / Linear 设置组的样子），
+/// 用留白与分隔线表达层级，而非嵌套卡片。行之间的 `Divider` 由调用方插入。
+struct SettingsGroup<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.025)))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.08)))
+    }
+}
+
+/// 一行设置：左标签 + 右控件，统一内边距，置于 SettingsGroup 内。
+struct SettingsRow<Control: View>: View {
+    private let title: String
+    private let control: Control
+
+    init(_ title: String, @ViewBuilder control: () -> Control) {
+        self.title = title
+        self.control = control()
+    }
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+            Spacer()
+            control
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 
@@ -456,7 +365,7 @@ struct SettingsGridItem: View {
 // MARK: - Health Dimension Button
 
 /// 健康分维度按钮：纯文字，无图标，点击切换开关。
-private struct HealthDimButton: View {
+struct HealthDimButton: View {
     let title: String
     @Binding var isOn: Bool
     let demoLevel: SettingsGridItem.DemoLevel
@@ -466,38 +375,36 @@ private struct HealthDimButton: View {
         Button {
             isOn.toggle()
         } label: {
-            Text(demoLabel)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(textColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isOn ? Color.primary.opacity(0.06) : Color.primary.opacity(0.03))
-                )
+            VStack(spacing: 3) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(isOn ? .primary : .secondary)
+                Text(demoLevel.label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(levelColor)
+            }
+            .frame(maxWidth: .infinity, minHeight: 26)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isOn ? Color.primary.opacity(0.06) : Color.primary.opacity(0.03))
+            )
         }
         .buttonStyle(.plain)
     }
 
-    private var demoLabel: String {
-        if useColorIndicator {
-            return title
-        } else {
-            return "\(title) \(demoLevel.label)"
-        }
-    }
-
-    private var textColor: Color {
+    /// 等级词的颜色：关闭时统一灰；开启时按偏好——颜色模式用红/黄/绿，文字模式保持中性。
+    private var levelColor: Color {
         guard isOn else { return .secondary }
-        return useColorIndicator ? demoLevel.color : .primary
+        return useColorIndicator ? demoLevel.color : .secondary
     }
 }
 
 // MARK: - Settings Toggle
 
 /// Reusable switch component — styling only; focus suppression is handled
-/// globally via `.focusable(false)` on the root ScrollView.
-private struct SettingsToggle: View {
+/// globally via `.focusable(false)` on the root.
+struct SettingsToggle: View {
     @Binding var isOn: Bool
 
     var body: some View {
