@@ -420,6 +420,13 @@ open "build/DerivedData/Build/Products/Debug/Light Stats.app"
 
 Force-quit before relaunching: `pkill -9 -f "Light Stats"` (`debug-run.sh` does this for you when you do need to launch).
 
+**Version number is tag-driven; the pbxproj value is not.** Release version is the git tag:
+`release.yml` parses `vX.Y.Z` → passes `VERSION` to `build.sh` → `MARKETING_VERSION=$VERSION` override →
+the DMG and the About page show the tag version. The hardcoded `MARKETING_VERSION = 1.0.2` in
+`project.pbxproj` is an **intentional local-Debug fallback only** (used by `debug-run.sh` / a plain
+`xcodebuild`). It deliberately does not track tags and does not affect releases — leave it as-is, it is
+not a stale-version bug.
+
 ### CI
 
 | Workflow | Trigger | Action |

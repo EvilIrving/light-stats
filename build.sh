@@ -5,7 +5,11 @@ PROJECT="Light Stats.xcodeproj"
 SCHEME="Light Stats"
 APP_NAME="Light Stats"
 
-# 版本号
+# 版本号 —— 发布产物的唯一真源。
+# 优先级：外部 VERSION（release.yml 从 git tag `vX.Y.Z` 解析）> 本地 git tag > 1.0.0-dev。
+# 下方 xcodebuild 用 MARKETING_VERSION=$VERSION 覆盖，所以 DMG/About 显示的版本始终跟 tag 走。
+# 注意：pbxproj 里写死的 MARKETING_VERSION = 1.0.2 只对本地 Debug（debug-run.sh / 直接 xcodebuild）生效，
+# 是有意保留的 fallback，不跟 tag 同步、不影响发布，无需每次发版去改它。
 if [ -n "$VERSION" ]; then
     echo "📌 版本号: $VERSION"
 elif git describe --tags --exact-match 2>/dev/null; then
