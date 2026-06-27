@@ -6,7 +6,40 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0486DCFE37D701C1C1AECDB7 /* FinderMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 724D46D591D7723498E3E818 /* FinderMenuController.swift */; };
+		09A14F6E4C9CD42C70C426F0 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */; };
+		1BB7F9FBCB2AFE635C3204C9 /* FinderMenuConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */; };
+		1E10EB9A36E3BFC4782D71CB /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */; };
+		2BC46C156421B32DC420DC95 /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */; };
+		3BD59E124216473F6AE7B30C /* FinderMenuConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */; };
+		3D3BB2812BDA41750D6D53C4 /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8CAD36B05096E438852D4C /* FinderMenuIPCClient.swift */; };
+		463D6E77AE281414DFA3D29A /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5CA0339A7753AE7823B7853 /* FinderMenuShared.swift */; };
+		4F087802BBF0A4E27CC88D15 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */; };
+		68D0974F836EFF98CDA2FAB3 /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039B1F798EA5628A55642C0E /* FinderMenuShared.swift */; };
+		6F7F5BC86AD9533A75C2EE13 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629BB24832C45E70B0A31F0E /* FinderMenuAction.swift */; };
+		763753E8F19FA01907205667 /* FinderMenuExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
+		7888CB5D4E32C318D7A9171B /* FinderMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */; };
+		8642EDACCBFF708F6E2E2163 /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2CE180B826D6EC13EFAB91 /* FinderMenuPresets.swift */; };
+		8CFD3AF21250D63FC2150141 /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */; };
+		9839D88CF7B0D11A04F2031E /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */; };
+		A1E12EAEC16CA1A40857A32B /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 708E7D6F3C88245D7E049305 /* FinderMenuCommand.swift */; };
+		A605D2851705B3719D4327DA /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039B1F798EA5628A55642C0E /* FinderMenuShared.swift */; };
+		B02725F33FEBF864A028064A /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */; };
+		BF8536D98CAB8199B3C80BE3 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */; };
+		F24E8CA7BD77C5A06B851C33 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */; };
+		FD71052D19A898945F9D4557 /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */; };
+		FE5621022D1FCBCBE9889361 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DF32BDFC092895A8EC0A53 /* FinderMenuRequest.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		D20107429E5ACFCA3B242278 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A4163D412EFBC3DB0013ED8C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AD1B0FF495F6021E26524778;
+			remoteInfo = FinderMenuExtension;
+		};
 		EF6FEED7ED57B120986EF218 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A4163D412EFBC3DB0013ED8C /* Project object */;
@@ -16,8 +49,31 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		6EE48E23A84CB7EC8EACE2E4 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				763753E8F19FA01907205667 /* FinderMenuExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		039B1F798EA5628A55642C0E /* FinderMenuShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuShared.swift; sourceTree = "<group>"; };
+		263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuAction.swift; sourceTree = "<group>"; };
+		43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuPresets.swift; sourceTree = "<group>"; };
+		58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuIPCClient.swift; sourceTree = "<group>"; };
+		5C301770F4F27CA339E9D34D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7063AD4296BA6D340790598F /* FinderMenuExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FinderMenuExtension.entitlements; sourceTree = "<group>"; };
+		724D46D591D7723498E3E818 /* FinderMenuController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuController.swift; sourceTree = "<group>"; };
+		744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuConfig.swift; sourceTree = "<group>"; };
 		7C473C581872387215E268E4 /* LightStatsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LightStatsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuController.swift; sourceTree = "<group>"; };
 		A4163D492EFBC3DB0013ED8C /* Light Stats.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Light Stats.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A475FD742F164E9000806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A475FDC32F165B3900806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
@@ -25,6 +81,9 @@
 		A4C320BF2F1615F600BA764B /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A4C321922F16296600BA764B /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A4C321D92F16306D00BA764B /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
+		BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuCommand.swift; sourceTree = "<group>"; };
+		E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuRequest.swift; sourceTree = "<group>"; };
+		E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FinderMenuExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,15 +129,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AC67B7373F0E286201CEC253 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		94E04D6296B456C56E1327C4 /* FinderMenuExtension */ = {
+			isa = PBXGroup;
+			children = (
+				812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */,
+				5C301770F4F27CA339E9D34D /* Info.plist */,
+				7063AD4296BA6D340790598F /* FinderMenuExtension.entitlements */,
+			);
+			name = FinderMenuExtension;
+			path = FinderMenuExtension;
+			sourceTree = "<group>";
+		};
 		A4163D402EFBC3DB0013ED8C = {
 			isa = PBXGroup;
 			children = (
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
 				A4163D4A2EFBC3DB0013ED8C /* Products */,
 				52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */,
+				C019218879934C3EA19D7C71 /* FinderMenu */,
+				94E04D6296B456C56E1327C4 /* FinderMenuExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -87,6 +166,7 @@
 			children = (
 				A4163D492EFBC3DB0013ED8C /* Light Stats.app */,
 				7C473C581872387215E268E4 /* LightStatsTests.xctest */,
+				E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +213,21 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		C019218879934C3EA19D7C71 /* FinderMenu */ = {
+			isa = PBXGroup;
+			children = (
+				039B1F798EA5628A55642C0E /* FinderMenuShared.swift */,
+				263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */,
+				BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */,
+				744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */,
+				E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */,
+				43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */,
+				58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */,
+			);
+			name = FinderMenu;
+			path = FinderMenu;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -164,10 +259,12 @@
 				A4163D452EFBC3DB0013ED8C /* Sources */,
 				A4163D462EFBC3DB0013ED8C /* Frameworks */,
 				A4163D472EFBC3DB0013ED8C /* Resources */,
+				6EE48E23A84CB7EC8EACE2E4 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				70A4396006F7ED4528FE16AF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
@@ -176,6 +273,23 @@
 			productName = "Light Stats";
 			productReference = A4163D492EFBC3DB0013ED8C /* Light Stats.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AD1B0FF495F6021E26524778 /* FinderMenuExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 27D40924EAEBE9AC8CB8E011 /* Build configuration list for PBXNativeTarget "FinderMenuExtension" */;
+			buildPhases = (
+				0E76D441C14D484459D226DF /* Sources */,
+				AC67B7373F0E286201CEC253 /* Frameworks */,
+				AD8BEC7FE1657D16381EC4B2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FinderMenuExtension;
+			productName = FinderMenuExtension;
+			productReference = E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -237,6 +351,7 @@
 			targets = (
 				A4163D482EFBC3DB0013ED8C /* Light Stats */,
 				2DBF011A75D43B2B5DCC0246 /* LightStatsTests */,
+				AD1B0FF495F6021E26524778 /* FinderMenuExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -256,9 +371,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD8BEC7FE1657D16381EC4B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0E76D441C14D484459D226DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				68D0974F836EFF98CDA2FAB3 /* FinderMenuShared.swift in Sources */,
+				4F087802BBF0A4E27CC88D15 /* FinderMenuAction.swift in Sources */,
+				FD71052D19A898945F9D4557 /* FinderMenuCommand.swift in Sources */,
+				3BD59E124216473F6AE7B30C /* FinderMenuConfig.swift in Sources */,
+				F24E8CA7BD77C5A06B851C33 /* FinderMenuRequest.swift in Sources */,
+				B02725F33FEBF864A028064A /* FinderMenuPresets.swift in Sources */,
+				9839D88CF7B0D11A04F2031E /* FinderMenuIPCClient.swift in Sources */,
+				7888CB5D4E32C318D7A9171B /* FinderMenuController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		88C3A800182FBF4D17784CC2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -270,6 +407,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A605D2851705B3719D4327DA /* FinderMenuShared.swift in Sources */,
+				BF8536D98CAB8199B3C80BE3 /* FinderMenuAction.swift in Sources */,
+				8CFD3AF21250D63FC2150141 /* FinderMenuCommand.swift in Sources */,
+				1BB7F9FBCB2AFE635C3204C9 /* FinderMenuConfig.swift in Sources */,
+				09A14F6E4C9CD42C70C426F0 /* FinderMenuRequest.swift in Sources */,
+				2BC46C156421B32DC420DC95 /* FinderMenuPresets.swift in Sources */,
+				1E10EB9A36E3BFC4782D71CB /* FinderMenuIPCClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,6 +425,12 @@
 			name = "Light Stats";
 			target = A4163D482EFBC3DB0013ED8C /* Light Stats */;
 			targetProxy = EF6FEED7ED57B120986EF218 /* PBXContainerItemProxy */;
+		};
+		70A4396006F7ED4528FE16AF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FinderMenuExtension;
+			target = AD1B0FF495F6021E26524778 /* FinderMenuExtension */;
+			targetProxy = D20107429E5ACFCA3B242278 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -312,6 +462,34 @@
 			};
 			name = Release;
 		};
+		27C0BFF43610AFB60B4565C6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		48499D521F5C0518AC36073E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -339,6 +517,63 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Light Stats.app/Contents/MacOS/Light Stats";
 			};
 			name = Debug;
+		};
+		48FB5A129531D001F3D4B192 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		9E505B20CFCC495C21ED80DA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
 		};
 		A4163D542EFBC3DC0013ED8C /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -578,9 +813,47 @@
 			};
 			name = Release;
 		};
+		AB20378ED70135E50788AA08 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = macosx;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		27D40924EAEBE9AC8CB8E011 /* Build configuration list for PBXNativeTarget "FinderMenuExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27C0BFF43610AFB60B4565C6 /* Release */,
+				48FB5A129531D001F3D4B192 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A4163D442EFBC3DB0013ED8C /* Build configuration list for PBXProject "Light Stats" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

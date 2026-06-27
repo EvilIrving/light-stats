@@ -51,6 +51,7 @@ protocol SettingsManaging: ObservableObject {
     var exitNodeProvider: ExitNodeProvider { get set }
     var autoCheckUpdates: Bool { get set }
     var windowManagementEnabled: Bool { get set }
+    var finderMenuEnabled: Bool { get set }
 }
 
 @MainActor
@@ -214,6 +215,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var scrollStepMultiplier: Double {
         didSet { save(scrollStepMultiplier, for: .scrollStepMultiplier) }
     }
+    /// Finder 右键菜单总开关：默认关闭（opt-in）。开 → 宿主注册 CFMessagePort、扩展出菜单；
+    /// 关 → 端口注销、扩展不出菜单。值镜像写入 App Group 容器供沙盒扩展读取。
+    @Published var finderMenuEnabled: Bool {
+        didSet {
+            save(finderMenuEnabled, for: .finderMenuEnabled)
+            FinderMenuShared.setEnabled(finderMenuEnabled)
+        }
+    }
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
@@ -327,6 +336,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
         case windowManagementEnabled = "settings.windowManagementEnabled"
+        case finderMenuEnabled = "settings.finderMenuEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
     }
@@ -395,12 +405,18 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的 magnet/titlebar 子开关。
         windowManagementEnabled = defaults.object(forKey: Key.windowManagementEnabled.rawValue) as? Bool ?? false
+        // Finder 右键菜单：默认关闭（opt-in）。
+        finderMenuEnabled = defaults.object(forKey: Key.finderMenuEnabled.rawValue) as? Bool ?? false
         scrollReverseHorizontalEnabled =
             defaults.object(forKey: Key.scrollReverseHorizontalEnabled.rawValue) as? Bool ?? false
         // 步长倍率：默认 1×；夹取到 0.25–3× 防御历史/异常值。
         let storedMultiplier = defaults.object(forKey: Key.scrollStepMultiplier.rawValue) as? Double ?? 1.0
         scrollStepMultiplier = min(max(storedMultiplier, 0.25), 3.0)
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
+
+        // 所有存储属性初始化完成后，把 Finder 菜单开关初值镜像进 App Group 容器，
+        // 确保沙盒扩展冷启动即读到正确状态。
+        FinderMenuShared.setEnabled(finderMenuEnabled)
     }
 
     // MARK: - Validation

@@ -105,9 +105,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             }
             .store(in: &cancellables)
 
+        // Finder 右键菜单总开关：开 → 注册宿主 CFMessagePort；关 → 注销。
+        settings.$finderMenuEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncFinderMenuService() }
+            .store(in: &cancellables)
+
+        // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
+        settings.$appLanguage
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { _ in FinderMenuHostService.shared.publishLabels() }
+            .store(in: &cancellables)
+
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
         syncScrollService()
         syncWindowControlServices()
+        syncFinderMenuService()
+        // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
+        FinderMenuHostService.shared.publishLabels()
 
         // 应用回到前台时复查权限（用户可能已授权但之前 tap 创建失败）。
         // 权限已满足且开关开启但服务未运行时自动启动。
@@ -482,7 +499,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         scrollService.stop()
         magnetHotKeyService.stop()
         titlebarGestureService.stop()
+        FinderMenuHostService.shared.stop()
         SMCInfo.shutdown()
+    }
+
+    // MARK: - Finder Menu
+
+    /// Finder 右键菜单宿主服务的起停。总开关开 → 注册 CFMessagePort 接收扩展委派的动作；
+    /// 关 → 注销端口。扩展侧由 FinderMenuShared.isEnabled() 独立把关，两道门都默认关。
+    private func syncFinderMenuService() {
+        if settings.finderMenuEnabled {
+            FinderMenuHostService.shared.start()
+        } else {
+            FinderMenuHostService.shared.stop()
+        }
     }
 
     // MARK: - Scroll Direction
