@@ -256,6 +256,23 @@ struct AIUsageDetail: View {
     }
 }
 
+// MARK: - Keep Awake
+
+struct KeepAwakeDetail: View {
+    @ObservedObject var settings: SettingsManager
+
+    var body: some View {
+        SettingsDetailScaffold("settings.keepAwake".localized) {
+            SettingsToggle(isOn: $settings.keepAwakeEnabled)
+        } content: {
+            Text("settings.keepAwake.description".localized)
+                .font(.system(size: 11)).foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
 // MARK: - Network (exit node)
 
 struct NetworkDetail: View {

@@ -112,6 +112,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .sink { [weak self] _ in self?.syncFinderMenuService() }
             .store(in: &cancellables)
 
+        // 保持唤醒总开关：开 → 持有 IOPM 断言阻止息屏；关 → 释放。
+        settings.$keepAwakeEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncKeepAwakeService() }
+            .store(in: &cancellables)
+
         // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
         settings.$appLanguage
             .dropFirst()
@@ -123,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         syncScrollService()
         syncWindowControlServices()
         syncFinderMenuService()
+        syncKeepAwakeService()
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
 
@@ -503,7 +511,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         magnetHotKeyService.stop()
         titlebarGestureService.stop()
         FinderMenuHostService.shared.stop()
+        KeepAwakeService.shared.stop()
         SMCInfo.shutdown()
+    }
+
+    // MARK: - Keep Awake
+
+    /// 保持唤醒服务的起停：开 → 持有 IOPM 电源断言阻止显示器息屏；关 → 释放断言。
+    private func syncKeepAwakeService() {
+        if settings.keepAwakeEnabled {
+            KeepAwakeService.shared.start()
+        } else {
+            KeepAwakeService.shared.stop()
+        }
     }
 
     // MARK: - Finder Menu

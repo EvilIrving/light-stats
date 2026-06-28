@@ -232,6 +232,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             FinderMenuShared.setEnabled(finderMenuEnabled)
         }
     }
+    /// 保持唤醒（阻止息屏）：默认关闭（opt-in）。开 → 持有 IOPM 电源断言阻止显示器息屏；关 → 释放。
+    @Published var keepAwakeEnabled: Bool {
+        didSet { save(keepAwakeEnabled, for: .keepAwakeEnabled) }
+    }
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
@@ -350,6 +354,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case finderMenuEnabled = "settings.finderMenuEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
+        case keepAwakeEnabled = "settings.keepAwakeEnabled"
     }
 
     // MARK: - Init
@@ -426,6 +431,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 步长倍率：默认 1×；夹取到 0.25–3× 防御历史/异常值。
         let storedMultiplier = defaults.object(forKey: Key.scrollStepMultiplier.rawValue) as? Double ?? 1.0
         scrollStepMultiplier = min(max(storedMultiplier, 0.25), 3.0)
+        // 保持唤醒：默认关闭（opt-in）。
+        keepAwakeEnabled = defaults.object(forKey: Key.keepAwakeEnabled.rawValue) as? Bool ?? false
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
 
         // 所有存储属性初始化完成后，把 Finder 菜单开关初值镜像进 App Group 容器，

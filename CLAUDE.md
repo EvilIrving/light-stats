@@ -48,6 +48,7 @@ Light Stats/
 │   ├── TitlebarGestureService.swift # Titlebar swipe-to-snap (CGEventTap, opt-in)
 │   ├── AccessibilityPermission.swift # Shared AXIsProcessTrusted check + prompt
 │   ├── LaunchAtLoginService.swift   # SMAppService login-item registration
+│   ├── KeepAwakeService.swift       # IOPMAssertion prevent-display-sleep (opt-in, default off)
 │   ├── PageRateService.swift        # vm_statistics64 swap page rate (nonisolated)
 │   ├── SMCInfo.swift                # SMC temperature + fan
 │   ├── CLIBinaryResolver.swift      # which/path for AI CLIs

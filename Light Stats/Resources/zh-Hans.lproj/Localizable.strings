@@ -244,3 +244,5 @@
 "window.action.maximize" = "最大化";
 "window.action.center" = "居中";
 "window.action.restore" = "还原";
+"settings.keepAwake" = "保持唤醒";
+"settings.keepAwake.description" = "开启后阻止屏幕息屏，直到你关闭此开关或退出 Light Stats。";

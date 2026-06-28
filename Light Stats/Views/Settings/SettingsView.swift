@@ -18,7 +18,7 @@ import SwiftUI
 /// opt-in 分组语义，让用户一眼看出哪些是可选的越界能力。
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general, menuBar, health
-    case scroll, windowManagement, finderMenu, aiUsage, network
+    case scroll, windowManagement, finderMenu, aiUsage, network, keepAwake
 
     var id: String { rawValue }
 
@@ -28,7 +28,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general: return .general
         case .menuBar, .health: return .monitoring
-        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network: return .extras
+        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network, .keepAwake: return .extras
         }
     }
 
@@ -43,6 +43,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .finderMenu: return "settings.finderMenu"
         case .aiUsage: return "settings.aiUsage"
         case .network: return "settings.exitNode.section"
+        case .keepAwake: return "settings.keepAwake"
         }
     }
 
@@ -56,6 +57,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .finderMenu: return "filemenu.and.cursorarrow"
         case .aiUsage: return "sparkles"
         case .network: return "network"
+        case .keepAwake: return "cup.and.saucer.fill"
         }
     }
 
@@ -77,6 +79,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             return settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled
         case .network:
             return settings.exitNodeDetectionEnabled
+        case .keepAwake:
+            return settings.keepAwakeEnabled
         case .general, .menuBar, .health:
             return false
         }
@@ -198,6 +202,8 @@ struct SettingsView: View {
             AIUsageDetail(settings: settings)
         case .network:
             NetworkDetail(settings: settings, showPrivacyAlert: $showExitPrivacyAlert)
+        case .keepAwake:
+            KeepAwakeDetail(settings: settings)
         }
     }
 
