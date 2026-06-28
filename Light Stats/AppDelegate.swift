@@ -312,9 +312,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // proc_pidpath / responsibility 查询，每 5s 一次）仅服务于 Cleanup 标签页。
         // 改为在面板打开时预热（见 togglePanel），面板关闭即停（见 dismissPanel），
         // 既消除了面板从未打开时的后台白扫，又保证首次切到 Cleanup 页数据已就绪、不闪空态。
-        if settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled {
-            AIUsageMonitor.shared.start()
-        }
+        // 始终 start()：仅建立设置订阅，无 provider 开启时不发请求、不弹 Keychain（见
+        // AIUsageMonitor 注释）。这样用户在运行期才开启某 provider 也能即时生效，
+        // 且 warmup 自动续期依赖监控发布的窗口快照拿 reset 时间。
+        AIUsageMonitor.shared.start()
+        UsageWarmupManager.shared.start()
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
@@ -496,6 +498,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
         AIUsageMonitor.shared.stop()
+        UsageWarmupManager.shared.stopAll()
         scrollService.stop()
         magnetHotKeyService.stop()
         titlebarGestureService.stop()

@@ -135,6 +135,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
+"aiUsage.autoRefresh" = "윈도우 자동 갱신";
 "aiUsage.fetching" = "가져오는 중...";
 "aiUsage.tokenExpired" = "토큰 만료 — %@ 을(를) 한 번 실행해 갱신하세요";
 "aiUsage.credentialsMissing" = "인증 정보 없음 — 먼저 %@ CLI로 로그인하세요";

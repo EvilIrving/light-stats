@@ -223,9 +223,21 @@ struct AIUsageDetail: View {
                 SettingsRow("aiUsage.claude".localized) {
                     SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
                 }
+                if settings.aiMonitorClaudeEnabled {
+                    rowDivider()
+                    SettingsRow("aiUsage.autoRefresh".localized) {
+                        SettingsToggle(isOn: $settings.autoRefreshClaudeEnabled)
+                    }
+                }
                 rowDivider()
                 SettingsRow("aiUsage.codex".localized) {
                     SettingsToggle(isOn: $settings.aiMonitorCodexEnabled)
+                }
+                if settings.aiMonitorCodexEnabled {
+                    rowDivider()
+                    SettingsRow("aiUsage.autoRefresh".localized) {
+                        SettingsToggle(isOn: $settings.autoRefreshCodexEnabled)
+                    }
                 }
                 rowDivider()
                 SettingsRow("aiUsage.gemini".localized) {

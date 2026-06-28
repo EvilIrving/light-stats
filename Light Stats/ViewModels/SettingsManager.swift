@@ -170,6 +170,15 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var aiUsageRefreshInterval: AIRefreshInterval {
         didSet { save(aiUsageRefreshInterval.rawValue, for: .aiUsageRefreshInterval) }
     }
+    /// 自动续期 5h 窗口（warmup）。默认关闭（opt-in），仅在对应 provider 监控开启时才有意义。
+    /// 开 → `UsageWarmupManager` 定时发一条 headless 消息把窗口起点挪进工作时段；关 → 立即停。
+    /// Gemini 无对应开关（每日 quota，非滚动窗口）。
+    @Published var autoRefreshClaudeEnabled: Bool {
+        didSet { save(autoRefreshClaudeEnabled, for: .autoRefreshClaude) }
+    }
+    @Published var autoRefreshCodexEnabled: Bool {
+        didSet { save(autoRefreshCodexEnabled, for: .autoRefreshCodex) }
+    }
 
     @Published var appLanguage: AppLanguage {
         didSet {
@@ -332,6 +341,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case aiMonitorCodex = "settings.aiMonitorCodex"
         case aiMonitorGemini = "settings.aiMonitorGemini"
         case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
+        case autoRefreshClaude = "settings.autoRefreshClaude"
+        case autoRefreshCodex = "settings.autoRefreshCodex"
         case autoCheckUpdates = "settings.autoCheckUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
@@ -398,6 +409,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         aiMonitorGeminiEnabled = defaults.object(forKey: Key.aiMonitorGemini.rawValue) as? Bool ?? false
         let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m2.rawValue
         aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m2
+        // 自动续期窗口：默认关闭（opt-in）。
+        autoRefreshClaudeEnabled = defaults.object(forKey: Key.autoRefreshClaude.rawValue) as? Bool ?? false
+        autoRefreshCodexEnabled = defaults.object(forKey: Key.autoRefreshCodex.rawValue) as? Bool ?? false
 
         // 自动检查更新：默认开启。
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true

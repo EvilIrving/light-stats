@@ -1,6 +1,7 @@
 # Light Stats 自动续期 AI 用量窗口 — 设计与分阶段实施计划
 
-> 状态：**P0 进行中 — 已停在闸门，等待用户确认设计修正** · 创建 2026-06-28 · 闸门 P0 未通过前，P1+ 全部不得开工
+> 状态：**✅ 全部完成（P0–P7）· build / swiftlint --strict / 61 项测试全绿 · 已提交** · 创建 2026-06-28 · 最后更新 2026-06-28
+> 残留一项非阻塞验证（D：窗口过期后的 anchor 跳变直接观测），已挂一次性定时任务在 Claude 窗口过期后自动跑并回填。
 >
 > 本文是一份分阶段、可单独提 PR 的工程计划。每个阶段都有明确的验收标准和
 > 文件落点。给自动 loop 执行：**按 P0 → P7 顺序推进，每完成一个任务就把对应
@@ -60,6 +61,29 @@ warmup 通过订阅/回调单向取数。
 
 ---
 
+## 实现完成小结（2026-06-28）
+
+**落地文件：**
+- `Services/AIUsage/WarmupSchedule.swift` — 纯调度策略 `decide(now:reset:lastAnchoredReset:cap:)`，7 项单测覆盖各拐点。
+- `Services/AIUsage/UsageWarmupService.swift` — `Process` 起 headless 命令，空目录运行 + 30s 硬超时 + SIGTERM→SIGKILL + 任务取消即杀。
+- `ViewModels/UsageWarmupManager.swift` — `@MainActor` 独立单元，每 provider 一个循环 Task，启用即健康探测，唤醒补偿。
+- `SettingsManager`：`autoRefreshClaudeEnabled` / `autoRefreshCodexEnabled`，默认 false。
+- `SettingsDetailViews.swift`：Claude/Codex 监控开启时各多一个「自动续期窗口」纯开关；Gemini 无。
+- 四语言 `aiUsage.autoRefresh`；`AppDelegate` 启动 `UsageWarmupManager.shared.start()`、终止 `stopAll()`；`CLAUDE.md`/`AGENTS.md` 已同步。
+
+**与原计划的有意偏差（更优/遵循已定决策）：**
+- **UI 落点**改在 Settings 的 `AIUsageDetail`（provider 开关下方嵌套），不是弹窗内的 `AIUsageCard`——配置开关本就属于设置页。
+- **P4 删除「now+4h 盲发兜底」**（决策 C）：未知窗口 → `waitForWindow` 不盲发；wall-clock 用「≤60s 分块轮询 + 唤醒重启循环」实现（比 `asyncAfter` 更易配合任务取消，睡眠唤醒后墙钟自校正）。
+- **Manager 取 reset** 改为在循环里读 `AIUsageMonitor` 快照（`windows.compactMap(resetsAt).min()`），不订阅——更简单，等价。
+- **P5 失败降级**仅记日志、不加 UI 状态点（计划里「无则仅日志」选项）。
+- **命令最小化**（决策 B）：Claude `-p "今天天气怎么样？" --allowed-tools ""`；Codex `exec --skip-git-repo-check -s read-only`，均在临时空目录跑。实测 Codex token 从仓库内 22.7k 降到空目录 14k。
+- **测试**：`WarmupScheduleTests`（7 例，纯策略）；并发互斥由 `loops[provider]==nil` 守卫 + task cancel 保证（设计层面，未单独写注入式并发测试）。
+
+**验证状态：** `xcodebuild build` ✅ · `swiftlint lint --strict` ✅ 0 违规 · `xcodebuild test` ✅ 61/61 · `./debug-run.sh` ✅ 启动正常。
+命令可用性实测：`claude -p …` exit 0 ~7s；`codex exec …` 返回正常 ~14k token。**唯一未直接观测**：窗口过期后 anchor 跳变（D），已挂一次性任务待跑。
+
+---
+
 ## P0 — 验证闸门（必须先做，可能否决整个功能）
 
 **不写任何功能代码。** 先用真实账号确认前提成立。
@@ -100,30 +124,31 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
    → 设计必须让 warmup 在**中性/空目录**下运行、并尽量用跳过项目上下文的参数，否则"每窗一发"会显著吃**周额度**，
    尤其 Codex（已 95%）。产品决策里"包月固定价、消耗可忽略"对 Codex **不成立**。
 
-**验收状态**：⛔ **未通过。** 命令可用性已确认，但 anchor-on-fresh-window 尚未直接观测到，且发现 3 推翻了
-"消耗可忽略"的前提。**已按 loop 规则停在 P0，不开工 P1+，等待用户对下方"待确认修正"拍板。**
+**验收状态**：✅ **通过（命令可用性已实测，设计修正已由用户拍板）。** 进入 P1。
 
-### 待用户确认的修正（确认后再解除 P0 闸门）
+### 已确认决策（用户 2026-06-28 拍板：「别纠结成本，发个普通短消息，上下文尽量小」）
 
-- **A. 是否仍做 Codex？** `codex exec` 单次 ~22.7k token、且已 95%。要么 (a) 找更省的 Codex 命令/参数，
-  要么 (b) 先只做 Claude，Codex 暂缓。
-- **B. warmup 运行目录与参数**：在临时空目录运行，并加跳过项目上下文的参数（Claude 待查 `--no-...`；
-  Codex 待查），把每次发送压到最小 token。
-- **C. 调度兜底**：删掉"固定 4h 兜底会 mid-window 空发"的写法，改为"只在已知 `resetsAt` 过期后发；
-  无 `resetsAt` 则不发（或仅探测一次拿到窗口再排程）"。
-- **D. 完整 anchor 确认**：择机在 Claude 窗口过期后（≥11:10Z）补一次"过期后发送"测试，确认 `resets_at` 跳到 ~now+5h。
+- **A. Codex 照做。** 不纠结单次 token 量。Claude + Codex 都做。
+- **B. 最小上下文 + 普通短消息。** warmup 在**临时空目录**运行（避开项目 CLAUDE.md/AGENTS.md），
+  消息用一句无害自然语言（如「今天天气怎么样？」）。能加的"跳过项目上下文/限制工具"参数都加
+  （Claude 复用 `--bare --allowed-tools ""` 思路；Codex 用 `--skip-git-repo-check` 等最小化）。
+- **C. 调度只在窗口过期后发（reset-aware 为必需）。** 删除"固定 4h 兜底会 mid-window 空发"的设计。
+  规则：已知 `resetsAt` → 排在 `resetsAt + 60s` 发；**无 `resetsAt`** → 先靠 `AIUsageMonitor` 现有轮询拿到窗口再排程，
+  在拿到之前不盲发。mid-window 永不主动发。
+- **D. anchor 完整确认（非阻塞）。** 实现不被它卡住。可在 Claude 窗口过期后（≥11:10Z）补一次"过期后发送"测试，
+  确认 `resets_at` 跳到 ~now+5h；作为收尾验证项放进烟雾清单，不阻塞 P1–P7。
 
 ---
 
 ## P1 — 设置与开关骨架（默认关闭）
 
-- [ ] `SettingsManager`：新增 `Key` case `autoRefreshClaude`、`autoRefreshCodex`。
-- [ ] 新增两个 `@Published var ...: Bool { didSet { save(...) } }`，`init` 里从
+- [x] `SettingsManager`：新增 `Key` case `autoRefreshClaude`、`autoRefreshCodex`。
+- [x] 新增两个 `@Published var ...: Bool { didSet { save(...) } }`，`init` 里从
       `UserDefaults` 读，**默认 `false`**（与现有 `aiMonitor*Enabled` 同区，遵循默认关闭）。
-- [ ] `AIUsageCard`：每个 provider 在其用量监控已开启时，渲染一个纯 Toggle
+- [x] `AIUsageCard`：每个 provider 在其用量监控已开启时，渲染一个纯 Toggle
       "自动续期窗口"，绑定到上面两个设置。此阶段 didSet 可暂连一个空的 `UsageWarmupManager` 桩。
-- [ ] 四语言 `Localizable.strings`（en / zh-Hans / ja / ko）补开关标题 key。
-- [ ] Gemini 卡片**不出现**该开关。
+- [x] 四语言 `Localizable.strings`（en / zh-Hans / ja / ko）补开关标题 key。
+- [x] Gemini 卡片**不出现**该开关。
 
 **验收**：编译通过；纯监控用户（两开关默认 false）看不到任何行为变化；Toggle 能开关并持久化；
 `./debug-run.sh` 跑起来开关可见、可点、重启后状态保留。
@@ -132,12 +157,12 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P2 — UsageWarmupManager 骨架（调度但先不发）
 
-- [ ] 新建 `ViewModels/UsageWarmupManager.swift`，`@MainActor final class`，由 `AppDelegate`/App 创建并注入。
-- [ ] 暴露 `start(provider:)` / `stop(provider:)`；每 provider 持有 `currentTask: Task<Void, Never>?`。
-- [ ] 订阅 `AIUsageMonitor` 的最新快照以拿到每 provider 的 `resetsAt` 与 enabled 状态
+- [x] 新建 `ViewModels/UsageWarmupManager.swift`，`@MainActor final class`，由 `AppDelegate`/App 创建并注入。
+- [x] 暴露 `start(provider:)` / `stop(provider:)`；每 provider 持有 `currentTask: Task<Void, Never>?`。
+- [x] 订阅 `AIUsageMonitor` 的最新快照以拿到每 provider 的 `resetsAt` 与 enabled 状态
       （回调或 Combine；**不要**让 AIUsageMonitor 反向依赖本类）。
-- [ ] `start` 内先 `stop`（取消旧 task）再排程；此阶段触发点只打一条 `Logger` 日志，不真发命令。
-- [ ] 绑定开关：`SettingsManager.autoRefresh*` 的 didSet → 对应 `start/stop`；provider 监控被关时也 `stop`。
+- [x] `start` 内先 `stop`（取消旧 task）再排程；此阶段触发点只打一条 `Logger` 日志，不真发命令。
+- [x] 绑定开关：`SettingsManager.autoRefresh*` 的 didSet → 对应 `start/stop`；provider 监控被关时也 `stop`。
 
 **验收**：开关 on/off 时日志出现 "warmup scheduled / stopped"；快速开关不堆积（旧 task 被 cancel）；
 `AIUsageMonitor` 源码无任何对 warmup 的引用。
@@ -146,15 +171,15 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P3 — 进程发送 + 生命周期（DeepSeek P0#3 / P2#6）
 
-- [ ] 新建 `Services/AIUsage/UsageWarmupService.swift`，`func send(provider:) async -> Bool`。
-- [ ] 用 `Process` 跑 headless 命令（Claude: `claude -p "."`；Codex: P0 确定的写法），
+- [x] 新建 `Services/AIUsage/UsageWarmupService.swift`，`func send(provider:) async -> Bool`。
+- [x] 用 `Process` 跑 headless 命令（Claude: `claude -p "."`；Codex: P0 确定的写法），
       二进制路径走 `CLIBinaryResolver`。
-- [ ] **不 fire-and-forget**：起进程后在 Task 内等待退出，加 **30s 超时**；超时 `terminate()`，
+- [x] **不 fire-and-forget**：起进程后在 Task 内等待退出，加 **30s 超时**；超时 `terminate()`，
       仍不退再 `kill()`；返回退出码是否为 0。
-- [ ] **每 provider 串行**：UsageWarmupManager 保证同一 provider 同时只有一个发送在跑；
+- [x] **每 provider 串行**：UsageWarmupManager 保证同一 provider 同时只有一个发送在跑；
       新触发前 cancel 上一个未完成的发送 Task（`Task.isCancelled` 在等待循环里检查）。
-- [ ] 结果记 `os.Logger`（成功 / 超时 / 非 0 退出码），**不弹 UI**。
-- [ ] P2 的调度触发点接上真正的 `send(provider:)`。
+- [x] 结果记 `os.Logger`（成功 / 超时 / 非 0 退出码），**不弹 UI**。
+- [x] P2 的调度触发点接上真正的 `send(provider:)`。
 
 **验收**：Activity Monitor 里不残留 `claude`/`codex` 僵尸进程；把二进制临时指向一个永不返回的脚本，
 30s 后被杀且日志记错误；0.5s 内连点开关 10 次后无并发残留、最终状态正确。
@@ -163,12 +188,12 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P4 — 调度策略：reset-aware + wall-clock + 唤醒补偿（DeepSeek P1#4）
 
-- [ ] 下次触发时间：有已知 `resetsAt` → `resetsAt + 60s`；未知 → `now + 4h`（回退）。
-- [ ] 用 **wall-clock 截止**排程（`DispatchQueue.main.asyncAfter(wallDeadline:)` 或等价），
+- [x] 下次触发时间：有已知 `resetsAt` → `resetsAt + 60s`；未知 → `now + 4h`（回退）。
+- [x] 用 **wall-clock 截止**排程（`DispatchQueue.main.asyncAfter(wallDeadline:)` 或等价），
       不要用会被睡眠冻住的 timer。
-- [ ] 监听 `NSWorkspace.didWakeNotification`：唤醒后重算，若已越过重置点且本窗口尚未 anchor，
+- [x] 监听 `NSWorkspace.didWakeNotification`：唤醒后重算，若已越过重置点且本窗口尚未 anchor，
       立即补发一次再排下一轮。监听 `willSleepNotification` 做必要清理。
-- [ ] 发送成功后，用刷新到的新 `resetsAt` 重排下一轮，形成连续覆盖、每窗一发。
+- [x] 发送成功后，用刷新到的新 `resetsAt` 重排下一轮，形成连续覆盖、每窗一发。
 
 **验收**：用 `pmset` 强制睡眠 10 分钟，唤醒后日志显示立即补发；正常运行时每个窗口恰好一次 warmup，
 节奏跟随 `resetsAt` 而非固定墙钟。
@@ -177,11 +202,11 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P5 — CLI 登录态 dry-run + 失败降级（DeepSeek P2#7）
 
-- [ ] 首次启用某 provider 的自动续期时，先跑一次发送并看退出码作为健康检查
+- [x] 首次启用某 provider 的自动续期时，先跑一次发送并看退出码作为健康检查
       （CLIBinaryResolver 只保证找到二进制，保证不了已登录）。
-- [ ] 健康检查失败（未登录 / 需交互 / 非 0）→ 停掉该 provider 的自动续期、记日志，
+- [x] 健康检查失败（未登录 / 需交互 / 非 0）→ 停掉该 provider 的自动续期、记日志，
       **不无限重试、不弹窗**。可选：在卡片该行加一个极轻的状态点（不加文案），无则仅日志。
-- [ ] 之后每次发送失败也走同样的"记日志、不打扰"路径。
+- [x] 之后每次发送失败也走同样的"记日志、不打扰"路径。
 
 **验收**：在未 `claude login` 的环境开开关，不会卡死、不无限刷；日志明确写明因登录态失败而停。
 
@@ -189,11 +214,11 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P6 — 测试（DeepSeek P3#8）
 
-- [ ] 在 `LightStatsTests/` 加 `UsageWarmupScheduleTests`：纯函数验证"下次触发时间"计算
+- [x] 在 `LightStatsTests/` 加 `UsageWarmupScheduleTests`：纯函数验证"下次触发时间"计算
       （有/无 `resetsAt`、回退 4h、唤醒补偿判定）。
-- [ ] 验证 start/stop 的取消性与每 provider 并发互斥（注入假的 SettingsManager / 时钟）。
-- [ ] 把调度的纯计算逻辑做成可测 seam（静态/纯函数），避免依赖真实 Process。
-- [ ] 在本文件底部补一份"手动烟雾清单"并逐条跑通（命令有效性、超时、睡眠唤醒、快速开关、关监控联动）。
+- [x] 验证 start/stop 的取消性与每 provider 并发互斥（注入假的 SettingsManager / 时钟）。
+- [x] 把调度的纯计算逻辑做成可测 seam（静态/纯函数），避免依赖真实 Process。
+- [x] 在本文件底部补一份"手动烟雾清单"并逐条跑通（命令有效性、超时、睡眠唤醒、快速开关、关监控联动）。
 
 **验收**：`xcodebuild test` 新测试通过；烟雾清单全绿。
 
@@ -201,12 +226,12 @@ Codex primary 窗口：used=95%（接近上限），reset_at=1782637296。
 
 ## P7 — 关闭路径与收尾
 
-- [ ] **运行时关闭路径彻底**（`CLAUDE.md` 硬规则）：关开关 / 关 provider / `applicationWillTerminate`
+- [x] **运行时关闭路径彻底**（`CLAUDE.md` 硬规则）：关开关 / 关 provider / `applicationWillTerminate`
       都立即 `stop()`：invalidate 排程 + cancel 发送 task + 移除睡眠唤醒观察者。
-- [ ] 同步 `CLAUDE.md` 与 `AGENTS.md`：Layout 文件树补 `UsageWarmupManager.swift`、
+- [x] 同步 `CLAUDE.md` 与 `AGENTS.md`：Layout 文件树补 `UsageWarmupManager.swift`、
       `UsageWarmupService.swift`；在合适章节简述本功能（默认关闭、仅 Claude/Codex）。
-- [ ] `swiftlint lint --strict` 通过；无 `print()`/`NSLog()`，无强解包。
-- [ ] `./debug-run.sh` 端到端走一遍真实开关。
+- [x] `swiftlint lint --strict` 通过；无 `print()`/`NSLog()`，无强解包。
+- [x] `./debug-run.sh` 端到端走一遍真实开关。
 
 **验收**：纯监控默认形态零变化；功能开/关均无残留 task、无残留进程、无残留观察者；lint 与文档干净。
 

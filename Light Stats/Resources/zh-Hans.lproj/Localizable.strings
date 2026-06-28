@@ -135,6 +135,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
+"aiUsage.autoRefresh" = "自动续期窗口";
 "aiUsage.fetching" = "获取中...";
 "aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
