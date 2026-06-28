@@ -54,13 +54,12 @@ Light Stats/
 │   └── AIUsage/                     # Shared AI-usage fetch helpers
 │       ├── PTYProbe.swift           # Reusable PTY capture engine (Claude/Codex CLI scrape)
 │       ├── KeychainCredentialReader.swift # `security` CLI Keychain read (no auth dialog)
-│       ├── UsageWarmupService.swift # Headless CLI send to anchor rolling usage window (warmup)
-│       └── WarmupSchedule.swift     # Pure warmup scheduling policy (reset-aware, testable)
+│       └── UsageWarmupService.swift # Headless CLI send to keep the usage window warm
 ├── ViewModels/                      # @Observable / ObservableObject; @MainActor for UI
 │   ├── SystemMonitor.swift          # Timer → collect → publish SystemSnapshot
 │   ├── SettingsManager.swift        # UserDefaults-backed preferences
 │   ├── AIUsageMonitor.swift         # Claude/Codex/Gemini polling coordinator
-│   ├── UsageWarmupManager.swift     # Opt-in auto-refresh (warmup) of Claude/Codex usage window
+│   ├── UsageWarmupManager.swift     # Opt-in fixed-interval keep-alive ping for Claude/Codex
 │   ├── AppMemoryManager.swift       # Process list + cleanup state
 │   ├── LocalizationManager.swift    # Language change broadcast
 │   ├── SystemAppFilter.swift        # Apple-signed app exclusion list

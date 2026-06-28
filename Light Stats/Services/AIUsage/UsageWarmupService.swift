@@ -4,11 +4,11 @@
 //
 //  Created on 2026/06/28.
 //
-//  Sends a throwaway headless CLI message ("warmup") to anchor a fresh rolling
-//  usage window. Unlike the read-only `/usage` probes elsewhere, this sends a
-//  real prompt (the only thing that starts a window). Fire-and-wait with a hard
-//  timeout and SIGTERM→SIGKILL escalation; output is discarded. Runs in a throwaway
-//  empty cwd so no project CLAUDE.md / AGENTS.md context is loaded.
+//  Sends a throwaway headless CLI message to keep the rolling usage window warm
+//  (the in-app version of a periodic `/loop` ping). Unlike the read-only `/usage`
+//  probes elsewhere, this sends a real prompt. Fire-and-wait with a hard timeout
+//  and SIGTERM→SIGKILL escalation; output is discarded. Runs in a throwaway empty
+//  cwd so no project CLAUDE.md / AGENTS.md context is loaded.
 //
 
 import Foundation

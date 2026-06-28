@@ -1,8 +1,11 @@
 # Light Stats 自动续期 AI 用量窗口 — 设计与分阶段实施计划
 
-> 状态：**⚠️ 代码全部完成（P0–P7，已提交、测试全绿），但 D 复测推翻了核心前提** · 创建 2026-06-28 · 最后更新 2026-06-28
-> **D 复测结论：未能证实「发消息能把 reset 提前」，证据偏向 reset 由固定 5h 网格决定、发消息改不了**（见 P0「D 复测」）。
-> 实现机制本身正确（会按时发消息、调度/进程/UI 都对），但它能否达到「把重置挪进工作时段」的目的存疑，待用户决定去留。
+> 状态：**✅ 完成（目标已澄清并据此简化）** · 创建 2026-06-28 · 最后更新 2026-06-28
+>
+> **目标澄清（用户 2026-06-28 纠正）：要的不是「把 reset 提前 / 早上 anchor 新窗口」那套，而是最朴素的
+> 「每隔固定时长（4h）定时发一条消息」——就是把手动 `/loop` 内置。** 因此 P0/D 里关于「发消息能否移动 reset」
+> 的那串调研**与目标无关**（结论：mid-window 发送不移动 reset，但本来也不需要它移动）。已据此把实现从
+> 「reset-aware 调度」**简化为固定 4h 间隔定时发**，删掉 `WarmupSchedule` 及其测试。
 >
 > 本文是一份分阶段、可单独提 PR 的工程计划。每个阶段都有明确的验收标准和
 > 文件落点。给自动 loop 执行：**按 P0 → P7 顺序推进，每完成一个任务就把对应
@@ -10,13 +13,11 @@
 
 ## 背景
 
-Claude / Codex 订阅额度是"滚动 5 小时窗口"：窗口从你发出的第一条消息开始计时，
-5 小时后自动重置，与用量多少无关。业内常见技巧叫 **warmup**：提前发一条无意义消息
-把窗口起点挪进工作时段，让重置落在你需要它的时候。用户当前是手动做这件事（用
-Claude Code `/loop` 每 4 小时 ping 一次），现在要把它做成 app 内置功能。
+用户当前手动做的事：用 Claude Code `/loop` 每 4 小时 ping 一次，目的就是**定时触发一条消息发送**。
+现在要把它做成 app 内置功能：对开了开关的 provider，**每隔固定 4 小时自动发一条无害消息**。
+不追求「把 reset 提前到工作时段」之类的效果——就是单纯的定时 ping（同 `/loop`）。
 
-调研结论（见 `docs/ai-usage-providers-research.md` 同源）：warmup 必须发**真实消息**
-（`claude -p "."`），现有只读探测用的 `/usage`、`/status` 斜杠命令疑似不 anchor 窗口。
+发送必须是**真实消息**（`claude -p "…"`），现有只读探测用的 `/usage`、`/status` 斜杠命令不算。
 
 ## 产品决策（已定，不再讨论）
 
@@ -41,24 +42,20 @@ Claude Code `/loop` 每 4 小时 ping 一次），现在要把它做成 app 内�
 
 ```
 App
-└─ UsageWarmupManager  (新增, @MainActor, ViewModels/)   ← 独立单元，不污染只读监控
-   ├─ 订阅 AIUsageMonitor 发布的 (provider, resetsAt, enabled)   ← 只读取，不反向依赖
-   ├─ SettingsManager.autoRefresh{Claude,Codex}              ← 开关来源
-   ├─ CLIBinaryResolver                                       ← 解析 claude/codex 路径
-   ├─ 每 provider 状态: currentTask: Task?, nextFireDeadline
-   ├─ NSWorkspace 睡眠/唤醒观察者
+└─ UsageWarmupManager  (新增, @MainActor, ViewModels/)   ← 一个计时器 + 一个 Task/provider
+   ├─ 订阅 SettingsManager.{autoRefresh,aiMonitor}{Claude,Codex}   ← 开关变化即起/停循环
+   ├─ 每 provider 循环：启用即发一次(兼健康探测)，之后每 4h 发一次（≤60s 分块睡，墙钟自校正）
    └─ os.Logger (category: "UsageWarmup")
 Services
 └─ UsageWarmupService  (新增, Services/AIUsage/)           ← 真正起 Process 发命令
-   └─ send(provider:) async -> Bool   超时/等待退出/杀进程，返回是否成功
+   ├─ send(provider:) async -> Bool   空目录 + 30s 硬超时 + SIGTERM→SIGKILL，返回 exit==0
+   └─ CLIBinaryResolver                                       ← 解析 claude/codex 路径
 UI
-└─ AIUsageCard  (Views/Popover/Components/)
-   └─ 每 provider（监控已开时）: Toggle "自动续期窗口"，绑定 SettingsManager，
-      didSet 调 UsageWarmupManager.start/stop
+└─ AIUsageDetail (Settings)
+   └─ 每 provider（监控已开时）: Toggle "自动续期窗口"，绑定 SettingsManager，didSet → start/stop
 ```
 
-**关键原则**：`AIUsageMonitor` 保持纯只读，完全不知道 warmup 存在（DeepSeek P1#5）。
-warmup 通过订阅/回调单向取数。
+**关键原则**：纯定时 ping，不依赖 `AIUsageMonitor`、不读 reset 时刻、不做 anchor 对齐。一个计时器一个 Task。
 
 ---
 

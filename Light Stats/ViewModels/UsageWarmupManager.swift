@@ -4,24 +4,17 @@
 //
 //  Created on 2026/06/28.
 //
-//  Drives "warmup" sends that anchor the rolling usage window for opt-in providers.
-//  Kept fully independent of AIUsageMonitor (which stays read-only): this class only
-//  *reads* the monitor's published snapshots to learn each provider's reset time, and
-//  never feeds back into it. Default-off — nothing runs until a per-provider switch is on.
+//  目标很简单：对开了「自动续期窗口」的 provider，每隔固定时长发一条无害消息——
+//  就是把用户手动用 `/loop` 每 4 小时 ping 一次的事做成内置。不做任何「按 reset 时刻
+//  对齐 / 提前 anchor」的花活：一个计时器 + 一个 Task，定时发，仅此而已。
 //
-//  Per-provider loop (see WarmupSchedule for the policy):
-//   1. On enable: one health-probe send (validates the CLI is installed + logged in).
-//      Fail → log and stop (no scheduling). Success → enter the loop.
-//   2. Loop: read the rolling-window reset from the monitor, sleep until reset+δ
-//      (in ≤60s chunks so system sleep/wake self-corrects), then send to anchor a
-//      fresh window. Dedup via lastAnchoredReset so a slow monitor refresh can't
-//      double-send for the same window.
-//   3. On wake: cancel + re-evaluate immediately so an expired window is caught up.
+//  每 provider 一个循环：启用即发一次（兼 CLI 登录态健康探测），失败则记日志、停；
+//  成功则每 interval 发一次。睡眠用 ≤60s 分块轮询，系统睡眠唤醒后墙钟自校正（漏发尽快补上）。
+//  默认全关——干净安装什么都不跑。
 //
 
 import Foundation
 import Combine
-import AppKit
 import os
 
 @MainActor
@@ -32,21 +25,21 @@ final class UsageWarmupManager: ObservableObject {
     /// 仅这两家有滚动窗口；Gemini 是每日 quota，不参与。
     private static let supported: [AIProvider] = [.claude, .codex]
 
+    /// 固定发送间隔：每 4 小时发一条（< 5h 窗口，保证持续覆盖）。
+    private static let interval: TimeInterval = 4 * 3600
+
     private let settings = SettingsManager.shared
-    private let monitor = AIUsageMonitor.shared
     private let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
 
     private var loops: [AIProvider: Task<Void, Never>] = [:]
-    private var lastAnchoredReset: [AIProvider: Date] = [:]
     private var cancellables = Set<AnyCancellable>()
-    private var wakeObserver: NSObjectProtocol?
 
     private init() {}
 
     // MARK: - Lifecycle
 
     func start() {
-        // 开关或对应监控状态变化 → 重新评估每个 provider（开 → 起循环；关 → 立即停）。
+        // 开关或对应监控状态变化 → 重新评估（开 → 起循环；关 → 立即停）。
         Publishers.CombineLatest4(
             settings.$autoRefreshClaudeEnabled,
             settings.$autoRefreshCodexEnabled,
@@ -57,28 +50,18 @@ final class UsageWarmupManager: ObservableObject {
         .sink { [weak self] _ in self?.syncAll() }
         .store(in: &cancellables)
 
-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.handleWake() }
-        }
-
         syncAll()
     }
 
     /// Runtime off-path: tear everything down immediately (not only at terminate).
     func stopAll() {
         for provider in Self.supported { stop(provider) }
-        if let wakeObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
-        }
-        wakeObserver = nil
         cancellables.removeAll()
     }
 
     // MARK: - Per-provider lifecycle
 
-    /// warmup 需要该 provider 的监控也开着（reset 时间来自监控快照）。
+    /// warmup 需要该 provider 的监控也开着（开关只在监控开启时才出现）。
     private func isEnabled(_ provider: AIProvider) -> Bool {
         switch provider {
         case .claude: return settings.autoRefreshClaudeEnabled && settings.aiMonitorClaudeEnabled
@@ -105,23 +88,13 @@ final class UsageWarmupManager: ObservableObject {
         guard let task = loops[provider] else { return }
         task.cancel()
         loops[provider] = nil
-        lastAnchoredReset[provider] = nil
         log.info("warmup loop stop: \(provider.rawValue, privacy: .public)")
-    }
-
-    /// 唤醒后立即重判：取消正在睡眠的循环、重新起，让已过期窗口尽快补发。
-    private func handleWake() {
-        for provider in Self.supported where loops[provider] != nil {
-            stop(provider)
-        }
-        syncAll()
     }
 
     // MARK: - Loop
 
     private func run(_ provider: AIProvider) async {
-        // 启用即做一次健康探测（同时也是一次 warmup 尝试）。
-        // 失败＝CLI 不可用 / 未登录 → 记日志、不再排程（不打扰用户、不无限重试）。
+        // 启用即发一次（同时是 CLI 登录态健康探测）。失败 → 记日志、不再排程（不打扰、不无限重试）。
         let healthy = await UsageWarmupService.send(provider: provider)
         guard healthy else {
             log.error("warmup disabled (CLI unavailable/not logged in): \(provider.rawValue, privacy: .public)")
@@ -130,31 +103,21 @@ final class UsageWarmupManager: ObservableObject {
         }
 
         while !Task.isCancelled {
-            let reset = rollingReset(for: provider)
-            switch WarmupSchedule.decide(now: Date(),
-                                         reset: reset,
-                                         lastAnchoredReset: lastAnchoredReset[provider]) {
-            case .waitForWindow:
-                try? await Task.sleep(for: .seconds(60))
-            case .sleep(let seconds):
-                try? await Task.sleep(for: .seconds(seconds))
-            case .sendNow:
-                _ = await UsageWarmupService.send(provider: provider)
-                lastAnchoredReset[provider] = reset
-                try? await Task.sleep(for: .seconds(90))   // 给监控时间刷新到新窗口
-            }
+            await sleepInterval()
+            if Task.isCancelled { break }
+            _ = await UsageWarmupService.send(provider: provider)
         }
     }
 
-    /// 当前滚动窗口的 reset：取快照里最早的 reset（滚动窗口比周窗口先重置）。可能略早于 now。
-    private func rollingReset(for provider: AIProvider) -> Date? {
-        let state: ProviderFetchState
-        switch provider {
-        case .claude: state = monitor.claudeState
-        case .codex: state = monitor.codexState
-        case .gemini: return nil
+    /// 睡满一个 interval，分 ≤60s 块轮询：系统睡眠会冻住单次 sleep，但唤醒后用墙钟
+    /// 重新比对截止时间，漏过的 ping 会在唤醒后尽快补发，不会一直拖到下一整段。
+    private func sleepInterval() async {
+        let deadline = Date().addingTimeInterval(Self.interval)
+        while Date() < deadline {
+            if Task.isCancelled { return }
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { return }
+            try? await Task.sleep(for: .seconds(min(remaining, 60)))
         }
-        guard let snapshot = state.snapshot else { return nil }
-        return snapshot.windows.compactMap(\.resetsAt).min()
     }
 }
