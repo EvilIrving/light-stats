@@ -77,11 +77,10 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertTrue(s.showMemory)
     }
 
-    func testAutoCheckUpdatesIsTheOnlyDefaultOnNetworkFeature() {
+    func testNoNetworkFeatureIsOnByDefault() {
         let s = freshSettings()
-        // The single allowed default outbound path.
-        XCTAssertTrue(s.autoCheckUpdates)
-        // ...and the opt-in network feature stays off.
+        // Zero outbound on a clean install: even update checks are opt-in now.
+        XCTAssertFalse(s.autoCheckUpdates)
         XCTAssertFalse(s.exitNodeDetectionEnabled)
     }
 

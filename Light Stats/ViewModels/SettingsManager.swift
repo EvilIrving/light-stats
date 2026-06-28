@@ -418,8 +418,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         autoRefreshClaudeEnabled = defaults.object(forKey: Key.autoRefreshClaude.rawValue) as? Bool ?? false
         autoRefreshCodexEnabled = defaults.object(forKey: Key.autoRefreshCodex.rawValue) as? Bool ?? false
 
-        // 自动检查更新：默认开启。
-        autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? true
+        // 自动检查更新：默认关闭（opt-in）。彻底零外发：默认形态不发起任何网络请求。
+        autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? false
         // 滚动方向翻转：默认关闭（opt-in）。
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的 magnet/titlebar 子开关。

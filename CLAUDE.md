@@ -482,8 +482,8 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   (scroll reversal, window management, cleaning mode).
 - **No `CGEventTap`.** scroll / keyboard / window taps are all off by default; nothing is
   installed until the matching switch is turned on.
-- **No outbound request** except `autoCheckUpdates` (on by default, user-disablable).
-  Exit-node detection and AI usage polling are opt-in.
+- **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
+  alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
 - **Window management is a single master switch.** `windowManagementEnabled` (default off)
   drives the menu bar icon **and** snap shortcuts **and** titlebar gestures together —
   on = icon + shortcuts + gestures + taps all start; off = all stop. There are no
