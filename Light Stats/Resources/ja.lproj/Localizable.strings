@@ -208,6 +208,10 @@
 "settings.finderMenu.usingDefaults" = "未設定 — デフォルトを使用";
 "settings.finderMenu.templates" = "新規ファイルのテンプレート";
 "settings.finderMenu.templatesHint" = "「新規ファイル」サブメニューに表示するファイルタイプを選択します。";
+"finderMenu.templateCategory.document" = "書類とテキスト";
+"finderMenu.templateCategory.web" = "Web・マークアップ";
+"finderMenu.templateCategory.data" = "データと設定";
+"finderMenu.templateCategory.code" = "コード";
 "settings.finderMenu.addTemplate" = "テンプレートを追加…";
 "findermenu.menu.copyPath" = "パスをコピー";
 "findermenu.menu.copyName" = "名前をコピー";

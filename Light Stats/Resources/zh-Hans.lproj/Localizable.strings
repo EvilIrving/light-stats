@@ -208,6 +208,10 @@
 "settings.finderMenu.usingDefaults" = "未设置，使用默认";
 "settings.finderMenu.templates" = "新建文件模板";
 "settings.finderMenu.templatesHint" = "选择「新建文件」子菜单里显示哪些文件类型。";
+"finderMenu.templateCategory.document" = "文档与文本";
+"finderMenu.templateCategory.web" = "网页与标记";
+"finderMenu.templateCategory.data" = "数据与配置";
+"finderMenu.templateCategory.code" = "代码";
 "settings.finderMenu.addTemplate" = "添加模板…";
 "findermenu.menu.copyPath" = "拷贝路径";
 "findermenu.menu.copyName" = "拷贝名称";

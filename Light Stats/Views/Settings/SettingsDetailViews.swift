@@ -298,6 +298,9 @@ struct FinderMenuDetail: View {
     @ObservedObject private var store = FinderMenuConfigStore.shared
     let openSettings: () -> Void
 
+    /// 哪些文件类型分类当前展开（默认全部收起，保持页面简短）。
+    @State private var expandedCategories: Set<FinderMenuPresets.TemplateCategory> = []
+
     var body: some View {
         SettingsDetailScaffold("settings.finderMenu".localized) {
             SettingsToggle(isOn: $settings.finderMenuEnabled)
@@ -341,27 +344,65 @@ struct FinderMenuDetail: View {
         }
     }
 
-    /// 「新建文件」类型选择器：内置一二十个常用类型，逐个勾选是否显示在右键子菜单。
+    /// 「新建文件」类型选择器：按分类分组、可折叠；每个类型一个开关，勾选即显示在右键子菜单。
     private var templateChooser: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("settings.finderMenu.templates".localized)
                 .font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary)
             Text("settings.finderMenu.templatesHint".localized)
                 .font(.system(size: 10)).foregroundColor(.secondary.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            SettingsGroup {
-                ForEach(Array(FinderMenuPresets.fileTemplates.enumerated()), id: \.element.id) { index, template in
-                    if index > 0 { rowDivider() }
-                    SettingsRow(template.title) {
-                        SettingsToggle(isOn: Binding(
-                            get: { store.isPresetTemplateEnabled(template.id) },
-                            set: { store.setPresetTemplate(template.id, enabled: $0) }
-                        ))
-                    }
-                }
+            ForEach(FinderMenuPresets.TemplateCategory.allCases, id: \.self) { category in
+                templateCategorySection(category)
             }
         }
+    }
+
+    private func templateCategorySection(_ category: FinderMenuPresets.TemplateCategory) -> some View {
+        let items = FinderMenuPresets.fileTemplates(in: category)
+        let enabledCount = items.filter { store.isPresetTemplateEnabled($0.id) }.count
+        let isExpanded = expandedCategories.contains(category)
+        return VStack(spacing: 0) {
+            Button {
+                if isExpanded { expandedCategories.remove(category) } else { expandedCategories.insert(category) }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 10)
+                    Text(category.titleKey.localized)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text("\(enabledCount)/\(items.count)")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundColor(enabledCount > 0 ? .secondary : .secondary.opacity(0.5))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                SettingsGroup {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, template in
+                        if index > 0 { rowDivider() }
+                        SettingsRow(template.title) {
+                            SettingsToggle(isOn: Binding(
+                                get: { store.isPresetTemplateEnabled(template.id) },
+                                set: { store.setPresetTemplate(template.id, enabled: $0) }
+                            ))
+                        }
+                    }
+                }
+                .padding(.leading, 16)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.02)))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.06)))
     }
 }
 

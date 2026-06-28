@@ -13,41 +13,85 @@ nonisolated enum FinderMenuPresets {
 
     // MARK: - New File Templates
 
+    /// 文件类型分类。设置页按此分组、可折叠；普通用户常用的「文档/文本」在前，「代码」在后。
+    /// 仅持 `titleKey`（本地化键），不依赖 AppKit / 本地化实现，保持模型层纯净。
+    enum TemplateCategory: String, CaseIterable, Sendable {
+        case document   // 文档与文本
+        case web        // 网页与标记
+        case data       // 数据与配置
+        case code       // 代码
+
+        var titleKey: String {
+            switch self {
+            case .document: return "finderMenu.templateCategory.document"
+            case .web: return "finderMenu.templateCategory.web"
+            case .data: return "finderMenu.templateCategory.data"
+            case .code: return "finderMenu.templateCategory.code"
+            }
+        }
+    }
+
     struct FileTemplate: Sendable {
         let id: String
         let title: String
         let fileExtension: String
         let content: String
+        let category: TemplateCategory
     }
 
-    /// 内置文件类型预设（一二十个常用类型）。用户在设置里勾选哪些显示在「新建文件」
-    /// 子菜单；空白/极简内容是有意的——只是个起点文件，不是脚手架。
+    /// 内置文件类型预设，按分类分组（数组顺序即菜单/设置顺序：文档优先，代码靠后）。
+    /// 空白/极简内容是有意的——只是个合法的起点文件，不是脚手架。
     static let fileTemplates: [FileTemplate] = [
-        FileTemplate(id: "txt", title: "Text (.txt)", fileExtension: "txt", content: ""),
-        FileTemplate(id: "md", title: "Markdown (.md)", fileExtension: "md", content: "# \n"),
+        // 文档与文本
+        FileTemplate(id: "txt", title: "Text (.txt)", fileExtension: "txt", content: "", category: .document),
+        FileTemplate(id: "md", title: "Markdown (.md)", fileExtension: "md", content: "# \n", category: .document),
+        FileTemplate(id: "rtf", title: "Rich Text (.rtf)", fileExtension: "rtf",
+                     content: "{\\rtf1\\ansi\\deff0\n}\n", category: .document),
+        FileTemplate(id: "csv", title: "CSV (.csv)", fileExtension: "csv", content: "", category: .document),
+        FileTemplate(id: "tsv", title: "TSV (.tsv)", fileExtension: "tsv", content: "", category: .document),
+        FileTemplate(id: "log", title: "Log (.log)", fileExtension: "log", content: "", category: .document),
+        FileTemplate(id: "tex", title: "LaTeX (.tex)", fileExtension: "tex",
+                     content: "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n", category: .document),
+        // 网页与标记
         FileTemplate(id: "html", title: "HTML (.html)", fileExtension: "html",
-                     content: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title></title>\n</head>\n<body>\n</body>\n</html>\n"),
-        FileTemplate(id: "css", title: "CSS (.css)", fileExtension: "css", content: ""),
-        FileTemplate(id: "js", title: "JavaScript (.js)", fileExtension: "js", content: ""),
-        FileTemplate(id: "ts", title: "TypeScript (.ts)", fileExtension: "ts", content: ""),
-        FileTemplate(id: "json", title: "JSON (.json)", fileExtension: "json", content: "{\n}\n"),
-        FileTemplate(id: "yaml", title: "YAML (.yaml)", fileExtension: "yaml", content: ""),
-        FileTemplate(id: "xml", title: "XML (.xml)", fileExtension: "xml", content: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"),
-        FileTemplate(id: "csv", title: "CSV (.csv)", fileExtension: "csv", content: ""),
-        FileTemplate(id: "toml", title: "TOML (.toml)", fileExtension: "toml", content: ""),
-        FileTemplate(id: "sh", title: "Shell (.sh)", fileExtension: "sh", content: "#!/bin/bash\nset -euo pipefail\n\n"),
-        FileTemplate(id: "py", title: "Python (.py)", fileExtension: "py", content: ""),
-        FileTemplate(id: "swift", title: "Swift (.swift)", fileExtension: "swift", content: ""),
-        FileTemplate(id: "go", title: "Go (.go)", fileExtension: "go", content: "package main\n"),
-        FileTemplate(id: "rs", title: "Rust (.rs)", fileExtension: "rs", content: ""),
-        FileTemplate(id: "c", title: "C (.c)", fileExtension: "c", content: ""),
-        FileTemplate(id: "cpp", title: "C++ (.cpp)", fileExtension: "cpp", content: ""),
-        FileTemplate(id: "java", title: "Java (.java)", fileExtension: "java", content: ""),
-        FileTemplate(id: "sql", title: "SQL (.sql)", fileExtension: "sql", content: "")
+                     content: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title></title>\n</head>\n<body>\n</body>\n</html>\n",
+                     category: .web),
+        FileTemplate(id: "css", title: "CSS (.css)", fileExtension: "css", content: "", category: .web),
+        FileTemplate(id: "xml", title: "XML (.xml)", fileExtension: "xml",
+                     content: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n", category: .web),
+        FileTemplate(id: "svg", title: "SVG (.svg)", fileExtension: "svg",
+                     content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n</svg>\n", category: .web),
+        FileTemplate(id: "rst", title: "reStructuredText (.rst)", fileExtension: "rst", content: "", category: .web),
+        // 数据与配置
+        FileTemplate(id: "json", title: "JSON (.json)", fileExtension: "json", content: "{\n}\n", category: .data),
+        FileTemplate(id: "yaml", title: "YAML (.yaml)", fileExtension: "yaml", content: "", category: .data),
+        FileTemplate(id: "toml", title: "TOML (.toml)", fileExtension: "toml", content: "", category: .data),
+        FileTemplate(id: "ini", title: "INI (.ini)", fileExtension: "ini", content: "", category: .data),
+        FileTemplate(id: "conf", title: "Config (.conf)", fileExtension: "conf", content: "", category: .data),
+        // 代码
+        FileTemplate(id: "js", title: "JavaScript (.js)", fileExtension: "js", content: "", category: .code),
+        FileTemplate(id: "ts", title: "TypeScript (.ts)", fileExtension: "ts", content: "", category: .code),
+        FileTemplate(id: "py", title: "Python (.py)", fileExtension: "py", content: "", category: .code),
+        FileTemplate(id: "sh", title: "Shell (.sh)", fileExtension: "sh",
+                     content: "#!/bin/bash\nset -euo pipefail\n\n", category: .code),
+        FileTemplate(id: "swift", title: "Swift (.swift)", fileExtension: "swift", content: "", category: .code),
+        FileTemplate(id: "go", title: "Go (.go)", fileExtension: "go", content: "package main\n", category: .code),
+        FileTemplate(id: "rs", title: "Rust (.rs)", fileExtension: "rs", content: "", category: .code),
+        FileTemplate(id: "rb", title: "Ruby (.rb)", fileExtension: "rb", content: "", category: .code),
+        FileTemplate(id: "php", title: "PHP (.php)", fileExtension: "php", content: "<?php\n", category: .code),
+        FileTemplate(id: "c", title: "C (.c)", fileExtension: "c", content: "", category: .code),
+        FileTemplate(id: "cpp", title: "C++ (.cpp)", fileExtension: "cpp", content: "", category: .code),
+        FileTemplate(id: "java", title: "Java (.java)", fileExtension: "java", content: "", category: .code),
+        FileTemplate(id: "sql", title: "SQL (.sql)", fileExtension: "sql", content: "", category: .code)
     ]
 
     /// 干净安装默认显示的类型（其余靠用户勾选）。保守取最通用的两个，避免菜单过长。
     static let defaultEnabledTemplateIDs: [String] = ["txt", "md"]
+
+    /// 某分类下的预设（保持数组定义顺序）。
+    static func fileTemplates(in category: TemplateCategory) -> [FileTemplate] {
+        fileTemplates.filter { $0.category == category }
+    }
 
     static func template(id: String) -> FileTemplate? {
         fileTemplates.first { $0.id == id }

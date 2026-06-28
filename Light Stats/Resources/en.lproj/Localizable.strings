@@ -206,6 +206,10 @@
 "settings.finderMenu.usingDefaults" = "Not set — using defaults";
 "settings.finderMenu.templates" = "New File Templates";
 "settings.finderMenu.templatesHint" = "Choose which file types appear in the New File submenu.";
+"finderMenu.templateCategory.document" = "Documents & Text";
+"finderMenu.templateCategory.web" = "Web & Markup";
+"finderMenu.templateCategory.data" = "Data & Config";
+"finderMenu.templateCategory.code" = "Code";
 "settings.finderMenu.addTemplate" = "Add Template…";
 "findermenu.menu.copyPath" = "Copy Path";
 "findermenu.menu.copyName" = "Copy Name";
