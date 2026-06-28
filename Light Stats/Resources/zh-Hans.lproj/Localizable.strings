@@ -207,6 +207,7 @@
 "settings.finderMenu.addApp" = "添加 App…";
 "settings.finderMenu.usingDefaults" = "未设置，使用默认";
 "settings.finderMenu.templates" = "新建文件模板";
+"settings.finderMenu.templatesHint" = "选择「新建文件」子菜单里显示哪些文件类型。";
 "settings.finderMenu.addTemplate" = "添加模板…";
 "findermenu.menu.copyPath" = "拷贝路径";
 "findermenu.menu.copyName" = "拷贝名称";

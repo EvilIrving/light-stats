@@ -96,6 +96,31 @@ final class FinderMenuConfigStore: ObservableObject {
         persist()
     }
 
+    // MARK: - Preset template visibility
+
+    /// 当前生效的勾选集合（`nil` → 默认子集）。
+    private var effectiveEnabledTemplateIDs: [String] {
+        config.enabledTemplateIDs ?? FinderMenuPresets.defaultEnabledTemplateIDs
+    }
+
+    func isPresetTemplateEnabled(_ id: String) -> Bool {
+        effectiveEnabledTemplateIDs.contains(id)
+    }
+
+    /// 勾选/取消某个内置类型。首次切换会把默认子集固化成显式列表，
+    /// 之后即使关掉某个默认项也会持久保留（空数组＝一个内置类型都不显示）。
+    func setPresetTemplate(_ id: String, enabled: Bool) {
+        var ids = effectiveEnabledTemplateIDs
+        if enabled {
+            guard !ids.contains(id) else { return }
+            ids.append(id)
+        } else {
+            ids.removeAll { $0 == id }
+        }
+        config.enabledTemplateIDs = ids
+        persist()
+    }
+
     // MARK: - Persistence
 
     private func persist() {

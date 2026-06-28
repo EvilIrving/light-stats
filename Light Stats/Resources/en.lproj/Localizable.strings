@@ -205,6 +205,7 @@
 "settings.finderMenu.addApp" = "Add App…";
 "settings.finderMenu.usingDefaults" = "Not set — using defaults";
 "settings.finderMenu.templates" = "New File Templates";
+"settings.finderMenu.templatesHint" = "Choose which file types appear in the New File submenu.";
 "settings.finderMenu.addTemplate" = "Add Template…";
 "findermenu.menu.copyPath" = "Copy Path";
 "findermenu.menu.copyName" = "Copy Name";

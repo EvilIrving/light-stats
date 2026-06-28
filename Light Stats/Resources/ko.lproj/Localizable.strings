@@ -207,6 +207,7 @@
 "settings.finderMenu.addApp" = "앱 추가…";
 "settings.finderMenu.usingDefaults" = "미설정 — 기본값 사용";
 "settings.finderMenu.templates" = "새 파일 템플릿";
+"settings.finderMenu.templatesHint" = "새 파일 하위 메뉴에 표시할 파일 형식을 선택하세요.";
 "settings.finderMenu.addTemplate" = "템플릿 추가…";
 "findermenu.menu.copyPath" = "경로 복사";
 "findermenu.menu.copyName" = "이름 복사";

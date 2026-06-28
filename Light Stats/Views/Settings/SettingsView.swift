@@ -101,8 +101,13 @@ struct SettingsView: View {
         HStack(spacing: 0) {
             sidebar
             Divider()
-            detail
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            // 详情面板包一层垂直 ScrollView：内容超过固定窗高（如 Finder 文件模板有
+            // 一二十行）时可滚动，短页面照常顶部对齐不受影响。
+            ScrollView(.vertical) {
+                detail
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。

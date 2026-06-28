@@ -334,21 +334,32 @@ struct FinderMenuDetail: View {
                         }
                     }
                 )
-                EditableListView(
-                    title: "settings.finderMenu.templates".localized,
-                    rows: store.config.templates.map {
-                        EditableListRow(id: $0.id, title: $0.title, subtitle: ".\($0.fileExtension)")
-                    },
-                    emptyHint: "settings.finderMenu.usingDefaults".localized,
-                    onAdd: { store.addTemplate() },
-                    onRemove: { id in
-                        if let template = store.config.templates.first(where: { $0.id == id }) {
-                            store.removeTemplate(template)
-                        }
-                    }
-                )
+                templateChooser
                 Button("settings.finderMenu.openSettings".localized) { openSettings() }
                     .font(.system(size: 11))
+            }
+        }
+    }
+
+    /// 「新建文件」类型选择器：内置一二十个常用类型，逐个勾选是否显示在右键子菜单。
+    private var templateChooser: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("settings.finderMenu.templates".localized)
+                .font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary)
+            Text("settings.finderMenu.templatesHint".localized)
+                .font(.system(size: 10)).foregroundColor(.secondary.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            SettingsGroup {
+                ForEach(Array(FinderMenuPresets.fileTemplates.enumerated()), id: \.element.id) { index, template in
+                    if index > 0 { rowDivider() }
+                    SettingsRow(template.title) {
+                        SettingsToggle(isOn: Binding(
+                            get: { store.isPresetTemplateEnabled(template.id) },
+                            set: { store.setPresetTemplate(template.id, enabled: $0) }
+                        ))
+                    }
+                }
             }
         }
     }
