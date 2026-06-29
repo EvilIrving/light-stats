@@ -84,6 +84,7 @@ enum CLIBinaryResolver {
     private static func commonPathComponents() -> [String] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return [
+            "\(home)/Library/pnpm/bin",
             "\(home)/Library/pnpm",
             "\(home)/.local/bin",
             "\(home)/.claude/local",
@@ -113,6 +114,7 @@ enum CLIBinaryResolver {
     private static func codexWellKnownPaths() -> [String] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         return [
+            "\(home)/Library/pnpm/bin/codex",
             "\(home)/Library/pnpm/codex",
             "\(home)/.local/bin/codex",
             "\(home)/.npm-global/bin/codex",
