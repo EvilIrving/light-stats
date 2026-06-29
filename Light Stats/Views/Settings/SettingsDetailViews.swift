@@ -265,10 +265,7 @@ struct KeepAwakeDetail: View {
         SettingsDetailScaffold("settings.keepAwake".localized) {
             SettingsToggle(isOn: $settings.keepAwakeEnabled)
         } content: {
-            Text("settings.keepAwake.description".localized)
-                .font(.system(size: 11)).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            EmptyView()
         }
     }
 }
@@ -322,11 +319,6 @@ struct FinderMenuDetail: View {
         SettingsDetailScaffold("settings.finderMenu".localized) {
             SettingsToggle(isOn: $settings.finderMenuEnabled)
         } content: {
-            Text("settings.finderMenu.description".localized)
-                .font(.system(size: 11)).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
             if settings.finderMenuEnabled {
                 EditableListView(
                     title: "settings.finderMenu.directories".localized,
