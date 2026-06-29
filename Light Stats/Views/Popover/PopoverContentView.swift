@@ -45,11 +45,15 @@ struct PopoverContentView: View {
                         key: "snapshot"
                     ) { DebugSnapshot.dumpPanel() }
 #endif
-                    toolbarIcon(
-                        image: "cleaningLock",
-                        key: "cleaning",
-                        iconSize: 15
-                    ) { CleaningModeViewModel.shared.start() }
+                    // 擦屏模式锁内置键盘，仅对带内置键盘的便携机型（MacBook）有意义；
+                    // Mac mini / Studio / iMac 等台式机无内置键盘，隐藏入口。
+                    if DeviceCapabilities.isPortable {
+                        toolbarIcon(
+                            image: "cleaningLock",
+                            key: "cleaning",
+                            iconSize: 15
+                        ) { CleaningModeViewModel.shared.start() }
+                    }
 
                     toolbarIcon(
                         systemName: "gearshape",
