@@ -1,3 +1,19 @@
+## Finder 扩展状态探测 + 擦屏模式限便携机型 · 2026-06-29 11:10 · claude-opus-4-8
+
+两件事，都未提交。
+
+**1. 排查「访达右键菜单无效」根因**
+现象：开了设置总开关但 Finder 右键无菜单。排查结论——app 侧全部正常（appex 已签名/公证/被宿主签名封装、`codesign --verify --deep` 通过；App Group 共享生效，组容器里 `findermenu.enabled=1` + labels 都在；CFMessagePort 宿主服务正常启动并有日志）。真正缺失的是 **FinderSync 扩展没被系统 pkd 注册/启用**：`pluginkit -m -i cain.com.light-stats.FinderMenuExtension` 无匹配，统一日志里扩展进程零条记录（`FinderMenuController.init` 的 "initialised" 从未出现）。注册是 OS（pkd）在 app 进 LaunchServices 并启动时自动做的，**没有公开 API 让 app 自己注册**——用户也认同不该手动调 pluginkit。最可能诱因：`/Applications` 正式版 + debug 版两份同 bundle id 同时在跑导致 pkd 注册冲突。日志系统本身健全（os.Logger 正常入统一日志）。排查时注意：zsh 里 `log` 被别名/函数拦截，要用 `/usr/bin/log` 绝对路径。
+
+针对此做了产品改进（#2 之前的 app 已有深链按钮 `x-apple.systempreferences:com.apple.LoginItems-Settings.extension`，无需新增）：宿主侧新增 `FinderMenuHostService.extensionStatus()`（`nonisolated static`，跑 `pluginkit -m -i <id>` 解析首字符：`+`启用 `-`/`?`已注册未勾选 空=未注册），经 `FinderMenuConfigStore.extensionStatus`（@Published，onAppear 刷新）暴露给 `FinderMenuDetail` 显示状态行。新增 `Models/FinderExtensionStatus.swift` 枚举、`FinderMenuShared.extensionBundleID` 常量、四语言 `settings.finderMenu.status.*` 文案。目的：用户开总开关后能看到「OS 层是否真启用」，不再静默无菜单。
+
+**2. 擦屏模式仅便携机型显示**
+诉求：擦屏模式锁内置键盘，Mac mini/Studio/iMac 这种没内置键盘的台式机不该显示入口。新增 `Utilities/DeviceCapabilities.swift` 的 `isPortable`——**判据是有无内置电池**（IOKit 查 `AppleSmartBattery`），不是解析 `hw.model`。关键原因：Apple Silicon 上 Mac mini 和 MacBook Air 都报形如 `MacXX,Y` 的通用标识，前缀判断不可靠；有无电池在 Intel/AS、笔记本/台式机上都准。擦屏入口（PopoverContentView 唯一入口）用 `if DeviceCapabilities.isPortable` 包裹。
+
+两项均 build 通过、localization 校验 212 键齐、swiftlint --strict 0 违规。
+
+---
+
 ## 发布灰度通道解耦 + 工具栏 tooltip 改 anchor 实测定位 · 2026-06-20 10:05 · claude-opus-4-8
 
 两件事，都为 v1.6.0 发布做准备。
