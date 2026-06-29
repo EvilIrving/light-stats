@@ -19,8 +19,19 @@ final class FinderMenuConfigStore: ObservableObject {
 
     @Published private(set) var config: FinderMenuConfig
 
+    /// 扩展在系统 pkd 里的真实状态，供设置页提示用户是否还需在系统设置中手动启用。
+    @Published private(set) var extensionStatus: FinderExtensionStatus = .unknown
+
     private init() {
         config = FinderMenuShared.loadConfig()
+    }
+
+    /// 在后台线程查询 pluginkit，回主线程更新发布属性。设置页 onAppear 调用。
+    func refreshExtensionStatus() {
+        Task {
+            let status = await Task.detached { FinderMenuHostService.extensionStatus() }.value
+            extensionStatus = status
+        }
     }
 
     // MARK: - Directories

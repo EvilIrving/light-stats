@@ -531,7 +531,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// Finder 右键菜单宿主服务的起停。总开关开 → 注册 CFMessagePort 接收扩展委派的动作；
     /// 关 → 注销端口。扩展侧由 FinderMenuShared.isEnabled() 独立把关，两道门都默认关。
     private func syncFinderMenuService() {
+        FinderMenuShared.setEnabled(settings.finderMenuEnabled)
         if settings.finderMenuEnabled {
+            FinderMenuHostService.shared.publishLabels()
             FinderMenuHostService.shared.start()
         } else {
             FinderMenuHostService.shared.stop()

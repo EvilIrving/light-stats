@@ -199,6 +199,10 @@
 "settings.finderMenu" = "Finder Right-Click Menu";
 "settings.finderMenu.description" = "Add Light Stats actions to Finder's right-click menu (home folder). The extension is usually enabled automatically; if items don't appear, restart Finder.";
 "settings.finderMenu.openSettings" = "Enable in System Settings…";
+"settings.finderMenu.status.enabled" = "Extension is enabled; the right-click menu should be active.";
+"settings.finderMenu.status.disabled" = "Extension is registered but not enabled in System Settings. Tap the button below to enable it, then restart Finder.";
+"settings.finderMenu.status.notRegistered" = "The system hasn't registered the extension yet. Make sure the app is in Applications, then relaunch the app or restart Finder.";
+"settings.finderMenu.status.unknown" = "Couldn't determine the extension status.";
 "settings.finderMenu.directories" = "Favorite Folders";
 "settings.finderMenu.apps" = "Open With Apps";
 "settings.finderMenu.addDirectory" = "Add Folder…";

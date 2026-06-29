@@ -29,6 +29,9 @@ nonisolated enum FinderMenuShared {
     /// 宿主 App 的 bundle id，供扩展在宿主未运行时拉起它。
     static let hostBundleID = "cain.com.light-stats"
 
+    /// FinderSync 扩展的 bundle id，供宿主用 pluginkit 查询其注册 / 启用状态。
+    static let extensionBundleID = "cain.com.light-stats.FinderMenuExtension"
+
     /// 共享配置的 UserDefaults suite 名（与 App Group 同名）。
     static let defaultsSuiteName = appGroupID
 
@@ -47,6 +50,7 @@ nonisolated enum FinderMenuShared {
 
     static func setEnabled(_ value: Bool) {
         sharedDefaults?.set(value, forKey: enabledKey)
+        sharedDefaults?.synchronize()
     }
 
     /// 读用户可编辑配置（常用目录 / 打开方式 App）。缺省 / 解码失败 → 空配置（沿用预设）。
@@ -62,6 +66,7 @@ nonisolated enum FinderMenuShared {
     static func saveConfig(_ config: FinderMenuConfig) {
         guard let data = try? JSONEncoder().encode(config) else { return }
         sharedDefaults?.set(data, forKey: configKey)
+        sharedDefaults?.synchronize()
     }
 
     /// 本地化菜单标题字典（key = 动作 rawValue）。宿主用自身语言计算好写入，扩展读取——
@@ -69,6 +74,7 @@ nonisolated enum FinderMenuShared {
     static func setLabels(_ labels: [String: String]) {
         guard let data = try? JSONEncoder().encode(labels) else { return }
         sharedDefaults?.set(data, forKey: labelsKey)
+        sharedDefaults?.synchronize()
     }
 
     /// 取某动作的本地化标题；未发布时返回 nil，由调用方回退到英文字面量。

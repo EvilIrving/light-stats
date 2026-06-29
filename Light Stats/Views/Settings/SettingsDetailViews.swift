@@ -355,10 +355,35 @@ struct FinderMenuDetail: View {
                     }
                 )
                 templateChooser
+                extensionStatusRow
                 Button("settings.finderMenu.openSettings".localized) { openSettings() }
                     .font(.system(size: 11))
             }
         }
+        .onAppear { store.refreshExtensionStatus() }
+    }
+
+    /// 显示扩展在系统层的真实启用状态——app 总开关之外的第二道门（系统设置里的勾）。
+    @ViewBuilder private var extensionStatusRow: some View {
+        let (symbol, color, key): (String, Color, String) = {
+            switch store.extensionStatus {
+            case .enabled:
+                return ("checkmark.circle.fill", .green, "settings.finderMenu.status.enabled")
+            case .disabled:
+                return ("exclamationmark.triangle.fill", .orange, "settings.finderMenu.status.disabled")
+            case .notRegistered:
+                return ("exclamationmark.triangle.fill", .orange, "settings.finderMenu.status.notRegistered")
+            case .unknown:
+                return ("questionmark.circle", .secondary, "settings.finderMenu.status.unknown")
+            }
+        }()
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: symbol).foregroundColor(color)
+            Text(key.localized)
+                .font(.system(size: 11)).foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 「新建文件」类型选择器：按分类分组、可折叠；每个类型一个开关，勾选即显示在右键子菜单。

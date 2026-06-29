@@ -201,6 +201,10 @@
 "settings.finderMenu" = "访达右键菜单";
 "settings.finderMenu.description" = "在访达右键菜单中加入 Light Stats 动作（用户主目录）。扩展通常会自动启用；若菜单项未出现，重启访达即可。";
 "settings.finderMenu.openSettings" = "在系统设置中启用…";
+"settings.finderMenu.status.enabled" = "扩展已启用，右键菜单应已生效。";
+"settings.finderMenu.status.disabled" = "扩展已注册但未在系统设置中启用，请点击下方按钮勾选并重启访达。";
+"settings.finderMenu.status.notRegistered" = "系统尚未注册扩展。请确认 app 在「应用程序」中，重新启动 app 或重启访达。";
+"settings.finderMenu.status.unknown" = "无法确定扩展状态。";
 "settings.finderMenu.directories" = "常用目录";
 "settings.finderMenu.apps" = "打开方式 App";
 "settings.finderMenu.addDirectory" = "添加目录…";

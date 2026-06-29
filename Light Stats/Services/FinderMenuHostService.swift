@@ -86,6 +86,36 @@ final class FinderMenuHostService {
         FinderMenuShared.setLabels(labels)
     }
 
+    // MARK: - Extension status
+
+    /// 查询 FinderSync 扩展在系统 pkd 里的注册 / 启用状态。宿主非沙盒，可直接调 pluginkit。
+    /// `nonisolated`：仅起子进程读管道，无 actor 状态——交给调用方在后台线程跑，避免阻塞主线程。
+    /// pluginkit 输出首个非空行的首字符即状态标记：`+` 已启用，`-`/`?` 已注册未勾选，空 → 未注册。
+    nonisolated static func extensionStatus() -> FinderExtensionStatus {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pluginkit")
+        process.arguments = ["-m", "-i", FinderMenuShared.extensionBundleID]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return .unknown
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        guard let output = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty else {
+            return .notRegistered
+        }
+        switch output.first {
+        case "+": return .enabled
+        case "-", "?": return .disabled
+        default: return .unknown
+        }
+    }
+
     // MARK: - Action handling
 
     private func handle(_ request: FinderMenuRequest) {
