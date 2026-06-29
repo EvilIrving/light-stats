@@ -155,9 +155,7 @@ struct OverviewTabView: View {
                                 AIProviderCompactRow(
                                     provider: provider,
                                     state: state,
-                                    isRefreshing: aiMonitor.refreshingProviders.contains(provider),
-                                    useFlatColors: useFlatColors,
-                                    retry: { aiMonitor.retry(provider) }
+                                    useFlatColors: useFlatColors
                                 )
                             }
                         }

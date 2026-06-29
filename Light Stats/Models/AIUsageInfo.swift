@@ -47,9 +47,8 @@ enum AIUsageError: Error, Equatable {
 
 /// Per-provider fetch state published to the UI.
 /// No `stale` case: the app never shows last-session data. A failed refresh
-/// drops back to `.idle` (which renders "fetching…"), so the user only ever
-/// sees fresh data, a fetching placeholder, or an explicit error — never an
-/// old snapshot.
+/// becomes `.error`, so the user sees fresh data, a fetching placeholder, or
+/// an explicit retryable error — never an old snapshot.
 enum ProviderFetchState: Equatable {
     case idle
     case loaded(ProviderUsageSnapshot)

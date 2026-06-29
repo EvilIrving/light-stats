@@ -27,9 +27,12 @@
 //  └──────────────────────────────────────────────────────────┘
 
 import Foundation
+import os
 
 /// Codex (ChatGPT) subscription usage — see file header for full logic chain.
 enum CodexUsageService {
+
+    private static let log = Logger(subsystem: "com.lightstats.app", category: "CodexUsage")
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 
@@ -89,11 +92,13 @@ enum CodexUsageService {
             // The Codex CLI may have refreshed the token since we read it; re-read and retry once.
             guard let fresh = readCredentials(), fresh.accessToken != creds.accessToken else {
                 // Token expired and not refreshed — fall back to CLI PTY.
+                log.error("Codex API token expired; trying CLI PTY fallback")
                 return try await fetchUsageFromCLI(fallbackError: AIUsageError.tokenExpired)
             }
             return try await fetchOnce(with: fresh)
         } catch {
             // API failed for any other reason — fall back to CLI PTY.
+            log.error("Codex API failed; trying CLI PTY fallback: \(describe(error), privacy: .public)")
             return try await fetchUsageFromCLI(fallbackError: error)
         }
     }
@@ -178,8 +183,21 @@ enum CodexUsageService {
             let output = try await PTYProbe.capture(binary: codexPath, timeout: cliTimeout, config: cliProbeConfig())
             return try parseCLIOutput(output)
         } catch {
+            if let fallbackError {
+                log.error("Codex CLI PTY fallback failed: \(describe(error), privacy: .public)")
+                log.error("Codex initial API error: \(describe(fallbackError), privacy: .public)")
+            } else {
+                log.error("Codex CLI PTY fallback failed: \(describe(error), privacy: .public)")
+            }
             throw fallbackError ?? error
         }
+    }
+
+    private static func describe(_ error: Error) -> String {
+        if let aiError = error as? AIUsageError {
+            return String(describing: aiError)
+        }
+        return error.localizedDescription
     }
 
     private static func resolveCodexBinary() -> String? {

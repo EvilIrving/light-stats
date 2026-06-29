@@ -35,13 +35,13 @@
 //                           │
 //  ┌─ Result handling ────────────────────────────────────────┐
 //  │  success      → .loaded(snapshot)                        │
-//  │  transient    → .idle ("fetching…"), never stale data    │
-//  │  credentials  → .error(error) — needs user attention     │
+//  │  failure      → .error(error), retryable in the card     │
 //  └──────────────────────────────────────────────────────────┘
 //
 
 import Foundation
 import Combine
+import os
 
 /// Polls AI subscription usage (Claude Code / Codex / Gemini) on its own timer,
 /// fully independent from SystemMonitor's 1-5s refresh cycle.
@@ -61,6 +61,7 @@ final class AIUsageMonitor: ObservableObject {
     private var inFlight: Set<AIProvider> = []
     private var lastSuccessAt: [AIProvider: Date] = [:]
     private let settings = SettingsManager.shared
+    private let logger = Logger(subsystem: "com.lightstats.app", category: "AIUsageMonitor")
 
     /// Refresh triggered by popover opening only if data is older than this
     private let popoverStaleThreshold: TimeInterval = 60
@@ -188,18 +189,8 @@ final class AIUsageMonitor: ObservableObject {
             lastSuccessAt[provider] = snapshot.fetchedAt
             newState = .loaded(snapshot)
         case .failure(let error):
-            // Never show stale/last-session data. The services already exhaust
-            // their internal recovery (re-read credentials + CLI PTY) before
-            // surfacing a transient failure, and the timer keeps retrying — so a
-            // transient failure drops back to `.idle` ("fetching…") rather than
-            // showing an old snapshot. Only a genuine credentials-missing
-            // (logged out) state demands the user's attention.
-            switch error {
-            case .network, .decoding, .endpointNotFound, .tokenExpired:
-                newState = .idle
-            case .credentialsMissing:
-                newState = .error(error)
-            }
+            logger.error("AI usage refresh failed for \(provider.rawValue, privacy: .public): \(error.logDescription, privacy: .public)")
+            newState = .error(error)
         }
 
         setState(newState, for: provider)
@@ -218,6 +209,18 @@ final class AIUsageMonitor: ObservableObject {
         case .claude: claudeState = state
         case .codex: codexState = state
         case .gemini: geminiState = state
+        }
+    }
+}
+
+private extension AIUsageError {
+    var logDescription: String {
+        switch self {
+        case .credentialsMissing: return "credentialsMissing"
+        case .tokenExpired: return "tokenExpired"
+        case .network: return "network"
+        case .decoding: return "decoding"
+        case .endpointNotFound: return "endpointNotFound"
         }
     }
 }

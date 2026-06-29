@@ -191,6 +191,7 @@ enum ClaudeUsageService {
                 do {
                     return try await fetchUsageFromHeaders(token: token)
                 } catch {
+                    log.error("Claude headers fallback failed; trying CLI PTY fallback: \(describe(error), privacy: .public)")
                     // 3. Messages API also failed — last resort is the CLI PTY,
                     //    which needs no network and reads usage from local `claude`.
                     return try await fetchUsageFromCLI()
@@ -368,19 +369,31 @@ enum ClaudeUsageService {
             throw AIUsageError.credentialsMissing
         }
 
-        let output = try await PTYProbe.capture(binary: claudePath, timeout: cliTimeout, config: cliProbeConfig())
-        return try parseCLIOutput(output)
+        do {
+            let output = try await PTYProbe.capture(binary: claudePath, timeout: cliTimeout, config: cliProbeConfig())
+            return try parseCLIOutput(output)
+        } catch {
+            log.error("Claude CLI PTY fallback failed: \(describe(error), privacy: .public)")
+            throw error
+        }
+    }
+
+    private static func describe(_ error: Error) -> String {
+        if let aiError = error as? AIUsageError {
+            return String(describing: aiError)
+        }
+        return error.localizedDescription
     }
 
     private static func resolveClaudeBinary() -> String? {
         CLIBinaryResolver.resolveClaudeBinary()
     }
 
-    /// PTY config for `claude /usage`: launch headless (`--bare`), send `/usage`,
-    /// and complete once the "Current session … N%" panel has rendered.
+    /// PTY config for `claude /usage`: keep OAuth/Keychain enabled, send `/usage`,
+    /// and complete once the "Current session ... N%" panel has rendered.
     private static func cliProbeConfig() -> PTYProbe.Config {
         PTYProbe.Config(
-            arguments: ["--bare", "--allowed-tools", ""],
+            arguments: ["--allowed-tools", ""],
             winsize: winsize(ws_row: 50, ws_col: 160, ws_xpixel: 0, ws_ypixel: 0),
             initialDelay: 2.5,
             command: "/usage\r\n",
