@@ -51,22 +51,45 @@ nonisolated struct ReleaseInfo: Sendable, Equatable {
     let downloadURL: URL
     let htmlURL: URL
 
-    /// 解析 GitHub `releases/latest` 响应。无可用 `.dmg` 资产时返回 nil。
+    private struct Asset: Decodable {
+        let name: String
+        let browser_download_url: String
+    }
+
+    private struct Response: Decodable {
+        let tag_name: String
+        let body: String?
+        let html_url: String?
+        let prerelease: Bool?
+        let draft: Bool?
+        let assets: [Asset]
+    }
+
+    /// 解析 GitHub `releases/latest`（单对象）。该 endpoint 天然排除 draft/prerelease，
+    /// 这里再拒绝一次以防 GitHub 行为变化——稳定通道（自动检查）专用。
     init?(json data: Data) {
-        struct Asset: Decodable {
-            let name: String
-            let browser_download_url: String
-        }
-        struct Response: Decodable {
-            let tag_name: String
-            let body: String?
-            let html_url: String?
-            let prerelease: Bool?
-            let draft: Bool?
-            let assets: [Asset]
-        }
         guard let response = try? JSONDecoder().decode(Response.self, from: data) else { return nil }
-        guard response.draft != true, response.prerelease != true else { return nil }
+        self.init(response: response, allowPrerelease: false)
+    }
+
+    /// 解析 GitHub `releases`（列表，按发布时间倒序）。取首个满足条件的版本。
+    /// `allowPrerelease == true` 时接受预发布版本——供「立即检查」的内测通道使用，
+    /// 让手动检查能拿到 beta，而自动检查仍只走稳定的 `releases/latest`。
+    static func first(fromListJSON data: Data, allowPrerelease: Bool) -> ReleaseInfo? {
+        guard let responses = try? JSONDecoder().decode([Response].self, from: data) else { return nil }
+        for response in responses {
+            if let info = ReleaseInfo(response: response, allowPrerelease: allowPrerelease) {
+                return info
+            }
+        }
+        return nil
+    }
+
+    /// 从单个 Release 响应构造。draft 一律拒绝；prerelease 仅在显式放行时接受；
+    /// 无可用 `.dmg` 资产或版本号非法时返回 nil。
+    private init?(response: Response, allowPrerelease: Bool) {
+        guard response.draft != true else { return nil }
+        guard allowPrerelease || response.prerelease != true else { return nil }
         guard let semantic = SemanticVersion(response.tag_name) else { return nil }
         guard let dmg = response.assets.first(where: { $0.name.lowercased().hasSuffix(".dmg") }),
               let url = URL(string: dmg.browser_download_url) else { return nil }

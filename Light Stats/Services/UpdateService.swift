@@ -51,8 +51,11 @@ actor UpdateService {
 
     // MARK: - 检查最新版本
 
-    func fetchLatest() async throws -> ReleaseInfo {
-        let endpoint = "https://api.github.com/repos/\(Self.repo)/releases/latest"
+    /// `includePrereleases == true`：打 `/releases` 列表并接受 prerelease（手动「立即检查」
+    /// 的内测通道）；否则打 `/releases/latest`，GitHub 天然只回稳定版（自动检查）。
+    func fetchLatest(includePrereleases: Bool = false) async throws -> ReleaseInfo {
+        let path = includePrereleases ? "releases?per_page=20" : "releases/latest"
+        let endpoint = "https://api.github.com/repos/\(Self.repo)/\(path)"
         guard let url = URL(string: endpoint) else { throw UpdateError.network }
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
@@ -61,7 +64,10 @@ actor UpdateService {
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 throw UpdateError.noRelease
             }
-            guard let release = ReleaseInfo(json: data) else { throw UpdateError.noRelease }
+            let release = includePrereleases
+                ? ReleaseInfo.first(fromListJSON: data, allowPrerelease: true)
+                : ReleaseInfo(json: data)
+            guard let release else { throw UpdateError.noRelease }
             return release
         } catch let error as UpdateError {
             throw error

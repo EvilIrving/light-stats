@@ -62,7 +62,9 @@ final class UpdateManager: ObservableObject {
         isChecking = true
         Task {
             do {
-                let release = try await service.fetchLatest()
+                // 手动「立即检查」开放内测通道：纳入 prerelease（beta）；
+                // 自动检查仍只走稳定的 releases/latest。
+                let release = try await service.fetchLatest(includePrereleases: userInitiated)
                 isChecking = false
                 handle(release: release, userInitiated: userInitiated)
             } catch {
