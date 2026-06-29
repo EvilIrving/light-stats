@@ -17,6 +17,8 @@ nonisolated struct BatteryInfo: Sendable, Equatable {
         case charging
         case discharging
         case charged
+        /// 已接电源但未在充电：常见于电量保护（如停在 80%）或系统暂停充电。
+        case acNotCharging
         case noBattery
     }
 

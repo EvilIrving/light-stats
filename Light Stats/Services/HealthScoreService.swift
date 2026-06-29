@@ -236,7 +236,8 @@ nonisolated enum HealthScoreService {
     /// 电池电量：接通电源（充电/已充满）视为满分；放电时电量越低风险越高。
     /// ≥40% 满分，20–40% 线性降到 60，<20% 继续降到 0。
     private static func batteryScore(state: BatteryInfo.State, percent: Double) -> Double {
-        if state == .charging || state == .charged { return 100 }
+        // 接通电源（充电/已充满/电量保护暂停充电）均视为满分——都在用市电，无续航风险。
+        if state == .charging || state == .charged || state == .acNotCharging { return 100 }
         let value = clamp(percent, min: 0, max: 100)
         if value >= 40 { return 100 }
         if value >= 20 {
