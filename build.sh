@@ -27,12 +27,14 @@ DMG_FILE="$OUTPUT_DIR/${APP_NAME}-${VERSION}.dmg"
 DMG_BACKGROUND="packaging/dmg-background.png"
 DMG_RW_FILE="$BUILD_DIR/${APP_NAME}-${VERSION}-rw.dmg"
 ENTITLEMENTS="Light Stats/LightStats.entitlements"
+FINDER_EXTENSION_ENTITLEMENTS="FinderMenuExtension/FinderMenuExtension.entitlements"
 NOTARIZATION_ENABLED=0
 if [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER_ID:-}" ] && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
     NOTARIZATION_ENABLED=1
 fi
 APP_PATH="$OUTPUT_DIR/$APP_NAME.app"
 MAIN_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
+FINDER_EXTENSION_PATH="$APP_PATH/Contents/PlugIns/FinderMenuExtension.appex"
 
 verify_signed_runtime() {
     local target="$1"
@@ -102,13 +104,20 @@ echo "✅ $APP_PATH"
 # 签名 App
 if [ -n "${DEVELOPER_ID:-}" ]; then
     echo "✍️  签名..."
-    codesign --deep --force --verify \
+    codesign --force --verify \
+      --options runtime \
+      --entitlements "$FINDER_EXTENSION_ENTITLEMENTS" \
+      --sign "$DEVELOPER_ID" \
+      --timestamp \
+      "$FINDER_EXTENSION_PATH"
+    codesign --force --verify \
       --options runtime \
       --entitlements "$ENTITLEMENTS" \
       --sign "$DEVELOPER_ID" \
       --timestamp \
       "$APP_PATH"
     codesign --verify --strict --deep --verbose=2 "$APP_PATH"
+    verify_signed_runtime "$FINDER_EXTENSION_PATH" "FinderSync 扩展"
     verify_signed_runtime "$APP_PATH" "App bundle"
     verify_signed_runtime "$MAIN_BINARY" "主二进制文件"
 elif [ "$NOTARIZATION_ENABLED" -eq 1 ]; then
