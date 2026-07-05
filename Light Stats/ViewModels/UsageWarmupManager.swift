@@ -8,8 +8,8 @@
 //  就是把用户手动用 `/loop` 每 4 小时 ping 一次的事做成内置。不做任何「按 reset 时刻
 //  对齐 / 提前 anchor」的花活：一个计时器 + 一个 Task，定时发，仅此而已。
 //
-//  每 provider 一个循环：启用即发一次（兼 CLI 登录态健康探测），失败则记日志、停；
-//  成功则每 interval 发一次。睡眠用 ≤60s 分块轮询，系统睡眠唤醒后墙钟自校正（漏发尽快补上）。
+//  每 provider 一个循环：启用即发一次，失败则短 backoff 重试两次，仍失败也保留
+//  后续 interval 周期。睡眠用 ≤60s 分块轮询，系统睡眠唤醒后墙钟自校正（漏发尽快补上）。
 //  默认全关——干净安装什么都不跑。
 //
 
@@ -27,6 +27,7 @@ final class UsageWarmupManager: ObservableObject {
 
     /// 固定发送间隔：每 4 小时发一条（< 5h 窗口，保证持续覆盖）。
     private static let interval: TimeInterval = 4 * 3600
+    private static let retryDelays: [TimeInterval] = [30, 120]
 
     private let settings = SettingsManager.shared
     private let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
@@ -94,25 +95,42 @@ final class UsageWarmupManager: ObservableObject {
     // MARK: - Loop
 
     private func run(_ provider: AIProvider) async {
-        // 启用即发一次（同时是 CLI 登录态健康探测）。失败 → 记日志、不再排程（不打扰、不无限重试）。
-        let healthy = await UsageWarmupService.send(provider: provider)
-        guard healthy else {
-            log.error("warmup disabled (CLI unavailable/not logged in): \(provider.rawValue, privacy: .public)")
-            loops[provider] = nil
-            return
+        while !Task.isCancelled {
+            _ = await sendWithRetries(provider)
+            if Task.isCancelled { break }
+            await sleepInterval()
+        }
+    }
+
+    private func sendWithRetries(_ provider: AIProvider) async -> Bool {
+        for attempt in 0...Self.retryDelays.count {
+            if await UsageWarmupService.send(provider: provider) {
+                return true
+            }
+
+            guard attempt < Self.retryDelays.count else { break }
+            let delay = Self.retryDelays[attempt]
+            let retryNumber = attempt + 1
+            let seconds = Int(delay)
+            log.error(
+                "warmup retry \(provider.rawValue, privacy: .public) #\(retryNumber, privacy: .public) in \(seconds, privacy: .public)s"
+            )
+            await sleep(seconds: delay)
+            if Task.isCancelled { return false }
         }
 
-        while !Task.isCancelled {
-            await sleepInterval()
-            if Task.isCancelled { break }
-            _ = await UsageWarmupService.send(provider: provider)
-        }
+        log.error("warmup failed after retries for \(provider.rawValue, privacy: .public)")
+        return false
     }
 
     /// 睡满一个 interval，分 ≤60s 块轮询：系统睡眠会冻住单次 sleep，但唤醒后用墙钟
     /// 重新比对截止时间，漏过的 ping 会在唤醒后尽快补发，不会一直拖到下一整段。
     private func sleepInterval() async {
-        let deadline = Date().addingTimeInterval(Self.interval)
+        await sleep(seconds: Self.interval)
+    }
+
+    private func sleep(seconds: TimeInterval) async {
+        let deadline = Date().addingTimeInterval(seconds)
         while Date() < deadline {
             if Task.isCancelled { return }
             let remaining = deadline.timeIntervalSinceNow
