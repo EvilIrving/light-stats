@@ -77,12 +77,17 @@ actor PowerService {
 
             let isCharging = (desc[kIOPSIsChargingKey] as? Bool) ?? false
             let isCharged = (desc[kIOPSIsChargedKey] as? Bool) ?? false
+            // 是否已接外部电源：电量保护（停在 80%）时 IsCharging 为 false，但仍在用市电，
+            // 不能算「使用电池」。靠电源状态而非 IsCharging 判定。
+            let onAC = (desc[kIOPSPowerSourceStateKey] as? String) == kIOPSACPowerValue
 
             let state: BatteryInfo.State
             if isCharged {
                 state = .charged
             } else if isCharging {
                 state = .charging
+            } else if onAC {
+                state = .acNotCharging
             } else {
                 state = .discharging
             }

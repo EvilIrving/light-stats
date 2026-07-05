@@ -651,7 +651,7 @@ private struct BatteryCard: View {
         switch battery.state {
         case .charging, .charged: return "battery.100.bolt"
         case .noBattery: return "battery.0"
-        case .discharging:
+        case .acNotCharging, .discharging:
             if battery.percent <= 20 { return "battery.25" }
             if battery.percent <= 60 { return "battery.50" }
             return "battery.100"
@@ -671,13 +671,15 @@ private struct BatteryCard: View {
         case .charging: return "battery.state.charging".localized
         case .discharging: return "battery.state.discharging".localized
         case .charged: return "battery.state.charged".localized
+        case .acNotCharging: return "battery.state.acNotCharging".localized
         case .noBattery: return ""
         }
     }
 
     /// 剩余/充满时间文案。计算中或已充满则不显示。
     private var timeRemainingText: String? {
-        guard battery.state != .charged, let minutes = battery.timeRemaining, minutes > 0 else {
+        guard battery.state != .charged, battery.state != .acNotCharging,
+              let minutes = battery.timeRemaining, minutes > 0 else {
             return nil
         }
         let h = minutes / 60

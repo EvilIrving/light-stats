@@ -218,7 +218,7 @@ final class StatusBarView: NSView {
                 batteryText = "—"
             case .charging, .charged:
                 batteryText = "⚡\(Int(battery.percent.rounded()))%"
-            case .discharging:
+            case .acNotCharging, .discharging:
                 batteryText = "\(Int(battery.percent.rounded()))%"
             }
             displayItems.append(DisplayItem(

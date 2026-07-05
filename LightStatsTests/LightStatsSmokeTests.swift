@@ -46,7 +46,8 @@ final class LightStatsSmokeTests: XCTestCase {
         XCTAssertTrue(a.contains("GB"), "1 GiB should format with a GB unit, got \(a)")
     }
 
-    func testDiskFormatterRoundsUp() {
-        XCTAssertEqual(ByteFormatter.formatDisk(1_500_000_000), "2 GB")
+    func testDiskFormatterKeepsOneDecimal() {
+        XCTAssertEqual(ByteFormatter.formatDisk(1_500_000_000), "1.5 GB")
+        XCTAssertEqual(ByteFormatter.formatDisk(81_090_000_000), "81.1 GB")
     }
 }

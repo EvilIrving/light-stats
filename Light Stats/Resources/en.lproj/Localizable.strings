@@ -68,6 +68,7 @@
 "battery.state.charging" = "Charging";
 "battery.state.discharging" = "On battery";
 "battery.state.charged" = "Charged";
+"battery.state.acNotCharging" = "Plugged in";
 
 // MARK: - Health
 "health.title" = "Health";
@@ -140,7 +141,7 @@
 "aiUsage.fetchFailed" = "Failed to fetch usage";
 
 // MARK: - Flat Colors
-"settings.flatColors.section" = "Flat Colors";
+"settings.flatColors.section" = "Monochrome UI";
 "settings.flatColors.hint" = "Use plain text color for all metrics except health score. Turn off dynamic green/yellow/red.";
 
 // MARK: - Accessibility

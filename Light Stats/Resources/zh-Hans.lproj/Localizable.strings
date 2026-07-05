@@ -70,6 +70,7 @@
 "battery.state.charging" = "充电中";
 "battery.state.discharging" = "使用电池";
 "battery.state.charged" = "已充满";
+"battery.state.acNotCharging" = "已接电源";
 
 // MARK: - Health
 "health.title" = "健康";
@@ -142,7 +143,7 @@
 "aiUsage.fetchFailed" = "用量获取失败";
 
 // MARK: - Flat Colors
-"settings.flatColors.section" = "平缓色调";
+"settings.flatColors.section" = "黑白界面";
 "settings.flatColors.hint" = "除健康分外，所有指标文字使用普通颜色，不再根据数值动态变色。";
 
 // MARK: - Accessibility

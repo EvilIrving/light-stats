@@ -70,6 +70,7 @@
 "battery.state.charging" = "充電中";
 "battery.state.discharging" = "バッテリー駆動";
 "battery.state.charged" = "充電完了";
+"battery.state.acNotCharging" = "電源接続中";
 
 // MARK: - Health
 "health.title" = "健康度";
@@ -142,7 +143,7 @@
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
 
 // MARK: - Flat Colors
-"settings.flatColors.section" = "フラットカラー";
+"settings.flatColors.section" = "モノクロ表示";
 "settings.flatColors.hint" = "健康度を除くすべての指標テキストを通常色にし、数値による動的な色変更をオフにします。";
 
 // MARK: - Accessibility
