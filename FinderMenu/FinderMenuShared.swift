@@ -38,6 +38,7 @@ nonisolated enum FinderMenuShared {
     private static let enabledKey = "findermenu.enabled"
     private static let configKey = "findermenu.config"
     private static let labelsKey = "findermenu.labels"
+    private static let pendingFailureKey = "findermenu.pendingFailure"
 
     private static var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: defaultsSuiteName)
@@ -93,5 +94,27 @@ nonisolated enum FinderMenuShared {
             return String(cString: dir)
         }
         return NSHomeDirectory()
+    }
+
+    // MARK: - Pending failure (IPC delivery failed while host was down)
+
+    /// 扩展侧 IPC 发送失败时写入，宿主启动时读取并 toast，然后清除。
+    /// 存 action rawValue + Unix timestamp，Host 看到后生成可读的失败提示。
+    static func writePendingFailure(action: String) {
+        let entry: [String: Any] = ["action": action, "timestamp": Date().timeIntervalSince1970]
+        sharedDefaults?.set(entry, forKey: pendingFailureKey)
+        sharedDefaults?.synchronize()
+    }
+
+    /// 宿主启动时调用：返回待 toast 的 action rawValue（如果有），并立即清除。
+    /// 返回 nil 表示没有挂起的失败。
+    static func consumePendingFailure() -> String? {
+        guard let entry = sharedDefaults?.dictionary(forKey: pendingFailureKey),
+              let action = entry["action"] as? String else {
+            return nil
+        }
+        sharedDefaults?.removeObject(forKey: pendingFailureKey)
+        sharedDefaults?.synchronize()
+        return action
     }
 }

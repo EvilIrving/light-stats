@@ -241,6 +241,7 @@
 "findermenu.toast.openWithFailed" = "无法用该 App 打开所选项目。";
 "findermenu.toast.toggleHiddenFailed" = "部分项目无法切换隐藏状态。";
 "findermenu.toast.cmuxFailed" = "无法调用 cmux 服务，请确认已安装 cmux 并启用它的服务。";
+"findermenu.toast.delayedFailure" = "点击「%@」时 Light Stats 未运行，现已启动，请重试。";
 "settings.section.general" = "通用";
 "settings.section.monitoring" = "监控";
 "settings.section.extras" = "附加工具";

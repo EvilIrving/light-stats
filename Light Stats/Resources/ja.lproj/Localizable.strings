@@ -241,6 +241,7 @@
 "findermenu.toast.openWithFailed" = "選択した項目をそのアプリで開けませんでした。";
 "findermenu.toast.toggleHiddenFailed" = "一部の項目の表示状態を変更できませんでした。";
 "findermenu.toast.cmuxFailed" = "cmux サービスを呼び出せませんでした。cmux がインストールされ、サービスが有効か確認してください。";
+"findermenu.toast.delayedFailure" = "「%@」をクリックした時点で Light Stats は起動していませんでした。起動したので、もう一度お試しください。";
 "settings.section.general" = "一般";
 "settings.section.monitoring" = "モニタリング";
 "settings.section.extras" = "追加ツール";

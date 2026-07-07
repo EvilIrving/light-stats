@@ -30,11 +30,15 @@ final class FinderMenuController: FIFinderSync {
         // 总开关关闭时不出任何菜单项——干净安装上的零侵扰契约。
         guard FinderMenuShared.isEnabled() else { return menu }
 
+        let controller = FIFinderSyncController.default()
+        let paths = (controller.selectedItemURLs() ?? []).map(\.path)
+        let container = controller.targetedURL()?.path
+
         switch menuKind {
         case .contextualMenuForItems:
-            buildItemsMenu(menu)
+            buildItemsMenu(menu, paths: paths, container: container)
         case .contextualMenuForContainer, .contextualMenuForSidebar:
-            buildContainerMenu(menu)
+            buildContainerMenu(menu, paths: paths, container: container)
         default:
             break
         }
@@ -44,30 +48,42 @@ final class FinderMenuController: FIFinderSync {
     // MARK: - Menu builders
 
     /// 选中文件 / 文件夹时的菜单。
-    private func buildItemsMenu(_ menu: NSMenu) {
-        addItem(FinderMenuCommand(.copyPath), title: FinderMenuAction.copyPath.localizedTitle, to: menu)
-        addItem(FinderMenuCommand(.copyName), title: FinderMenuAction.copyName.localizedTitle, to: menu)
-        addItem(FinderMenuCommand(.openTerminalHere), title: FinderMenuAction.openTerminalHere.localizedTitle, to: menu)
+    private func buildItemsMenu(_ menu: NSMenu, paths: [String], container: String?) {
+        addItem(FinderMenuCommand(.copyPath, paths: paths, container: container), title: FinderMenuAction.copyPath.localizedTitle, to: menu)
+        addItem(FinderMenuCommand(.copyName, paths: paths, container: container), title: FinderMenuAction.copyName.localizedTitle, to: menu)
+        addItem(
+            FinderMenuCommand(.openTerminalHere, paths: paths, container: container),
+            title: FinderMenuAction.openTerminalHere.localizedTitle,
+            to: menu
+        )
 
         let config = FinderMenuShared.loadConfig()
-        addCmuxItemsIfNeeded(config, to: menu)
+        addCmuxItemsIfNeeded(config, paths: paths, container: container, to: menu)
         let appItems = resolveApps(config).map { (title: $0.name, parameter: $0.bundleID) }
-        addSubmenu(.openWithApp, items: appItems, to: menu)
+        addSubmenu(.openWithApp, items: appItems, paths: paths, container: container, to: menu)
 
         let dirItems = resolveDirectories(config).map { (title: $0.name, parameter: $0.path) }
-        addSubmenu(.moveTo, items: dirItems, to: menu)
-        addSubmenu(.copyTo, items: dirItems, to: menu)
+        addSubmenu(.moveTo, items: dirItems, paths: paths, container: container, to: menu)
+        addSubmenu(.copyTo, items: dirItems, paths: paths, container: container, to: menu)
 
-        addItem(FinderMenuCommand(.toggleHidden), title: FinderMenuAction.toggleHidden.localizedTitle, to: menu)
+        addItem(
+            FinderMenuCommand(.toggleHidden, paths: paths, container: container),
+            title: FinderMenuAction.toggleHidden.localizedTitle,
+            to: menu
+        )
     }
 
     /// 右键空白处 / 侧边栏目录时的菜单。
-    private func buildContainerMenu(_ menu: NSMenu) {
+    private func buildContainerMenu(_ menu: NSMenu, paths: [String], container: String?) {
         let config = FinderMenuShared.loadConfig()
         let templateItems = config.resolvedTemplates().map { (title: $0.title, parameter: $0.id) }
-        addSubmenu(.newFile, items: templateItems, to: menu)
-        addItem(FinderMenuCommand(.openTerminalHere), title: FinderMenuAction.openTerminalHere.localizedTitle, to: menu)
-        addCmuxItemsIfNeeded(config, to: menu)
+        addSubmenu(.newFile, items: templateItems, paths: paths, container: container, to: menu)
+        addItem(
+            FinderMenuCommand(.openTerminalHere, paths: paths, container: container),
+            title: FinderMenuAction.openTerminalHere.localizedTitle,
+            to: menu
+        )
+        addCmuxItemsIfNeeded(config, paths: paths, container: container, to: menu)
     }
 
     // MARK: - Item helpers
@@ -79,20 +95,39 @@ final class FinderMenuController: FIFinderSync {
         menu.addItem(item)
     }
 
-    private func addCmuxItemsIfNeeded(_ config: FinderMenuConfig, to menu: NSMenu) {
+    private func addCmuxItemsIfNeeded(_ config: FinderMenuConfig, paths: [String], container: String?, to menu: NSMenu) {
         guard config.showCmuxActions else { return }
-        addItem(FinderMenuCommand(.cmuxNewWindow), title: FinderMenuAction.cmuxNewWindow.localizedTitle, to: menu)
-        addItem(FinderMenuCommand(.cmuxNewWorkspace), title: FinderMenuAction.cmuxNewWorkspace.localizedTitle, to: menu)
+        addItem(
+            FinderMenuCommand(.cmuxNewWindow, paths: paths, container: container),
+            title: FinderMenuAction.cmuxNewWindow.localizedTitle,
+            to: menu
+        )
+        addItem(
+            FinderMenuCommand(.cmuxNewWorkspace, paths: paths, container: container),
+            title: FinderMenuAction.cmuxNewWorkspace.localizedTitle,
+            to: menu
+        )
     }
 
-    private func addSubmenu(_ action: FinderMenuAction, items: [(title: String, parameter: String)], to menu: NSMenu) {
+    private func addSubmenu(
+        _ action: FinderMenuAction,
+        items: [(title: String, parameter: String)],
+        paths: [String],
+        container: String?,
+        to menu: NSMenu
+    ) {
         guard !items.isEmpty else { return }
         let parent = NSMenuItem(title: action.localizedTitle, action: nil, keyEquivalent: "")
         let sub = NSMenu(title: "")
         for entry in items {
             let item = NSMenuItem(title: entry.title, action: #selector(runAction(_:)), keyEquivalent: "")
             item.target = self
-            item.representedObject = FinderMenuCommand(action, parameter: entry.parameter)
+            item.representedObject = FinderMenuCommand(
+                action,
+                parameter: entry.parameter,
+                paths: paths,
+                container: container
+            )
             sub.addItem(item)
         }
         parent.submenu = sub
@@ -122,17 +157,16 @@ final class FinderMenuController: FIFinderSync {
     @objc private func runAction(_ sender: NSMenuItem) {
         guard let command = sender.representedObject as? FinderMenuCommand else { return }
 
-        let controller = FIFinderSyncController.default()
-        let paths = (controller.selectedItemURLs() ?? []).map(\.path)
-        let container = controller.targetedURL()?.path
-
         if command.action.requiresHost {
             let request = FinderMenuRequest(
-                action: command.action, paths: paths, container: container, parameter: command.parameter
+                action: command.action,
+                paths: command.paths,
+                container: command.container,
+                parameter: command.parameter
             )
             FinderMenuIPCClient.send(request, logger: logger)
         } else {
-            handleLocally(command.action, paths: paths)
+            handleLocally(command.action, paths: command.paths)
         }
     }
 

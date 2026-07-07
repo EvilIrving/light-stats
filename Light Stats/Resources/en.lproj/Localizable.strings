@@ -239,6 +239,7 @@
 "findermenu.toast.openWithFailed" = "Couldn't open the selected item with that app.";
 "findermenu.toast.toggleHiddenFailed" = "Couldn't change hidden state for some items.";
 "findermenu.toast.cmuxFailed" = "Couldn't call the cmux service. Make sure cmux is installed and its Service is enabled.";
+"findermenu.toast.delayedFailure" = "Light Stats wasn't running when you clicked \"%@\". It just launched — try again.";
 "settings.section.general" = "General";
 "settings.section.monitoring" = "Monitoring";
 "settings.section.extras" = "Extra Tools";

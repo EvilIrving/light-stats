@@ -241,6 +241,7 @@
 "findermenu.toast.openWithFailed" = "선택한 항목을 해당 앱으로 열 수 없습니다.";
 "findermenu.toast.toggleHiddenFailed" = "일부 항목의 숨김 상태를 변경할 수 없습니다.";
 "findermenu.toast.cmuxFailed" = "cmux 서비스를 호출할 수 없습니다. cmux가 설치되어 있고 서비스가 활성화되어 있는지 확인하세요.";
+"findermenu.toast.delayedFailure" = "\"%@\"을(를) 클릭했을 때 Light Stats가 실행 중이 아니었습니다. 지금 시작되었으니 다시 시도해 주세요.";
 "settings.section.general" = "일반";
 "settings.section.monitoring" = "모니터링";
 "settings.section.extras" = "추가 도구";

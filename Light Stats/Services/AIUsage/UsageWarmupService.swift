@@ -22,8 +22,8 @@ nonisolated enum UsageWarmupService {
     private static let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
     private static let maxStderrLogBytes = 2_048
 
-    /// 一句无害的自然语言；anchor 窗口只需要"发出一条真实消息"，内容无所谓。
-    static let prompt = "今天天气怎么样？"
+    /// 窗口 anchor 只需要发出一条真实消息；内容越短，warmup 的 token 成本越低。
+    static let prompt = "ok"
 
     static func send(provider: AIProvider, timeout: TimeInterval = 30) async -> Bool {
         guard provider != .gemini else { return false }   // 每日 quota，无滚动窗口可 anchor
@@ -47,11 +47,15 @@ nonisolated enum UsageWarmupService {
     }
 
     /// 尽量压小上下文：Claude 用 `-p` print 模式并禁用工具；Codex 用 `exec` 只读沙箱、
-    /// 跳过 git 检查并不落 session 文件（配合空 cwd，避免加载仓库上下文）。
+    /// 跳过 git 检查、忽略用户规则/配置并不落 session 文件（配合空 cwd，避免加载仓库上下文）。
     private static func arguments(for provider: AIProvider) -> [String] {
         switch provider {
         case .claude: return ["-p", prompt, "--allowed-tools", ""]
-        case .codex: return ["exec", "--skip-git-repo-check", "--ephemeral", "-s", "read-only", prompt]
+        case .codex:
+            return [
+                "exec", "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check", "--ephemeral",
+                "-s", "read-only", prompt
+            ]
         case .gemini: return []
         }
     }

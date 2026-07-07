@@ -58,6 +58,17 @@ final class FinderMenuHostService {
         runLoopSource = source
         isRunning = true
         logger.info("FinderMenu host service started")
+
+        // 检查扩展侧是否有挂起的 IPC 失败（宿主之前不在运行），有就 toast。
+        if let failedAction = FinderMenuShared.consumePendingFailure() {
+            let label = FinderMenuShared.label(for: failedAction) ?? failedAction
+            let message = String(format: "findermenu.toast.delayedFailure".localized, label)
+            NotificationCenter.default.post(
+                name: .finderMenuActionFailed,
+                object: nil,
+                userInfo: ["message": message]
+            )
+        }
     }
 
     func stop() {
@@ -340,7 +351,12 @@ final class FinderMenuHostService {
 
     private func directory(for request: FinderMenuRequest) -> String? {
         if let container = request.container {
-            return container
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: container, isDirectory: &isDir), isDir.boolValue {
+                return container
+            }
+            // container 不是目录（Finder 在某些上下文中可能返回文件路径），取父目录。
+            return (container as NSString).deletingLastPathComponent
         }
         guard let first = request.paths.first else { return nil }
         var isDir: ObjCBool = false

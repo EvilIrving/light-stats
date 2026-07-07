@@ -27,6 +27,7 @@ nonisolated enum FinderMenuIPCClient {
         Thread.sleep(forTimeInterval: 0.6)
         if !trySend(data) {
             logger.error("Failed to deliver \(request.action.rawValue, privacy: .public) to host")
+            FinderMenuShared.writePendingFailure(action: request.action.rawValue)
         }
     }
 
