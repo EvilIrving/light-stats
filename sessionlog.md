@@ -1,3 +1,19 @@
+## FinderMenu beta 5：上下文捕获修复 + IPC 失败 toast + 双扩展残留排障 · 2026-07-07 18:00 · pi-coding-agent
+
+beta 4 的问题是子菜单点击时上下文丢失（menu(for:) 里能拿到 targetedURL，但 submenu action 触发时已失效）。修法：FinderMenuCommand 在 menu(for:) 阶段缓存 paths + container，runAction() 不再重新查询 FIFinderSyncController。
+
+DeepSeek review 后补了两个修复：
+
+**P1 — IPC 发送失败不再静默。** 扩展侧两次发送均失败后写 App Group pending failure；宿主 start() 时检查并 toast，然后清除。关键：不能像以前那样只写 log.error 了事——用户点菜单没反应必须给反馈。
+
+**P2 — directory(for:) 不再盲目信任 container。** 原来 `if let container = request.container { return container }` 无条件信任 Finder 的 targetedURL() 返回值是目录。现在加 isDirectory 检查，不是目录就取 parent。
+
+**排障过程（耗了一下午）。** 用户报告右键完全没用。清空了所有权限、App Group、UserDefaults 后出现了一个鸡生蛋问题：用 defaults write 直接写 App Group → 扩展读到 isEnabled()=true 出了菜单；但 Host 的 SettingsManager 从自己 UserDefaults 读到 false → CFMessagePort 从未启动 → 点击菜单完全沉默。另外 pluginkit 里残留了两份扩展注册（Debug build 的 1.0.2 + /Applications 的 1.9.0-beta.5），Finder 右键出现两个菜单项。
+
+**尚未从代码层面修的问题：Host 启动时应该把 App Group 的 isEnabled() 作为权威来源，而不是只信任自己的 UserDefaults。** 否则一旦 UserDefaults 和 App Group 不一致（清数据、迁移、备份恢复都可能触发），就会出现菜单可见但点击无效的静默失败。可以用 consumePendingFailure 在 start() 检查作为修复起点，但更根本的：syncFinderMenuService() 应该在启动时读 App Group 的值来纠正 UserDefaults。
+
+四个 Localizable.strings 各加了 findermenu.toast.delayedFailure。UsageWarmup 顺手优化：prompt 从 "今天天气怎么样？" 缩成 "ok"，Codex 加 --ignore-user-config --ignore-rules。
+
 ## Finder 扩展状态探测 + 擦屏模式限便携机型 · 2026-06-29 11:10 · claude-opus-4-8
 
 两件事，都未提交。
