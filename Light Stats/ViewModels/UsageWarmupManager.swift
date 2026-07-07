@@ -4,13 +4,12 @@
 //
 //  Created on 2026/06/28.
 //
-//  目标很简单：对开了「自动续期窗口」的 provider，每隔固定时长发一条无害消息——
-//  就是把用户手动用 `/loop` 每 4 小时 ping 一次的事做成内置。不做任何「按 reset 时刻
-//  对齐 / 提前 anchor」的花活：一个计时器 + 一个 Task，定时发，仅此而已。
+//  目标很简单：对开了「自动续期窗口」的 provider，在 5h 窗口 reset 后发一条无害消息——
+//  就是把用户手动等窗口过期后 ping 一次的事做成内置。mid-window 发送不会移动 reset，
+//  所以这里必须先拿到当前窗口 reset，再在 reset 后短延迟触发。
 //
-//  每 provider 一个循环：启用即发一次，失败则短 backoff 重试两次，仍失败也保留
-//  后续 interval 周期。睡眠用 ≤60s 分块轮询，系统睡眠唤醒后墙钟自校正（漏发尽快补上）。
-//  默认全关——干净安装什么都不跑。
+//  每 provider 一个循环：拿 reset → 等到 reset+delay → 发送 → 刷新验证；同一个 reset
+//  只发一次，避免服务端短暂返回旧窗口时重复消耗。默认全关——干净安装什么都不跑。
 //
 
 import Foundation
@@ -25,14 +24,15 @@ final class UsageWarmupManager: ObservableObject {
     /// 仅这两家有滚动窗口；Gemini 是每日 quota，不参与。
     private static let supported: [AIProvider] = [.claude, .codex]
 
-    /// 固定发送间隔：每 4 小时发一条（< 5h 窗口，保证持续覆盖）。
-    private static let interval: TimeInterval = 4 * 3600
+    private static let resetDelay: TimeInterval = 60
+    private static let snapshotRetryDelay: TimeInterval = 2 * 3600
     private static let retryDelays: [TimeInterval] = [30, 120]
 
     private let settings = SettingsManager.shared
     private let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
 
     private var loops: [AIProvider: Task<Void, Never>] = [:]
+    private var lastSentReset: [AIProvider: Date] = [:]
     private var cancellables = Set<AnyCancellable>()
 
     private init() {}
@@ -89,6 +89,7 @@ final class UsageWarmupManager: ObservableObject {
         guard let task = loops[provider] else { return }
         task.cancel()
         loops[provider] = nil
+        lastSentReset[provider] = nil
         log.info("warmup loop stop: \(provider.rawValue, privacy: .public)")
     }
 
@@ -96,9 +97,51 @@ final class UsageWarmupManager: ObservableObject {
 
     private func run(_ provider: AIProvider) async {
         while !Task.isCancelled {
-            _ = await sendWithRetries(provider)
+            guard let fireDate = await nextFireDate(for: provider) else {
+                log.error("warmup waiting for readable 5h reset: \(provider.rawValue, privacy: .public)")
+                await sleep(seconds: Self.snapshotRetryDelay)
+                continue
+            }
+
+            log.info(
+                "warmup scheduled \(provider.rawValue, privacy: .public) at \(fireDate, privacy: .public)"
+            )
+            await sleep(until: fireDate)
             if Task.isCancelled { break }
-            await sleepInterval()
+
+            let reset = fireDate.addingTimeInterval(-Self.resetDelay)
+            if await sendWithRetries(provider) {
+                lastSentReset[provider] = reset
+                await verifySend(provider, previousReset: reset)
+            } else {
+                await sleep(seconds: Self.snapshotRetryDelay)
+            }
+        }
+    }
+
+    private func nextFireDate(for provider: AIProvider) async -> Date? {
+        do {
+            let snapshot = try await fetchUsage(provider)
+            return Self.nextFireDate(
+                from: snapshot,
+                now: Date(),
+                resetDelay: Self.resetDelay,
+                lastSentReset: lastSentReset[provider]
+            )
+        } catch {
+            let description = String(describing: error)
+            log.error(
+                "warmup usage fetch failed for \(provider.rawValue, privacy: .public): \(description, privacy: .public)"
+            )
+            return nil
+        }
+    }
+
+    private func fetchUsage(_ provider: AIProvider) async throws -> ProviderUsageSnapshot {
+        switch provider {
+        case .claude: return try await ClaudeUsageService.fetch()
+        case .codex: return try await CodexUsageService.fetch()
+        case .gemini: throw AIUsageError.decoding
         }
     }
 
@@ -123,10 +166,22 @@ final class UsageWarmupManager: ObservableObject {
         return false
     }
 
-    /// 睡满一个 interval，分 ≤60s 块轮询：系统睡眠会冻住单次 sleep，但唤醒后用墙钟
-    /// 重新比对截止时间，漏过的 ping 会在唤醒后尽快补发，不会一直拖到下一整段。
-    private func sleepInterval() async {
-        await sleep(seconds: Self.interval)
+    private func verifySend(_ provider: AIProvider, previousReset: Date) async {
+        do {
+            let snapshot = try await fetchUsage(provider)
+            guard let nextReset = Self.primaryReset(in: snapshot),
+                  nextReset > previousReset else {
+                log.error("warmup sent but reset did not advance/read back yet: \(provider.rawValue, privacy: .public)")
+                return
+            }
+            log.info("warmup verified \(provider.rawValue, privacy: .public) nextReset=\(nextReset, privacy: .public)")
+        } catch {
+            log.error("warmup sent but verification fetch failed for \(provider.rawValue, privacy: .public)")
+        }
+    }
+
+    private func sleep(until date: Date) async {
+        await sleep(seconds: max(0, date.timeIntervalSinceNow))
     }
 
     private func sleep(seconds: TimeInterval) async {
@@ -137,5 +192,27 @@ final class UsageWarmupManager: ObservableObject {
             guard remaining > 0 else { return }
             try? await Task.sleep(for: .seconds(min(remaining, 60)))
         }
+    }
+
+    static func nextFireDate(
+        from snapshot: ProviderUsageSnapshot,
+        now: Date,
+        resetDelay: TimeInterval,
+        lastSentReset: Date?
+    ) -> Date? {
+        guard let reset = primaryReset(in: snapshot) else { return nil }
+        if let lastSentReset, abs(lastSentReset.timeIntervalSince(reset)) < 1 {
+            return nil
+        }
+        return maxDate(now, reset.addingTimeInterval(resetDelay))
+    }
+
+    static func primaryReset(in snapshot: ProviderUsageSnapshot) -> Date? {
+        snapshot.windows.first { $0.label == "5h" }?.resetsAt
+            ?? snapshot.windows.compactMap(\.resetsAt).min()
+    }
+
+    private static func maxDate(_ lhs: Date, _ rhs: Date) -> Date {
+        lhs > rhs ? lhs : rhs
     }
 }
