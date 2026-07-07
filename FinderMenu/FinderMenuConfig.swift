@@ -15,6 +15,10 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
     var favoriteDirectories: [DirectoryEntry]
     var openWithApps: [AppEntry]
     var templates: [TemplateEntry]
+    /// 「在此打开终端」使用的终端。默认 Terminal，不根据用户安装情况自动猜测。
+    var terminalID: String
+    /// 是否前置 cmux 的 macOS Service 动作。默认关闭，避免未安装 cmux 的用户看到无效项。
+    var showCmuxActions: Bool
     /// 选中显示在「新建文件」菜单里的内置预设类型 id。
     /// `nil` = 未设置，沿用 `FinderMenuPresets.defaultEnabledTemplateIDs`；
     /// 非 nil（含空数组）= 用户显式选择，空数组即「一个内置类型都不显示」。
@@ -23,10 +27,14 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
     init(favoriteDirectories: [DirectoryEntry] = [],
          openWithApps: [AppEntry] = [],
          templates: [TemplateEntry] = [],
+         terminalID: String = FinderMenuPresets.defaultTerminalID,
+         showCmuxActions: Bool = false,
          enabledTemplateIDs: [String]? = nil) {
         self.favoriteDirectories = favoriteDirectories
         self.openWithApps = openWithApps
         self.templates = templates
+        self.terminalID = FinderMenuPresets.normalizeTerminalID(terminalID)
+        self.showCmuxActions = showCmuxActions
         self.enabledTemplateIDs = enabledTemplateIDs
     }
 
@@ -35,6 +43,9 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
         favoriteDirectories = try container.decodeIfPresent([DirectoryEntry].self, forKey: .favoriteDirectories) ?? []
         openWithApps = try container.decodeIfPresent([AppEntry].self, forKey: .openWithApps) ?? []
         templates = try container.decodeIfPresent([TemplateEntry].self, forKey: .templates) ?? []
+        let decodedTerminalID = try container.decodeIfPresent(String.self, forKey: .terminalID) ?? FinderMenuPresets.defaultTerminalID
+        terminalID = FinderMenuPresets.normalizeTerminalID(decodedTerminalID)
+        showCmuxActions = try container.decodeIfPresent(Bool.self, forKey: .showCmuxActions) ?? false
         enabledTemplateIDs = try container.decodeIfPresent([String].self, forKey: .enabledTemplateIDs)
     }
 

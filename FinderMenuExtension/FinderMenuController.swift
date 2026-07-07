@@ -50,6 +50,7 @@ final class FinderMenuController: FIFinderSync {
         addItem(FinderMenuCommand(.openTerminalHere), title: FinderMenuAction.openTerminalHere.localizedTitle, to: menu)
 
         let config = FinderMenuShared.loadConfig()
+        addCmuxItemsIfNeeded(config, to: menu)
         let appItems = resolveApps(config).map { (title: $0.name, parameter: $0.bundleID) }
         addSubmenu(.openWithApp, items: appItems, to: menu)
 
@@ -62,9 +63,11 @@ final class FinderMenuController: FIFinderSync {
 
     /// 右键空白处 / 侧边栏目录时的菜单。
     private func buildContainerMenu(_ menu: NSMenu) {
-        let templateItems = FinderMenuShared.loadConfig().resolvedTemplates().map { (title: $0.title, parameter: $0.id) }
+        let config = FinderMenuShared.loadConfig()
+        let templateItems = config.resolvedTemplates().map { (title: $0.title, parameter: $0.id) }
         addSubmenu(.newFile, items: templateItems, to: menu)
         addItem(FinderMenuCommand(.openTerminalHere), title: FinderMenuAction.openTerminalHere.localizedTitle, to: menu)
+        addCmuxItemsIfNeeded(config, to: menu)
     }
 
     // MARK: - Item helpers
@@ -74,6 +77,12 @@ final class FinderMenuController: FIFinderSync {
         item.target = self
         item.representedObject = command
         menu.addItem(item)
+    }
+
+    private func addCmuxItemsIfNeeded(_ config: FinderMenuConfig, to menu: NSMenu) {
+        guard config.showCmuxActions else { return }
+        addItem(FinderMenuCommand(.cmuxNewWindow), title: FinderMenuAction.cmuxNewWindow.localizedTitle, to: menu)
+        addItem(FinderMenuCommand(.cmuxNewWorkspace), title: FinderMenuAction.cmuxNewWorkspace.localizedTitle, to: menu)
     }
 
     private func addSubmenu(_ action: FinderMenuAction, items: [(title: String, parameter: String)], to menu: NSMenu) {

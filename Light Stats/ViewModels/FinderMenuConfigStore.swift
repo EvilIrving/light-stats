@@ -10,6 +10,7 @@
 import AppKit
 import Combine
 import Foundation
+import SwiftUI
 import UniformTypeIdentifiers
 
 @MainActor
@@ -32,6 +33,17 @@ final class FinderMenuConfigStore: ObservableObject {
             let status = await Task.detached { FinderMenuHostService.extensionStatus() }.value
             extensionStatus = status
         }
+    }
+
+    func restartFinder() {
+        Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            process.arguments = ["Finder"]
+            try? process.run()
+            process.waitUntilExit()
+        }
+        ToastCenter.shared.show(message: "settings.finderMenu.finderRefreshing".localized, systemImage: "arrow.clockwise", tint: .blue)
     }
 
     // MARK: - Directories
@@ -83,6 +95,18 @@ final class FinderMenuConfigStore: ObservableObject {
 
     func removeApp(_ entry: FinderMenuConfig.AppEntry) {
         config.openWithApps.removeAll { $0.bundleID == entry.bundleID }
+        persist()
+    }
+
+    // MARK: - Terminal / Integrations
+
+    func setTerminalID(_ id: String) {
+        config.terminalID = FinderMenuPresets.normalizeTerminalID(id)
+        persist()
+    }
+
+    func setShowCmuxActions(_ enabled: Bool) {
+        config.showCmuxActions = enabled
         persist()
     }
 

@@ -149,6 +149,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             name: .showAbout,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleFinderMenuActionFailed(_:)),
+            name: .finderMenuActionFailed,
+            object: nil
+        )
 
         // 启动后延迟检查更新，避开冷启动高峰；尊重「自动检查」开关。
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
@@ -158,6 +164,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func handleShowAbout() {
         showAbout()
+    }
+
+    @objc private func handleFinderMenuActionFailed(_ notification: Notification) {
+        let message = notification.userInfo?["message"] as? String ?? "findermenu.toast.actionFailed".localized
+        ToastCenter.shared.show(message: message, systemImage: "exclamationmark.triangle.fill", tint: .orange, duration: 3)
     }
 
     // MARK: - Status Item Setup
@@ -566,6 +577,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             _ = scrollService.start()
         }
         syncWindowControlServices()
+        if settings.finderMenuEnabled {
+            syncFinderMenuService()
+            FinderMenuConfigStore.shared.refreshExtensionStatus()
+        }
     }
 
     private func currentScrollConfig() -> ScrollConfig {

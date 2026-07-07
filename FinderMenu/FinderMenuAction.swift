@@ -20,12 +20,15 @@ nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
     case copyTo            // 委派宿主：把选中项复制到目标目录（parameter = 目标目录路径）
     case openWithApp       // 委派宿主：用指定 App 打开选中项（parameter = App bundle id）
     case toggleHidden      // 委派宿主：切换选中项的隐藏标志
+    case cmuxNewWindow     // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开窗口
+    case cmuxNewWorkspace  // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开工作区
 
     /// 是否需要委派给宿主（true）还是扩展内自理（false）。
     var requiresHost: Bool {
         switch self {
         case .copyPath, .copyName: return false
-        case .openTerminalHere, .newFile, .moveTo, .copyTo, .openWithApp, .toggleHidden: return true
+        case .openTerminalHere, .newFile, .moveTo, .copyTo, .openWithApp, .toggleHidden,
+             .cmuxNewWindow, .cmuxNewWorkspace: return true
         }
     }
 
@@ -47,6 +50,8 @@ nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
         case .copyTo: return "Copy To"
         case .openWithApp: return "Open With"
         case .toggleHidden: return "Hide / Show"
+        case .cmuxNewWindow: return "New cmux Window Here"
+        case .cmuxNewWorkspace: return "New cmux Workspace Here"
         }
     }
 }

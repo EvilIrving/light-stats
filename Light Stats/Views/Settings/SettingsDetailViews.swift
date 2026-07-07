@@ -320,6 +320,26 @@ struct FinderMenuDetail: View {
             SettingsToggle(isOn: $settings.finderMenuEnabled)
         } content: {
             if settings.finderMenuEnabled {
+                SettingsGroup {
+                    SettingsRow("settings.finderMenu.defaultTerminal".localized) {
+                        Picker("", selection: Binding(
+                            get: { store.config.terminalID },
+                            set: { store.setTerminalID($0) }
+                        )) {
+                            ForEach(FinderMenuPresets.terminalPresets) { terminal in
+                                Text(terminal.name).tag(terminal.id)
+                            }
+                        }
+                        .pickerStyle(.menu).labelsHidden().frame(width: 150).focusable(false)
+                    }
+                    rowDivider()
+                    SettingsRow("settings.finderMenu.cmuxActions".localized) {
+                        SettingsToggle(isOn: Binding(
+                            get: { store.config.showCmuxActions },
+                            set: { store.setShowCmuxActions($0) }
+                        ))
+                    }
+                }
                 EditableListView(
                     title: "settings.finderMenu.directories".localized,
                     rows: store.config.favoriteDirectories.map {
@@ -348,8 +368,11 @@ struct FinderMenuDetail: View {
                 )
                 templateChooser
                 extensionStatusRow
-                Button("settings.finderMenu.openSettings".localized) { openSettings() }
-                    .font(.system(size: 11))
+                HStack(spacing: 8) {
+                    Button("settings.finderMenu.openSettings".localized) { openSettings() }
+                    Button("settings.finderMenu.refreshFinder".localized) { store.restartFinder() }
+                }
+                .font(.system(size: 11))
             }
         }
         .onAppear { store.refreshExtensionStatus() }

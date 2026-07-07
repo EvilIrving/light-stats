@@ -132,6 +132,10 @@ final class FinderMenuHostService {
             openWithApp(request)
         case .toggleHidden:
             toggleHidden(request)
+        case .cmuxNewWindow:
+            performCmuxService("New cmux Window Here", request: request)
+        case .cmuxNewWorkspace:
+            performCmuxService("New cmux Workspace Here", request: request)
         case .copyPath, .copyName:
             // 这些动作在扩展内已处理，不应抵达宿主；忽略。
             break
@@ -140,10 +144,81 @@ final class FinderMenuHostService {
 
     // MARK: - Open Terminal
 
-    /// 在目标目录打开终端。优先用容器路径；否则取首个选中项所在目录。
+    /// 在目标目录打开用户选择的终端。默认 Terminal，不根据安装情况替用户猜。
     private func openTerminal(_ request: FinderMenuRequest) {
-        guard let dir = directory(for: request) else { return }
-        runOpen(["-a", "Terminal", dir])
+        guard let dir = directory(for: request) else {
+            showFailure("findermenu.toast.noTarget")
+            return
+        }
+        let terminalID = FinderMenuShared.loadConfig().terminalID
+        if !openTerminal(id: terminalID, at: URL(fileURLWithPath: dir, isDirectory: true)) {
+            showFailure("findermenu.toast.openTerminalFailed")
+        }
+    }
+
+    private func openTerminal(id: String, at directory: URL) -> Bool {
+        switch FinderMenuPresets.normalizeTerminalID(id) {
+        case "iterm2":
+            return openApplication(bundleIdentifier: "com.googlecode.iterm2", urls: [directory])
+                || runProcess("/usr/bin/open", arguments: ["-a", "iTerm", directory.path]) == 0
+                || openTerminalApp(at: directory)
+        case "ghostty":
+            return openTerminalWithArguments(
+                bundleIdentifier: "com.mitchellh.ghostty",
+                appName: "Ghostty",
+                arguments: ["--working-directory=\(directory.path)"]
+            ) || openTerminalApp(at: directory)
+        case "wezterm":
+            return openTerminalWithArguments(
+                bundleIdentifier: "com.github.wez.wezterm",
+                appName: "WezTerm",
+                arguments: ["start", "--cwd", directory.path]
+            ) || openTerminalApp(at: directory)
+        case "alacritty":
+            return openTerminalWithArguments(
+                bundleIdentifier: "org.alacritty",
+                appName: "Alacritty",
+                arguments: ["--working-directory", directory.path]
+            ) || openTerminalApp(at: directory)
+        case "kitty":
+            return openTerminalWithArguments(
+                bundleIdentifier: "net.kovidgoyal.kitty",
+                appName: "kitty",
+                arguments: ["--directory", directory.path]
+            ) || openTerminalApp(at: directory)
+        case "warp":
+            return runProcess("/usr/bin/open", arguments: ["-a", "Warp", directory.path]) == 0 || openTerminalApp(at: directory)
+        default:
+            return openTerminalApp(at: directory)
+        }
+    }
+
+    private func openTerminalApp(at directory: URL) -> Bool {
+        if openApplication(bundleIdentifier: "com.apple.Terminal", urls: [directory]) {
+            return true
+        }
+        if runProcess("/usr/bin/open", arguments: ["-a", "Terminal", directory.path]) == 0 {
+            return true
+        }
+        let command = "cd \(shellQuoted(directory.path))"
+        let script = """
+        tell application "Terminal"
+          activate
+          do script "\(appleScriptEscaped(command))"
+        end tell
+        """
+        return runProcess("/usr/bin/osascript", arguments: ["-e", script]) == 0
+    }
+
+    private func openTerminalWithArguments(bundleIdentifier: String, appName: String, arguments: [String]) -> Bool {
+        var bundleArguments = ["-n", "-b", bundleIdentifier, "--args"]
+        bundleArguments.append(contentsOf: arguments)
+        if runProcess("/usr/bin/open", arguments: bundleArguments) == 0 {
+            return true
+        }
+        var appArguments = ["-n", "-a", appName, "--args"]
+        appArguments.append(contentsOf: arguments)
+        return runProcess("/usr/bin/open", arguments: appArguments) == 0
     }
 
     // MARK: - New File
@@ -151,17 +226,22 @@ final class FinderMenuHostService {
     /// 在容器目录按模板新建文件，自增重名后写入内容并在 Finder 中选中。
     /// 模板取用户配置（resolvedTemplates 在无自定义时回退预设），与扩展菜单一致。
     private func newFile(_ request: FinderMenuRequest) {
-        guard let dir = directory(for: request),
-              let id = request.parameter,
-              let template = FinderMenuShared.loadConfig().resolvedTemplates().first(where: { $0.id == id }) else { return }
+        guard let dir = directory(for: request), let id = request.parameter else {
+            showFailure("findermenu.toast.noTarget")
+            return
+        }
+        guard let template = FinderMenuShared.loadConfig().resolvedTemplates().first(where: { $0.id == id }) else {
+            showFailure("findermenu.toast.newFileFailed")
+            return
+        }
 
-        let base = "Untitled"
-        let dest = uniqueURL(inDirectory: dir, baseName: base, fileExtension: template.fileExtension)
+        let dest = uniqueURL(inDirectory: dir, baseName: "Untitled", fileExtension: template.fileExtension)
         do {
             try template.content.write(to: dest, atomically: true, encoding: .utf8)
             NSWorkspace.shared.activateFileViewerSelecting([dest])
         } catch {
             logger.error("newFile failed: \(error.localizedDescription, privacy: .public)")
+            showFailure("findermenu.toast.newFileFailed")
         }
     }
 
@@ -169,8 +249,12 @@ final class FinderMenuHostService {
 
     /// 把选中项移动或复制到目标目录，逐个处理并对重名自增。
     private func transfer(_ request: FinderMenuRequest, move: Bool) {
-        guard let dest = request.parameter else { return }
+        guard let dest = request.parameter, !request.paths.isEmpty else {
+            showFailure("findermenu.toast.noTarget")
+            return
+        }
         let fileManager = FileManager.default
+        var failureCount = 0
         for path in request.paths {
             let source = URL(fileURLWithPath: path)
             let name = source.deletingPathExtension().lastPathComponent
@@ -183,8 +267,12 @@ final class FinderMenuHostService {
                     try fileManager.copyItem(at: source, to: target)
                 }
             } catch {
+                failureCount += 1
                 logger.error("\(move ? "move" : "copy", privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             }
+        }
+        if failureCount > 0 {
+            showFailure(move ? "findermenu.toast.moveFailed" : "findermenu.toast.copyFailed")
         }
     }
 
@@ -192,16 +280,26 @@ final class FinderMenuHostService {
 
     /// 用指定 bundle id 的 App 打开选中项；无选中项时打开容器目录。
     private func openWithApp(_ request: FinderMenuRequest) {
-        guard let bundleID = request.parameter else { return }
+        guard let bundleID = request.parameter else {
+            showFailure("findermenu.toast.openWithFailed")
+            return
+        }
         let targets = request.paths.isEmpty ? [request.container].compactMap { $0 } : request.paths
-        guard !targets.isEmpty else { return }
-        runOpen(["-b", bundleID] + targets)
+        guard !targets.isEmpty, runProcess("/usr/bin/open", arguments: ["-b", bundleID] + targets) == 0 else {
+            showFailure("findermenu.toast.openWithFailed")
+            return
+        }
     }
 
     // MARK: - Hide / Show
 
     /// 切换选中项的隐藏标志。逐项读取当前状态再反转。
     private func toggleHidden(_ request: FinderMenuRequest) {
+        guard !request.paths.isEmpty else {
+            showFailure("findermenu.toast.noTarget")
+            return
+        }
+        var failureCount = 0
         for path in request.paths {
             let url = URL(fileURLWithPath: path)
             do {
@@ -211,8 +309,30 @@ final class FinderMenuHostService {
                 var mutableURL = url
                 try mutableURL.setResourceValues(values)
             } catch {
+                failureCount += 1
                 logger.error("toggleHidden failed: \(error.localizedDescription, privacy: .public)")
             }
+        }
+        if failureCount > 0 {
+            showFailure("findermenu.toast.toggleHiddenFailed")
+        }
+    }
+
+    // MARK: - cmux Services
+
+    private func performCmuxService(_ serviceName: String, request: FinderMenuRequest) {
+        guard let dir = directory(for: request) else {
+            showFailure("findermenu.toast.noTarget")
+            return
+        }
+        let url = URL(fileURLWithPath: dir, isDirectory: true)
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("com.lightstats.findermenu.cmux"))
+        pasteboard.clearContents()
+        pasteboard.writeObjects([url as NSURL])
+        pasteboard.setString(url.path, forType: .string)
+        guard NSPerformService(serviceName, pasteboard) else {
+            showFailure("findermenu.toast.cmuxFailed")
+            return
         }
     }
 
@@ -246,15 +366,61 @@ final class FinderMenuHostService {
         return candidate
     }
 
-    /// 调用 `/usr/bin/open` 执行系统打开操作。
-    private func runOpen(_ arguments: [String]) {
+    private func openApplication(bundleIdentifier: String, urls: [URL]) -> Bool {
+        guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
+            logger.error("application not found: \(bundleIdentifier, privacy: .public)")
+            return false
+        }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.open(urls, withApplicationAt: applicationURL, configuration: configuration) { _, error in
+            if let error {
+                self.logger.error("open app failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        return true
+    }
+
+    @discardableResult
+    private func runProcess(_ launchPath: String, arguments: [String]) -> Int32 {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.executableURL = URL(fileURLWithPath: launchPath)
         process.arguments = arguments
         do {
             try process.run()
+            process.waitUntilExit()
+            let status = process.terminationStatus
+            if status != 0 {
+                logger.error("process failed: \(launchPath, privacy: .public) status=\(status)")
+            }
+            return status
         } catch {
-            logger.error("open failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("process failed: \(error.localizedDescription, privacy: .public)")
+            return -1
         }
     }
+
+    private func showFailure(_ localizedKey: String) {
+        NotificationCenter.default.post(
+            name: .finderMenuActionFailed,
+            object: nil,
+            userInfo: ["message": localizedKey.localized]
+        )
+    }
+
+    private func appleScriptEscaped(_ value: String) -> String {
+        value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    }
+
+    private func shellQuoted(_ value: String) -> String {
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-_.:")
+        if value.unicodeScalars.allSatisfy({ allowed.contains($0) }) {
+            return value
+        }
+        return "'\(value.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
+    }
+}
+
+extension Notification.Name {
+    static let finderMenuActionFailed = Notification.Name("finderMenuActionFailed")
 }

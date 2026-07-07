@@ -11,6 +11,34 @@ import Foundation
 
 nonisolated enum FinderMenuPresets {
 
+    // MARK: - Terminal Presets
+
+    struct TerminalPreset: Sendable, Identifiable, Hashable {
+        let id: String
+        let name: String
+        let bundleID: String?
+    }
+
+    static let defaultTerminalID = "terminal"
+
+    static let terminalPresets: [TerminalPreset] = [
+        TerminalPreset(id: "terminal", name: "Terminal", bundleID: "com.apple.Terminal"),
+        TerminalPreset(id: "iterm2", name: "iTerm2", bundleID: "com.googlecode.iterm2"),
+        TerminalPreset(id: "ghostty", name: "Ghostty", bundleID: "com.mitchellh.ghostty"),
+        TerminalPreset(id: "wezterm", name: "WezTerm", bundleID: "com.github.wez.wezterm"),
+        TerminalPreset(id: "alacritty", name: "Alacritty", bundleID: "org.alacritty"),
+        TerminalPreset(id: "kitty", name: "kitty", bundleID: "net.kovidgoyal.kitty"),
+        TerminalPreset(id: "warp", name: "Warp", bundleID: "dev.warp.Warp-Stable")
+    ]
+
+    static func normalizeTerminalID(_ id: String) -> String {
+        terminalPresets.contains { $0.id == id } ? id : defaultTerminalID
+    }
+
+    static func terminalPreset(id: String) -> TerminalPreset {
+        terminalPresets.first { $0.id == id } ?? terminalPresets[0]
+    }
+
     // MARK: - New File Templates
 
     /// 文件类型分类。设置页按此分组、可折叠；普通用户常用的「文档/文本」在前，「代码」在后。
