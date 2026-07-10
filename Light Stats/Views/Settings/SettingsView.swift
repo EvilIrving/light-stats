@@ -14,8 +14,8 @@ import SwiftUI
 
 // MARK: - Category
 
-/// 设置分类。三组分区对应「通用 / 监控（核心）/ 附加工具（默认关闭）」，保留旧版的
-/// opt-in 分组语义，让用户一眼看出哪些是可选的越界能力。
+/// 设置分类。三组分区对应「通用 / 监控（核心）/ 附加工具（默认关闭）」。
+/// 保持唤醒属于通用设置，但仍保留 opt-in 状态指示，让用户一眼看出它是否正在运行。
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general, menuBar, health
     case scroll, windowManagement, finderMenu, aiUsage, network, keepAwake
@@ -26,9 +26,9 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
     var group: Group {
         switch self {
-        case .general: return .general
+        case .general, .keepAwake: return .general
         case .menuBar, .health: return .monitoring
-        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network, .keepAwake: return .extras
+        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network: return .extras
         }
     }
 
@@ -66,7 +66,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     }
 
     /// 该 opt-in 工具当前是否处于启用状态——用于侧栏的绿色「live」信号点。
-    /// 监控核心（general/menuBar/health）永远返回 false：它们不是可开关的越界能力。
+    /// 监控核心（general/menuBar/health）永远返回 false；保持唤醒虽位于通用分组，仍是可选工具。
     func isActive(_ settings: SettingsManager) -> Bool {
         switch self {
         case .scroll:
