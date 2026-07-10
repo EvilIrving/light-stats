@@ -1,3 +1,57 @@
+## v1.9.0-beta.6（预发布 / Prerelease）
+
+### ✨ 新功能 / Features
+
+- Finder 右键菜单支持终端选择、cmux 新窗口与新工作区操作
+- 设置中显示 FinderSync 扩展的真实注册与启用状态
+- 自动更新默认关闭，干净安装保持零外联
+
+### 🔧 优化 / Improvements
+
+- AI 用量窗口保活改为在重置窗口后触发，并增加有限重试
+- 清洁模式仅在便携式 Mac 上显示
+- 保持唤醒归入通用设置
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.8.0...v1.9.0-beta.6
+
+---
+
+## v1.8.0
+
+### ✨ 新功能 / Features
+
+- 新增默认关闭的屏幕保持唤醒
+- 新增 Finder 右键菜单、分类文件模板和模板显示开关
+- 新增 Claude Code 与 Codex 用量窗口保活
+- 设置、关于和更新窗口适配 Liquid Glass 背景
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.7.0...v1.8.0
+
+---
+
+## v1.7.0
+
+### ✨ 新功能 / Features
+
+- 窗口管理整合为单一总开关
+- 新增登录时启动设置
+- 概览指标增加短期趋势折线
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.6.0...v1.7.0
+
+---
+
+## v1.6.0
+
+### 🔧 优化 / Improvements
+
+- 完善多语言切换与更新窗口交互
+- 增加轻量 Toast，并统一工具栏操作反馈
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.5.2...v1.6.0
+
+---
+
 ## v1.5.2
 
 ### ✨ 新功能 / Features

@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Light Stats — Free macOS Menu Bar System Monitor</title>
-  <meta name="description" content="Free, open-source macOS menu bar system monitor. CPU, GPU, memory pressure, network, battery, and AI CLI usage folded into one 0-100 health score. Local-first, no telemetry.">
+  <title>Light Stats | Native macOS Pressure and Workflow Monitor</title>
+  <meta name="description" content="Free, open-source macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
   <link rel="canonical" href="https://evilirving.github.io/light-stats/">
   <meta name="theme-color" content="#007AFF">
-  <meta name="keywords" content="macOS menu bar, system monitor, mac cpu monitor, memory pressure, gpu usage, health score, open source, swiftui, apple silicon">
+  <meta name="keywords" content="macOS menu bar, system monitor, mac cpu monitor, memory pressure, gpu usage, health score, AI CLI usage, Finder menu, open source, swiftui, apple silicon">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Light Stats">
-  <meta property="og:title" content="Light Stats — Free macOS Menu Bar System Monitor">
-  <meta property="og:description" content="CPU, GPU, memory pressure, network, battery, and AI CLI usage folded into one 0-100 health score. Native, local-first, no telemetry. macOS 14+, MIT licensed.">
+  <meta property="og:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
+  <meta property="og:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows in the menu bar. Native, no telemetry, zero outbound requests by default.">
   <meta property="og:url" content="https://evilirving.github.io/light-stats/">
   <meta property="og:image" content="https://evilirving.github.io/light-stats/screenshots/popover-overview.png">
   <meta property="og:image:alt" content="The Light Stats panel showing a 100 health score with CPU, GPU, memory, network, and AI usage readouts.">
@@ -22,8 +22,8 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Light Stats — Free macOS Menu Bar System Monitor">
-  <meta name="twitter:description" content="CPU, GPU, memory pressure, network, battery, and AI CLI usage in one 0-100 health score. Native, local-first, no telemetry.">
+  <meta name="twitter:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
+  <meta name="twitter:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
   <meta name="twitter:image" content="https://evilirving.github.io/light-stats/screenshots/popover-overview.png">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='100%25' stop-color='%235AC8FA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Crect x='140' y='226' width='60' height='120' rx='10' fill='white' opacity='.9'/%3E%3Crect x='226' y='166' width='60' height='180' rx='10' fill='white' opacity='.9'/%3E%3Crect x='312' y='196' width='60' height='150' rx='10' fill='white' opacity='.9'/%3E%3C/svg%3E">
@@ -217,10 +217,10 @@
         "name": "Light Stats",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "macOS 14.0 or later",
-        "description": "Free, open-source native macOS menu bar system monitor. CPU, GPU, memory pressure, disk I/O, network, proxy and exit node, battery, temperature, fan, and AI CLI usage folded into one 0-100 health score. Local-first, no telemetry.",
+        "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. No telemetry and zero outbound requests by default.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://github.com/EvilIrving/light-stats/releases",
-        "softwareVersion": "1.5.2",
+        "softwareVersion": "1.8.0",
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -277,7 +277,7 @@
             <div>
               <div class="eyebrow reveal">Free · Open source · macOS 14+</div>
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
-              <p class="lede reveal d2">Eleven live signals from the menu bar, folded into one health score. No windows to manage, no setup, no data leaving your machine.</p>
+              <p class="lede reveal d2">Live pressure signals folded into one health score, with optional AI, network, and Finder context. No telemetry and no outbound requests unless you use or enable a network feature.</p>
               <div class="actions reveal d3">
                 <div class="seg">
                   <a href="https://github.com/EvilIrving/light-stats/releases/latest" target="_blank" rel="noopener">
@@ -390,31 +390,31 @@
                 <span class="tag">Differentiator</span>
                 <h3>Network truth, not just speed</h3>
                 <p>Throughput is the easy part. Light Stats also detects whether you are behind a proxy and, when you opt in, which exit node you are actually leaving through, with its geo-location and AS number.</p>
-                <p>The exit lookup is the only feature that reaches the network, it is off by default, and the first time you enable it the app explains exactly what it sends. See the <a href="#" @click.prevent="activeTab = 'privacy'">privacy policy</a>.</p>
+                <p>Exit lookup is off by default, and the first time you enable it the app explains exactly what it sends. See the <a href="#" @click.prevent="activeTab = 'privacy'">privacy policy</a> for every optional network behavior.</p>
               </div>
             </div>
 
             <div class="feature">
               <div class="idx">03 / Agents</div>
               <div>
-                <h3>Claude Code and Codex usage, in the menu bar</h3>
-                <p>For developers running local AI coding agents: live token-window usage for Claude Code and Codex, both the 5-hour and 7-day windows, read straight from local usage data. Know how close you are to a limit before it stops you mid-task.</p>
+                <h3>Claude Code, Codex, and Gemini usage</h3>
+                <p>When enabled, Light Stats uses credentials already stored by each provider's CLI to request current subscription windows from that provider. Optional Claude and Codex warmup can send a minimal headless message after a rolling window resets; it has a separate switch and is off by default.</p>
               </div>
             </div>
 
             <div class="feature">
-              <div class="idx">04 / Memory</div>
+              <div class="idx">04 / Finder</div>
               <div>
-                <h3>See what's eating RAM, quit it in one click</h3>
-                <p>The Memory tab lists running apps sorted by footprint, with grouped processes and a force-quit button on each row. A confirmation guards against losing unsaved work.</p>
+                <h3>Developer actions where the files are</h3>
+                <p>The optional Finder extension can copy paths and names, open a chosen terminal, create files from curated templates, move or copy selections, open them with configured apps, toggle hidden state, and start cmux windows or workspaces.</p>
               </div>
             </div>
 
             <div class="feature">
-              <div class="idx">05 / Display</div>
+              <div class="idx">05 / Defaults</div>
               <div>
-                <h3>A readout, not a dashboard</h3>
-                <p>Two lines in the menu bar: values on top, labels below, fixed widths so the layout never jitters as numbers change. Toggle each item in Settings to show only what you watch. Click any of it for the full panel.</p>
+                <h3>Nothing extra runs until you ask</h3>
+                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, Finder actions, window and scroll event taps, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
               </div>
             </div>
           </div>
@@ -422,15 +422,15 @@
 
         <!-- ══════════ PRIVACY ══════════ -->
         <section v-if="activeTab === 'privacy'" class="prose col">
-          <p>Light Stats is local by default. This policy is short because there is almost nothing to disclose, and specific about the one thing there is.</p>
+          <p>Light Stats is local by default. It has no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. Optional features contact only the service needed to perform the action described below.</p>
 
           <div class="callout">
-            <div class="k">The one network feature</div>
-            <p>Exit-node detection is the only feature that contacts the internet. It is <strong>off by default</strong>. When you turn it on, the app shows a disclosure first, then queries a public geo-IP service to learn your outbound IP, location, and AS number. Leave it off and Light Stats makes no network requests at all.</p>
+            <div class="k">Zero outbound by default</div>
+            <p>Exit-node lookup, AI usage requests, Claude/Codex usage-window warmup, and automatic update checks are all <strong>off by default</strong>. A clean install reads local system metrics only and makes no network request.</p>
           </div>
 
           <h2>Data collection</h2>
-          <p>Light Stats does not collect, transmit, or store personal data. System metrics are read locally and shown on your device. The app reads, for display only:</p>
+          <p>Light Stats does not collect or send data to the developer. System metrics are read locally and shown on your device. The app reads, for display or user-requested actions:</p>
           <ul>
             <li>CPU load and per-core utilization</li>
             <li>GPU utilization (supported Macs)</li>
@@ -439,17 +439,24 @@
             <li>Network up/down throughput and local proxy configuration</li>
             <li>Battery, temperature, and fan RPM (supported Macs)</li>
             <li>Running applications and their memory footprint (Memory tab)</li>
-            <li>Local Claude Code and Codex usage data, read from their on-disk files</li>
+            <li>Credentials and local state already stored by Claude Code, Codex, and Gemini CLI, only when the matching AI provider is enabled</li>
+            <li>Selected Finder paths and Finder-menu preferences, only when the Finder extension is enabled</li>
           </ul>
 
           <h2>Local processing</h2>
-          <p>All processing happens on your device through macOS system APIs (Mach, IOKit, SMC, CFNetwork, Network). Nothing is cached to disk beyond what the system already tracks.</p>
+          <p>Metric sampling and scoring happen on your device through macOS system APIs (Mach, IOKit, SMC, CFNetwork, Network). App preferences and Finder-menu configuration are stored locally in UserDefaults and the app group. The app does not upload system metrics or process lists.</p>
 
           <h2>Exit-node detection</h2>
           <p>When enabled, this feature sends a request to a public geo-IP service and caches the result briefly to avoid repeated lookups. It transmits no personal data beyond the network request itself, which necessarily reveals your IP to that service, the same as visiting any website. Disable it and no such request is ever made.</p>
 
+          <h2>AI usage and optional warmup</h2>
+          <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
+
+          <h2>Update checks</h2>
+          <p>A manual update check, or the off-by-default automatic update setting, contacts GitHub Releases. Downloaded updates must pass codesign, notarization, and Team ID verification before installation.</p>
+
           <h2>Third parties</h2>
-          <p>No analytics, crash reporting, advertising, or third-party SDKs. The geo-IP service used by exit-node detection, only when you enable it, is the sole external service involved.</p>
+          <p>No analytics, crash reporting, advertising, or third-party SDKs. Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
 
           <h2>Open source</h2>
           <p>The full source is on <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">GitHub</a>. You can inspect exactly what the app does, including every network call.</p>
@@ -457,7 +464,7 @@
           <h2>Changes</h2>
           <p>Any change to this policy will appear here and in the app's release notes. Data handling will never change silently.</p>
 
-          <p class="updated">Last updated: June 2026</p>
+          <p class="updated">Last updated: July 10, 2026</p>
         </section>
 
         <!-- ══════════ SUPPORT ══════════ -->
@@ -484,7 +491,7 @@
                 </div>
                 <div>
                   <dt>Does exit-node detection cost me privacy?</dt>
-                  <dd>Only if you turn it on. It is off by default and shows a disclosure before its first lookup. With it off, the app makes no network requests.</dd>
+                  <dd>Only if you turn it on. It is off by default and shows a disclosure before its first lookup. Other optional network features are documented in the Privacy tab and are also off by default.</dd>
                 </div>
                 <div>
                   <dt>Why do some readings show N/A?</dt>
@@ -492,7 +499,7 @@
                 </div>
                 <div>
                   <dt>Does it affect battery life?</dt>
-                  <dd>The default refresh is 2 seconds; CPU overhead is typically under 0.5%. Lower the refresh rate in Settings if you prefer.</dd>
+                  <dd>The default refresh is 2 seconds. You can choose a 5-second interval in Settings to reduce sampling frequency.</dd>
                 </div>
                 <div>
                   <dt>Is force-quitting safe?</dt>

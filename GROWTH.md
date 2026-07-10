@@ -1,17 +1,17 @@
 # Growth Context
 
-*Last updated: 2026-06-21*
+*Last updated: 2026-07-10*
 
 ## Product
 - **Name:** Light Stats
-- **One-liner:** Native macOS menu bar monitor with pressure scoring and privacy-first diagnostics.
-- **What it does:** Light Stats is a native macOS menu bar system monitor for CPU, GPU, memory pressure, disk, disk I/O, network, proxy state, exit node, battery, temperature, fan, processes, AI subscription usage, window controls, scroll behavior, cleaning mode, self-update, and a 0-100 health score. It keeps live pressure signals visible in the menu bar and opens a detailed popover for context. It is designed as a lightweight status instrument, not a full Activity Monitor replacement.
-- **Category:** macOS menu bar system monitor
+- **One-liner:** Native macOS menu bar instrument for live system pressure and developer workflow context.
+- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, scroll reversal, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
+- **Category:** macOS menu bar system and developer-workflow monitor
 
 ## Platform & distribution
 - **Platform / requirements:** macOS 14+, Swift 5.9+, Xcode 16+ recommended for development.
 - **How it ships / installs:** GitHub Releases DMG.
-- **Updates:** Built-in self-update checks GitHub Releases, downloads the DMG, verifies codesign, notarization, and Team ID, then replaces the running app.
+- **Updates:** Manual checks and opt-in automatic checks use GitHub Releases. Installation downloads the DMG, verifies codesign, notarization, and Team ID, then replaces the running app.
 - **Repo:** https://github.com/EvilIrving/light-stats
 - **Site:** https://evilirving.github.io/light-stats/
 
@@ -19,16 +19,16 @@
 - Free and open source under the MIT License.
 
 ## Audience
-- **Who it's for:** macOS power users, developers, local AI coding-agent users, and system administrators who want fast visibility into whether their Mac is under pressure.
-- **Why they reach for it:** They want live system status without keeping Activity Monitor open, and they care about local-first tooling, proxy/network truth, memory pressure, AI CLI usage, and menu bar density.
+- **Who it's for:** macOS power users and developers, especially people who run AI coding agents, work through terminals and Finder, or need fast visibility into whether their Mac is under pressure.
+- **Why they reach for it:** They want to know whether the Mac is actually struggling without keeping Activity Monitor open, while keeping AI limits, proxy and exit-node truth, and frequent Finder actions close at hand.
 
 ## Differentiators (ranked, all true)
 1. **Pressure score instead of raw capacity alerts:** The 0-100 health score focuses on responsiveness pressure using CPU, memory pressure and swap, load, temperature, GPU, and power or disk I/O.
 2. **Network truth beyond throughput:** Detects local proxy configuration and tunnel interfaces without external requests, with optional exit-node lookup for public IP, ASN, ISP, and location.
-3. **AI CLI usage in the system monitor:** Displays Claude Code, Codex, and Gemini subscription usage when enabled.
-4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent, no third-party runtime dependencies.
-5. **Privacy-forward defaults:** No remote telemetry. Exit-node detection and AI usage monitoring are disabled by default. Update checks contact GitHub Releases.
-6. **Extra Mac utility features:** Cleaning mode, window controls, titlebar gestures, hotkeys, and scroll-direction controls sit next to system monitoring.
+3. **Developer context in one instrument:** Displays Claude Code, Codex, and Gemini subscription usage, and adds an opt-in Finder menu for terminal, file-template, copy, move, and open-with workflows.
+4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, no third-party runtime dependencies.
+5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, and automatic update checks are all disabled by default, so a clean install makes no outbound request.
+6. **Opt-in Mac utilities:** Window placement, scroll reversal, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
 
 ## Competitors / alternatives
 - Do not use public competitor comparisons in launch copy, README copy, listings, or social posts.
@@ -45,10 +45,11 @@
 ## Proof points (REAL only)
 - Public GitHub repository.
 - MIT License file exists in the repository.
-- Latest GitHub release observed: v1.5.2.
+- Latest stable GitHub release observed: v1.8.0.
+- Latest prerelease observed: v1.9.0-beta.6.
 - GitHub Actions build and release workflows exist.
 - Screenshots exist for overview and cleanup panels.
-- No real usage, download, star, testimonial, or benchmark numbers captured yet.
+- No adoption, testimonial, or benchmark claim is approved for marketing copy; any public count must be rechecked immediately before use.
 
 ## Links
 - **Social handles / accounts:**

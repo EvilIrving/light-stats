@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a native macOS menu bar system monitor that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; a popover opens the full picture: disk and disk I/O, network, proxy and exit-node state, battery, temperature, fan, top processes, and AI CLI usage.
+Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, and display keep-awake.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -23,9 +23,9 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## Overview
 
-Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for users who want quick status checks without keeping Activity Monitor open, and for developers who want a native SwiftUI/AppKit reference for menu bar monitoring.
+Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for power users and developers who want quick status checks without keeping Activity Monitor open, plus optional workflow context for AI coding agents, networks, and Finder.
 
-The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; every capability beyond it — window management, scroll reversal, exit-node detection, AI usage — is **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, and no outbound request except the (disableable) update check.
+The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; network requests and persistent system interactions are **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, and no outbound request.
 
 ---
 
@@ -49,6 +49,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Temperature, fan, thermal state, and disk status strip
 - System health score with dimension-level summary and toggles
 - Claude Code, Codex, and Gemini subscription usage when AI monitoring is enabled
+- Short-term sparklines for key metrics
 
 ### Memory Cleanup
 
@@ -56,6 +57,15 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - App list sorted by memory usage
 - Normal quit and force quit with confirmation
 - Expandable child process details
+
+### Finder Menu
+
+- Optional FinderSync extension, disabled by default
+- Copy path or file name, open a chosen terminal, and toggle hidden state
+- Create files from curated templates grouped by document, web, data, and code types
+- Move or copy selections to favorite directories and open them with configured apps
+- Optional cmux actions for a new window or workspace at the current Finder location
+- Extension registration status and Finder refresh controls in Settings
 
 ### Window Management
 
@@ -79,9 +89,15 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Mouse-only exit button, while keyboard input is suppressed
 - Uses CGEventTap with Accessibility permission
 
+### Keep Awake and Launch at Login
+
+- Optional display-sleep prevention with no Accessibility permission
+- Stops immediately when disabled or when Light Stats exits
+- Optional launch at login through the native macOS login-item service
+
 ### Auto-Update
 
-- Checks GitHub Releases for new versions
+- Manual checks and optional automatic checks use GitHub Releases; automatic checks are off by default
 - Downloads and verifies DMG with codesign, notarization, and Team ID checks
 - Replaces the running app via a detached script after exit
 - Shows a minimal progress window during download and install
@@ -94,7 +110,9 @@ Public exit-node detection is optional. When enabled, it can query a selected ge
 
 ### AI Subscription Usage
 
-When enabled, Light Stats reads credentials stored locally by Claude Code, Codex, and Gemini CLIs, then displays current subscription utilization in the overview panel. AI monitoring is disabled by default and never transmits credentials to any service other than the provider's own usage endpoint.
+When enabled, Light Stats reads credentials stored locally by Claude Code, Codex, and Gemini CLIs, then requests current subscription utilization from that provider. AI monitoring is disabled by default and never transmits credentials to another provider or to the Light Stats developer.
+
+Claude Code and Codex each have a separate, off-by-default usage-window warmup switch. After a rolling window resets, warmup sends the minimal headless prompt `ok` through that provider's CLI from a temporary empty directory, discards normal output, and verifies the new window. Gemini does not use warmup.
 
 ### Health Score
 
@@ -106,11 +124,21 @@ The health score summarizes CPU, memory pressure and swap, load average, tempera
 
 Light Stats has no remote telemetry. Local system metrics, local proxy detection, process lists, scroll behavior, and window control stay on the Mac.
 
-Exit-node detection is disabled by default. When enabled, the app sends a request to the selected geo-IP provider to identify the current public IP and network owner. The result is cached for 60 seconds and failures degrade silently.
+- A clean install makes no outbound request. Exit-node lookup, AI usage monitoring, Claude/Codex warmup, and automatic update checks are all disabled by default.
+- Exit-node detection contacts the selected geo-IP provider to identify the public IP, location, ASN, and ISP, then caches the result for 60 seconds.
+- AI monitoring contacts only the enabled provider's own usage endpoint using credentials already stored by that provider's CLI.
+- Optional Claude/Codex warmup sends the headless prompt described above through the selected provider's CLI.
+- Manual update checks and opt-in automatic checks contact GitHub Releases; downloaded updates are verified before installation.
 
-AI usage monitoring is disabled by default. When enabled, requests go only to the selected provider's own usage endpoint using credentials already stored by that provider's CLI.
+There is no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. See the full [privacy policy](https://evilirving.github.io/light-stats/#privacy).
 
-Update checks contact GitHub Releases.
+---
+
+## Install
+
+Download the latest DMG from [GitHub Releases](https://github.com/EvilIrving/light-stats/releases/latest), open it, and drag Light Stats into Applications. Release builds are signed and notarized; the built-in updater also verifies codesign, notarization, and Team ID before replacing the app.
+
+Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ---
 
@@ -119,15 +147,16 @@ Update checks contact GitHub Releases.
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit
-- Network speed unit: Auto, KB/s, or MB/s
+- Launch at login, automatic update checks, and display keep-awake
 - Exit-node detection and provider selection
-- AI monitoring toggles for Claude Code, Codex, and Gemini
+- AI monitoring for Claude Code, Codex, and Gemini, plus separate Claude/Codex warmup switches
 - Scroll reversal, horizontal reversal, and step multiplier
 - Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures)
+- Finder menu, terminal selection, cmux actions, favorite directories, apps, and file templates
 - Health score dimension toggles
-
-Settings are grouped into **Monitoring** (the core readout) and **Extra Tools (off by default)** so it is obvious which capabilities are optional.
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
+
+Settings are grouped into **General**, **Monitoring**, and **Extra Tools** so it is obvious which capabilities are optional and currently active.
 
 ---
 
@@ -208,6 +237,7 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 - `Light Stats/Views/CleaningMode/`: cleaning mode overlay
 - `Light Stats/Views/Update/`: update progress window
 - `Light Stats/Resources/`: localized strings and window-control icons
+- `FinderMenu/` and `FinderMenuExtension/`: shared Finder actions and FinderSync integration
 - `LightStatsTests/`: starter XCTest smoke tests
 - `.github/workflows/`: build, deploy, and release automation
 
