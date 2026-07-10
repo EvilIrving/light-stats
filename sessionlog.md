@@ -1,3 +1,17 @@
+## 擦屏模式 KeyboardLockService 三处 bug 修复 · 2026-07-05 · claude-sonnet-4-6
+
+修复了擦屏模式（Cleaning Mode）的 `KeyboardLockService.swift`，两处导致功能异常的 bug + 一处内存管理小修复。Codex 和 DeepSeek 双重审查确认方案正确。
+
+**Bug 1 — 退出擦屏后键盘卡死：** `stop()` 先调 `CGEvent.tapEnable(enable: false)` 禁用 tap，但实例变量 `eventTap` 仍非 nil。系统投递 `.tapDisabledByTimeout` 时回调检查 `eventTap != nil`，又执行了 `tapEnable(enable: true)` 重新启用。随后 run loop source 被移除，tap 处于"启用但无投递通道"状态 → 所有键盘事件被拦截后丢弃，全系统键盘卡死。**修复：** 先把 `eventTap`/`runLoopSource` 存局部变量并清空实例变量，再执行 disable/remove，确保回调不会误重新启用。
+
+**Bug 2 — 擦屏期间功能键（亮度/音量/媒体等）未被拦截：** mask 只覆盖了 `keyDown`/`keyUp`/`flagsChanged`，但 Mac 顶排功能键走的是 `NX_SYSDEFINED`（type=14，`CGEventType` 枚举未包含，需用 `rawValue: 14` 构造）。**修复：** mask 加入 `NX_SYSDEFINED`，`handle` 中对该类型全量吞掉（不做 subtype 过滤——如果只吞 subtype=8 会因为 NSEvent 转换失败或 subtype 差异导致漏过）。
+
+**修复 #3 — `passRetained` → `passUnretained`：** `refcon == nil` 的 guard fallback 分支误用 `passRetained(event)`，按 CGEvent 文档回调传入事件由调用方 retain/release，应放行而非额外 retain。虽然 refcon 永不为 nil，但 Codex 和 DeepSeek 一致认为值得顺手修正。
+
+**Codex/DeepSeek 审查结论：** 两个核心修复正确。Codex 额外建议的 `deinit { stop() }` 和保存创建时 RunLoop 两项，DeepSeek 判断在当前单例使用模式下属于过度防御，不予采用。
+
+**鼠标退出逻辑也检查过，无问题。**
+
 ## FinderMenu beta 5：上下文捕获修复 + IPC 失败 toast + 双扩展残留排障 · 2026-07-07 18:00 · pi-coding-agent
 
 beta 4 的问题是子菜单点击时上下文丢失（menu(for:) 里能拿到 targetedURL，但 submenu action 触发时已失效）。修法：FinderMenuCommand 在 menu(for:) 阶段缓存 paths + container，runAction() 不再重新查询 FIFinderSyncController。

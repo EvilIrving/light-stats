@@ -27,6 +27,16 @@ final class FinderMenuConfigStore: ObservableObject {
         config = FinderMenuShared.loadConfig()
     }
 
+    /// 将文件面板作为设置窗口的 sheet 展示，避免应用级 modal 与 SwiftUI 设置页的
+    /// 外层 ScrollView 争用事件循环。设置窗口尚未可用时仍使用异步 app-modal。
+    private func present(_ panel: NSOpenPanel, completion: @escaping (NSApplication.ModalResponse) -> Void) {
+        if let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            panel.beginSheetModal(for: window, completionHandler: completion)
+        } else {
+            panel.begin(completionHandler: completion)
+        }
+    }
+
     /// 在后台线程查询 pluginkit，回主线程更新发布属性。设置页 onAppear 调用。
     func refreshExtensionStatus() {
         Task {
@@ -56,7 +66,7 @@ final class FinderMenuConfigStore: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.begin { [weak self] response in
+        present(panel) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
             let entry = FinderMenuConfig.DirectoryEntry(name: url.lastPathComponent, path: url.path)
             guard !self.config.favoriteDirectories.contains(where: { $0.path == entry.path }) else { return }
@@ -82,7 +92,7 @@ final class FinderMenuConfigStore: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.begin { [weak self] response in
+        present(panel) { [weak self] response in
             guard let self, response == .OK, let url = panel.url,
                   let bundleID = Bundle(url: url)?.bundleIdentifier else { return }
             let name = url.deletingPathExtension().lastPathComponent
@@ -121,7 +131,7 @@ final class FinderMenuConfigStore: ObservableObject {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.begin { [weak self] response in
+        present(panel) { [weak self] response in
             guard let self, response == .OK, let url = panel.url,
                   let content = try? String(contentsOf: url, encoding: .utf8) else { return }
             let entry = FinderMenuConfig.TemplateEntry(

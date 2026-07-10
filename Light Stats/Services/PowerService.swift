@@ -133,15 +133,21 @@ actor PowerService {
         // 循环次数
         data.cycleCount = (dict["CycleCount"] as? NSNumber)?.intValue
 
-        // 健康度 = 最大容量 / 设计容量。Apple Silicon 用 AppleRawMaxCapacity；
-        // Intel 直接 MaxCapacity（mAh）。MaxCapacity == 100 时是百分比而非容量，跳过。
+        // 健康度 = 当前最大容量 / 设计容量。
+        // 优先 AppleRawMaxCapacity（电池控制器上报的真实最大容量），
+        // 缺失时回退到 NominalChargeCapacity 或 MaxCapacity（Intel，mAh）。
+        // system_profiler 用 NominalChargeCapacity，偏乐观（偏高 2-3pp）；这里用真实值。
         if let design = (dict["DesignCapacity"] as? NSNumber)?.doubleValue, design > 0 {
             let rawMax = (dict["AppleRawMaxCapacity"] as? NSNumber)?.doubleValue
+            let nominal = (dict["NominalChargeCapacity"] as? NSNumber)?.doubleValue
             let maxCap = (dict["MaxCapacity"] as? NSNumber)?.doubleValue
             let effectiveMax: Double?
             if let rawMax, rawMax > 0 {
                 effectiveMax = rawMax
-            } else if let maxCap, maxCap > 0, maxCap != 100 {
+            } else if let nominal, nominal > 0 {
+                effectiveMax = nominal
+            } else if let maxCap, maxCap > 0, maxCap > 100 {
+                // MaxCapacity ≤100 时是百分比（充满上限/电量），不是 mAh 容量，跳过。
                 effectiveMax = maxCap
             } else {
                 effectiveMax = nil
