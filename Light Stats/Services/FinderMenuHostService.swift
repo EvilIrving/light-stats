@@ -199,6 +199,8 @@ final class FinderMenuHostService {
             ) || openTerminalApp(at: directory)
         case "warp":
             return runProcess("/usr/bin/open", arguments: ["-a", "Warp", directory.path]) == 0 || openTerminalApp(at: directory)
+        case "cmux":
+            return openApplication(bundleIdentifier: "com.cmuxterm.app", urls: [directory])
         default:
             return openTerminalApp(at: directory)
         }

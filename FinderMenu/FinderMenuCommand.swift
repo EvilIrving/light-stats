@@ -2,7 +2,7 @@
 //  FinderMenuCommand.swift
 //  Light Stats / FinderMenuExtension
 //
-//  绑定到 NSMenuItem.representedObject 的命令载荷：动作 + 可选参数（模板 id /
+//  FinderSync 扩展内部的命令载荷：动作 + 可选参数（模板 id /
 //  目标目录路径 / App bundle id）+ 菜单生成时捕获的 Finder 上下文。
 //
 

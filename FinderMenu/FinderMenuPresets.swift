@@ -28,7 +28,8 @@ nonisolated enum FinderMenuPresets {
         TerminalPreset(id: "wezterm", name: "WezTerm", bundleID: "com.github.wez.wezterm"),
         TerminalPreset(id: "alacritty", name: "Alacritty", bundleID: "org.alacritty"),
         TerminalPreset(id: "kitty", name: "kitty", bundleID: "net.kovidgoyal.kitty"),
-        TerminalPreset(id: "warp", name: "Warp", bundleID: "dev.warp.Warp-Stable")
+        TerminalPreset(id: "warp", name: "Warp", bundleID: "dev.warp.Warp-Stable"),
+        TerminalPreset(id: "cmux", name: "cmux", bundleID: "com.cmuxterm.app")
     ]
 
     static func normalizeTerminalID(_ id: String) -> String {
@@ -82,7 +83,19 @@ nonisolated enum FinderMenuPresets {
                      content: "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n", category: .document),
         // 网页与标记
         FileTemplate(id: "html", title: "HTML (.html)", fileExtension: "html",
-                     content: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title></title>\n</head>\n<body>\n</body>\n</html>\n",
+                     content: """
+                     <!DOCTYPE html>
+                     <html lang="en">
+                     <head>
+                       <meta charset="UTF-8">
+                       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                       <title></title>
+                     </head>
+                     <body>
+                     </body>
+                     </html>
+
+                     """,
                      category: .web),
         FileTemplate(id: "css", title: "CSS (.css)", fileExtension: "css", content: "", category: .web),
         FileTemplate(id: "xml", title: "XML (.xml)", fileExtension: "xml",

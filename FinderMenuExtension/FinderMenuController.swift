@@ -14,6 +14,7 @@ import os
 final class FinderMenuController: FIFinderSync {
 
     private let logger = Logger(subsystem: "com.lightstats.findermenu", category: "Extension")
+    private var commandsByTag: [Int: FinderMenuCommand] = [:]
 
     override init() {
         super.init()
@@ -29,6 +30,7 @@ final class FinderMenuController: FIFinderSync {
         let menu = NSMenu(title: "")
         // 总开关关闭时不出任何菜单项——干净安装上的零侵扰契约。
         guard FinderMenuShared.isEnabled() else { return menu }
+        commandsByTag.removeAll(keepingCapacity: true)
 
         let controller = FIFinderSyncController.default()
         let paths = (controller.selectedItemURLs() ?? []).map(\.path)
@@ -91,7 +93,9 @@ final class FinderMenuController: FIFinderSync {
     private func addItem(_ command: FinderMenuCommand, title: String, to menu: NSMenu) {
         let item = NSMenuItem(title: title, action: #selector(runAction(_:)), keyEquivalent: "")
         item.target = self
-        item.representedObject = command
+        let tag = commandsByTag.count + 1
+        commandsByTag[tag] = command
+        item.tag = tag
         menu.addItem(item)
     }
 
@@ -120,15 +124,11 @@ final class FinderMenuController: FIFinderSync {
         let parent = NSMenuItem(title: action.localizedTitle, action: nil, keyEquivalent: "")
         let sub = NSMenu(title: "")
         for entry in items {
-            let item = NSMenuItem(title: entry.title, action: #selector(runAction(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = FinderMenuCommand(
-                action,
-                parameter: entry.parameter,
-                paths: paths,
-                container: container
+            addItem(
+                FinderMenuCommand(action, parameter: entry.parameter, paths: paths, container: container),
+                title: entry.title,
+                to: sub
             )
-            sub.addItem(item)
         }
         parent.submenu = sub
         menu.addItem(parent)
@@ -155,7 +155,10 @@ final class FinderMenuController: FIFinderSync {
     // MARK: - Action dispatch
 
     @objc private func runAction(_ sender: NSMenuItem) {
-        guard let command = sender.representedObject as? FinderMenuCommand else { return }
+        guard let command = commandsByTag[sender.tag] else {
+            logger.error("Missing command for menu tag \(sender.tag, privacy: .public)")
+            return
+        }
 
         if command.action.requiresHost {
             let request = FinderMenuRequest(
