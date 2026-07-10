@@ -155,6 +155,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             name: .finderMenuActionFailed,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleFinderMenuFilePanelWillPresent),
+            name: .finderMenuFilePanelWillPresent,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleFinderMenuFilePanelDidDismiss),
+            name: .finderMenuFilePanelDidDismiss,
+            object: nil
+        )
 
         // 启动后延迟检查更新，避开冷启动高峰；尊重「自动检查」开关。
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
@@ -169,6 +181,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc private func handleFinderMenuActionFailed(_ notification: Notification) {
         let message = notification.userInfo?["message"] as? String ?? "findermenu.toast.actionFailed".localized
         ToastCenter.shared.show(message: message, systemImage: "exclamationmark.triangle.fill", tint: .orange, duration: 3)
+    }
+
+    @objc private func handleFinderMenuFilePanelWillPresent() {
+        scrollService.setSuspended(true)
+        titlebarGestureService.setSuspended(true)
+    }
+
+    @objc private func handleFinderMenuFilePanelDidDismiss() {
+        scrollService.setSuspended(false)
+        titlebarGestureService.setSuspended(false)
     }
 
     // MARK: - Status Item Setup

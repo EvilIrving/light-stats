@@ -30,10 +30,15 @@ final class FinderMenuConfigStore: ObservableObject {
     /// 将文件面板作为设置窗口的 sheet 展示，避免应用级 modal 与 SwiftUI 设置页的
     /// 外层 ScrollView 争用事件循环。设置窗口尚未可用时仍使用异步 app-modal。
     private func present(_ panel: NSOpenPanel, completion: @escaping (NSApplication.ModalResponse) -> Void) {
+        NotificationCenter.default.post(name: .finderMenuFilePanelWillPresent, object: nil)
+        let finish: (NSApplication.ModalResponse) -> Void = { response in
+            NotificationCenter.default.post(name: .finderMenuFilePanelDidDismiss, object: nil)
+            completion(response)
+        }
         if let window = NSApp.keyWindow ?? NSApp.mainWindow {
-            panel.beginSheetModal(for: window, completionHandler: completion)
+            panel.beginSheetModal(for: window, completionHandler: finish)
         } else {
-            panel.begin(completionHandler: completion)
+            panel.begin(completionHandler: finish)
         }
     }
 
@@ -180,4 +185,9 @@ final class FinderMenuConfigStore: ObservableObject {
     private func persist() {
         FinderMenuShared.saveConfig(config)
     }
+}
+
+extension Notification.Name {
+    static let finderMenuFilePanelWillPresent = Notification.Name("finderMenuFilePanelWillPresent")
+    static let finderMenuFilePanelDidDismiss = Notification.Name("finderMenuFilePanelDidDismiss")
 }

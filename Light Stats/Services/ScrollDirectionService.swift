@@ -68,6 +68,7 @@ protocol ScrollReversing: AnyObject {
     func checkPermission(promptIfNeeded: Bool) -> Bool
     func start() -> Bool
     func stop()
+    func setSuspended(_ suspended: Bool)
     func updateConfig(_ config: ScrollConfig)
     var isRunning: Bool { get }
 }
@@ -114,6 +115,7 @@ final class ScrollDirectionService: ScrollReversing {
     // 跨线程共享，stateLock 守护。
     private let stateLock = NSLock()
     private var running = false
+    private var suspended = false
     private var tapRunLoop: CFRunLoop?
     private var config = ScrollConfig.identity
 
@@ -240,9 +242,14 @@ final class ScrollDirectionService: ScrollReversing {
         config = newConfig
     }
 
-    private func currentConfig() -> ScrollConfig {
+    func setSuspended(_ suspended: Bool) {
         stateLock.lock(); defer { stateLock.unlock() }
-        return config
+        self.suspended = suspended
+    }
+
+    private func currentState() -> (config: ScrollConfig, suspended: Bool) {
+        stateLock.lock(); defer { stateLock.unlock() }
+        return (config, suspended)
     }
 
     // MARK: - Event Handler
@@ -257,8 +264,13 @@ final class ScrollDirectionService: ScrollReversing {
             return nil
         }
 
+        let state = currentState()
+        guard !state.suspended else {
+            return Unmanaged.passUnretained(event)
+        }
+
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
-        let cfg = currentConfig()
+        let cfg = state.config
         // 各轴的有符号乘数：翻转贡献 -1，步长倍率同时缩放两轴。等于 1 即原样放行。
         let vmul = (cfg.reverseVertical ? -1.0 : 1.0) * cfg.stepMultiplier
         let hmul = (cfg.reverseHorizontal ? -1.0 : 1.0) * cfg.stepMultiplier

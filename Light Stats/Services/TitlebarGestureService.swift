@@ -18,6 +18,7 @@ protocol TitlebarGestureControlling: AnyObject {
     var isRunning: Bool { get }
     func start() -> Bool
     func stop()
+    func setSuspended(_ suspended: Bool)
 }
 
 final class TitlebarGestureService: TitlebarGestureControlling {
@@ -43,6 +44,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
     private let previewService = WindowSnapPreviewService()
     private let stateLock = NSLock()
     private var running = false
+    private var suspended = false
     private var tapRunLoop: CFRunLoop?
     private var tapThread: Thread?
 
@@ -97,6 +99,20 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             CFRunLoopStop(loop)
         }
         tapThread = nil
+    }
+
+    func setSuspended(_ suspended: Bool) {
+        stateLock.lock()
+        self.suspended = suspended
+        if suspended {
+            gestureState = GestureState()
+            previewToken += 1
+        }
+        stateLock.unlock()
+
+        guard suspended else { return }
+        cancelPreviewTimeout()
+        hidePreview()
     }
 
     private func runTapLoop() {
@@ -173,6 +189,11 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             }
             return
         }
+
+        stateLock.lock()
+        let isSuspended = suspended
+        stateLock.unlock()
+        guard !isSuspended else { return }
 
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
         guard isContinuous else { return }
