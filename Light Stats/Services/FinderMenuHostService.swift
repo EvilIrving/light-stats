@@ -20,9 +20,10 @@ final class FinderMenuHostService {
 
     static let shared = FinderMenuHostService()
 
-    private let logger = Logger(subsystem: "com.lightstats.findermenu", category: "Host")
+    private let logger = AppLogger(subsystem: "com.lightstats.findermenu", category: "Host")
     private var localPort: CFMessagePort?
     private var runLoopSource: CFRunLoopSource?
+    private var activeAction: FinderMenuAction?
 
     private(set) var isRunning = false
 
@@ -61,6 +62,12 @@ final class FinderMenuHostService {
 
         // 检查扩展侧是否有挂起的 IPC 失败（宿主之前不在运行），有就 toast。
         if let failedAction = FinderMenuShared.consumePendingFailure() {
+            DiagnosticLogService.record(
+                level: .error,
+                category: "finderMenu.extension",
+                action: "deliveryFailed",
+                fields: ["finderAction": failedAction]
+            )
             let label = FinderMenuShared.label(for: failedAction) ?? failedAction
             let message = String(format: "findermenu.toast.delayedFailure".localized, label)
             NotificationCenter.default.post(
@@ -130,6 +137,13 @@ final class FinderMenuHostService {
     // MARK: - Action handling
 
     private func handle(_ request: FinderMenuRequest) {
+        activeAction = request.action
+        defer { activeAction = nil }
+        DiagnosticLogService.record(
+            category: "finderMenu",
+            action: "requested",
+            fields: ["action": request.action.rawValue]
+        )
         switch request.action {
         case .openTerminalHere:
             openTerminal(request)
@@ -148,9 +162,26 @@ final class FinderMenuHostService {
         case .cmuxNewWorkspace:
             performCmuxService("New cmux Workspace Here", request: request)
         case .copyPath, .copyName:
-            // 这些动作在扩展内已处理，不应抵达宿主；忽略。
-            break
+            copyToPasteboard(request)
         }
+    }
+
+    private func copyToPasteboard(_ request: FinderMenuRequest) {
+        let text: String
+        switch request.action {
+        case .copyPath:
+            text = request.paths.joined(separator: "\n")
+        case .copyName:
+            text = request.paths.map { ($0 as NSString).lastPathComponent }.joined(separator: "\n")
+        default:
+            return
+        }
+        guard !text.isEmpty else { return showFailure("findermenu.toast.noTarget") }
+        NSPasteboard.general.clearContents()
+        guard NSPasteboard.general.setString(text, forType: .string) else {
+            return showFailure("findermenu.toast.copyFailed")
+        }
+        recordSuccess()
     }
 
     // MARK: - Open Terminal
@@ -164,6 +195,8 @@ final class FinderMenuHostService {
         let terminalID = FinderMenuShared.loadConfig().terminalID
         if !openTerminal(id: terminalID, at: URL(fileURLWithPath: dir, isDirectory: true)) {
             showFailure("findermenu.toast.openTerminalFailed")
+        } else {
+            recordSuccess()
         }
     }
 
@@ -252,8 +285,9 @@ final class FinderMenuHostService {
         do {
             try template.content.write(to: dest, atomically: true, encoding: .utf8)
             NSWorkspace.shared.activateFileViewerSelecting([dest])
+            recordSuccess()
         } catch {
-            logger.error("newFile failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("newFile failed: \(error.localizedDescription)")
             showFailure("findermenu.toast.newFileFailed")
         }
     }
@@ -281,11 +315,13 @@ final class FinderMenuHostService {
                 }
             } catch {
                 failureCount += 1
-                logger.error("\(move ? "move" : "copy", privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                logger.error("\(move ? "move" : "copy") failed: \(error.localizedDescription)")
             }
         }
         if failureCount > 0 {
             showFailure(move ? "findermenu.toast.moveFailed" : "findermenu.toast.copyFailed")
+        } else {
+            recordSuccess()
         }
     }
 
@@ -302,6 +338,7 @@ final class FinderMenuHostService {
             showFailure("findermenu.toast.openWithFailed")
             return
         }
+        recordSuccess()
     }
 
     // MARK: - Hide / Show
@@ -323,11 +360,13 @@ final class FinderMenuHostService {
                 try mutableURL.setResourceValues(values)
             } catch {
                 failureCount += 1
-                logger.error("toggleHidden failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("toggleHidden failed: \(error.localizedDescription)")
             }
         }
         if failureCount > 0 {
             showFailure("findermenu.toast.toggleHiddenFailed")
+        } else {
+            recordSuccess()
         }
     }
 
@@ -347,6 +386,7 @@ final class FinderMenuHostService {
             showFailure("findermenu.toast.cmuxFailed")
             return
         }
+        recordSuccess()
     }
 
     // MARK: - Helpers
@@ -386,14 +426,14 @@ final class FinderMenuHostService {
 
     private func openApplication(bundleIdentifier: String, urls: [URL]) -> Bool {
         guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            logger.error("application not found: \(bundleIdentifier, privacy: .public)")
+            logger.error("application not found: \(bundleIdentifier)")
             return false
         }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.open(urls, withApplicationAt: applicationURL, configuration: configuration) { _, error in
             if let error {
-                self.logger.error("open app failed: \(error.localizedDescription, privacy: .public)")
+                self.logger.error("open app failed: \(error.localizedDescription)")
             }
         }
         return true
@@ -409,20 +449,37 @@ final class FinderMenuHostService {
             process.waitUntilExit()
             let status = process.terminationStatus
             if status != 0 {
-                logger.error("process failed: \(launchPath, privacy: .public) status=\(status)")
+                logger.error("process failed: \(launchPath) status=\(status)")
             }
             return status
         } catch {
-            logger.error("process failed: \(error.localizedDescription, privacy: .public)")
+            logger.error("process failed: \(error.localizedDescription)")
             return -1
         }
     }
 
     private func showFailure(_ localizedKey: String) {
+        DiagnosticLogService.record(
+            level: .error,
+            category: "finderMenu",
+            action: "failed",
+            fields: [
+                "finderAction": activeAction?.rawValue ?? "unknown",
+                "reason": localizedKey
+            ]
+        )
         NotificationCenter.default.post(
             name: .finderMenuActionFailed,
             object: nil,
             userInfo: ["message": localizedKey.localized]
+        )
+    }
+
+    private func recordSuccess() {
+        DiagnosticLogService.record(
+            category: "finderMenu",
+            action: "succeeded",
+            fields: ["finderAction": activeAction?.rawValue ?? "unknown"]
         )
     }
 

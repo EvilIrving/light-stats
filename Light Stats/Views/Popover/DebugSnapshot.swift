@@ -19,7 +19,7 @@ import AppKit
 import os
 
 enum DebugSnapshot {
-    private static let logger = Logger(subsystem: "LightStats", category: "DebugSnapshot")
+    private static let logger = AppLogger(subsystem: "com.lightstats.app", category: "DebugSnapshot")
 
     /// 面板内容固定宽度，与正式面板一致。
     private static let contentWidth: CGFloat = 360
@@ -81,7 +81,7 @@ enum DebugSnapshot {
 
         if let url = firstURL {
             NSWorkspace.shared.activateFileViewerSelecting([url])
-            logger.info("Panel snapshot written to \(url.deletingLastPathComponent().path, privacy: .public)")
+            logger.info("Panel snapshot written to \(url.deletingLastPathComponent().path)")
         }
     }
 
@@ -108,24 +108,24 @@ enum DebugSnapshot {
 
         let bounds = hosting.bounds
         guard let rep = hosting.bitmapImageRepForCachingDisplay(in: bounds) else {
-            logger.error("No bitmap rep: \(name, privacy: .public)")
+            logger.error("No bitmap rep: \(name)")
             return nil
         }
         hosting.cacheDisplay(in: bounds, to: rep)
 
         let trimmed = trimBottom(rep) ?? rep
         guard let png = trimmed.representation(using: .png, properties: [:]) else {
-            logger.error("PNG encode failed: \(name, privacy: .public)")
+            logger.error("PNG encode failed: \(name)")
             return nil
         }
 
         let url = outputDirectory.appendingPathComponent("\(name).png")
         do {
             try png.write(to: url)
-            logger.info("Wrote \(url.path, privacy: .public)")
+            logger.info("Wrote \(url.path)")
             return url
         } catch {
-            logger.error("Write failed \(name, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger.error("Write failed \(name): \(error.localizedDescription)")
             return nil
         }
     }

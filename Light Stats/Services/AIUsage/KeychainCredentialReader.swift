@@ -15,7 +15,7 @@ import os
 
 nonisolated enum KeychainCredentialReader {
 
-    private static let log = Logger(subsystem: "com.lightstats.app", category: "Keychain")
+    private static let log = AppLogger(subsystem: "com.lightstats.app", category: "Keychain")
 
     /// Reads a generic-password secret's raw blob for `service` via
     /// `security find-generic-password -s <service> -w`. Returns nil if the

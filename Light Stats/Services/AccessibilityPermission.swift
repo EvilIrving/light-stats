@@ -18,7 +18,7 @@ import OSLog
 /// 弹窗与跳转涉及 AppKit，标 `@MainActor`。
 nonisolated enum AccessibilityPermission {
 
-    private static let log = Logger(subsystem: "com.lightstats", category: "AccessibilityPermission")
+    private static let log = AppLogger(subsystem: "com.lightstats", category: "AccessibilityPermission")
 
     /// 系统设置 → 隐私与安全性 → 辅助功能。
     private static let settingsURL = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"

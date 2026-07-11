@@ -20,7 +20,7 @@ actor UpdateService {
     /// 本团队的 Developer ID Team ID，校验下载产物归属。
     static let expectedTeamID = "QZZ878S3NS"
 
-    private let logger = Logger(subsystem: "com.lightstats", category: "Update")
+    private let logger = AppLogger(subsystem: "com.lightstats", category: "Update")
 
     enum UpdateError: LocalizedError {
         case network

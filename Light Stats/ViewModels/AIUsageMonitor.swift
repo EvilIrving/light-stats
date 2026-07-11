@@ -61,7 +61,6 @@ final class AIUsageMonitor: ObservableObject {
     private var inFlight: Set<AIProvider> = []
     private var lastSuccessAt: [AIProvider: Date] = [:]
     private let settings = SettingsManager.shared
-    private let logger = Logger(subsystem: "com.lightstats.app", category: "AIUsageMonitor")
 
     /// Refresh triggered by popover opening only if data is older than this
     private let popoverStaleThreshold: TimeInterval = 60
@@ -187,9 +186,22 @@ final class AIUsageMonitor: ObservableObject {
         switch result {
         case .success(let snapshot):
             lastSuccessAt[provider] = snapshot.fetchedAt
+            let windows = snapshot.windows.map {
+                "\($0.label)|usedPercent=\($0.usedPercent)|resetsAt=\($0.resetsAt?.timeIntervalSince1970.description ?? "unavailable")"
+            }.joined(separator: ";")
+            DiagnosticLogService.record(
+                category: "ai.usage",
+                action: "collected",
+                fields: ["provider": provider.rawValue, "windows": windows]
+            )
             newState = .loaded(snapshot)
         case .failure(let error):
-            logger.error("AI usage refresh failed for \(provider.rawValue, privacy: .public): \(error.logDescription, privacy: .public)")
+            DiagnosticLogService.record(
+                level: .error,
+                category: "ai.usage",
+                action: "collectionFailed",
+                fields: ["provider": provider.rawValue, "error": error.logDescription]
+            )
             newState = .error(error)
         }
 

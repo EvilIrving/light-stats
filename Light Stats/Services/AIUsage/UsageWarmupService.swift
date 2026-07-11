@@ -19,7 +19,11 @@ import os
 /// Returns `true` iff the CLI exited 0 — i.e. it is installed and logged in.
 nonisolated enum UsageWarmupService {
 
-    private static let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
+    private static let log = AppLogger(
+        subsystem: "com.lightstats.app",
+        category: "UsageWarmup",
+        mirrorsToJournal: false
+    )
     private static let maxStderrLogBytes = 2_048
 
     /// 窗口 anchor 只需要发出一条真实消息；内容越短，warmup 的 token 成本越低。
@@ -28,11 +32,23 @@ nonisolated enum UsageWarmupService {
     static func send(provider: AIProvider, timeout: TimeInterval = 30) async -> Bool {
         guard provider != .gemini else { return false }   // 每日 quota，无滚动窗口可 anchor
         guard let binary = binary(for: provider) else {
-            log.error("warmup: \(provider.rawValue, privacy: .public) binary not found")
+            log.error("warmup: \(provider.rawValue) binary not found")
+            DiagnosticLogService.record(
+                level: .error,
+                category: "usageWarmup.command",
+                action: "binaryNotFound",
+                fields: ["provider": provider.rawValue]
+            )
             return false
         }
         let ok = await run(binary: binary, arguments: arguments(for: provider), timeout: timeout)
-        log.info("warmup \(provider.rawValue, privacy: .public) ok=\(ok, privacy: .public)")
+        log.info("warmup \(provider.rawValue) ok=\(ok)")
+        DiagnosticLogService.record(
+            level: ok ? .info : .error,
+            category: "usageWarmup.command",
+            action: "completed",
+            fields: ["provider": provider.rawValue, "success": String(ok)]
+        )
         return ok
     }
 
@@ -88,7 +104,13 @@ nonisolated enum UsageWarmupService {
                     if !ok {
                         let stderrText = stderr.finish()
                         log.error(
-                            "warmup failed status=\(proc.terminationStatus, privacy: .public) stderr=\(stderrText, privacy: .private)"
+                            "warmup failed status=\(proc.terminationStatus) stderr=\(stderrText)"
+                        )
+                        DiagnosticLogService.record(
+                            level: .error,
+                            category: "usageWarmup.command",
+                            action: "processFailed",
+                            fields: ["exitStatus": String(proc.terminationStatus), "stderr": stderrText]
                         )
                     } else {
                         stderr.finish()
@@ -98,7 +120,13 @@ nonisolated enum UsageWarmupService {
                 do {
                     try process.run()
                 } catch {
-                    log.error("warmup: launch failed: \(error.localizedDescription, privacy: .public)")
+                    log.error("warmup: launch failed: \(error.localizedDescription)")
+                    DiagnosticLogService.record(
+                        level: .error,
+                        category: "usageWarmup.command",
+                        action: "launchFailed",
+                        fields: ["error": error.localizedDescription]
+                    )
                     cont.resume(returning: false)
                     return
                 }

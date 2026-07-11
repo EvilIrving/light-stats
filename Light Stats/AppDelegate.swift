@@ -40,6 +40,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 面板打开时监听面板外的全局点击（含别的菜单栏图标），点外部即关闭
     private var globalClickMonitor: Any?
     private var windowControlPermissionAlertShown = false
+    private var terminationInProgress = false
+    private var terminationReplySent = false
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -70,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        recordApplicationLaunch()
         // Create the monitoring item first: macOS parks each newly-created status item to the
         // left of the previous one, so creating the monitor first and the window-controls item
         // second places the split-screen icon to the RIGHT of the monitoring numbers by default.
@@ -431,12 +434,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Actions
 
-    func closePanel() {
-        dismissPanel()
-    }
-
     /// 统一关闭面板：隐藏、同步状态、停止采集、移除全局点击监听。
     private func dismissPanel(autoClosed: Bool = false) {
+        recordPanelClosed(automatically: autoClosed)
         panel?.orderOut(nil)
         if autoClosed { panelAutoClosedAt = Date() }
         monitor.setPopoverVisible(false)
@@ -465,6 +465,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - About Window
 
     @objc func showAbout() {
+        DiagnosticLogService.record(category: "about", action: "opened")
         if let existing = aboutWindow {
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -525,6 +526,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
 
         panel.setFrameOrigin(panelOrigin)
+        DiagnosticLogService.record(category: "popover", action: "opened")
         AIUsageMonitor.shared.refreshIfStale()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -533,19 +535,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // Cleanup 页的 onAppear/onDisappear 仍会幂等地接管 start/stop。
         appMemoryManager.startMonitoring()
         installGlobalClickMonitor()
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        monitor.stopMonitoring()
-        appMemoryManager.stopMonitoring()
-        AIUsageMonitor.shared.stop()
-        UsageWarmupManager.shared.stopAll()
-        scrollService.stop()
-        magnetHotKeyService.stop()
-        titlebarGestureService.stop()
-        FinderMenuHostService.shared.stop()
-        KeepAwakeService.shared.stop()
-        SMCInfo.shutdown()
     }
 
     // MARK: - Keep Awake
@@ -668,5 +657,72 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private func presentAccessibilityAlert(title: String, message: String) {
         AccessibilityPermission.presentSettingsAlert(title: title, message: message)
+    }
+}
+
+extension AppDelegate {
+    func closePanel() {
+        dismissPanel()
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminationInProgress else { return .terminateLater }
+        terminationInProgress = true
+        DiagnosticLogService.record(category: "application", action: "willTerminate")
+        stopRuntimeServices()
+
+        Task { @MainActor [weak self] in
+            await DiagnosticLogService.shared.close()
+            self?.replyToTerminationIfNeeded(sender)
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            self?.replyToTerminationIfNeeded(sender)
+        }
+        return .terminateLater
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        stopRuntimeServices()
+    }
+
+    private func stopRuntimeServices() {
+        monitor.stopMonitoring()
+        appMemoryManager.stopMonitoring()
+        AIUsageMonitor.shared.stop()
+        UsageWarmupManager.shared.stopAll()
+        scrollService.stop()
+        magnetHotKeyService.stop()
+        titlebarGestureService.stop()
+        FinderMenuHostService.shared.stop()
+        KeepAwakeService.shared.stop()
+        SMCInfo.shutdown()
+    }
+
+    private func replyToTerminationIfNeeded(_ sender: NSApplication) {
+        guard !terminationReplySent else { return }
+        terminationReplySent = true
+        sender.reply(toApplicationShouldTerminate: true)
+    }
+}
+
+private extension AppDelegate {
+    func recordApplicationLaunch() {
+        DiagnosticLogService.record(
+            category: "application",
+            action: "launched",
+            fields: [
+                "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+                "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+            ]
+        )
+    }
+
+    func recordPanelClosed(automatically: Bool) {
+        DiagnosticLogService.record(
+            category: "popover",
+            action: "closed",
+            fields: ["automatic": String(automatically)]
+        )
     }
 }

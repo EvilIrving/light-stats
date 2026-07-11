@@ -22,7 +22,7 @@ final class KeepAwakeService {
 
     private(set) var isRunning = false
     private var assertionID = IOPMAssertionID(0)
-    private let log = Logger(subsystem: "com.lightstats.app", category: "KeepAwake")
+    private let log = AppLogger(subsystem: "com.lightstats.app", category: "KeepAwake")
 
     private init() {}
 
@@ -39,7 +39,7 @@ final class KeepAwakeService {
             &id
         )
         guard result == kIOReturnSuccess else {
-            log.error("keep-awake assertion failed: \(result, privacy: .public)")
+            log.error("keep-awake assertion failed: \(result)")
             return false
         }
         assertionID = id

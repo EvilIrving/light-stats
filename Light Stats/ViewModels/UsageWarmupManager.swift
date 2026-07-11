@@ -29,7 +29,11 @@ final class UsageWarmupManager: ObservableObject {
     private static let retryDelays: [TimeInterval] = [30, 120]
 
     private let settings = SettingsManager.shared
-    private let log = Logger(subsystem: "com.lightstats.app", category: "UsageWarmup")
+    private let log = AppLogger(
+        subsystem: "com.lightstats.app",
+        category: "UsageWarmup",
+        mirrorsToJournal: false
+    )
 
     private var loops: [AIProvider: Task<Void, Never>] = [:]
     private var lastSentReset: [AIProvider: Date] = [:]
@@ -79,7 +83,8 @@ final class UsageWarmupManager: ObservableObject {
 
     private func start(_ provider: AIProvider) {
         guard loops[provider] == nil else { return }   // 已在跑，避免重复起循环
-        log.info("warmup loop start: \(provider.rawValue, privacy: .public)")
+        log.info("warmup loop start: \(provider.rawValue)")
+        DiagnosticLogService.record(category: "usageWarmup", action: "loopStarted", fields: providerFields(provider))
         loops[provider] = Task { [weak self] in
             await self?.run(provider)
         }
@@ -90,7 +95,8 @@ final class UsageWarmupManager: ObservableObject {
         task.cancel()
         loops[provider] = nil
         lastSentReset[provider] = nil
-        log.info("warmup loop stop: \(provider.rawValue, privacy: .public)")
+        log.info("warmup loop stop: \(provider.rawValue)")
+        DiagnosticLogService.record(category: "usageWarmup", action: "loopStopped", fields: providerFields(provider))
     }
 
     // MARK: - Loop
@@ -98,13 +104,24 @@ final class UsageWarmupManager: ObservableObject {
     private func run(_ provider: AIProvider) async {
         while !Task.isCancelled {
             guard let fireDate = await nextFireDate(for: provider) else {
-                log.error("warmup waiting for readable 5h reset: \(provider.rawValue, privacy: .public)")
+                log.error("warmup waiting for readable 5h reset: \(provider.rawValue)")
+                DiagnosticLogService.record(
+                    level: .error,
+                    category: "usageWarmup",
+                    action: "resetUnavailable",
+                    fields: providerFields(provider)
+                )
                 await sleep(seconds: Self.snapshotRetryDelay)
                 continue
             }
 
             log.info(
-                "warmup scheduled \(provider.rawValue, privacy: .public) at \(fireDate, privacy: .public)"
+                "warmup scheduled \(provider.rawValue) at \(fireDate)"
+            )
+            DiagnosticLogService.record(
+                category: "usageWarmup",
+                action: "scheduled",
+                fields: providerFields(provider).merging(["fireDate": fireDate.ISO8601Format()]) { _, new in new }
             )
             await sleep(until: fireDate)
             if Task.isCancelled { break }
@@ -131,7 +148,13 @@ final class UsageWarmupManager: ObservableObject {
         } catch {
             let description = String(describing: error)
             log.error(
-                "warmup usage fetch failed for \(provider.rawValue, privacy: .public): \(description, privacy: .public)"
+                "warmup usage fetch failed for \(provider.rawValue): \(description)"
+            )
+            DiagnosticLogService.record(
+                level: .error,
+                category: "usageWarmup",
+                action: "usageFetchFailed",
+                fields: providerFields(provider).merging(["error": description]) { _, new in new }
             )
             return nil
         }
@@ -156,13 +179,27 @@ final class UsageWarmupManager: ObservableObject {
             let retryNumber = attempt + 1
             let seconds = Int(delay)
             log.error(
-                "warmup retry \(provider.rawValue, privacy: .public) #\(retryNumber, privacy: .public) in \(seconds, privacy: .public)s"
+                "warmup retry \(provider.rawValue) #\(retryNumber) in \(seconds)s"
+            )
+            DiagnosticLogService.record(
+                level: .warning,
+                category: "usageWarmup",
+                action: "retryScheduled",
+                fields: providerFields(provider).merging([
+                    "retryNumber": String(retryNumber), "delaySeconds": String(seconds)
+                ]) { _, new in new }
             )
             await sleep(seconds: delay)
             if Task.isCancelled { return false }
         }
 
-        log.error("warmup failed after retries for \(provider.rawValue, privacy: .public)")
+        log.error("warmup failed after retries for \(provider.rawValue)")
+        DiagnosticLogService.record(
+            level: .error,
+            category: "usageWarmup",
+            action: "failedAfterRetries",
+            fields: providerFields(provider)
+        )
         return false
     }
 
@@ -171,13 +208,34 @@ final class UsageWarmupManager: ObservableObject {
             let snapshot = try await fetchUsage(provider)
             guard let nextReset = Self.primaryReset(in: snapshot),
                   nextReset > previousReset else {
-                log.error("warmup sent but reset did not advance/read back yet: \(provider.rawValue, privacy: .public)")
+                log.error("warmup sent but reset did not advance/read back yet: \(provider.rawValue)")
+                DiagnosticLogService.record(
+                    level: .error,
+                    category: "usageWarmup",
+                    action: "verificationDidNotAdvance",
+                    fields: providerFields(provider)
+                )
                 return
             }
-            log.info("warmup verified \(provider.rawValue, privacy: .public) nextReset=\(nextReset, privacy: .public)")
+            log.info("warmup verified \(provider.rawValue) nextReset=\(nextReset)")
+            DiagnosticLogService.record(
+                category: "usageWarmup",
+                action: "verified",
+                fields: providerFields(provider).merging(["nextReset": nextReset.ISO8601Format()]) { _, new in new }
+            )
         } catch {
-            log.error("warmup sent but verification fetch failed for \(provider.rawValue, privacy: .public)")
+            log.error("warmup sent but verification fetch failed for \(provider.rawValue)")
+            DiagnosticLogService.record(
+                level: .error,
+                category: "usageWarmup",
+                action: "verificationFetchFailed",
+                fields: providerFields(provider)
+            )
         }
+    }
+
+    private func providerFields(_ provider: AIProvider) -> [String: String] {
+        ["provider": provider.rawValue]
     }
 
     private func sleep(until date: Date) async {

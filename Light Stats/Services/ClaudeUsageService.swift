@@ -128,7 +128,7 @@ private actor ClaudeTokenCache {
 
 enum ClaudeUsageService {
 
-    private static let log = Logger(subsystem: "com.lightstats.app", category: "ClaudeUsage")
+    private static let log = AppLogger(subsystem: "com.lightstats.app", category: "ClaudeUsage")
 
     private static let keychainService = "Claude Code-credentials"
     private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
@@ -191,7 +191,7 @@ enum ClaudeUsageService {
                 do {
                     return try await fetchUsageFromHeaders(token: token)
                 } catch {
-                    log.error("Claude headers fallback failed; trying CLI PTY fallback: \(describe(error), privacy: .public)")
+                    log.error("Claude headers fallback failed; trying CLI PTY fallback: \(describe(error))")
                     // 3. Messages API also failed — last resort is the CLI PTY,
                     //    which needs no network and reads usage from local `claude`.
                     return try await fetchUsageFromCLI()
@@ -373,7 +373,7 @@ enum ClaudeUsageService {
             let output = try await PTYProbe.capture(binary: claudePath, timeout: cliTimeout, config: cliProbeConfig())
             return try parseCLIOutput(output)
         } catch {
-            log.error("Claude CLI PTY fallback failed: \(describe(error), privacy: .public)")
+            log.error("Claude CLI PTY fallback failed: \(describe(error))")
             throw error
         }
     }

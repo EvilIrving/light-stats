@@ -45,7 +45,7 @@ final class WindowSnappingService {
         var title: String
     }
 
-    private let logger = Logger(subsystem: "com.lightstats", category: "WindowSnapping")
+    private let logger = AppLogger(subsystem: "com.lightstats", category: "WindowSnapping")
     private var savedFrames: [WindowIdentity: CGRect] = [:]
 
     func checkPermission(promptIfNeeded: Bool) -> Bool {
@@ -53,15 +53,17 @@ final class WindowSnappingService {
     }
 
     func perform(_ action: WindowSnapAction) {
-        guard checkPermission(promptIfNeeded: false) else { return }
-        guard let window = focusedWindow() else { return }
-        perform(action, on: window)
+        recordRequest(action)
+        guard checkPermission(promptIfNeeded: false) else { return recordResult(action, success: false, reason: "permission") }
+        guard let window = focusedWindow() else { return recordResult(action, success: false, reason: "focusedWindow") }
+        recordResult(action, success: perform(action, on: window))
     }
 
     func perform(_ action: WindowSnapAction, at axPoint: CGPoint) {
-        guard checkPermission(promptIfNeeded: false) else { return }
-        guard let window = titlebarWindow(at: axPoint) else { return }
-        perform(action, on: window)
+        recordRequest(action)
+        guard checkPermission(promptIfNeeded: false) else { return recordResult(action, success: false, reason: "permission") }
+        guard let window = titlebarWindow(at: axPoint) else { return recordResult(action, success: false, reason: "titlebarWindow") }
+        recordResult(action, success: perform(action, on: window))
     }
 
     func canPerform(_ action: WindowSnapAction) -> Bool {
@@ -75,20 +77,37 @@ final class WindowSnappingService {
         return previewFrame(for: action, on: window)
     }
 
-    private func perform(_ action: WindowSnapAction, on window: AXUIElement) {
-        guard canPerform(action, on: window) else { return }
+    private func perform(_ action: WindowSnapAction, on window: AXUIElement) -> Bool {
+        guard canPerform(action, on: window) else { return false }
         switch action {
         case .restore:
-            restore(window)
+            return restore(window)
         case .minimize:
-            minimize(window)
+            return minimize(window)
         case .nextDisplay:
-            moveToAdjacentDisplay(window, direction: 1)
+            return moveToAdjacentDisplay(window, direction: 1)
         case .previousDisplay:
-            moveToAdjacentDisplay(window, direction: -1)
+            return moveToAdjacentDisplay(window, direction: -1)
         default:
-            snap(window, action: action)
+            return snap(window, action: action)
         }
+    }
+
+    private func recordRequest(_ action: WindowSnapAction) {
+        DiagnosticLogService.record(
+            category: "windowManagement",
+            action: "requested",
+            fields: ["snapAction": String(describing: action)]
+        )
+    }
+
+    private func recordResult(_ action: WindowSnapAction, success: Bool, reason: String = "") {
+        DiagnosticLogService.record(
+            level: success ? .info : .error,
+            category: "windowManagement",
+            action: success ? "succeeded" : "failed",
+            fields: ["snapAction": String(describing: action), "reason": reason]
+        )
     }
 
     private func focusedWindow() -> AXUIElement? {
@@ -200,12 +219,13 @@ final class WindowSnappingService {
         copyAttribute(kAXMinimizedAttribute, from: window)
     }
 
-    private func snap(_ window: AXUIElement, action: WindowSnapAction) {
-        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else { return }
+    private func snap(_ window: AXUIElement, action: WindowSnapAction) -> Bool {
+        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else { return false }
 
         saveFrameIfNeeded(currentFrame, for: window)
-        guard setFrame(targetFrame, for: window) else { return }
+        guard setFrame(targetFrame, for: window) else { return false }
         performHapticFeedback()
+        return true
     }
 
     private func previewFrame(for action: WindowSnapAction, on window: AXUIElement) -> CGRect? {
@@ -298,10 +318,10 @@ final class WindowSnappingService {
         return centeredFrame(size: size, in: visibleFrame)
     }
 
-    private func moveToAdjacentDisplay(_ window: AXUIElement, direction: Int) {
-        guard let currentFrame = frame(of: window), let currentScreen = screen(containingAXFrame: currentFrame) else { return }
+    private func moveToAdjacentDisplay(_ window: AXUIElement, direction: Int) -> Bool {
+        guard let currentFrame = frame(of: window), let currentScreen = screen(containingAXFrame: currentFrame) else { return false }
         let sortedScreens = NSScreen.screens.sorted { $0.frame.minX < $1.frame.minX }
-        guard let currentIndex = sortedScreens.firstIndex(of: currentScreen), sortedScreens.count > 1 else { return }
+        guard let currentIndex = sortedScreens.firstIndex(of: currentScreen), sortedScreens.count > 1 else { return false }
 
         let targetIndex = (currentIndex + direction + sortedScreens.count) % sortedScreens.count
         let sourceVisible = axRect(fromCocoaRect: currentScreen.visibleFrame)
@@ -318,21 +338,24 @@ final class WindowSnappingService {
         ).intersection(targetVisible)
 
         saveFrameIfNeeded(currentFrame, for: window)
-        guard setFrame(targetFrame, for: window) else { return }
+        guard setFrame(targetFrame, for: window) else { return false }
         performHapticFeedback()
+        return true
     }
 
-    private func minimize(_ window: AXUIElement) {
+    private func minimize(_ window: AXUIElement) -> Bool {
         let minimized = kCFBooleanTrue as CFTypeRef
-        guard AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, minimized) == .success else { return }
+        guard AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, minimized) == .success else { return false }
         performHapticFeedback()
+        return true
     }
 
-    private func restore(_ window: AXUIElement) {
-        guard let identity = identity(for: window), let savedFrame = savedFrames[identity] else { return }
-        guard setFrame(savedFrame, for: window) else { return }
+    private func restore(_ window: AXUIElement) -> Bool {
+        guard let identity = identity(for: window), let savedFrame = savedFrames[identity] else { return false }
+        guard setFrame(savedFrame, for: window) else { return false }
         savedFrames.removeValue(forKey: identity)
         performHapticFeedback()
+        return true
     }
 
     private func savedFrame(for window: AXUIElement) -> CGRect? {

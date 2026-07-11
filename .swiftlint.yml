@@ -94,10 +94,18 @@ custom_rules:
   no_print:
     name: "Print Statement"
     regex: '\bprint\('
-    message: "Use Logger or os_log instead of print() in production code."
+    message: "Use AppLogger or DiagnosticLogService instead of print() in production code."
     severity: warning
   no_nslog:
     name: "NSLog"
     regex: '\bNSLog\('
-    message: "Use Logger or os_log instead of NSLog() in production code."
+    message: "Use AppLogger or DiagnosticLogService instead of NSLog() in production code."
+    severity: error
+  no_bare_logger:
+    name: "Bare Logger"
+    regex: '\b(Logger|os_log)\('
+    excluded:
+      - "Light Stats/Services/AppLogger.swift"
+      - "Light Stats/Services/DiagnosticLogService.swift"
+    message: "Use AppLogger or DiagnosticLogService so the event reaches the five-day journal."
     severity: error

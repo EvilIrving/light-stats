@@ -32,7 +32,7 @@ import os
 /// Codex (ChatGPT) subscription usage — see file header for full logic chain.
 enum CodexUsageService {
 
-    private static let log = Logger(subsystem: "com.lightstats.app", category: "CodexUsage")
+    private static let log = AppLogger(subsystem: "com.lightstats.app", category: "CodexUsage")
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 
@@ -98,7 +98,7 @@ enum CodexUsageService {
             return try await fetchOnce(with: fresh)
         } catch {
             // API failed for any other reason — fall back to CLI PTY.
-            log.error("Codex API failed; trying CLI PTY fallback: \(describe(error), privacy: .public)")
+            log.error("Codex API failed; trying CLI PTY fallback: \(describe(error))")
             return try await fetchUsageFromCLI(fallbackError: error)
         }
     }
@@ -184,10 +184,10 @@ enum CodexUsageService {
             return try parseCLIOutput(output)
         } catch {
             if let fallbackError {
-                log.error("Codex CLI PTY fallback failed: \(describe(error), privacy: .public)")
-                log.error("Codex initial API error: \(describe(fallbackError), privacy: .public)")
+                log.error("Codex CLI PTY fallback failed: \(describe(error))")
+                log.error("Codex initial API error: \(describe(fallbackError))")
             } else {
-                log.error("Codex CLI PTY fallback failed: \(describe(error), privacy: .public)")
+                log.error("Codex CLI PTY fallback failed: \(describe(error))")
             }
             throw fallbackError ?? error
         }

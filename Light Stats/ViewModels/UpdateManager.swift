@@ -29,9 +29,11 @@ final class UpdateManager: ObservableObject {
     @Published private(set) var phase: Phase = .idle
     /// 入口处的「检查中」状态。任何「检查更新」按钮都可观察它做内联 spinner。
     @Published private(set) var isChecking = false
+    /// 最近一次检查发现的新版本，供设置页在检查行内显示更新入口。
+    @Published private(set) var availableRelease: ReleaseInfo?
 
     private let service = UpdateService()
-    private let logger = Logger(subsystem: "com.lightstats", category: "UpdateManager")
+    private let logger = AppLogger(subsystem: "com.lightstats", category: "UpdateManager")
     private var window: NSWindow?
     private var windowDelegate: UpdateWindowDelegate?
 
@@ -52,6 +54,11 @@ final class UpdateManager: ObservableObject {
     /// 统一的「检查更新」入口。任何想加检查入口的地方都复用它:
     /// 先检查,发现新版才弹窗;无新版/出错仅在用户主动触发时弹轻量提示。
     func check(userInitiated: Bool) {
+        DiagnosticLogService.record(
+            category: "update",
+            action: "checkRequested",
+            fields: ["userInitiated": String(userInitiated)]
+        )
         // 窗口已开（正在下载/安装等）→ 直接前置,不重复检查。
         if window != nil {
             window?.makeKeyAndOrderFront(nil)
@@ -79,6 +86,11 @@ final class UpdateManager: ObservableObject {
 
     /// 用户点击「立即更新」。
     func startInstall(_ release: ReleaseInfo) {
+        DiagnosticLogService.record(
+            category: "update",
+            action: "installRequested",
+            fields: ["version": release.tagName]
+        )
         phase = .downloading(0)
         Task {
             do {
@@ -97,6 +109,13 @@ final class UpdateManager: ObservableObject {
         }
     }
 
+    /// 从设置页重新打开已发现版本的更新窗口。
+    func presentAvailableRelease() {
+        guard let availableRelease else { return }
+        phase = .available(availableRelease)
+        showUpdateWindow()
+    }
+
     /// 关闭更新窗口，重置状态。
     func dismissWindow() {
         window?.orderOut(nil)
@@ -108,6 +127,7 @@ final class UpdateManager: ObservableObject {
     /// 用户选择跳过此版本。
     func skipVersion(_ release: ReleaseInfo) {
         SettingsManager.shared.lastIgnoredVersion = release.tagName
+        availableRelease = nil
         dismissWindow()
     }
 
@@ -115,6 +135,7 @@ final class UpdateManager: ObservableObject {
 
     private func handle(release: ReleaseInfo, userInitiated: Bool) {
         guard let current = currentVersion, current < release.version else {
+            availableRelease = nil
             guard userInitiated else { return }
             ToastCenter.shared.show(message: "update.upToDate.message".localized,
                                     systemImage: "checkmark.circle.fill", tint: .green)
@@ -123,6 +144,7 @@ final class UpdateManager: ObservableObject {
         if !userInitiated, SettingsManager.shared.lastIgnoredVersion == release.tagName {
             return
         }
+        availableRelease = release
         phase = .available(release)
         showUpdateWindow()
     }

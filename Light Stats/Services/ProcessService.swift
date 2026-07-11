@@ -7,7 +7,6 @@
 
 import Foundation
 import AppKit
-import os.log
 
 // MARK: - Responsibility Framework
 
@@ -37,6 +36,7 @@ final class ProcessService: ProcessServiceProtocol {
     /// Bundle ID 缓存（避免重复读取 Info.plist）
     private var bundleIdCache: [String: String?] = [:]
     private let memoryCleanupLock = NSLock()
+    private let logger = AppLogger(subsystem: "com.lightstats.app", category: "ProcessService")
     private var isMemoryCleanupRunning = false
 
     private init() {}
@@ -136,28 +136,18 @@ final class ProcessService: ProcessServiceProtocol {
                         let stderrText = String(data: stderrData, encoding: .utf8)?
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                         if let stderrText, !stderrText.isEmpty {
-                            os_log(
-                                "ps command failed with termination status: %{public}d, stderr: %{public}@",
-                                log: OSLog.default,
-                                type: .error,
-                                task.terminationStatus,
-                                stderrText
+                            self.logger.error(
+                                "ps command failed status=\(task.terminationStatus), stderr=\(stderrText)"
                             )
                         } else {
-                            os_log(
-                                "ps command failed with termination status: %{public}d",
-                                log: OSLog.default,
-                                type: .error,
-                                task.terminationStatus
-                            )
+                            self.logger.error("ps command failed status=\(task.terminationStatus)")
                         }
                         continuation.resume(returning: [])
                         return
                     }
 
                     guard let output = String(data: data, encoding: .utf8) else {
-                        os_log("Failed to decode ps command output to UTF-8 string",
-                               log: OSLog.default, type: .error)
+                        self.logger.error("Failed to decode ps command output to UTF-8 string")
                         continuation.resume(returning: [])
                         return
                     }
@@ -167,20 +157,14 @@ final class ProcessService: ProcessServiceProtocol {
                         let stderrText = String(data: stderrData, encoding: .utf8)?
                             .trimmingCharacters(in: .whitespacesAndNewlines)
                         if let stderrText, !stderrText.isEmpty {
-                            os_log(
-                                "ps command returned no processes, stderr: %{public}@",
-                                log: OSLog.default,
-                                type: .error,
-                                stderrText
-                            )
+                            self.logger.error("ps command returned no processes, stderr=\(stderrText)")
                         } else {
-                            os_log("ps command returned no processes", log: OSLog.default, type: .error)
+                            self.logger.error("ps command returned no processes")
                         }
                     }
                     continuation.resume(returning: processes)
                 } catch {
-                    os_log("ps command execution error: %{public}@",
-                           log: OSLog.default, type: .error, error.localizedDescription)
+                    self.logger.error("ps command execution error: \(error.localizedDescription)")
                     continuation.resume(returning: [])
                 }
             }

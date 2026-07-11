@@ -39,7 +39,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         var lastTriggeredAt: TimeInterval = 0
     }
 
-    private let logger = Logger(subsystem: "com.lightstats", category: "TitlebarGestures")
+    private let logger = AppLogger(subsystem: "com.lightstats", category: "TitlebarGestures")
     private let snappingService: WindowSnappingService
     private let previewService = WindowSnapPreviewService()
     private let stateLock = NSLock()

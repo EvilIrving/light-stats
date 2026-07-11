@@ -106,7 +106,7 @@ final class ScrollDirectionService: ScrollReversing {
         point: .scrollWheelEventPointDeltaAxis2
     )
 
-    private let logger = Logger(subsystem: "com.lightstats", category: "ScrollDirection")
+    private let logger = AppLogger(subsystem: "com.lightstats", category: "ScrollDirection")
 
     // 仅在 tap 线程访问，无需加锁。
     private var eventTap: CFMachPort?

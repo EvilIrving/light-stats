@@ -2,8 +2,8 @@
 //  FinderMenuAction.swift
 //  Light Stats / FinderMenuExtension
 //
-//  Finder 右键菜单的动作标识。`copy*` 在扩展进程内直接完成（纯剪贴板，无文件 IO）；
-//  其余动作通过 CFMessagePort 委派给非沙盒宿主执行，绕开扩展沙盒的文件写入限制。
+//  Finder 右键菜单的动作标识。所有动作通过 CFMessagePort 委派给宿主执行，
+//  使操作结果进入统一诊断日志；文件动作同时借此绕开扩展沙盒的写入限制。
 //
 //  `nonisolated` + `Codable`：随 FinderMenuRequest 走 JSON 编码跨进程传输，并在
 //  两侧的 nonisolated 上下文（含宿主的 C 回调）中自由读取。
@@ -12,8 +12,8 @@
 import Foundation
 
 nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
-    case copyPath          // 扩展内：拷贝完整路径到剪贴板
-    case copyName          // 扩展内：拷贝文件名到剪贴板
+    case copyPath          // 委派宿主：拷贝完整路径到剪贴板
+    case copyName          // 委派宿主：拷贝文件名到剪贴板
     case openTerminalHere  // 委派宿主：在当前目录打开终端
     case newFile           // 委派宿主：在容器目录按模板新建文件（parameter = 模板 id）
     case moveTo            // 委派宿主：把选中项移动到目标目录（parameter = 目标目录路径）
@@ -23,13 +23,9 @@ nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
     case cmuxNewWindow     // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开窗口
     case cmuxNewWorkspace  // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开工作区
 
-    /// 是否需要委派给宿主（true）还是扩展内自理（false）。
+    /// 所有动作统一委派给宿主，确保执行结果可被诊断日志记录。
     var requiresHost: Bool {
-        switch self {
-        case .copyPath, .copyName: return false
-        case .openTerminalHere, .newFile, .moveTo, .copyTo, .openWithApp, .toggleHidden,
-             .cmuxNewWindow, .cmuxNewWorkspace: return true
-        }
+        true
     }
 
     /// 本地化标题：优先读宿主发布到 App Group 的标签，未发布则回退英文字面量。
