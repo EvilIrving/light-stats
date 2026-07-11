@@ -19,56 +19,96 @@ private func rowDivider() -> some View {
 struct GeneralDetail: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var updateManager: UpdateManager
+    let openDiagnosticLogs: () -> Void
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
-            SettingsGroup {
-                SettingsRow("settings.launchAtLogin".localized) {
-                    SettingsToggle(isOn: $settings.launchAtLogin)
-                }
-                rowDivider()
-                SettingsRow("settings.language".localized) {
-                    Picker("", selection: $settings.appLanguage) {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Text(lang.shortName).tag(lang)
-                        }
+            SettingsSection("settings.general.app".localized) {
+                SettingsGroup {
+                    SettingsRow("settings.launchAtLogin".localized) {
+                        SettingsToggle(isOn: $settings.launchAtLogin)
                     }
-                    .pickerStyle(.segmented).labelsHidden().fixedSize().focusable(false)
-                }
-                rowDivider()
-                SettingsRow("settings.update.autoCheck".localized) {
-                    SettingsToggle(isOn: $settings.autoCheckUpdates)
+                    rowDivider()
+                    SettingsRow(
+                        "settings.keepAwake".localized,
+                        subtitle: "settings.keepAwake.description".localized
+                    ) {
+                        SettingsToggle(isOn: $settings.keepAwakeEnabled)
+                    }
+                    rowDivider()
+                    SettingsRow("settings.language".localized) {
+                        Picker("", selection: $settings.appLanguage) {
+                            ForEach(AppLanguage.allCases) { lang in
+                                Text(lang.shortName).tag(lang)
+                            }
+                        }
+                        .pickerStyle(.segmented).labelsHidden().fixedSize().focusable(false)
+                    }
+                    rowDivider()
+                    SettingsRow(
+                        "settings.appLogs".localized,
+                        subtitle: "settings.appLogs.hint".localized
+                    ) {
+                        Button("settings.view".localized, action: openDiagnosticLogs)
+                            .controlSize(.small)
+                    }
                 }
             }
+            SettingsSection("settings.update.section".localized) {
+                SettingsGroup {
+                    updateRow
+                }
+            }
+        }
+    }
+
+    private var updateRow: some View {
+        HStack(spacing: 10) {
             Button {
-                UpdateManager.shared.check(userInitiated: true)
+                updateManager.check(userInitiated: true)
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     if updateManager.isChecking {
                         ProgressView().controlSize(.small).scaleEffect(0.8)
                     }
-                    Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
+                    Text((updateManager.isChecking ? "update.checking" : "settings.update.manualCheck").localized)
                         .font(.system(size: 12, weight: .medium))
                 }
-                .frame(maxWidth: .infinity)
             }
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .disabled(updateManager.isChecking)
+
+            Spacer()
+
+            if let release = updateManager.availableRelease {
+                Button("settings.update.installVersion".localized(release.tagName)) {
+                    updateManager.presentAvailableRelease()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+
+            Text("settings.update.automaticLabel".localized)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+            SettingsToggle(isOn: $settings.autoCheckUpdates)
         }
+        .padding(.horizontal, 12)
+        .frame(minHeight: 40)
     }
 }
 
-// MARK: - Menu Bar (display items + refresh + temperature + appearance)
+// MARK: - Monitoring
 
-struct MenuBarDetail: View {
+struct MonitoringDetail: View {
     @ObservedObject var settings: SettingsManager
     let onValidate: () -> Void
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     var body: some View {
-        ScrollView {
-            SettingsDetailScaffold("settings.statusBar".localized) {
+        SettingsDetailScaffold("settings.section.monitoring".localized) {
+            SettingsSection("settings.statusBar".localized) {
                 LazyVGrid(columns: columns, spacing: 8) {
                     item("settings.logo", $settings.showLogo, "applelogo", asset: "StatusIcon")
                     item("settings.cpu", $settings.showCPU, "cpu")
@@ -80,6 +120,8 @@ struct MenuBarDetail: View {
                     item("settings.battery", $settings.showBattery, "battery.100")
                     item("settings.health", $settings.showHealth, "heart.text.square")
                 }
+            }
+            SettingsSection("settings.refreshAndUnits".localized) {
                 SettingsGroup {
                     SettingsRow("settings.refreshRate.label".localized) {
                         Picker("", selection: $settings.refreshRate) {
@@ -99,46 +141,43 @@ struct MenuBarDetail: View {
                         .pickerStyle(.segmented).labelsHidden().focusable(false)
                     }
                 }
+            }
+            SettingsSection("settings.appearance".localized) {
                 SettingsGroup {
-                    SettingsRow("settings.flatColors.section".localized) {
+                    SettingsRow(
+                        "settings.flatColors.section".localized,
+                        subtitle: "settings.flatColors.hint".localized
+                    ) {
                         SettingsToggle(isOn: $settings.useFlatColors)
                     }
                     rowDivider()
-                    SettingsRow("settings.colorIndicator".localized) {
+                    SettingsRow(
+                        "settings.colorIndicator".localized,
+                        subtitle: "settings.accessibility.colorIndicator.hint".localized
+                    ) {
                         SettingsToggle(isOn: $settings.useColorIndicator)
                     }
                 }
+            }
+            SettingsSection("settings.health".localized) {
+                LazyVGrid(columns: columns, spacing: 8) {
+                    dim("health.dimension.cpu", $settings.healthIncludeCPU, .low)
+                    dim("health.dimension.memory", $settings.healthIncludeMemory, .low)
+                    dim("health.dimension.load", $settings.healthIncludeLoad, .medium)
+                    dim("health.dimension.temperature", $settings.healthIncludeTemperature, .high)
+                    dim("health.dimension.gpu", $settings.healthIncludeGPU, .medium)
+                    dim("settings.healthDimensions.power", $settings.healthIncludePower, .low)
+                }
+                Text("settings.healthDimensions.hint".localized)
+                    .font(.system(size: 10)).foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     private func item(_ key: String, _ isOn: Binding<Bool>, _ icon: String, asset: String? = nil) -> some View {
         SettingsGridItem(title: key.localized, isOn: isOn, icon: icon, assetIcon: asset, onChange: onValidate)
-    }
-}
-
-// MARK: - Health Score
-
-struct HealthDetail: View {
-    @ObservedObject var settings: SettingsManager
-
-    private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-
-    var body: some View {
-        SettingsDetailScaffold("settings.health".localized) {
-            LazyVGrid(columns: columns, spacing: 8) {
-                dim("health.dimension.cpu", $settings.healthIncludeCPU, .low)
-                dim("health.dimension.memory", $settings.healthIncludeMemory, .low)
-                dim("health.dimension.load", $settings.healthIncludeLoad, .medium)
-                dim("health.dimension.temperature", $settings.healthIncludeTemperature, .high)
-                dim("health.dimension.gpu", $settings.healthIncludeGPU, .medium)
-                dim("settings.healthDimensions.power", $settings.healthIncludePower, .low)
-            }
-            Text("settings.healthDimensions.hint".localized)
-                .font(.system(size: 11)).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 
     private func dim(_ key: String, _ isOn: Binding<Bool>, _ level: SettingsGridItem.DemoLevel) -> some View {
@@ -149,13 +188,31 @@ struct HealthDetail: View {
     }
 }
 
+// MARK: - Extras
+
+struct ExtrasDetail: View {
+    @ObservedObject var settings: SettingsManager
+    @Binding var showPrivacyAlert: Bool
+    let openSettings: () -> Void
+
+    var body: some View {
+        SettingsDetailScaffold("settings.section.extras".localized) {
+            ScrollDetail(settings: settings)
+            WindowManagementDetail(settings: settings)
+            AIUsageDetail(settings: settings)
+            NetworkDetail(settings: settings, showPrivacyAlert: $showPrivacyAlert)
+            FinderMenuDetail(settings: settings, openSettings: openSettings)
+        }
+    }
+}
+
 // MARK: - Scroll
 
 struct ScrollDetail: View {
     @ObservedObject var settings: SettingsManager
 
     var body: some View {
-        SettingsDetailScaffold("settings.inputDevices".localized) {
+        SettingsSection("settings.inputDevices".localized) {
             SettingsGroup {
                 SettingsRow("settings.scrollReverse".localized) {
                     SettingsToggle(isOn: $settings.scrollReverseEnabled)
@@ -197,13 +254,15 @@ struct WindowManagementDetail: View {
     @ObservedObject var settings: SettingsManager
 
     var body: some View {
-        SettingsDetailScaffold("settings.windowManagement".localized) {
-            SettingsToggle(isOn: $settings.windowManagementEnabled)
-        } content: {
-            Text("settings.windowManagement.description".localized)
-                .font(.system(size: 11)).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        SettingsSection("settings.windowManagement".localized) {
+            SettingsGroup {
+                SettingsRow(
+                    "settings.windowManagement".localized,
+                    subtitle: "settings.windowManagement.description".localized
+                ) {
+                    SettingsToggle(isOn: $settings.windowManagementEnabled)
+                }
+            }
         }
     }
 }
@@ -218,7 +277,7 @@ struct AIUsageDetail: View {
     }
 
     var body: some View {
-        SettingsDetailScaffold("settings.aiUsage".localized) {
+        SettingsSection("settings.aiUsage".localized) {
             SettingsGroup {
                 SettingsRow("aiUsage.claude".localized) {
                     SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
@@ -256,20 +315,6 @@ struct AIUsageDetail: View {
     }
 }
 
-// MARK: - Keep Awake
-
-struct KeepAwakeDetail: View {
-    @ObservedObject var settings: SettingsManager
-
-    var body: some View {
-        SettingsDetailScaffold("settings.keepAwake".localized) {
-            SettingsToggle(isOn: $settings.keepAwakeEnabled)
-        } content: {
-            EmptyView()
-        }
-    }
-}
-
 // MARK: - Network (exit node)
 
 struct NetworkDetail: View {
@@ -277,20 +322,25 @@ struct NetworkDetail: View {
     @Binding var showPrivacyAlert: Bool
 
     var body: some View {
-        SettingsDetailScaffold("settings.exitNode.section".localized) {
-            SettingsToggle(isOn: Binding(
-                get: { settings.exitNodeDetectionEnabled },
-                set: { newValue in
-                    if newValue {
-                        showPrivacyAlert = true
-                    } else {
-                        settings.exitNodeDetectionEnabled = false
-                    }
+        SettingsSection("settings.exitNode.section".localized) {
+            SettingsGroup {
+                SettingsRow(
+                    "settings.exitNode.toggle".localized,
+                    subtitle: "settings.exitNode.toggleHint".localized
+                ) {
+                    SettingsToggle(isOn: Binding(
+                        get: { settings.exitNodeDetectionEnabled },
+                        set: { newValue in
+                            if newValue {
+                                showPrivacyAlert = true
+                            } else {
+                                settings.exitNodeDetectionEnabled = false
+                            }
+                        }
+                    ))
                 }
-            ))
-        } content: {
-            if settings.exitNodeDetectionEnabled {
-                SettingsGroup {
+                if settings.exitNodeDetectionEnabled {
+                    rowDivider()
                     SettingsRow("settings.exitNode.provider".localized) {
                         Picker("", selection: $settings.exitNodeProvider) {
                             ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
@@ -316,11 +366,16 @@ struct FinderMenuDetail: View {
     @State private var expandedCategories: Set<FinderMenuPresets.TemplateCategory> = []
 
     var body: some View {
-        SettingsDetailScaffold("settings.finderMenu".localized) {
-            SettingsToggle(isOn: $settings.finderMenuEnabled)
-        } content: {
-            if settings.finderMenuEnabled {
-                SettingsGroup {
+        SettingsSection("settings.finderMenu".localized) {
+            SettingsGroup {
+                SettingsRow(
+                    "settings.finderMenu".localized,
+                    subtitle: "settings.finderMenu.description".localized
+                ) {
+                    SettingsToggle(isOn: $settings.finderMenuEnabled)
+                }
+                if settings.finderMenuEnabled {
+                    rowDivider()
                     SettingsRow("settings.finderMenu.defaultTerminal".localized) {
                         Picker("", selection: Binding(
                             get: { store.config.terminalID },
@@ -340,6 +395,8 @@ struct FinderMenuDetail: View {
                         ))
                     }
                 }
+            }
+            if settings.finderMenuEnabled {
                 EditableListView(
                     title: "settings.finderMenu.directories".localized,
                     rows: store.config.favoriteDirectories.map {

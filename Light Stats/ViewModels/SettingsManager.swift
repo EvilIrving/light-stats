@@ -458,6 +458,11 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
     private func save<T>(_ value: T, for key: Key) {
         UserDefaults.standard.set(value, forKey: key.rawValue)
+        DiagnosticLogService.record(
+            category: "settings",
+            action: "changed",
+            fields: ["key": key.rawValue, "value": String(describing: value)]
+        )
         // 延迟执行以避免在视图更新过程中修改状态
         Task { @MainActor in
             ensureAtLeastOneItem()

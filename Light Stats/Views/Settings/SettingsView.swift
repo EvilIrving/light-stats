@@ -14,75 +14,25 @@ import SwiftUI
 
 // MARK: - Category
 
-/// 设置分类。三组分区对应「通用 / 监控（核心）/ 附加工具（默认关闭）」。
-/// 保持唤醒属于通用设置，但仍保留 opt-in 状态指示，让用户一眼看出它是否正在运行。
+/// 设置分类。侧栏只负责导航，不承载功能运行状态。
 enum SettingsCategory: String, CaseIterable, Identifiable {
-    case general, menuBar, health
-    case scroll, windowManagement, finderMenu, aiUsage, network, keepAwake
+    case general, monitoring, extras
 
     var id: String { rawValue }
 
-    enum Group { case general, monitoring, extras }
-
-    var group: Group {
-        switch self {
-        case .general, .keepAwake: return .general
-        case .menuBar, .health: return .monitoring
-        case .scroll, .windowManagement, .finderMenu, .aiUsage, .network: return .extras
-        }
-    }
-
-    /// 侧栏标题的本地化 key（尽量复用旧卡片标题，减少新增键）。
     var titleKey: String {
         switch self {
         case .general: return "settings.general"
-        case .menuBar: return "settings.statusBar"
-        case .health: return "settings.health"
-        case .scroll: return "settings.inputDevices"
-        case .windowManagement: return "settings.windowManagement"
-        case .finderMenu: return "settings.finderMenu"
-        case .aiUsage: return "settings.aiUsage"
-        case .network: return "settings.exitNode.section"
-        case .keepAwake: return "settings.keepAwake"
+        case .monitoring: return "settings.section.monitoring"
+        case .extras: return "settings.section.extras"
         }
     }
 
     var icon: String {
         switch self {
         case .general: return "gearshape"
-        case .menuBar: return "menubar.rectangle"
-        case .health: return "heart.text.square"
-        case .scroll: return "arrow.up.arrow.down"
-        case .windowManagement: return "macwindow"
-        case .finderMenu: return "filemenu.and.cursorarrow"
-        case .aiUsage: return "sparkles"
-        case .network: return "network"
-        case .keepAwake: return "cup.and.saucer.fill"
-        }
-    }
-
-    static func items(in group: Group) -> [SettingsCategory] {
-        allCases.filter { $0.group == group }
-    }
-
-    /// 该 opt-in 工具当前是否处于启用状态——用于侧栏的绿色「live」信号点。
-    /// 监控核心（general/menuBar/health）永远返回 false；保持唤醒虽位于通用分组，仍是可选工具。
-    func isActive(_ settings: SettingsManager) -> Bool {
-        switch self {
-        case .scroll:
-            return settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
-        case .windowManagement:
-            return settings.windowManagementEnabled
-        case .finderMenu:
-            return settings.finderMenuEnabled
-        case .aiUsage:
-            return settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled
-        case .network:
-            return settings.exitNodeDetectionEnabled
-        case .keepAwake:
-            return settings.keepAwakeEnabled
-        case .general, .menuBar, .health:
-            return false
+        case .monitoring: return "waveform.path.ecg"
+        case .extras: return "switch.2"
         }
     }
 }
@@ -109,14 +59,15 @@ struct SettingsView: View {
             // 一二十行）时可滚动，短页面照常顶部对齐不受影响。
             ScrollView(.vertical) {
                 detail
-                    .frame(width: 400, alignment: .topLeading)
+                    .frame(width: 560, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .top)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(nsColor: .controlBackgroundColor))
         }
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
-        .frame(width: 620, height: 620)
+        .frame(width: 900, height: 640)
         .background(
             GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
                 .ignoresSafeArea()
@@ -143,43 +94,25 @@ struct SettingsView: View {
             get: { selectedCategory },
             set: { if let value = $0 { selectedRaw = value.rawValue } }
         )) {
-            sidebarSection(.general, header: "settings.section.general")
-            sidebarSection(.monitoring, header: "settings.section.monitoring")
-            sidebarSection(.extras, header: "settings.section.extras")
+            ForEach(SettingsCategory.allCases) { category in
+                sidebarRow(category)
+                    .tag(category)
+            }
         }
         .listStyle(.sidebar)
-        .frame(width: 160)
+        .frame(width: 190)
         .focusable(false)
     }
 
-    @ViewBuilder
-    private func sidebarSection(_ group: SettingsCategory.Group, header: String) -> some View {
-        Section {
-            ForEach(SettingsCategory.items(in: group)) { category in
-                HStack(spacing: 8) {
-                    Image(systemName: category.icon)
-                        .font(.system(size: 13))
-                        .frame(width: 18)
-                    Text(category.titleKey.localized)
-                        .font(.system(size: 12))
-                    Spacer(minLength: 4)
-                    // 绿色 live 信号点：仅当该 opt-in 工具正在运行时出现，一眼看清哪些
-                    // 越界能力被打开了（呼应「opt-in by construction」的产品原则）。
-                    if category.isActive(settings) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .tag(category)
-            }
-        } header: {
-            Text(header.localized)
-                .font(.system(size: 10, weight: .semibold))
-                .textCase(.uppercase)
-                .tracking(0.6)
-                .foregroundStyle(.tertiary)
+    private func sidebarRow(_ category: SettingsCategory) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: category.icon)
+                .font(.system(size: 14))
+                .frame(width: 19)
+            Text(category.titleKey.localized)
+                .font(.system(size: 13))
         }
+        .frame(minHeight: 28)
     }
 
     // MARK: Detail
@@ -188,23 +121,19 @@ struct SettingsView: View {
     private var detail: some View {
         switch selectedCategory {
         case .general:
-            GeneralDetail(settings: settings, updateManager: updateManager)
-        case .menuBar:
-            MenuBarDetail(settings: settings, onValidate: validateMinimumItems)
-        case .health:
-            HealthDetail(settings: settings)
-        case .scroll:
-            ScrollDetail(settings: settings)
-        case .windowManagement:
-            WindowManagementDetail(settings: settings)
-        case .finderMenu:
-            FinderMenuDetail(settings: settings, openSettings: openLoginItemsAndExtensionsSettings)
-        case .aiUsage:
-            AIUsageDetail(settings: settings)
-        case .network:
-            NetworkDetail(settings: settings, showPrivacyAlert: $showExitPrivacyAlert)
-        case .keepAwake:
-            KeepAwakeDetail(settings: settings)
+            GeneralDetail(
+                settings: settings,
+                updateManager: updateManager,
+                openDiagnosticLogs: openDiagnosticLogs
+            )
+        case .monitoring:
+            MonitoringDetail(settings: settings, onValidate: validateMinimumItems)
+        case .extras:
+            ExtrasDetail(
+                settings: settings,
+                showPrivacyAlert: $showExitPrivacyAlert,
+                openSettings: openLoginItemsAndExtensionsSettings
+            )
         }
     }
 
@@ -222,6 +151,13 @@ struct SettingsView: View {
     private func openLoginItemsAndExtensionsSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    private func openDiagnosticLogs() {
+        Task {
+            await DiagnosticLogService.shared.flush()
+            NSWorkspace.shared.open(DiagnosticLogService.diagnosticsDirectoryURL)
+        }
     }
 }
 
@@ -245,19 +181,37 @@ struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Text(title).font(.system(size: 16, weight: .semibold))
+                Text(title).font(.system(size: 22, weight: .semibold))
                 Spacer()
                 accessory
             }
-            .padding(.bottom, 12)
-            Divider()
-            VStack(alignment: .leading, spacing: 14) {
+            .padding(.bottom, 24)
+            VStack(alignment: .leading, spacing: 22) {
                 content
             }
-            .padding(.top, 16)
         }
-        .padding(20)
+        .padding(.horizontal, 32)
+        .padding(.vertical, 28)
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// 页面内的语义分组：标题在容器外，相关设置行收进同一个连续面板。
+struct SettingsSection<Content: View>: View {
+    private let title: String
+    private let content: Content
+
+    init(_ title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+            content
+        }
     }
 }
 
@@ -274,31 +228,42 @@ struct SettingsGroup<Content: View>: View {
         VStack(spacing: 0) {
             content
         }
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.025)))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.025)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.09)))
     }
 }
 
 /// 一行设置：左标签 + 右控件，统一内边距，置于 SettingsGroup 内。
 struct SettingsRow<Control: View>: View {
     private let title: String
+    private let subtitle: String?
     private let control: Control
 
-    init(_ title: String, @ViewBuilder control: () -> Control) {
+    init(_ title: String, subtitle: String? = nil, @ViewBuilder control: () -> Control) {
         self.title = title
+        self.subtitle = subtitle
         self.control = control()
     }
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             Spacer()
             control
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, subtitle == nil ? 8 : 7)
+        .frame(minHeight: 40)
     }
 }
 
