@@ -5,8 +5,9 @@
 //  Created on 2024/12/24.
 //
 
-import Foundation
+import AppKit
 import Combine
+import Foundation
 
 /// 标 `nonisolated`：纯常量，供采集 actor / 服务直接读取（如电池缓存 TTL）。
 nonisolated enum AppConfig {
@@ -451,6 +452,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     func ensureAtLeastOneItem() {
         if !hasAtLeastOneItem {
             showCPU = true
+        }
+    }
+
+    func openDiagnosticLogs() {
+        Task {
+            await DiagnosticLogService.shared.flush()
+            NSWorkspace.shared.open(DiagnosticLogService.diagnosticsDirectoryURL)
         }
     }
 

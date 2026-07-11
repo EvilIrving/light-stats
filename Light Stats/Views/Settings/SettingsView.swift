@@ -124,7 +124,7 @@ struct SettingsView: View {
             GeneralDetail(
                 settings: settings,
                 updateManager: updateManager,
-                openDiagnosticLogs: openDiagnosticLogs
+                openDiagnosticLogs: settings.openDiagnosticLogs
             )
         case .monitoring:
             MonitoringDetail(settings: settings, onValidate: validateMinimumItems)
@@ -153,12 +153,6 @@ struct SettingsView: View {
         NSWorkspace.shared.open(url)
     }
 
-    private func openDiagnosticLogs() {
-        Task {
-            await DiagnosticLogService.shared.flush()
-            NSWorkspace.shared.open(DiagnosticLogService.diagnosticsDirectoryURL)
-        }
-    }
 }
 
 // MARK: - Detail scaffold

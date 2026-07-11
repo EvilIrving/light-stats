@@ -134,33 +134,67 @@ final class AppMemoryManager: ObservableObject {
         detailedMemory = detailedInfo
         totalMemoryUsed = detailedInfo.used
         memoryPressure = detailedInfo.pressureLevel
+        DiagnosticLogService.recordSample(
+            category: "processMemory",
+            action: "collected",
+            fields: [
+                "appCount": .privateValue(.integer(Int64(appGroups.count))),
+                "totalBytes": .privateValue(.unsignedInteger(detailedInfo.total)),
+                "usedBytes": .privateValue(.unsignedInteger(detailedInfo.used)),
+                "usagePercent": .privateValue(.double(detailedInfo.usagePercent)),
+                "compressedBytes": .privateValue(.unsignedInteger(detailedInfo.compressed)),
+                "pressure": .privateValue(.string(String(describing: detailedInfo.pressureLevel))),
+                "swapUsedBytes": .privateValue(.unsignedInteger(detailedInfo.swapUsed))
+            ]
+        )
     }
 
     // MARK: - App Control
 
     /// Trigger system memory cleanup
     func triggerMemoryCleanup() async {
+        DiagnosticLogService.record(category: "memoryCleanup", action: "requested")
         await processService.triggerMemoryCleanup()
         await updateRunningApps()
+        DiagnosticLogService.record(category: "memoryCleanup", action: "completed")
     }
 
     /// Terminate an app group
     func terminateApp(_ app: AppGroup) -> Bool {
-        processService.terminateApp(app)
+        let success = processService.terminateApp(app)
+        recordTermination(app, forced: false, success: success)
+        return success
     }
 
     /// Force terminate an app group
     func forceTerminateApp(_ app: AppGroup) -> Bool {
-        processService.forceTerminateApp(app)
+        let success = processService.forceTerminateApp(app)
+        recordTermination(app, forced: true, success: success)
+        return success
     }
 
     /// Async terminate with reliable two-stage strategy
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
         let success = await processService.terminateAppAsync(app)
+        recordTermination(app, forced: false, success: success)
         if success {
             await updateRunningApps()
         }
         return success
+    }
+
+    private func recordTermination(_ app: AppGroup, forced: Bool, success: Bool) {
+        DiagnosticLogService.record(
+            level: success ? .info : .error,
+            category: "process",
+            action: "terminationCompleted",
+            fields: [
+                "name": app.name,
+                "pid": String(app.id),
+                "forced": String(forced),
+                "success": String(success)
+            ]
+        )
     }
 
     /// Check if a process is still running

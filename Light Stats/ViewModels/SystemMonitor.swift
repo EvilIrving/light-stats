@@ -21,12 +21,16 @@ private struct SystemSnapshot {
     let memoryUsage: Double
     let memoryUsed: UInt64
     let memoryTotal: UInt64
+    let memoryPressure: MemoryPressureLevel
+    let swapUsed: UInt64
+    let swapActivityMBs: Double
     let diskUsed: UInt64
     let diskTotal: UInt64
     let diskAvailable: UInt64
     let networkUpload: Double
     let networkDownload: Double
     let cpuTemperature: Double?
+    let thermalState: String
     let fanSpeed: Int?
     let health: HealthScore
     // Phase 2: 电池/功耗 + 磁盘 IO
@@ -111,6 +115,7 @@ private actor MonitorSampler {
         let route = classifyRoute(proxy: proxyConfig, exit: exitNode)
         let battery = await batteryResult
         let detailedMemory = MemoryInfo.getDetailedMemoryInfo()
+        let thermalState = ProcessInfo.processInfo.thermalState
         let rawHealth = HealthScoreService.compute(
             cpu: cpuUsage.total,
             memoryPressure: detailedMemory.pressureLevel,
@@ -118,7 +123,7 @@ private actor MonitorSampler {
             load1: loadAverage.load1,
             coreCount: coreTopology.totalCores,
             temp: cpuTemperature,
-            thermalState: ProcessInfo.processInfo.thermalState,
+            thermalState: thermalState,
             gpu: gpuUsage,
             batteryState: battery.state,
             batteryPercent: battery.percent,
@@ -140,12 +145,16 @@ private actor MonitorSampler {
             memoryUsage: memoryInfo.usagePercent,
             memoryUsed: memoryInfo.used,
             memoryTotal: memoryInfo.total,
+            memoryPressure: detailedMemory.pressureLevel,
+            swapUsed: detailedMemory.swapUsed,
+            swapActivityMBs: swapActivityMBs,
             diskUsed: diskInfo.used,
             diskTotal: diskInfo.total,
             diskAvailable: diskInfo.available,
             networkUpload: networkStats.uploadSpeed,
             networkDownload: networkStats.downloadSpeed,
             cpuTemperature: cpuTemperature,
+            thermalState: String(describing: thermalState),
             fanSpeed: fanSpeed,
             health: health,
             battery: battery,
@@ -337,6 +346,39 @@ final class SystemMonitor: ObservableObject {
         exitNode = snapshot.exitNode
         route = snapshot.route
         pushTrends(snapshot)
+        recordDiagnosticSnapshot(snapshot)
+    }
+
+    private func recordDiagnosticSnapshot(_ snapshot: SystemSnapshot) {
+        typealias Value = DiagnosticLogService.Value
+        typealias Field = DiagnosticLogService.Field
+        func field(_ value: Value) -> Field { .privateValue(value) }
+        func optionalDouble(_ value: Double?) -> Field { field(value.map(Value.double) ?? .null) }
+        func optionalInteger(_ value: Int?) -> Field {
+            field(value.map { .integer(Int64($0)) } ?? .null)
+        }
+
+        let healthBreakdown = Value.object(snapshot.health.breakdown.mapValues(Value.double))
+        var fields: [String: Field] = [:]
+        fields["cpu.totalPercent"] = field(.double(snapshot.cpuUsage))
+        fields["load.1m"] = field(.double(snapshot.loadAverage.load1))
+        fields["gpu.percent"] = optionalDouble(snapshot.gpuUsage)
+        fields["memory.pressure"] = field(.string(String(describing: snapshot.memoryPressure)))
+        fields["memory.swapUsedBytes"] = field(.unsignedInteger(snapshot.swapUsed))
+        fields["memory.swapActivityMBs"] = field(.double(snapshot.swapActivityMBs))
+        fields["disk.readMBs"] = field(.double(snapshot.diskIO.readMBs))
+        fields["disk.writeMBs"] = field(.double(snapshot.diskIO.writeMBs))
+        fields["network.uploadBytesPerSecond"] = field(.double(snapshot.networkUpload))
+        fields["network.downloadBytesPerSecond"] = field(.double(snapshot.networkDownload))
+        fields["temperature.cpuCelsius"] = optionalDouble(snapshot.cpuTemperature)
+        fields["temperature.thermalState"] = field(.string(snapshot.thermalState))
+        fields["fan.rpm"] = optionalInteger(snapshot.fanSpeed)
+        fields["battery.state"] = field(.string(String(describing: snapshot.battery.state)))
+        fields["battery.percent"] = field(.double(snapshot.battery.percent))
+        fields["battery.powerWatts"] = optionalDouble(snapshot.battery.powerWatts)
+        fields["health.score"] = field(.integer(Int64(snapshot.health.score)))
+        fields["health.breakdown"] = field(healthBreakdown)
+        DiagnosticLogService.recordSample(category: "system", action: "collected", fields: fields)
     }
 
     /// 把本轮采样点追加进各环形缓冲，再汇成只读的 `trends` 快照供 sparkline 读取。
