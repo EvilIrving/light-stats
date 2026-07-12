@@ -64,25 +64,37 @@ nonisolated enum FinderMenuPresets {
         let id: String
         let title: String
         let fileExtension: String
+        /// 新建文件时的默认主文件名（不含扩展名）。按类型区分，避免全是 Untitled。
+        let defaultBaseName: String
         let content: String
         let category: TemplateCategory
     }
 
     /// 内置文件类型预设，按分类分组（数组顺序即菜单/设置顺序：文档优先，代码靠后）。
     /// 空白/极简内容是有意的——只是个合法的起点文件，不是脚手架。
+    /// `defaultBaseName` 按类型给合理起点名（重名时由宿主自增：main 2.py）。
     static let fileTemplates: [FileTemplate] = [
         // 文档与文本
-        FileTemplate(id: "txt", title: "Text (.txt)", fileExtension: "txt", content: "", category: .document),
-        FileTemplate(id: "md", title: "Markdown (.md)", fileExtension: "md", content: "# \n", category: .document),
+        FileTemplate(id: "txt", title: "Text (.txt)", fileExtension: "txt",
+                     defaultBaseName: "Document", content: "", category: .document),
+        FileTemplate(id: "md", title: "Markdown (.md)", fileExtension: "md",
+                     defaultBaseName: "notes", content: "# \n", category: .document),
         FileTemplate(id: "rtf", title: "Rich Text (.rtf)", fileExtension: "rtf",
+                     defaultBaseName: "Document",
                      content: "{\\rtf1\\ansi\\deff0\n}\n", category: .document),
-        FileTemplate(id: "csv", title: "CSV (.csv)", fileExtension: "csv", content: "", category: .document),
-        FileTemplate(id: "tsv", title: "TSV (.tsv)", fileExtension: "tsv", content: "", category: .document),
-        FileTemplate(id: "log", title: "Log (.log)", fileExtension: "log", content: "", category: .document),
+        FileTemplate(id: "csv", title: "CSV (.csv)", fileExtension: "csv",
+                     defaultBaseName: "data", content: "", category: .document),
+        FileTemplate(id: "tsv", title: "TSV (.tsv)", fileExtension: "tsv",
+                     defaultBaseName: "data", content: "", category: .document),
+        FileTemplate(id: "log", title: "Log (.log)", fileExtension: "log",
+                     defaultBaseName: "log", content: "", category: .document),
         FileTemplate(id: "tex", title: "LaTeX (.tex)", fileExtension: "tex",
-                     content: "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n", category: .document),
+                     defaultBaseName: "document",
+                     content: "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n",
+                     category: .document),
         // 网页与标记
         FileTemplate(id: "html", title: "HTML (.html)", fileExtension: "html",
+                     defaultBaseName: "index",
                      content: """
                      <!DOCTYPE html>
                      <html lang="en">
@@ -97,34 +109,77 @@ nonisolated enum FinderMenuPresets {
 
                      """,
                      category: .web),
-        FileTemplate(id: "css", title: "CSS (.css)", fileExtension: "css", content: "", category: .web),
+        FileTemplate(id: "css", title: "CSS (.css)", fileExtension: "css",
+                     defaultBaseName: "styles", content: "", category: .web),
         FileTemplate(id: "xml", title: "XML (.xml)", fileExtension: "xml",
+                     defaultBaseName: "document",
                      content: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n", category: .web),
         FileTemplate(id: "svg", title: "SVG (.svg)", fileExtension: "svg",
-                     content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n</svg>\n", category: .web),
-        FileTemplate(id: "rst", title: "reStructuredText (.rst)", fileExtension: "rst", content: "", category: .web),
+                     defaultBaseName: "image",
+                     content: "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n</svg>\n",
+                     category: .web),
+        FileTemplate(id: "rst", title: "reStructuredText (.rst)", fileExtension: "rst",
+                     defaultBaseName: "document", content: "", category: .web),
         // 数据与配置
-        FileTemplate(id: "json", title: "JSON (.json)", fileExtension: "json", content: "{\n}\n", category: .data),
-        FileTemplate(id: "yaml", title: "YAML (.yaml)", fileExtension: "yaml", content: "", category: .data),
-        FileTemplate(id: "toml", title: "TOML (.toml)", fileExtension: "toml", content: "", category: .data),
-        FileTemplate(id: "ini", title: "INI (.ini)", fileExtension: "ini", content: "", category: .data),
-        FileTemplate(id: "conf", title: "Config (.conf)", fileExtension: "conf", content: "", category: .data),
+        FileTemplate(id: "json", title: "JSON (.json)", fileExtension: "json",
+                     defaultBaseName: "data", content: "{\n}\n", category: .data),
+        FileTemplate(id: "yaml", title: "YAML (.yaml)", fileExtension: "yaml",
+                     defaultBaseName: "config", content: "", category: .data),
+        FileTemplate(id: "toml", title: "TOML (.toml)", fileExtension: "toml",
+                     defaultBaseName: "config", content: "", category: .data),
+        FileTemplate(id: "ini", title: "INI (.ini)", fileExtension: "ini",
+                     defaultBaseName: "config", content: "", category: .data),
+        FileTemplate(id: "conf", title: "Config (.conf)", fileExtension: "conf",
+                     defaultBaseName: "config", content: "", category: .data),
         // 代码
-        FileTemplate(id: "js", title: "JavaScript (.js)", fileExtension: "js", content: "", category: .code),
-        FileTemplate(id: "ts", title: "TypeScript (.ts)", fileExtension: "ts", content: "", category: .code),
-        FileTemplate(id: "py", title: "Python (.py)", fileExtension: "py", content: "", category: .code),
+        FileTemplate(id: "js", title: "JavaScript (.js)", fileExtension: "js",
+                     defaultBaseName: "script", content: "", category: .code),
+        FileTemplate(id: "ts", title: "TypeScript (.ts)", fileExtension: "ts",
+                     defaultBaseName: "index", content: "", category: .code),
+        FileTemplate(id: "py", title: "Python (.py)", fileExtension: "py",
+                     defaultBaseName: "main", content: "", category: .code),
         FileTemplate(id: "sh", title: "Shell (.sh)", fileExtension: "sh",
+                     defaultBaseName: "script",
                      content: "#!/bin/bash\nset -euo pipefail\n\n", category: .code),
-        FileTemplate(id: "swift", title: "Swift (.swift)", fileExtension: "swift", content: "", category: .code),
-        FileTemplate(id: "go", title: "Go (.go)", fileExtension: "go", content: "package main\n", category: .code),
-        FileTemplate(id: "rs", title: "Rust (.rs)", fileExtension: "rs", content: "", category: .code),
-        FileTemplate(id: "rb", title: "Ruby (.rb)", fileExtension: "rb", content: "", category: .code),
-        FileTemplate(id: "php", title: "PHP (.php)", fileExtension: "php", content: "<?php\n", category: .code),
-        FileTemplate(id: "c", title: "C (.c)", fileExtension: "c", content: "", category: .code),
-        FileTemplate(id: "cpp", title: "C++ (.cpp)", fileExtension: "cpp", content: "", category: .code),
-        FileTemplate(id: "java", title: "Java (.java)", fileExtension: "java", content: "", category: .code),
-        FileTemplate(id: "sql", title: "SQL (.sql)", fileExtension: "sql", content: "", category: .code)
+        FileTemplate(id: "swift", title: "Swift (.swift)", fileExtension: "swift",
+                     defaultBaseName: "main", content: "", category: .code),
+        FileTemplate(id: "go", title: "Go (.go)", fileExtension: "go",
+                     defaultBaseName: "main", content: "package main\n", category: .code),
+        FileTemplate(id: "rs", title: "Rust (.rs)", fileExtension: "rs",
+                     defaultBaseName: "main", content: "", category: .code),
+        FileTemplate(id: "rb", title: "Ruby (.rb)", fileExtension: "rb",
+                     defaultBaseName: "script", content: "", category: .code),
+        FileTemplate(id: "php", title: "PHP (.php)", fileExtension: "php",
+                     defaultBaseName: "index", content: "<?php\n", category: .code),
+        FileTemplate(id: "c", title: "C (.c)", fileExtension: "c",
+                     defaultBaseName: "main", content: "", category: .code),
+        FileTemplate(id: "cpp", title: "C++ (.cpp)", fileExtension: "cpp",
+                     defaultBaseName: "main", content: "", category: .code),
+        FileTemplate(id: "java", title: "Java (.java)", fileExtension: "java",
+                     defaultBaseName: "Main", content: "", category: .code),
+        FileTemplate(id: "sql", title: "SQL (.sql)", fileExtension: "sql",
+                     defaultBaseName: "query", content: "", category: .code)
     ]
+
+    /// 自定义模板或未知扩展的兜底主文件名（按扩展名猜用途）。
+    static func defaultBaseName(forExtension ext: String) -> String {
+        switch ext.lowercased() {
+        case "html", "htm", "php": return "index"
+        case "css": return "styles"
+        case "js", "mjs", "cjs", "sh", "bash", "zsh", "rb": return "script"
+        case "ts", "tsx", "jsx", "mts", "cts": return "index"
+        case "py", "swift", "go", "rs", "c", "cc", "cpp", "h", "hpp": return "main"
+        case "java", "kt": return "Main"
+        case "json", "csv", "tsv": return "data"
+        case "yaml", "yml", "toml", "ini", "conf", "cfg", "env": return "config"
+        case "sql": return "query"
+        case "md", "markdown": return "notes"
+        case "svg", "png", "jpg", "jpeg", "gif", "webp": return "image"
+        case "log": return "log"
+        case "txt", "rtf", "text": return "Document"
+        default: return "document"
+        }
+    }
 
     /// 干净安装默认显示的类型（其余靠用户勾选）。保守取最通用的两个，避免菜单过长。
     static let defaultEnabledTemplateIDs: [String] = ["txt", "md"]

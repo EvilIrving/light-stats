@@ -216,10 +216,10 @@
 "settings.finderMenu.openSettings" = "Enable in System Settings…";
 "settings.finderMenu.refreshFinder" = "Refresh Finder";
 "settings.finderMenu.finderRefreshing" = "Refreshing Finder…";
-"settings.finderMenu.status.enabled" = "Extension is enabled; the right-click menu should be active.";
-"settings.finderMenu.status.disabled" = "Extension is registered but not enabled in System Settings. Enable it below; no Mac restart is needed. If it does not appear, refresh Finder.";
-"settings.finderMenu.status.notRegistered" = "The system hasn't registered the extension yet. Make sure the app is in Applications, then relaunch the app or refresh Finder.";
-"settings.finderMenu.status.unknown" = "Couldn't determine the extension status.";
+"settings.finderMenu.status.enabled" = "Extension enabled — right-click menu is ready.";
+"settings.finderMenu.status.disabled" = "Extension is not enabled in System Settings yet. Use the button below (no Mac restart needed).";
+"settings.finderMenu.status.notRegistered" = "The system hasn't registered the extension yet. Keep the app in Applications, then reopen Light Stats.";
+"settings.finderMenu.status.unknown" = "Couldn't confirm extension status. Try refreshing Finder.";
 "settings.finderMenu.defaultTerminal" = "Default Terminal";
 "settings.finderMenu.cmuxActions" = "Show cmux Actions";
 "settings.finderMenu.directories" = "Favorite Folders";

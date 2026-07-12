@@ -218,10 +218,10 @@
 "settings.finderMenu.openSettings" = "システム設定で有効にする…";
 "settings.finderMenu.refreshFinder" = "Finder を更新";
 "settings.finderMenu.finderRefreshing" = "Finder を更新中…";
-"settings.finderMenu.status.enabled" = "拡張機能は有効です。右クリックメニューが利用できるはずです。";
-"settings.finderMenu.status.disabled" = "拡張機能は登録済みですが、システム設定で有効になっていません。有効化後、Mac の再起動は不要です。表示されない場合は Finder を更新してください。";
-"settings.finderMenu.status.notRegistered" = "システムが拡張機能をまだ登録していません。アプリが「アプリケーション」にあることを確認し、アプリまたは Finder を更新してください。";
-"settings.finderMenu.status.unknown" = "拡張機能の状態を確認できませんでした。";
+"settings.finderMenu.status.enabled" = "拡張機能は有効です。右クリックメニューを利用できます。";
+"settings.finderMenu.status.disabled" = "システム設定で拡張機能がまだ有効になっていません。下のボタンから有効にしてください（再起動不要）。";
+"settings.finderMenu.status.notRegistered" = "システムが拡張機能をまだ登録していません。「アプリケーション」にあることを確認し、アプリを開き直してください。";
+"settings.finderMenu.status.unknown" = "拡張機能の状態を確認できません。Finder を更新してみてください。";
 "settings.finderMenu.defaultTerminal" = "既定のターミナル";
 "settings.finderMenu.cmuxActions" = "cmux アクションを表示";
 "settings.finderMenu.directories" = "よく使うフォルダ";

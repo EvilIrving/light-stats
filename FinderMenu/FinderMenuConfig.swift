@@ -66,6 +66,28 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
         var title: String
         var fileExtension: String
         var content: String
+        /// 新建时的默认主文件名（不含扩展名）。旧 JSON 缺失时按扩展名推断。
+        var defaultBaseName: String
+
+        init(id: String, title: String, fileExtension: String, content: String,
+             defaultBaseName: String? = nil) {
+            self.id = id
+            self.title = title
+            self.fileExtension = fileExtension
+            self.content = content
+            self.defaultBaseName = defaultBaseName
+                ?? FinderMenuPresets.defaultBaseName(forExtension: fileExtension)
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            title = try container.decode(String.self, forKey: .title)
+            fileExtension = try container.decode(String.self, forKey: .fileExtension)
+            content = try container.decode(String.self, forKey: .content)
+            defaultBaseName = try container.decodeIfPresent(String.self, forKey: .defaultBaseName)
+                ?? FinderMenuPresets.defaultBaseName(forExtension: fileExtension)
+        }
     }
 
     /// 新建文件模板：勾选的内置预设（按预设顺序）+ 用户自定义模板。
@@ -74,7 +96,15 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
         let enabledIDs = enabledTemplateIDs ?? FinderMenuPresets.defaultEnabledTemplateIDs
         let presetEntries = FinderMenuPresets.fileTemplates
             .filter { enabledIDs.contains($0.id) }
-            .map { TemplateEntry(id: $0.id, title: $0.title, fileExtension: $0.fileExtension, content: $0.content) }
+            .map {
+                TemplateEntry(
+                    id: $0.id,
+                    title: $0.title,
+                    fileExtension: $0.fileExtension,
+                    content: $0.content,
+                    defaultBaseName: $0.defaultBaseName
+                )
+            }
         return presetEntries + templates
     }
 

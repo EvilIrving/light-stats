@@ -37,20 +37,29 @@ struct GeneralDetail: View {
                     }
                     rowDivider()
                     SettingsRow("settings.language".localized) {
-                        Picker("", selection: $settings.appLanguage) {
+                        SettingsSegmentedPicker(selection: $settings.appLanguage, segmentMinWidth: 40) {
                             ForEach(AppLanguage.allCases) { lang in
-                                Text(lang.shortName).tag(lang)
+                                SettingsSegmentLabel(title: lang.shortName).tag(lang)
                             }
                         }
-                        .pickerStyle(.segmented).labelsHidden().fixedSize().focusable(false)
                     }
                     rowDivider()
                     SettingsRow(
                         "settings.appLogs".localized,
                         subtitle: "settings.appLogs.hint".localized
                     ) {
-                        Button("settings.view".localized, action: openDiagnosticLogs)
-                            .controlSize(.small)
+                        HStack(spacing: 8) {
+                            SettingsSegmentedPicker(
+                                selection: $settings.diagnosticLogLevel,
+                                segmentMinWidth: 52
+                            ) {
+                                ForEach(SettingsManager.DiagnosticLogLevel.allCases, id: \.self) { level in
+                                    SettingsSegmentLabel(title: level.displayName).tag(level)
+                                }
+                            }
+                            Button("settings.view".localized, action: openDiagnosticLogs)
+                                .controlSize(.regular)
+                        }
                     }
                 }
             }
@@ -62,6 +71,7 @@ struct GeneralDetail: View {
         }
     }
 
+    /// 单行：检查按钮 + 可用版本入口 + 稳定/Beta 通道 + 自动更新开关。
     private var updateRow: some View {
         HStack(spacing: 10) {
             Button {
@@ -87,6 +97,12 @@ struct GeneralDetail: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
             }
+
+            SettingsSegmentedPicker(selection: $settings.includeBetaUpdates, segmentMinWidth: 48) {
+                SettingsSegmentLabel(title: "settings.update.channel.stable".localized).tag(false)
+                SettingsSegmentLabel(title: "settings.update.channel.beta".localized).tag(true)
+            }
+            .help("settings.update.channel.hint".localized)
 
             Text("settings.update.automaticLabel".localized)
                 .font(.system(size: 10))
@@ -124,21 +140,19 @@ struct MonitoringDetail: View {
             SettingsSection("settings.refreshAndUnits".localized) {
                 SettingsGroup {
                     SettingsRow("settings.refreshRate.label".localized) {
-                        Picker("", selection: $settings.refreshRate) {
+                        SettingsSegmentedPicker(selection: $settings.refreshRate, segmentMinWidth: 56) {
                             ForEach(SettingsManager.RefreshRate.allCases, id: \.self) { rate in
-                                Text(rate.displayName).tag(rate)
+                                SettingsSegmentLabel(title: rate.displayName).tag(rate)
                             }
                         }
-                        .pickerStyle(.segmented).labelsHidden().fixedSize().focusable(false)
                     }
                     rowDivider()
                     SettingsRow("settings.temperatureUnit".localized) {
-                        Picker("", selection: $settings.temperatureUnit) {
+                        SettingsSegmentedPicker(selection: $settings.temperatureUnit, segmentMinWidth: 48) {
                             ForEach(SettingsManager.TemperatureUnit.allCases, id: \.self) { unit in
-                                Text(unit.displayName).tag(unit)
+                                SettingsSegmentLabel(title: unit.displayName).tag(unit)
                             }
                         }
-                        .pickerStyle(.segmented).labelsHidden().focusable(false)
                     }
                 }
             }
@@ -342,12 +356,11 @@ struct NetworkDetail: View {
                 if settings.exitNodeDetectionEnabled {
                     rowDivider()
                     SettingsRow("settings.exitNode.provider".localized) {
-                        Picker("", selection: $settings.exitNodeProvider) {
+                        SettingsSegmentedPicker(selection: $settings.exitNodeProvider, segmentMinWidth: 52) {
                             ForEach(ExitNodeProvider.allCases, id: \.self) { provider in
-                                Text(provider.shortName).tag(provider)
+                                SettingsSegmentLabel(title: provider.shortName).tag(provider)
                             }
                         }
-                        .pickerStyle(.segmented).labelsHidden().fixedSize().focusable(false)
                     }
                 }
             }
@@ -424,41 +437,89 @@ struct FinderMenuDetail: View {
                     }
                 )
                 templateChooser
-                extensionStatusRow
-                HStack(spacing: 8) {
-                    Button("settings.finderMenu.openSettings".localized) { openSettings() }
-                    Button("settings.finderMenu.refreshFinder".localized) { store.restartFinder() }
-                }
-                .font(.system(size: 11))
+                extensionFooter
             }
         }
         .onAppear { store.refreshExtensionStatus() }
     }
 
-    /// 显示扩展在系统层的真实启用状态——app 总开关之外的第二道门（系统设置里的勾）。
-    @ViewBuilder private var extensionStatusRow: some View {
-        let (symbol, color, key): (String, Color, String) = {
-            switch store.extensionStatus {
-            case .enabled:
-                return ("checkmark.circle.fill", .green, "settings.finderMenu.status.enabled")
-            case .disabled:
-                return ("exclamationmark.triangle.fill", .orange, "settings.finderMenu.status.disabled")
-            case .notRegistered:
-                return ("exclamationmark.triangle.fill", .orange, "settings.finderMenu.status.notRegistered")
-            case .unknown:
-                return ("questionmark.circle", .secondary, "settings.finderMenu.status.unknown")
+    /// 扩展状态 + 情境化动作。已启用时只提示成功，并保留轻量「刷新访达」；
+    /// 未启用 / 未注册时才露出「在系统设置中启用」主按钮，避免已就绪时还推用户去设置。
+    @ViewBuilder private var extensionFooter: some View {
+        let isReady = store.extensionStatus == .enabled
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: statusSymbol)
+                    .foregroundColor(statusColor)
+                Text(statusMessageKey.localized)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if isReady {
+                    Button("settings.finderMenu.refreshFinder".localized) {
+                        store.restartFinder()
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .controlSize(.small)
+                }
             }
-        }()
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: symbol).foregroundColor(color)
-            Text(key.localized)
-                .font(.system(size: 11)).foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+
+            if !isReady {
+                HStack(spacing: 8) {
+                    Button("settings.finderMenu.openSettings".localized) { openSettings() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    Button("settings.finderMenu.refreshFinder".localized) {
+                        store.restartFinder()
+                        store.refreshExtensionStatus()
+                    }
+                    .controlSize(.small)
+                    Spacer(minLength: 0)
+                }
+            }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isReady ? Color.green.opacity(0.06) : Color.orange.opacity(0.07))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isReady ? Color.green.opacity(0.15) : Color.orange.opacity(0.18))
+        )
     }
 
-    /// 「新建文件」类型选择器：按分类分组、可折叠；每个类型一个开关，勾选即显示在右键子菜单。
+    private var statusSymbol: String {
+        switch store.extensionStatus {
+        case .enabled: return "checkmark.circle.fill"
+        case .disabled, .notRegistered: return "exclamationmark.triangle.fill"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    private var statusColor: Color {
+        switch store.extensionStatus {
+        case .enabled: return .green
+        case .disabled, .notRegistered: return .orange
+        case .unknown: return .secondary
+        }
+    }
+
+    private var statusMessageKey: String {
+        switch store.extensionStatus {
+        case .enabled: return "settings.finderMenu.status.enabled"
+        case .disabled: return "settings.finderMenu.status.disabled"
+        case .notRegistered: return "settings.finderMenu.status.notRegistered"
+        case .unknown: return "settings.finderMenu.status.unknown"
+        }
+    }
+
+    /// 「新建文件」类型选择器：单层 SettingsGroup，分类头与类型开关同级，可折叠但不嵌套卡片。
     private var templateChooser: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("settings.finderMenu.templates".localized)
@@ -467,56 +528,59 @@ struct FinderMenuDetail: View {
                 .font(.system(size: 10)).foregroundColor(.secondary.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(FinderMenuPresets.TemplateCategory.allCases, id: \.self) { category in
-                templateCategorySection(category)
+
+            SettingsGroup {
+                let categories = FinderMenuPresets.TemplateCategory.allCases
+                ForEach(Array(categories.enumerated()), id: \.element) { index, category in
+                    if index > 0 { rowDivider() }
+                    templateCategoryHeader(category)
+                    if expandedCategories.contains(category) {
+                        ForEach(FinderMenuPresets.fileTemplates(in: category), id: \.id) { template in
+                            rowDivider()
+                            SettingsRow(template.title) {
+                                SettingsToggle(isOn: Binding(
+                                    get: { store.isPresetTemplateEnabled(template.id) },
+                                    set: { store.setPresetTemplate(template.id, enabled: $0) }
+                                ))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    private func templateCategorySection(_ category: FinderMenuPresets.TemplateCategory) -> some View {
+    /// 分类头：与类型行同级，点击展开/收起下属开关，无第二层卡片。
+    private func templateCategoryHeader(_ category: FinderMenuPresets.TemplateCategory) -> some View {
         let items = FinderMenuPresets.fileTemplates(in: category)
         let enabledCount = items.filter { store.isPresetTemplateEnabled($0.id) }.count
         let isExpanded = expandedCategories.contains(category)
-        return VStack(spacing: 0) {
-            Button {
-                if isExpanded { expandedCategories.remove(category) } else { expandedCategories.insert(category) }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.secondary)
-                        .frame(width: 10)
-                    Text(category.titleKey.localized)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text("\(enabledCount)/\(items.count)")
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundColor(enabledCount > 0 ? .secondary : .secondary.opacity(0.5))
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
+        return Button {
             if isExpanded {
-                SettingsGroup {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, template in
-                        if index > 0 { rowDivider() }
-                        SettingsRow(template.title) {
-                            SettingsToggle(isOn: Binding(
-                                get: { store.isPresetTemplateEnabled(template.id) },
-                                set: { store.setPresetTemplate(template.id, enabled: $0) }
-                            ))
-                        }
-                    }
-                }
-                .padding(.leading, 16)
+                expandedCategories.remove(category)
+            } else {
+                expandedCategories.insert(category)
             }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 10)
+                Text(category.titleKey.localized)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer(minLength: 8)
+                Text("\(enabledCount)/\(items.count)")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundColor(enabledCount > 0 ? .secondary : .secondary.opacity(0.5))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.02)))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.06)))
+        .buttonStyle(.plain)
     }
 }
 
@@ -553,8 +617,16 @@ private struct EditableListView: View {
                 Divider()
                 footer
             }
-            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.025)))
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.primary.opacity(0.1)))
+            // 与 SettingsGroup 同白底，靠发丝描边区分，不再用偏灰的 primary 填充。
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .shadow(color: Color.primary.opacity(0.04), radius: 1.5, y: 0.5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08))
+            )
         }
     }
 
@@ -581,20 +653,22 @@ private struct EditableListView: View {
         }
     }
 
+    /// 单行：名称 + 间距 + 副标题（路径 / bundle id），小字副标题居中截断。
     private func rowView(_ row: EditableListRow) -> some View {
-        HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(row.title).font(.system(size: 11, weight: .medium))
-                Text(row.subtitle)
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 4)
+        HStack(spacing: 10) {
+            Text(row.title)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+                .layoutPriority(1)
+            Text(row.subtitle)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(rowBackground(row.id))
         .contentShape(Rectangle())

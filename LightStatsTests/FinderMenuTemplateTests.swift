@@ -60,4 +60,45 @@ final class FinderMenuTemplateTests: XCTestCase {
         let restored = try JSONDecoder().decode(FinderMenuConfig.self, from: data)
         XCTAssertEqual(restored.enabledTemplateIDs, ["md", "html"])
     }
+
+    func testPresetDefaultBaseNamesAreTypeSpecific() {
+        let byID = Dictionary(uniqueKeysWithValues: FinderMenuPresets.fileTemplates.map { ($0.id, $0.defaultBaseName) })
+        XCTAssertEqual(byID["html"], "index")
+        XCTAssertEqual(byID["py"], "main")
+        XCTAssertEqual(byID["ts"], "index")
+        XCTAssertEqual(byID["txt"], "Document")
+        XCTAssertEqual(byID["md"], "notes")
+        XCTAssertEqual(byID["css"], "styles")
+        XCTAssertEqual(byID["json"], "data")
+        // Never the old catch-all.
+        for template in FinderMenuPresets.fileTemplates {
+            XCTAssertNotEqual(template.defaultBaseName, "Untitled", template.id)
+            XCTAssertFalse(template.defaultBaseName.isEmpty, template.id)
+        }
+    }
+
+    func testResolvedTemplatesCarryDefaultBaseNames() {
+        let config = FinderMenuConfig(enabledTemplateIDs: ["html", "py", "txt"])
+        let names = Dictionary(uniqueKeysWithValues: config.resolvedTemplates().map { ($0.id, $0.defaultBaseName) })
+        XCTAssertEqual(names["html"], "index")
+        XCTAssertEqual(names["py"], "main")
+        XCTAssertEqual(names["txt"], "Document")
+    }
+
+    func testCustomTemplateInfersBaseNameFromExtension() {
+        let custom = FinderMenuConfig.TemplateEntry(
+            id: "c1", title: "My", fileExtension: "py", content: ""
+        )
+        XCTAssertEqual(custom.defaultBaseName, "main")
+    }
+
+    func testDecodingOldTemplateJSONWithoutBaseNameInfersFromExtension() throws {
+        let json = Data(#"""
+        {"favoriteDirectories":[],"openWithApps":[],"templates":[
+          {"id":"c1","title":"x","fileExtension":"html","content":""}
+        ],"enabledTemplateIDs":[]}
+        """#.utf8)
+        let config = try JSONDecoder().decode(FinderMenuConfig.self, from: json)
+        XCTAssertEqual(config.templates.first?.defaultBaseName, "index")
+    }
 }

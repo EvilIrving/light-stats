@@ -281,7 +281,12 @@ final class FinderMenuHostService {
             return
         }
 
-        let dest = uniqueURL(inDirectory: dir, baseName: "Untitled", fileExtension: template.fileExtension)
+        // 按类型给起点名（index.html / main.py / notes.md…），重名时 uniqueURL 自增。
+        let baseName = template.defaultBaseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeBase = baseName.isEmpty
+            ? FinderMenuPresets.defaultBaseName(forExtension: template.fileExtension)
+            : baseName
+        let dest = uniqueURL(inDirectory: dir, baseName: safeBase, fileExtension: template.fileExtension)
         do {
             try template.content.write(to: dest, atomically: true, encoding: .utf8)
             NSWorkspace.shared.activateFileViewerSelecting([dest])

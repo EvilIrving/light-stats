@@ -219,9 +219,9 @@
 "settings.finderMenu.refreshFinder" = "Finder 새로고침";
 "settings.finderMenu.finderRefreshing" = "Finder를 새로고침하는 중…";
 "settings.finderMenu.status.enabled" = "확장 프로그램이 활성화되어 우클릭 메뉴를 사용할 수 있습니다.";
-"settings.finderMenu.status.disabled" = "확장 프로그램이 등록되었지만 시스템 설정에서 활성화되지 않았습니다. 활성화 후 Mac 재시동은 필요 없습니다. 보이지 않으면 Finder를 새로고침하세요.";
-"settings.finderMenu.status.notRegistered" = "시스템이 아직 확장 프로그램을 등록하지 않았습니다. 앱이 '응용 프로그램'에 있는지 확인하고 앱 또는 Finder를 새로고침하세요.";
-"settings.finderMenu.status.unknown" = "확장 프로그램 상태를 확인할 수 없습니다.";
+"settings.finderMenu.status.disabled" = "시스템 설정에서 확장 프로그램이 아직 켜지지 않았습니다. 아래 버튼으로 활성화하세요(재시동 불필요).";
+"settings.finderMenu.status.notRegistered" = "시스템이 아직 확장 프로그램을 등록하지 않았습니다. 앱이 '응용 프로그램'에 있는지 확인한 뒤 앱을 다시 여세요.";
+"settings.finderMenu.status.unknown" = "확장 프로그램 상태를 확인할 수 없습니다. Finder를 새로고침해 보세요.";
 "settings.finderMenu.defaultTerminal" = "기본 터미널";
 "settings.finderMenu.cmuxActions" = "cmux 작업 표시";
 "settings.finderMenu.directories" = "자주 쓰는 폴더";
