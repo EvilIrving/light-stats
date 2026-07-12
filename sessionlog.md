@@ -1,3 +1,13 @@
+## Finder 文件面板挂起滚动/手势服务 · 2026-07-10 · pi-coding-agent
+
+修复 Finder 菜单设置中的文件选择面板（NSOpenPanel）与 ScrollDirectionService / TitlebarGestureService 的冲突。这两个服务通过 CGEventTap 拦截系统级滚动事件，当 NSOpenPanel 以 sheet 形式打开时，tap 仍然在处理事件，导致面板内的滚动行为异常（比如反向滚动仍然生效，标题栏手势误触发）。
+
+修法：FinderMenuConfigStore 在 present() 中发送 willPresent / didDismiss 通知，AppDelegate 观察这两个通知并调用 setSuspended(true/false) 挂起/恢复两个事件 tap 服务。setSuspended 时 ScrollDirectionService 原样放行事件，TitlebarGestureService 重置手势状态并隐藏预览。
+
+影响范围：AppDelegate、FinderMenuConfigStore、ScrollDirectionService、TitlebarGestureService 四个文件，仅在 Finder 文件面板打开期间生效。
+
+另外 deepseek_collab.sh 被误加了 API key 行（未提交），用 `git update-index --assume-unchanged` 让该文件不再出现在 git status 中。恢复：`--no-assume-unchanged`。
+
 ## 擦屏模式 KeyboardLockService 三处 bug 修复 · 2026-07-05 · claude-sonnet-4-6
 
 修复了擦屏模式（Cleaning Mode）的 `KeyboardLockService.swift`，两处导致功能异常的 bug + 一处内存管理小修复。Codex 和 DeepSeek 双重审查确认方案正确。
