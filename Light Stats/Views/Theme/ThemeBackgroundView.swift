@@ -5,7 +5,7 @@
 //  Mesh stack (bottom → top):
 //    1. Light field (film S-curve vs noir vertical shaft) — bold enough to read
 //    2. Soft radial reading veil (center only) — text contrast without burying art
-//    3. Shared film grain — always on top so grit stays visible
+//    3. Shared film grain — optional; always on top so grit stays crisp
 //
 //  Do NOT paint a full-frame opaque scrim over this; it kills grain + light shapes.
 //
@@ -40,21 +40,36 @@ struct ThemeBackgroundView: View {
 
 private struct FluidMeshBackground: View {
     let tokens: ThemeTokens
+    @ObservedObject private var settings = SettingsManager.shared
+    @State private var phaseAnchorDate = Date()
+    @State private var phaseAnchor: CGFloat = 0
+
+    /// Film-only user overrides; other mesh themes keep product defaults.
+    private var isFilm: Bool { tokens.theme == .film }
+    private var grainEnabled: Bool { !isFilm || settings.filmGrainEnabled }
+    private var lightFlow: Double { isFilm ? settings.filmLightFlow : 0.5 }
+    private var lightPosX: Double { isFilm ? settings.filmLightPositionX : 0.5 }
+    private var lightPosY: Double { isFilm ? settings.filmLightPositionY : 0.5 }
 
     /// Same grit strength for film + noir; film only warms the tint.
     private var grainWarmth: Double { tokens.theme == .film ? 0.5 : 0 }
-    private var grainOpacity: Double { 0.42 }
+    private var grainOpacity: Double { grainEnabled ? 0.42 : 0 }
+
+    private var animationPaused: Bool {
+        lightFlow < 0.02
+    }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: false)) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
-            let period = tokens.theme == .noir ? 24.0 : 18.0
-            let phase = CGFloat((time / period).truncatingRemainder(dividingBy: 1.0) * .pi * 2)
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: animationPaused)) { context in
+            let phase = phase(at: context.date, flow: tokens.theme == .noir ? 0.25 : lightFlow)
 
             GeometryReader { geo in
                 let width = geo.size.width
                 let height = geo.size.height
                 let scale = min(width, height)
+                // Keep the light mass inside the visible composition at slider extremes.
+                let shiftX = CGFloat(lightPosX - 0.5) * width * 0.4
+                let shiftY = CGFloat(lightPosY - 0.5) * height * 0.3
 
                 ZStack {
                     // 1) Light art — flattened for blur cost.
@@ -62,7 +77,13 @@ private struct FluidMeshBackground: View {
                         switch tokens.theme {
                         case .film:
                             FilmLightField(
-                                tokens: tokens, width: width, height: height, scale: scale, phase: phase
+                                tokens: tokens,
+                                width: width,
+                                height: height,
+                                scale: scale,
+                                phase: phase,
+                                shiftX: shiftX,
+                                shiftY: shiftY
                             )
                         case .noir:
                             NoirLightField(
@@ -74,33 +95,62 @@ private struct FluidMeshBackground: View {
                     }
                     .drawingGroup(opaque: true, colorMode: .extendedLinear)
 
-                    // 2) Soft center darken only — edges keep full light + shape.
-                    readingVeil(width: width, height: height, scale: scale)
+                    // 2) Soft center darken — tracks light bias slightly so shift stays visible.
+                    readingVeil(
+                        width: width,
+                        height: height,
+                        scale: scale,
+                        posX: lightPosX,
+                        posY: lightPosY
+                    )
 
-                    // 3) Grain always on top — must stay outside drawingGroup.
+                    // 3) Grain on top when enabled — must stay outside drawingGroup.
                     GrainTextureView(opacity: grainOpacity, warmth: grainWarmth)
                 }
                 .frame(width: width, height: height)
             }
         }
+        .onChange(of: lightFlow) { oldFlow, newFlow in
+            let now = Date()
+            phaseAnchor = phase(at: now, flow: oldFlow)
+            phaseAnchorDate = now
+            _ = newFlow
+        }
     }
 
-    /// Center opacity ~0.4 so cream text holds; rim almost clear so ribbons read.
-    private func readingVeil(width: CGFloat, height: CGFloat, scale: CGFloat) -> some View {
+    /// Integrate from a retained anchor so changing speed never teleports the light field.
+    private func phase(at date: Date, flow: Double) -> CGFloat {
+        guard flow >= 0.02 else { return phaseAnchor }
+        let elapsed = date.timeIntervalSince(phaseAnchorDate)
+        let radiansPerSecond = CGFloat(flow) * .pi / 3
+        return phaseAnchor + CGFloat(elapsed) * radiansPerSecond
+    }
+
+    /// Center opacity keeps cream text readable; rim stays clear for light shapes.
+    private func readingVeil(
+        width: CGFloat,
+        height: CGFloat,
+        scale: CGFloat,
+        posX: Double,
+        posY: Double
+    ) -> some View {
         let center = tokens.theme == .film
             ? Color(red: 0.06, green: 0.03, blue: 0.02)
             : Color.black
+        // Veil follows position a little so light shift isn’t canceled by a fixed scrim.
+        let veilX = 0.5 + (posX - 0.5) * 0.35
+        let veilY = 0.48 + (posY - 0.5) * 0.3
 
         return RadialGradient(
             colors: [
-                center.opacity(0.52),
-                center.opacity(0.28),
-                center.opacity(0.08),
+                center.opacity(0.48),
+                center.opacity(0.24),
+                center.opacity(0.06),
                 Color.clear
             ],
-            center: UnitPoint(x: 0.5, y: 0.48),
-            startRadius: scale * 0.08,
-            endRadius: max(width, height) * 0.72
+            center: UnitPoint(x: veilX, y: veilY),
+            startRadius: scale * 0.06,
+            endRadius: max(width, height) * 0.75
         )
         .allowsHitTesting(false)
     }
@@ -114,129 +164,142 @@ private struct FilmLightField: View {
     let height: CGFloat
     let scale: CGFloat
     let phase: CGFloat
+    /// Static composition bias in points, constrained by the mesh shell.
+    var shiftX: CGFloat = 0
+    var shiftY: CGFloat = 0
 
     var body: some View {
-        let driftX = cos(phase) * width * 0.07
-        let driftY = sin(phase * 0.75) * height * 0.04
-        let driftX2 = cos(phase * 0.95 + 1.1) * width * 0.055
-        let driftY2 = sin(phase * 1.05 + 0.5) * height * 0.045
+        let driftX = cos(phase) * width * 0.12
+        let driftY = sin(phase * 0.75) * height * 0.08
+        let driftX2 = cos(phase * 0.95 + 1.1) * width * 0.09
+        let driftY2 = sin(phase * 1.05 + 0.5) * height * 0.075
+        let phaseX = cos(phase) * 0.08
+        let ribbonTwist = Double(sin(phase)) * 9
+        let ribbonTwist2 = Double(cos(phase * 0.85)) * 7
+        // Slight composition tilt from horizontal position.
+        let compositionTilt = Double(shiftX / max(width, 1)) * 12
 
         return ZStack {
             tokens.meshBase
 
-            // Full diagonal wash — cream → coral → burgundy.
-            LinearGradient(
-                colors: [
-                    tokens.meshBlobHighlight.opacity(0.70),
-                    tokens.meshBlobSecondary.opacity(0.55),
-                    tokens.meshBlobPrimary.opacity(0.65),
-                    tokens.meshBase
-                ],
-                startPoint: UnitPoint(x: 0.0 + cos(phase) * 0.05, y: 0.0),
-                endPoint: UnitPoint(x: 1.0, y: 1.0)
-            )
-
-            // Coral mass (lower-right lobe of the S).
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobSecondary.opacity(0.95),
-                            tokens.meshBlobSecondary.opacity(0.55),
-                            tokens.meshBlobPrimary.opacity(0.25),
-                            Color.clear
-                        ],
-                        center: UnitPoint(x: 0.65, y: 0.6),
-                        startRadius: 0,
-                        endRadius: scale * 0.9
-                    )
+            // All light art moves as one composition — position slider is a clear pan.
+            ZStack {
+                // Full diagonal wash — cream → coral → burgundy.
+                LinearGradient(
+                    colors: [
+                        tokens.meshBlobHighlight.opacity(0.75),
+                        tokens.meshBlobSecondary.opacity(0.60),
+                        tokens.meshBlobPrimary.opacity(0.70),
+                        tokens.meshBase
+                    ],
+                    startPoint: UnitPoint(x: 0.0 + phaseX, y: 0.0),
+                    endPoint: UnitPoint(x: 1.0, y: 1.0)
                 )
-                .frame(width: width * 1.7, height: height * 1.25)
-                .blur(radius: scale * 0.2)
-                .offset(x: width * 0.22 + driftX, y: height * 0.2 + driftY)
-                .blendMode(.plusLighter)
 
-            // Burgundy counter-lobe — secondary mass, kept soft so main ribbon reads.
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobPrimary.opacity(0.55),
-                            tokens.meshBlobPrimary.opacity(0.22),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: scale * 0.75
+                // Coral mass (lower-right lobe of the S).
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                tokens.meshBlobSecondary.opacity(0.98),
+                                tokens.meshBlobSecondary.opacity(0.60),
+                                tokens.meshBlobPrimary.opacity(0.30),
+                                Color.clear
+                            ],
+                            center: UnitPoint(x: 0.65, y: 0.6),
+                            startRadius: 0,
+                            endRadius: scale * 0.9
+                        )
                     )
-                )
-                .frame(width: width * 1.2, height: height * 0.9)
-                .blur(radius: scale * 0.2)
-                .offset(x: -width * 0.22 + driftX * 0.45, y: -height * 0.1 - driftY * 0.35)
-                .blendMode(.normal)
-                .opacity(0.55)
+                    .frame(width: width * 1.7, height: height * 1.25)
+                    .blur(radius: scale * 0.18)
+                    .offset(x: width * 0.22 + driftX, y: height * 0.2 + driftY)
+                    .blendMode(.plusLighter)
 
-            // Primary S-ribbon — long shallow band (main light shape).
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            tokens.meshBlobHighlight.opacity(0.85),
-                            tokens.meshBlobSecondary.opacity(0.75),
-                            tokens.meshBlobHighlight.opacity(0.45),
-                            Color.clear
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                // Burgundy counter-lobe.
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                tokens.meshBlobPrimary.opacity(0.60),
+                                tokens.meshBlobPrimary.opacity(0.25),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: scale * 0.75
+                        )
                     )
-                )
-                .frame(width: width * 1.85, height: height * 0.38)
-                .blur(radius: scale * 0.09)
-                .rotationEffect(.degrees(-26 + Double(sin(phase)) * 6))
-                .offset(x: driftX * 0.8, y: height * 0.04 + driftY * 0.7)
-                .blendMode(.screen)
+                    .frame(width: width * 1.2, height: height * 0.9)
+                    .blur(radius: scale * 0.18)
+                    .offset(x: -width * 0.22 + driftX * 0.45, y: -height * 0.1 - driftY * 0.35)
+                    .blendMode(.normal)
+                    .opacity(0.6)
 
-            // Secondary ribbon — much quieter parallel accent.
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            tokens.meshBlobSecondary.opacity(0.28),
-                            tokens.meshBlobHighlight.opacity(0.16),
-                            Color.clear
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                // Primary S-ribbon.
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                tokens.meshBlobHighlight.opacity(0.90),
+                                tokens.meshBlobSecondary.opacity(0.80),
+                                tokens.meshBlobHighlight.opacity(0.50),
+                                Color.clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-                .frame(width: width * 1.35, height: height * 0.16)
-                .blur(radius: scale * 0.13)
-                .rotationEffect(.degrees(-16 + Double(cos(phase * 0.85)) * 4))
-                .offset(x: -width * 0.06 + driftX2, y: -height * 0.14 + driftY2)
-                .blendMode(.screen)
-                .opacity(0.4)
+                    .frame(width: width * 1.85, height: height * 0.40)
+                    .blur(radius: scale * 0.08)
+                    .rotationEffect(.degrees(-26 + ribbonTwist + compositionTilt))
+                    .offset(x: driftX * 0.8, y: height * 0.04 + driftY * 0.7)
+                    .blendMode(.screen)
 
-            // Cream bloom — secondary blob, reduced so it doesn’t compete with the ribbon.
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobHighlight.opacity(0.32),
-                            tokens.meshBlobHighlight.opacity(0.08),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: scale * 0.55
+                // Secondary ribbon.
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                tokens.meshBlobSecondary.opacity(0.35),
+                                tokens.meshBlobHighlight.opacity(0.20),
+                                Color.clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-                .frame(width: width * 0.85, height: height * 0.65)
-                .blur(radius: scale * 0.16)
-                .offset(x: -width * 0.32 + driftX2 * 0.4, y: -height * 0.32 + driftY2 * 0.3)
-                .blendMode(.plusLighter)
-                .opacity(0.45)
+                    .frame(width: width * 1.35, height: height * 0.18)
+                    .blur(radius: scale * 0.12)
+                    .rotationEffect(.degrees(-16 + ribbonTwist2 + compositionTilt * 0.5))
+                    .offset(x: -width * 0.06 + driftX2, y: -height * 0.14 + driftY2)
+                    .blendMode(.screen)
+                    .opacity(0.5)
+
+                // Cream bloom.
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                tokens.meshBlobHighlight.opacity(0.40),
+                                tokens.meshBlobHighlight.opacity(0.10),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: scale * 0.55
+                        )
+                    )
+                    .frame(width: width * 0.9, height: height * 0.7)
+                    .blur(radius: scale * 0.14)
+                    .offset(x: -width * 0.32 + driftX2 * 0.4, y: -height * 0.32 + driftY2 * 0.3)
+                    .blendMode(.plusLighter)
+                    .opacity(0.55)
+            }
+            // Single pan of the whole light stack — position knobs read immediately.
+            .offset(x: shiftX, y: shiftY)
         }
     }
 }
@@ -259,7 +322,6 @@ private struct NoirLightField: View {
         return ZStack {
             tokens.meshBase
 
-            // Cool ceiling → void floor.
             LinearGradient(
                 colors: [
                     tokens.meshBlobHighlight.opacity(0.45),
@@ -271,7 +333,6 @@ private struct NoirLightField: View {
                 endPoint: UnitPoint(x: 0.5, y: 1.0)
             )
 
-            // Tall vertical shaft (center-right).
             Ellipse()
                 .fill(
                     RadialGradient(
@@ -291,7 +352,6 @@ private struct NoirLightField: View {
                 .offset(x: width * 0.14 + driftX, y: -height * 0.1 + driftY)
                 .blendMode(.screen)
 
-            // Cool side pool — secondary blob, quiet fill only.
             Ellipse()
                 .fill(
                     RadialGradient(
@@ -311,7 +371,6 @@ private struct NoirLightField: View {
                 .blendMode(.plusLighter)
                 .opacity(0.4)
 
-            // Steep ribbon A — main noir light band.
             Capsule()
                 .fill(
                     LinearGradient(
@@ -331,7 +390,6 @@ private struct NoirLightField: View {
                 .offset(x: width * 0.1 + driftX * 0.5, y: driftY * 0.35)
                 .blendMode(.screen)
 
-            // Steep ribbon B — secondary counter-band, heavily reduced.
             Capsule()
                 .fill(
                     LinearGradient(
@@ -352,7 +410,6 @@ private struct NoirLightField: View {
                 .blendMode(.screen)
                 .opacity(0.35)
 
-            // Top rim glow — secondary, soft ceiling only.
             Ellipse()
                 .fill(
                     RadialGradient(
@@ -371,7 +428,6 @@ private struct NoirLightField: View {
                 .blendMode(.plusLighter)
                 .opacity(0.45)
 
-            // Floor darken — keeps noir “void” under the shaft.
             LinearGradient(
                 colors: [
                     Color.clear,

@@ -24,7 +24,12 @@ struct GeneralDetail: View {
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
             SettingsSection("settings.theme".localized) {
-                ThemePickerView(selection: $settings.appTheme)
+                VStack(alignment: .leading, spacing: 10) {
+                    ThemePickerView(selection: $settings.appTheme)
+                    if settings.appTheme == .film {
+                        filmAppearanceControls
+                    }
+                }
             }
             SettingsSection("settings.general.app".localized) {
                 SettingsGroup {
@@ -72,6 +77,83 @@ struct GeneralDetail: View {
                 }
             }
         }
+    }
+
+    /// 胶片棕专属：实时预览 + 颗粒开关 + 光影流动 / 位置滑块。
+    /// 设置窗本身不跟主题，所以必须内嵌预览，否则滑块没有可见反馈。
+    private var filmAppearanceControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            filmLivePreview
+            SettingsGroup {
+                SettingsRow(
+                    "settings.theme.film.grain".localized,
+                    subtitle: "settings.theme.film.grain.hint".localized
+                ) {
+                    SettingsToggle(isOn: $settings.filmGrainEnabled)
+                }
+                rowDivider()
+                filmSliderRow(
+                    title: "settings.theme.film.lightFlow".localized,
+                    value: $settings.filmLightFlow,
+                    format: { String(format: "%.0f%%", $0 * 100) }
+                )
+                rowDivider()
+                filmSliderRow(
+                    title: "settings.theme.film.lightPositionX".localized,
+                    value: $settings.filmLightPositionX,
+                    format: positionLabel
+                )
+                rowDivider()
+                filmSliderRow(
+                    title: "settings.theme.film.lightPositionY".localized,
+                    value: $settings.filmLightPositionY,
+                    format: positionLabel
+                )
+            }
+        }
+    }
+
+    /// Compact film mesh so grain / flow / position updates are visible in-settings.
+    private var filmLivePreview: some View {
+        ThemeBackgroundView(tokens: .film, cornerRadius: 10)
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            )
+            .accessibilityLabel("settings.theme.film".localized)
+    }
+
+    private func filmSliderRow(
+        title: String,
+        value: Binding<Double>,
+        format: @escaping (Double) -> String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                Spacer()
+                Text(format(value.wrappedValue))
+                    .font(.system(size: 12, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: 0...1, step: 0.01)
+                .controlSize(.small)
+                .focusable(false)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    /// 0…1 → L50 / Center / R50 style readout for position sliders.
+    private func positionLabel(_ value: Double) -> String {
+        let bias = Int(((value - 0.5) * 200).rounded())
+        if abs(bias) < 3 { return "·" }
+        return bias < 0 ? "\(bias)" : "+\(bias)"
     }
 
     /// 单行：检查按钮 + 可用版本入口 + 稳定/Beta 通道 + 自动更新开关。
