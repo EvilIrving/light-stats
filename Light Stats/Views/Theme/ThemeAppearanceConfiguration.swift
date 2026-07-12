@@ -7,16 +7,15 @@ import Foundation
 
 struct ThemeAppearanceConfiguration: Equatable, Sendable {
     let grainEnabled: Bool
-    let lightFlow: Double
-    let lightPositionX: Double
-    let lightPositionY: Double
+    let dynamics: Double
 
-    static func defaults(for theme: AppTheme) -> ThemeAppearanceConfiguration {
+    /// Natural light dynamics (segment value 0.4) for both mesh themes.
+    static let defaultDynamics: Double = 0.4
+
+    static func defaults(for _: AppTheme) -> ThemeAppearanceConfiguration {
         ThemeAppearanceConfiguration(
             grainEnabled: true,
-            lightFlow: theme == .noir ? 0.25 : 0.5,
-            lightPositionX: 0.5,
-            lightPositionY: 0.5
+            dynamics: defaultDynamics
         )
     }
 }
@@ -27,16 +26,12 @@ extension SettingsManager {
         case .film:
             return ThemeAppearanceConfiguration(
                 grainEnabled: filmGrainEnabled,
-                lightFlow: filmLightFlow,
-                lightPositionX: filmLightPositionX,
-                lightPositionY: filmLightPositionY
+                dynamics: filmLightFlow
             )
         case .noir:
             return ThemeAppearanceConfiguration(
                 grainEnabled: noirGrainEnabled,
-                lightFlow: noirLightFlow,
-                lightPositionX: noirLightPositionX,
-                lightPositionY: noirLightPositionY
+                dynamics: noirLightFlow
             )
         default:
             return .defaults(for: theme)

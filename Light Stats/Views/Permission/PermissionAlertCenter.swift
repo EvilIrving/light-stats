@@ -71,24 +71,24 @@ enum PermissionAlertCenter {
     }
 
     private static func makePanel() -> NSPanel {
+        // Borderless: no system titlebar / traffic-light close button.
+        // With `.titled + .closable + .fullSizeContentView` the red close control
+        // stays in the titlebar chrome and floats over the themed card (see the
+        // gray disc above the dialog). Dismiss is via “Later” / Open Settings.
         let win = NSPanel(
             contentRect: .zero,
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        win.title = ""
-        win.titleVisibility = .hidden
-        win.titlebarAppearsTransparent = true
         win.isOpaque = false
         win.backgroundColor = .clear
+        win.hasShadow = false
         win.isMovableByWindowBackground = true
         win.level = .floating
         win.isReleasedWhenClosed = false
         win.hidesOnDeactivate = false
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
-        win.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        win.standardWindowButton(.zoomButton)?.isHidden = true
         return win
     }
 
@@ -150,6 +150,7 @@ struct PermissionAlertView: View {
                         .padding(.vertical, 8)
                 }
                 .buttonStyle(PermissionSecondaryButtonStyle(theme: theme))
+                .keyboardShortcut(.cancelAction)
 
                 Button(action: onOpenSettings) {
                     Text("cleaning.permission.openSettings".localized)
@@ -184,7 +185,7 @@ struct PermissionAlertView: View {
         )
         .shadow(color: .black.opacity(0.22 + theme.surfaceShadowOpacity * 0.25), radius: 20, y: 8)
         .focusable(false)
-        .id(localization.currentLanguage)
+        .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
         .appThemed(settings.appTheme)
     }
 }

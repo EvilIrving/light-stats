@@ -97,9 +97,10 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().diagnosticLogLevel, .full)
     }
 
-    func testAppThemeDefaultsToFilm() {
-        // Cold start is 胶片棕 (film brown); other themes are opt-in.
-        XCTAssertEqual(freshSettings().appTheme, .film)
+    func testAppThemeDefaultsToGlass() {
+        // Cold start is Default (raw `.glass`); picker order Default → Bento → Sun Gold → Ink Night.
+        XCTAssertEqual(freshSettings().appTheme, .glass)
+        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir])
     }
 
     func testLegacyAuroraThemeKeyMigratesToFilm() {
@@ -115,17 +116,14 @@ final class SettingsDefaultsTests: XCTestCase {
     func testFilmAppearanceDefaults() {
         let settings = freshSettings()
         XCTAssertTrue(settings.filmGrainEnabled)
-        XCTAssertEqual(settings.filmLightFlow, 0.5, accuracy: 0.0001)
-        XCTAssertEqual(settings.filmLightPositionX, 0.5, accuracy: 0.0001)
-        XCTAssertEqual(settings.filmLightPositionY, 0.5, accuracy: 0.0001)
+        // Natural segment (0.4) — see ThemeAppearancePresetConfiguration.dynamicsValues.
+        XCTAssertEqual(settings.filmLightFlow, 0.4, accuracy: 0.0001)
     }
 
     func testNoirAppearanceDefaults() {
         let settings = freshSettings()
         XCTAssertTrue(settings.noirGrainEnabled)
-        XCTAssertEqual(settings.noirLightFlow, 0.25, accuracy: 0.0001)
-        XCTAssertEqual(settings.noirLightPositionX, 0.5, accuracy: 0.0001)
-        XCTAssertEqual(settings.noirLightPositionY, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(settings.noirLightFlow, 0.4, accuracy: 0.0001)
     }
 
     // MARK: - Persisted overrides are honored (DI sanity check)

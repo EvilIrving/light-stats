@@ -115,7 +115,7 @@ struct AboutView: View {
             )
             .ignoresSafeArea()
         )
-        .id(localization.currentLanguage)
+        .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
         .appThemed(settings.appTheme)
         .focusable(false)
     }

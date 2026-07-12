@@ -17,7 +17,7 @@ import SwiftUI
 struct GrainTextureView: View {
     /// Overall strength. Mesh themes use ~0.32 soft-light.
     var opacity: Double
-    /// Optional warm tint for 胶片棕 (0 = neutral mono grit for noir).
+    /// Optional warm tint for Sun Gold / 晒金 (0 = neutral mono grit for Ink Night).
     var warmth: Double = 0
 
     var body: some View {

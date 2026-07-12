@@ -26,23 +26,4 @@ enum FilmAppearanceLabel {
         }
     }
 
-    static func horizontalPosition(_ value: Double) -> String {
-        switch value {
-        case ..<0.15: return "settings.theme.film.position.farLeft".localized
-        case ..<0.4: return "settings.theme.film.position.left".localized
-        case ..<0.6: return "settings.theme.film.position.center".localized
-        case ..<0.85: return "settings.theme.film.position.right".localized
-        default: return "settings.theme.film.position.farRight".localized
-        }
-    }
-
-    static func verticalPosition(_ value: Double) -> String {
-        switch value {
-        case ..<0.15: return "settings.theme.film.position.top".localized
-        case ..<0.4: return "settings.theme.film.position.upper".localized
-        case ..<0.6: return "settings.theme.film.position.center".localized
-        case ..<0.85: return "settings.theme.film.position.lower".localized
-        default: return "settings.theme.film.position.bottom".localized
-        }
-    }
 }

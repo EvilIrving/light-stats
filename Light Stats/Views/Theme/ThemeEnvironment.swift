@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - Environment
 
 private struct ThemeKey: EnvironmentKey {
-    static let defaultValue = ThemeTokens.film
+    static let defaultValue = ThemeTokens.glass
 }
 
 extension EnvironmentValues {

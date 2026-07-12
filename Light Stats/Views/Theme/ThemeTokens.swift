@@ -90,7 +90,7 @@ struct ThemeTokens: Equatable {
         }
     }
 
-    /// 胶片棕 — warm mesh atmosphere + dark reading scrim + high-contrast cream ink.
+    /// Sun Gold / 晒金 — warm mesh atmosphere + dark reading scrim + high-contrast cream ink.
     static let film = ThemeTokens(
         theme: .film,
         preferredColorScheme: .dark,

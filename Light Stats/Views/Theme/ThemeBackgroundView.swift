@@ -42,7 +42,10 @@ struct ThemeBackgroundView: View {
                     configuresWindow: configuresWindow
                 )
             } else if tokens.usesMesh {
+                // film ↔ noir share this branch; without a theme id, TimelineView +
+                // drawingGroup can keep the previous mesh theme’s Metal layer.
                 FluidMeshBackground(tokens: tokens, appearance: appearance)
+                    .id(tokens.theme)
             } else {
                 tokens.canvas
             }
@@ -64,23 +67,28 @@ private struct FluidMeshBackground: View {
     private var grainOpacity: Double { appearance.grainEnabled ? 0.42 : 0 }
 
     private var animationPaused: Bool {
-        appearance.lightFlow < 0.02
+        appearance.dynamics < 0.02
     }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: animationPaused)) { context in
-            let phase = phase(at: context.date, flow: appearance.lightFlow)
+            let phase = phase(at: context.date, dynamics: appearance.dynamics)
 
             GeometryReader { geo in
                 let width = geo.size.width
                 let height = geo.size.height
                 let scale = min(width, height)
-                // Keep the light mass inside the visible composition at slider extremes.
-                let shiftX = CGFloat(appearance.lightPositionX - 0.5) * width * 0.4
-                let shiftY = CGFloat(appearance.lightPositionY - 0.5) * height * 0.3
+                let motion = motionOffset(
+                    phase: phase,
+                    dynamics: appearance.dynamics,
+                    width: width,
+                    height: height
+                )
 
                 ZStack {
                     // 1) Light art — flattened for blur cost.
+                    // Identity must include theme: opaque drawingGroup caches the
+                    // raster and will not swap FilmLightField ↔ NoirLightField on its own.
                     Group {
                         switch tokens.theme {
                         case .film:
@@ -90,8 +98,8 @@ private struct FluidMeshBackground: View {
                                 height: height,
                                 scale: scale,
                                 phase: phase,
-                                shiftX: shiftX,
-                                shiftY: shiftY
+                                shiftX: motion.x,
+                                shiftY: motion.y
                             )
                         case .noir:
                             NoirLightField(
@@ -100,22 +108,23 @@ private struct FluidMeshBackground: View {
                                 height: height,
                                 scale: scale,
                                 phase: phase,
-                                shiftX: shiftX,
-                                shiftY: shiftY
+                                shiftX: motion.x,
+                                shiftY: motion.y
                             )
                         default:
                             tokens.meshBase
                         }
                     }
                     .drawingGroup(opaque: true, colorMode: .extendedLinear)
+                    .id(tokens.theme)
 
                     // 2) Soft center darken — tracks light bias slightly so shift stays visible.
                     readingVeil(
                         width: width,
                         height: height,
                         scale: scale,
-                        posX: appearance.lightPositionX,
-                        posY: appearance.lightPositionY
+                        posX: 0.5 + Double(motion.x / max(width, 1)),
+                        posY: 0.5 + Double(motion.y / max(height, 1))
                     )
 
                     // 3) Grain on top when enabled — must stay outside drawingGroup.
@@ -124,19 +133,50 @@ private struct FluidMeshBackground: View {
                 .frame(width: width, height: height)
             }
         }
-        .onChange(of: appearance.lightFlow) { oldFlow, _ in
+        // Light ellipses/capsules are larger than the view and drift with negative Y.
+        // Keep them out of the hit-test tree so they never intercept sibling controls
+        // (settings theme tiles sit directly above the live preview).
+        .allowsHitTesting(false)
+        .onChange(of: appearance.dynamics) { oldDynamics, _ in
             let now = Date()
-            phaseAnchor = phase(at: now, flow: oldFlow)
+            phaseAnchor = phase(at: now, dynamics: oldDynamics)
             phaseAnchorDate = now
         }
     }
 
-    /// Integrate from a retained anchor so changing speed never teleports the light field.
-    private func phase(at date: Date, flow: Double) -> CGFloat {
-        guard flow >= 0.02 else { return phaseAnchor }
+    /// Continuous phase with two low-frequency bands for organic acceleration and deceleration.
+    private func phase(at date: Date, dynamics: Double) -> CGFloat {
+        guard dynamics >= 0.02 else { return phaseAnchor }
         let elapsed = date.timeIntervalSince(phaseAnchorDate)
-        let radiansPerSecond = CGFloat(flow) * .pi / 3
-        return phaseAnchor + CGFloat(elapsed) * radiansPerSecond
+        let smoothDynamics = dynamics * dynamics * (3 - 2 * dynamics)
+        let travel = CGFloat(elapsed * smoothDynamics) * .pi / 3
+        let slowBand = sin((phaseAnchor + travel) * 0.19) - sin(phaseAnchor * 0.19)
+        let detailBand = sin((phaseAnchor + travel) * 0.37 + 1.2) - sin(phaseAnchor * 0.37 + 1.2)
+        return phaseAnchor + travel + slowBand * 0.12 + detailBand * 0.06
+    }
+
+    /// Theme-specific quasi-periodic Lissajous orbit driven by the single dynamics value.
+    private func motionOffset(
+        phase: CGFloat,
+        dynamics: Double,
+        width: CGFloat,
+        height: CGFloat
+    ) -> CGPoint {
+        guard dynamics >= 0.02 else { return .zero }
+        let smoothDynamics = CGFloat(dynamics * dynamics * (3 - 2 * dynamics))
+        let isNoir = tokens.theme == .noir
+        // Noir starts restrained but opens into a much wider orbit at the lively end.
+        let amplitude = isNoir ? 0.35 + smoothDynamics * 1.15 : 0.68 + smoothDynamics * 0.32
+        let phaseOffset: CGFloat = isNoir ? 1.35 : 0.45
+        let horizontalPrimary: CGFloat = isNoir ? 0.14 : 0.105
+        let horizontalSecondary: CGFloat = isNoir ? 0.05 : 0.038
+        let verticalPrimary: CGFloat = isNoir ? 0.12 : 0.065
+        let verticalSecondary: CGFloat = isNoir ? 0.045 : 0.028
+        let positionX = sin(phase * 0.61 + phaseOffset) * horizontalPrimary
+            + sin(phase * 1.17 + 1.1) * horizontalSecondary
+        let positionY = cos(phase * 0.43 + phaseOffset) * verticalPrimary
+            + sin(phase * 0.83 + 2.0) * verticalSecondary
+        return CGPoint(x: width * amplitude * positionX, y: height * amplitude * positionY)
     }
 
     /// Center opacity keeps cream text readable; rim stays clear for light shapes.

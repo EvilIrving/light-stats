@@ -98,7 +98,8 @@ struct PopoverContentView: View {
         )
         .frame(width: 360, height: 780)
         .cornerRadius(12)
-        .id(localization.currentLanguage) // Force refresh when language changes
+        // Language + theme: mesh↔mesh (film/noir) must rebuild chrome, not only language.
+        .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
         .appThemed(settings.appTheme)
         .focusable(false)
         .overlayPreferenceValue(ToolbarIconBoundsKey.self) { anchors in

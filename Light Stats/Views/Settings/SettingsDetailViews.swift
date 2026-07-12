@@ -23,9 +23,24 @@ struct GeneralDetail: View {
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
+            // Theme first: picker, monochrome UI, then mesh preview / grain / dynamics.
             SettingsSection("settings.theme".localized) {
                 VStack(alignment: .leading, spacing: 10) {
-                    ThemePickerView(selection: $settings.appTheme)
+                    SettingsGroup {
+                        HStack {
+                            Spacer(minLength: 0)
+                            ThemePickerView(selection: $settings.appTheme)
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 40)
+                        rowDivider()
+                        SettingsRow(
+                            "settings.flatColors.section".localized,
+                            subtitle: "settings.flatColors.hint".localized
+                        ) {
+                            SettingsToggle(isOn: $settings.useFlatColors)
+                        }
+                    }
                     themeAppearanceControls
                 }
             }
@@ -80,9 +95,7 @@ struct GeneralDetail: View {
     func meshAppearanceControls(
         tokens: ThemeTokens,
         grainEnabled: Binding<Bool>,
-        lightFlow: Binding<Double>,
-        lightPositionX: Binding<Double>,
-        lightPositionY: Binding<Double>,
+        dynamics: Binding<Double>,
         presets: ThemeAppearancePresetConfiguration
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -95,26 +108,19 @@ struct GeneralDetail: View {
                     SettingsToggle(isOn: grainEnabled)
                 }
                 rowDivider()
-                filmSegmentedRow(
-                    title: "settings.theme.film.lightFlow".localized,
-                    value: lightFlow,
-                    options: presets.flowValues,
-                    format: FilmAppearanceLabel.flow
-                )
-                rowDivider()
-                filmSegmentedRow(
-                    title: "settings.theme.film.lightPositionX".localized,
-                    value: lightPositionX,
-                    options: presets.positionValues,
-                    format: FilmAppearanceLabel.horizontalPosition
-                )
-                rowDivider()
-                filmSegmentedRow(
-                    title: "settings.theme.film.lightPositionY".localized,
-                    value: lightPositionY,
-                    options: presets.positionValues,
-                    format: FilmAppearanceLabel.verticalPosition
-                )
+                SettingsRow("settings.theme.film.lightFlow".localized) {
+                    SettingsSegmentedPicker(
+                        selection: FilmAppearanceLabel.discreteBinding(
+                            dynamics,
+                            options: presets.dynamicsValues
+                        ),
+                        segmentMinWidth: 44
+                    ) {
+                        ForEach(presets.dynamicsValues, id: \.self) { option in
+                            SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
+                        }
+                    }
+                }
             }
         }
     }
@@ -127,36 +133,18 @@ struct GeneralDetail: View {
             .frame(maxWidth: .infinity)
             .frame(height: 120)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            // Decorative only. Mesh light fields are oversized + offset upward; without this
+            // their hit targets steal taps from the theme tiles above (esp. film when noir
+            // is lively). Visual clip does not clip hit-testing.
+            .allowsHitTesting(false)
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
+            // film ↔ noir are both mesh previews; pin identity so the raster cannot stick.
+            .id(tokens.theme)
             .accessibilityLabel(tokens.theme.titleKey.localized)
-    }
-
-    private func filmSegmentedRow(
-        title: String,
-        value: Binding<Double>,
-        options: [Double],
-        format: @escaping (Double) -> String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.primary)
-            Picker("", selection: FilmAppearanceLabel.discreteBinding(value, options: options)) {
-                ForEach(options, id: \.self) { option in
-                    Text(format(option)).tag(option)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(.regular)
-            .frame(maxWidth: .infinity)
-                .focusable(false)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
     }
 
     /// 单行：检查按钮 + 可用版本入口 + 稳定/Beta 通道 + 自动更新开关。
@@ -244,36 +232,29 @@ struct MonitoringDetail: View {
                     }
                 }
             }
-            SettingsSection("settings.appearance".localized) {
-                SettingsGroup {
-                    SettingsRow(
-                        "settings.flatColors.section".localized,
-                        subtitle: "settings.flatColors.hint".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.useFlatColors)
-                    }
-                    rowDivider()
-                    SettingsRow(
-                        "settings.colorIndicator".localized,
-                        subtitle: "settings.accessibility.colorIndicator.hint".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.useColorIndicator)
-                    }
-                }
-            }
             SettingsSection("settings.health".localized) {
-                LazyVGrid(columns: columns, spacing: 8) {
-                    dim("health.dimension.cpu", $settings.healthIncludeCPU, .low)
-                    dim("health.dimension.memory", $settings.healthIncludeMemory, .low)
-                    dim("health.dimension.load", $settings.healthIncludeLoad, .medium)
-                    dim("health.dimension.temperature", $settings.healthIncludeTemperature, .high)
-                    dim("health.dimension.gpu", $settings.healthIncludeGPU, .medium)
-                    dim("settings.healthDimensions.power", $settings.healthIncludePower, .low)
+                VStack(alignment: .leading, spacing: 10) {
+                    SettingsGroup {
+                        SettingsRow(
+                            "settings.colorIndicator".localized,
+                            subtitle: "settings.accessibility.colorIndicator.hint".localized
+                        ) {
+                            SettingsToggle(isOn: $settings.useColorIndicator)
+                        }
+                    }
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        dim("health.dimension.cpu", $settings.healthIncludeCPU, .low)
+                        dim("health.dimension.memory", $settings.healthIncludeMemory, .low)
+                        dim("health.dimension.load", $settings.healthIncludeLoad, .medium)
+                        dim("health.dimension.temperature", $settings.healthIncludeTemperature, .high)
+                        dim("health.dimension.gpu", $settings.healthIncludeGPU, .medium)
+                        dim("settings.healthDimensions.power", $settings.healthIncludePower, .low)
+                    }
+                    Text("settings.healthDimensions.hint".localized)
+                        .font(.system(size: 10)).foregroundStyle(Color.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Text("settings.healthDimensions.hint".localized)
-                    .font(.system(size: 10)).foregroundStyle(Color.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

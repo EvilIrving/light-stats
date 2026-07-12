@@ -135,7 +135,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(useFlatColors, for: .useFlatColors) }
     }
 
-    /// Visual theme for popover / settings / about. Default `.film` (胶片棕).
+    /// Visual theme for popover / settings / about. Default `.glass` (Default / 默认).
     @Published var appTheme: AppTheme {
         didSet { save(appTheme.rawValue, for: .appTheme) }
     }
@@ -146,7 +146,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var filmGrainEnabled: Bool {
         didSet { save(filmGrainEnabled, for: .filmGrainEnabled) }
     }
-    /// Light-field motion intensity. 0 = frozen, 0.5 = product default, 1 = lively.
+    /// Light-field motion intensity. 0 = frozen, 0.4 = natural (default), 1 = lively.
     @Published var filmLightFlow: Double {
         didSet {
             let safeValue = min(max(filmLightFlow, 0), 1)
@@ -157,29 +157,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             save(filmLightFlow, for: .filmLightFlow)
         }
     }
-    /// Horizontal bias of the film light field. 0 = left, 0.5 = default, 1 = right.
-    @Published var filmLightPositionX: Double {
-        didSet {
-            let safeValue = min(max(filmLightPositionX, 0), 1)
-            guard safeValue == filmLightPositionX else {
-                filmLightPositionX = safeValue
-                return
-            }
-            save(filmLightPositionX, for: .filmLightPositionX)
-        }
-    }
-    /// Vertical bias of the film light field. 0 = top, 0.5 = default, 1 = bottom.
-    @Published var filmLightPositionY: Double {
-        didSet {
-            let safeValue = min(max(filmLightPositionY, 0), 1)
-            guard safeValue == filmLightPositionY else {
-                filmLightPositionY = safeValue
-                return
-            }
-            save(filmLightPositionY, for: .filmLightPositionY)
-        }
-    }
-
     // MARK: - Noir theme appearance
 
     @Published var noirGrainEnabled: Bool {
@@ -195,27 +172,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             save(noirLightFlow, for: .noirLightFlow)
         }
     }
-    @Published var noirLightPositionX: Double {
-        didSet {
-            let safeValue = min(max(noirLightPositionX, 0), 1)
-            guard safeValue == noirLightPositionX else {
-                noirLightPositionX = safeValue
-                return
-            }
-            save(noirLightPositionX, for: .noirLightPositionX)
-        }
-    }
-    @Published var noirLightPositionY: Double {
-        didSet {
-            let safeValue = min(max(noirLightPositionY, 0), 1)
-            guard safeValue == noirLightPositionY else {
-                noirLightPositionY = safeValue
-                return
-            }
-            save(noirLightPositionY, for: .noirLightPositionY)
-        }
-    }
-
     // MARK: - Other Settings
 
     /// 开机启动。真相源是系统登录项（`SMAppService`），不落 UserDefaults。
@@ -458,12 +414,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case appTheme = "settings.appTheme"
         case filmGrainEnabled = "settings.filmGrainEnabled"
         case filmLightFlow = "settings.filmLightFlow"
-        case filmLightPositionX = "settings.filmLightPositionX"
-        case filmLightPositionY = "settings.filmLightPositionY"
         case noirGrainEnabled = "settings.noirGrainEnabled"
         case noirLightFlow = "settings.noirLightFlow"
-        case noirLightPositionX = "settings.noirLightPositionX"
-        case noirLightPositionY = "settings.noirLightPositionY"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case appLanguage = "settings.appLanguage"
@@ -519,23 +471,15 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
-        // 主题：默认 film（胶片棕）。兼容上一版短暂使用的 aurora 键。
+        // 主题：默认 glass（展示名「默认」）。aurora/paper 仍映射到 film（晒金）。
         appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
-        // 胶片外观：颗粒默认开；光影流动/位置中点 = 产品默认构图。
+        // Mesh appearance: grain on; light dynamics default = Natural (0.4).
         filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true
-        let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.5
+        let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.4
         filmLightFlow = min(max(storedFlow, 0), 1)
-        let storedPosX = defaults.object(forKey: Key.filmLightPositionX.rawValue) as? Double ?? 0.5
-        filmLightPositionX = min(max(storedPosX, 0), 1)
-        let storedPosY = defaults.object(forKey: Key.filmLightPositionY.rawValue) as? Double ?? 0.5
-        filmLightPositionY = min(max(storedPosY, 0), 1)
         noirGrainEnabled = defaults.object(forKey: Key.noirGrainEnabled.rawValue) as? Bool ?? true
-        let storedNoirFlow = defaults.object(forKey: Key.noirLightFlow.rawValue) as? Double ?? 0.25
+        let storedNoirFlow = defaults.object(forKey: Key.noirLightFlow.rawValue) as? Double ?? 0.4
         noirLightFlow = min(max(storedNoirFlow, 0), 1)
-        let storedNoirPosX = defaults.object(forKey: Key.noirLightPositionX.rawValue) as? Double ?? 0.5
-        noirLightPositionX = min(max(storedNoirPosX, 0), 1)
-        let storedNoirPosY = defaults.object(forKey: Key.noirLightPositionY.rawValue) as? Double ?? 0.5
-        noirLightPositionY = min(max(storedNoirPosY, 0), 1)
 
         // 开机启动：以系统登录项注册状态为唯一真相源。
         launchAtLogin = LaunchAtLoginService.isEnabled
