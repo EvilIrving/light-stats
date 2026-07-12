@@ -10,8 +10,13 @@ struct PopoverContentView: View {
     @State private var selectedTab: Int = 0
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var settings = SettingsManager.shared
     @Environment(\.openSettings) private var openSettingsAction
     @State private var hoveredIcon: String?
+
+    /// Resolved at this root from settings — `@Environment(\.theme)` only reaches children
+    /// after `.appThemed`, so the root itself must not depend on it.
+    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +38,7 @@ struct PopoverContentView: View {
                 .padding(3)
                 .background(
                     Capsule()
-                        .fill(Color.primary.opacity(0.03))
+                        .fill(theme.tabTrackFill)
                 )
 
                 Spacer()
@@ -81,10 +86,16 @@ struct PopoverContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .ignoresSafeArea(.container, edges: .top)
-        .background(GlassBackgroundView(cornerRadius: 12).ignoresSafeArea())
+        // Mesh art + grain live entirely inside ThemeBackgroundView (soft center
+        // veil only). No full-frame scrim — that was burying light shapes + grit.
+        .background(
+            ThemeBackgroundView(tokens: theme, cornerRadius: 12)
+                .ignoresSafeArea()
+        )
         .frame(width: 360, height: 780)
         .cornerRadius(12)
         .id(localization.currentLanguage) // Force refresh when language changes
+        .appThemed(settings.appTheme)
         .focusable(false)
         .overlayPreferenceValue(ToolbarIconBoundsKey.self) { anchors in
             GeometryReader { proxy in
@@ -109,17 +120,17 @@ struct PopoverContentView: View {
     private func tooltipLabel(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11))
-            .foregroundColor(.primary)
+            .foregroundStyle(theme.inkPrimary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                    .fill(theme.usesGlass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(theme.cardFill))
+                    .shadow(color: .black.opacity(theme.cardShadowOpacity + 0.06), radius: 4, y: 2)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+                    .stroke(theme.cardStroke, lineWidth: 0.5)
             )
             .fixedSize()
     }
@@ -162,7 +173,7 @@ struct PopoverContentView: View {
                     .frame(width: iconSize, height: iconSize)
             }
         }
-        .foregroundColor(hoveredIcon == key ? .secondary : .secondary.opacity(0.58))
+        .foregroundStyle(hoveredIcon == key ? theme.inkSecondary : theme.inkFaint)
         .frame(width: 24, height: 24)
         .contentShape(Rectangle())
         .anchorPreference(key: ToolbarIconBoundsKey.self, value: .bounds) { [key: $0] }

@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-// Proposed TabButton change
 struct TabButton: View {
+    @Environment(\.theme) private var theme
+
     let title: String
     let isSelected: Bool
     let namespace: Namespace.ID
@@ -17,7 +18,7 @@ struct TabButton: View {
     var body: some View {
         Text(title)
             .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
-            .foregroundColor(isSelected ? .primary : .secondary)
+            .foregroundStyle(isSelected ? theme.inkPrimary : theme.inkSecondary)
             .animation(nil, value: isSelected)
             .padding(.horizontal, 20)
             .padding(.vertical, 6)
@@ -25,8 +26,8 @@ struct TabButton: View {
                 ZStack {
                     if isSelected {
                         Capsule()
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                            .shadow(color: Color.black.opacity(0.08), radius: 2, y: 1)
+                            .fill(theme.tabSelectedFill)
+                            .shadow(color: Color.black.opacity(theme.cardShadowOpacity + 0.02), radius: 2, y: 1)
                             .matchedGeometryEffect(id: "ACTIVE_TAB", in: namespace)
                     }
                 }

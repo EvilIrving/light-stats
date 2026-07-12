@@ -1,23 +1,27 @@
 import SwiftUI
 
+/// Classic raised card chrome used by the **Bento Grid** theme (original product look).
 struct BentoCard<Content: View, Accessory: View>: View {
+    @Environment(\.theme) private var theme
+
     let title: String?
     let icon: String?
-    /// 资源目录里的品牌图标名（如 Claude/Codex logo）。设置后优先于 SF Symbol 的 `icon`。
+    /// Asset catalog brand icon (e.g. Claude/Codex). Preferred over SF Symbol `icon`.
     let assetIcon: String?
     let content: Content
     let headerAccessory: Accessory
     let padding: CGFloat
-    /// 固定高度。设置后卡片不再随内容字号自适应（避免同一网格里不同卡片因文本大小不同而高矮不一）。
     let fixedHeight: CGFloat?
 
-    init(title: String? = nil,
-         icon: String? = nil,
-         assetIcon: String? = nil,
-         padding: CGFloat = 12,
-         fixedHeight: CGFloat? = nil,
-         @ViewBuilder headerAccessory: () -> Accessory = { EmptyView() },
-         @ViewBuilder content: () -> Content) {
+    init(
+        title: String? = nil,
+        icon: String? = nil,
+        assetIcon: String? = nil,
+        padding: CGFloat = 12,
+        fixedHeight: CGFloat? = nil,
+        @ViewBuilder headerAccessory: () -> Accessory = { EmptyView() },
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.icon = icon
         self.assetIcon = assetIcon
@@ -31,20 +35,20 @@ struct BentoCard<Content: View, Accessory: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             if title != nil || icon != nil || assetIcon != nil {
                 HStack(spacing: 6) {
-                    if let assetIcon = assetIcon {
+                    if let assetIcon {
                         Image(assetIcon)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 13, height: 13)
-                    } else if let icon = icon {
+                    } else if let icon {
                         Image(systemName: icon)
                             .font(.system(size: 12))
-                            .foregroundColor(.labelMuted)
+                            .foregroundStyle(theme.inkMuted)
                     }
-                    if let title = title {
+                    if let title {
                         Text(title)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.labelMuted)
+                            .foregroundStyle(theme.inkMuted)
                     }
                     Spacer()
                     headerAccessory
@@ -57,14 +61,14 @@ struct BentoCard<Content: View, Accessory: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: fixedHeight)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.78))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(theme.surfaceFill)
         )
         .compositingGroup()
-        .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        .shadow(color: .black.opacity(theme.surfaceShadowOpacity), radius: 3, y: 1)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(theme.surfaceStroke, lineWidth: 0.5)
         )
     }
 }

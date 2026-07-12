@@ -2,108 +2,81 @@
 //  CleanupTabView.swift
 //  Light Stats
 //
-//  Created on 2024/12/24.
+//  Memory readout + running-app list. Instrument layout, no bento cards.
 //
 
 import SwiftUI
 
 struct CleanupTabView: View {
+    @Environment(\.theme) private var theme
     @StateObject private var appManager = AppMemoryManager.shared
     @State private var showForceTerminateAlert = false
     @State private var appToTerminate: RunningApp?
     @State private var terminatingApps: Set<Int32> = []
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Memory Summary Card
-            BentoCard(title: "cleanup.memoryUsage".localized, icon: "memorychip.fill") {
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("\(ByteFormatter.format(appManager.totalMemoryUsed)) / \(ByteFormatter.format(appManager.totalMemory))")
-                            .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        Spacer()
-                        Text(String(format: "%.0f%%", memoryUsagePercent))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.labelMuted)
+        VStack(spacing: 0) {
+            Group {
+                if theme.theme.usesBentoLayout {
+                    BentoCard(title: "cleanup.memoryUsage".localized, icon: "memorychip.fill") {
+                        memoryHeaderBody
                     }
-
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color.primary.opacity(0.05))
-
-                            Capsule()
-                                .fill(memoryBarColor)
-                                .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
-                        }
-                    }
-                    .frame(height: 8)
-
-                    // Swap Warning (only show when swap is used)
-                    if swapUsed > 0 {
-                        HStack(spacing: 6) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 11))
-                            Text("Swap")
-                                .font(.system(size: 11, weight: .medium))
-                            Text(ByteFormatter.format(swapUsed))
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            Spacer()
-                        }
-                        .foregroundColor(swapUsed < 1024 * 1024 * 1024 ? .orange : .red)
-                    }
+                } else {
+                    memoryHeader
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 4)
+            .padding(.top, 6)
+            .padding(.bottom, 10)
 
-            // Simplified Metrics Grid
-            // LazyVGrid(columns: [
-            //     GridItem(.flexible(), spacing: 12),
-            //     GridItem(.flexible(), spacing: 12)
-            // ], spacing: 12) {
-            //     // Available
-            //     BentoCard(title: "cleanup.availableMemory".localized, icon: "checkmark.circle.fill") {
-            //         Text(ByteFormatter.format(appManager.totalMemory - appManager.totalMemoryUsed))
-            //             .font(.system(size: 18, weight: .bold, design: .rounded))
-            //             .foregroundColor(.green)
-            //     }
-
-            //     // App Used
-            //     BentoCard(title: "cleanup.appUsed".localized, icon: "app.dashed") {
-            //         Text(ByteFormatter.format(appManager.totalMemoryUsed))
-            //             .font(.system(size: 18, weight: .bold, design: .rounded))
-            //             .foregroundColor(.blue)
-            //     }
-            // }
-            // .padding(.horizontal, 16)
-
-            // App List Header
-            HStack {
-                Text("cleanup.runningApps".localized)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.labelMuted)
-                Spacer()
-                Text(String(format: "cleanup.appCount".localized, appManager.runningApps.filter(\.isTerminable).count))
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary.opacity(0.8))
+            if !theme.theme.usesBentoLayout {
+                PanelDivider()
+                    .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
 
-            // App List
+            HStack {
+                Text(
+                    theme.theme.usesBentoLayout
+                        ? "cleanup.runningApps".localized
+                        : "cleanup.runningApps".localized.uppercased()
+                )
+                .font(.system(
+                    size: theme.theme.usesBentoLayout ? 12 : 10,
+                    weight: .semibold,
+                    design: theme.theme.usesBentoLayout ? .default : .monospaced
+                ))
+                .tracking(theme.theme.usesBentoLayout ? 0 : 0.9)
+                .foregroundStyle(theme.inkFaint)
+                Spacer()
+                Text(String(
+                    format: "cleanup.appCount".localized,
+                    appManager.runningApps.filter(\.isTerminable).count
+                ))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(theme.inkSecondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
             if appManager.runningApps.isEmpty {
                 emptyStateView
             } else {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 8) {
-                        ForEach(appManager.runningApps) { app in
+                    VStack(spacing: theme.theme.usesBentoLayout ? 8 : 0) {
+                        ForEach(Array(appManager.runningApps.enumerated()), id: \.element.id) { index, app in
                             AppCardView(
                                 app: app,
                                 isTerminating: terminatingApps.contains(app.id),
                                 appManager: appManager
                             ) {
                                 terminateApp(app)
+                            }
+                            if !theme.theme.usesBentoLayout, index < appManager.runningApps.count - 1 {
+                                Rectangle()
+                                    .fill(theme.lineHairline)
+                                    .frame(height: 1)
+                                    .padding(.leading, 52)
                             }
                         }
                     }
@@ -130,7 +103,52 @@ struct CleanupTabView: View {
         }
     }
 
-    // MARK: - Helpers
+    private var memoryHeader: some View {
+        // Instrument themes: title only (Bento keeps icon on BentoCard).
+        PanelSection(title: "cleanup.memoryUsage".localized) {
+            memoryHeaderBody
+        }
+    }
+
+    private var memoryHeaderBody: some View {
+        VStack(spacing: 10) {
+            HStack(alignment: .lastTextBaseline) {
+                Text("\(ByteFormatter.format(appManager.totalMemoryUsed)) / \(ByteFormatter.format(appManager.totalMemory))")
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(theme.inkPrimary)
+                Spacer()
+                Text(String(format: "%.0f%%", memoryUsagePercent))
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(memoryBarColor)
+            }
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(theme.wellFill)
+                    Capsule()
+                        .fill(memoryBarColor)
+                        .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
+                }
+            }
+            .frame(height: theme.theme.usesBentoLayout ? 8 : 6)
+
+            if swapUsed > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                    Text("Swap")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    Text(ByteFormatter.format(swapUsed))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    Spacer()
+                }
+                .foregroundStyle(
+                    swapUsed < 1024 * 1024 * 1024 ? theme.signalWarn : theme.signalBad
+                )
+            }
+        }
+    }
 
     private var memoryUsagePercent: Double {
         guard appManager.totalMemory > 0 else { return 0 }
@@ -139,9 +157,9 @@ struct CleanupTabView: View {
 
     private var memoryBarColor: Color {
         switch appManager.memoryPressure {
-        case .normal: return .green
-        case .warning: return .yellow
-        case .critical: return .red
+        case .normal: return theme.signalGood
+        case .warning: return theme.signalWarn
+        case .critical: return theme.signalBad
         }
     }
 
@@ -149,19 +167,15 @@ struct CleanupTabView: View {
         appManager.detailedMemory?.swapUsed ?? 0
     }
 
-    // MARK: - Actions
-
     private var emptyStateView: some View {
         VStack {
             Spacer()
             Text("cleanup.noApps".localized)
                 .font(.system(size: 14))
-                .foregroundColor(.labelMuted)
+                .foregroundStyle(theme.inkMuted)
             Spacer()
         }
     }
-
-    // MARK: - Actions
 
     private func terminateApp(_ app: RunningApp) {
         guard app.isTerminable else { return }

@@ -2,101 +2,16 @@
 //  AIUsageCard.swift
 //  Light Stats
 //
-//  Created on 2026/06/10.
-//
-//  Logic chain — card display states:
-//
-//  ┌─ .idle ──────────────────────────────────────────────────┐
-//  │  "Fetching…" placeholder. Shown before the first fetch.  │
-//  │  The app never shows stale/last-session data.            │
-//  └──────────────────────────────────────────────────────────┘
-//                           │ (fetch completes)
-//  ┌─ .loaded(snapshot) ─────────────────────────────────────┐
-//  │  WindowRow × N — progress bar + remaining% + reset time │
-//  │  Colors: green (>25%) / yellow (>10%) / red (≤10%)      │
-//  │  Flat mode: monochrome bars, no semantic color.         │
-//  └──────────────────────────────────────────────────────────┘
-//                           │ (credentials missing / logged out)
-//  ┌─ .error(AIUsageError) ──────────────────────────────────┐
-//  │  Error text only.                                       │
-//  └──────────────────────────────────────────────────────────┘
+//  Compact AI provider rows for the instrument readout (no card chrome).
 //
 
 import SwiftUI
 
-/// Overview card showing one AI provider's subscription usage windows.
-struct AIUsageCard: View {
-    let provider: AIProvider
-    let state: ProviderFetchState
-    let useFlatColors: Bool
-
-    var body: some View {
-        BentoCard(title: provider.displayName, icon: symbolIcon, assetIcon: assetIcon) {
-            switch state {
-            case .idle:
-                Text("aiUsage.fetching".localized)
-                    .font(.system(size: 11))
-                    .foregroundColor(.labelMuted)
-
-            case .loaded(let snapshot):
-                windowsView(snapshot)
-
-            case .error(let error):
-                Text(errorText(error))
-                    .font(.system(size: 11))
-                    .foregroundColor(.labelMuted)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    private var assetIcon: String? {
-        switch provider {
-        case .claude: return "claudeLogo"
-        case .codex: return "codexLogo"
-        case .gemini: return "geminiLogo"
-        }
-    }
-
-    private var symbolIcon: String? { nil }
-
-    // MARK: - Windows
-
-    private func windowsView(_ snapshot: ProviderUsageSnapshot) -> some View {
-        VStack(spacing: 6) {
-            ForEach(snapshot.windows, id: \.label) { window in
-                WindowRow(window: window, useFlatColors: useFlatColors)
-            }
-        }
-    }
-
-    // MARK: - Texts
-
-    private func errorText(_ error: AIUsageError) -> String {
-        let cli = providerCLIName
-        switch error {
-        case .tokenExpired:
-            return "aiUsage.tokenExpired".localized(cli)
-        case .credentialsMissing:
-            return "aiUsage.credentialsMissing".localized(cli)
-        case .network, .decoding, .endpointNotFound:
-            return "aiUsage.fetchFailed".localized
-        }
-    }
-
-    private var providerCLIName: String {
-        switch provider {
-        case .claude: return "claude"
-        case .codex: return "codex"
-        case .gemini: return "gemini"
-        }
-    }
-}
-
 // MARK: - Window Row
 
 private struct WindowRow: View {
+    @Environment(\.theme) private var theme
+
     let window: UsageWindow
     let useFlatColors: Bool
 
@@ -104,16 +19,15 @@ private struct WindowRow: View {
         HStack(spacing: 8) {
             Text(window.label)
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundColor(.labelMuted)
+                .foregroundStyle(theme.inkMuted)
                 .frame(width: 22, alignment: .leading)
 
-            // Progress bar (remaining)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.primary.opacity(0.06))
+                        .fill(theme.wellFill)
                     Capsule()
-                        .fill(useFlatColors ? Color.primary.opacity(0.4) : colorForRemaining(remainingPercent))
+                        .fill(useFlatColors ? theme.inkPrimary.opacity(0.4) : colorForRemaining(remainingPercent))
                         .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
                 }
             }
@@ -121,12 +35,12 @@ private struct WindowRow: View {
 
             Text(String(format: "%.0f%%", remainingPercent))
                 .font(.system(size: 11, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
-                .foregroundColor(useFlatColors ? .primary : colorForRemaining(remainingPercent))
+                .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForRemaining(remainingPercent))
                 .frame(width: 36, alignment: .trailing)
 
             Text(resetText)
-                .font(.system(size: 9))
-                .foregroundColor(.labelMuted)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(theme.inkMuted)
                 .frame(width: 76, alignment: .trailing)
                 .lineLimit(1)
         }
@@ -152,67 +66,71 @@ private struct WindowRow: View {
 
     private func colorForRemaining(_ remaining: Double) -> Color {
         if remaining > 25 {
-            return .green
+            return theme.signalGood
         } else if remaining > 10 {
-            return .yellow
+            return theme.signalWarn
         } else {
-            return .red
+            return theme.signalBad
         }
     }
 }
 
-// MARK: - Compact Provider Row (for consolidated AI Usage card)
+// MARK: - Compact Provider Row
 
-/// A single provider's state rendered as a compact row group (no BentoCard wrapper).
-/// Shows the provider logo + name as a header, then its usage windows underneath.
+/// A single provider's state as a compact row group (no card wrapper).
 struct AIProviderCompactRow: View {
+    @Environment(\.theme) private var theme
+
     let provider: AIProvider
     let state: ProviderFetchState
     let useFlatColors: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Provider header
             HStack(spacing: 4) {
-                Image(provider.assetIconName)
+                Image(assetIconName)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 11, height: 11)
                 Text(provider.displayName)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(theme.inkSecondary)
                 Spacer()
             }
 
-            // Provider content
             switch state {
             case .idle:
                 Text("aiUsage.fetching".localized)
-                    .font(.system(size: 10))
-                    .foregroundColor(.labelMuted)
-                    .padding(.leading, 15)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.inkMuted)
 
             case .loaded(let snapshot):
-                windowsRows(snapshot)
+                VStack(spacing: 6) {
+                    ForEach(snapshot.windows, id: \.label) { window in
+                        WindowRow(window: window, useFlatColors: useFlatColors)
+                    }
+                }
 
             case .error(let error):
-                Text(AIProviderCompactRow.errorText(error, cli: providerCLIName))
-                    .font(.system(size: 10))
-                    .foregroundColor(.labelMuted)
+                Text(errorText(error))
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.inkMuted)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 15)
             }
         }
     }
 
-    private func windowsRows(_ snapshot: ProviderUsageSnapshot) -> some View {
-        VStack(spacing: 4) {
-            ForEach(snapshot.windows, id: \.label) { window in
-                WindowRow(window: window, useFlatColors: useFlatColors)
-            }
+    private func errorText(_ error: AIUsageError) -> String {
+        let cli = providerCLIName
+        switch error {
+        case .tokenExpired:
+            return "aiUsage.tokenExpired".localized(cli)
+        case .credentialsMissing:
+            return "aiUsage.credentialsMissing".localized(cli)
+        case .network, .decoding, .endpointNotFound:
+            return "aiUsage.fetchFailed".localized
         }
-        .padding(.leading, 15)
     }
 
     private var providerCLIName: String {
@@ -223,21 +141,8 @@ struct AIProviderCompactRow: View {
         }
     }
 
-    static func errorText(_ error: AIUsageError, cli: String) -> String {
-        switch error {
-        case .tokenExpired:
-            return "aiUsage.tokenExpired".localized(cli)
-        case .credentialsMissing:
-            return "aiUsage.credentialsMissing".localized(cli)
-        case .network, .decoding, .endpointNotFound:
-            return "aiUsage.fetchFailed".localized
-        }
-    }
-}
-
-private extension AIProvider {
-    var assetIconName: String {
-        switch self {
+    private var assetIconName: String {
+        switch provider {
         case .claude: return "claudeLogo"
         case .codex: return "codexLogo"
         case .gemini: return "geminiLogo"

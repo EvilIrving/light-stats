@@ -9,28 +9,27 @@ import SwiftUI
 
 /// 子进程列表项组件（仅显示，不可终止）
 struct ChildProcessRowView: View {
+    @Environment(\.theme) private var theme
+
     let command: String
     let memoryBytes: UInt64
     let indentation: CGFloat
 
     var body: some View {
         HStack(spacing: 8) {
-            // 缩进占位
             Color.clear.frame(width: indentation)
 
-            // 子进程名称
             Text(command)
                 .font(.system(size: 12))
-                .foregroundColor(.labelMuted)
+                .foregroundStyle(theme.inkSecondary)
                 .lineLimit(1)
                 .help(command)
 
             Spacer()
 
-            // 内存
             Text(memoryFormatted)
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary.opacity(0.8))
+                .foregroundStyle(theme.inkFaint)
         }
         .padding(.leading, 8)
         .padding(.vertical, 6)
@@ -56,5 +55,6 @@ struct ChildProcessRowView: View {
         )
     }
     .padding()
+    .appThemed(.film)
 }
 #endif

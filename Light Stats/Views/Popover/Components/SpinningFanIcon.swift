@@ -13,6 +13,8 @@ import SwiftUI
 /// 用 `TimelineView(.animation)` 逐帧累积角度（而非 repeatForever 动画），
 /// 这样转速随 RPM 变化时平滑过渡、无跳变；面板隐藏时 timeline 自动停摆，不耗电。
 struct SpinningFanIcon: View {
+    @Environment(\.theme) private var theme
+
     let rpm: Int?
 
     /// 视觉封顶：最快每秒 3 圈。
@@ -40,6 +42,7 @@ struct SpinningFanIcon: View {
 
     private var fanImage: some View {
         Image(systemName: "fanblades.fill")
+            .foregroundStyle(theme.inkSecondary)
     }
 
     /// 当前角速度（度/秒）：RPM 线性映射并封顶。

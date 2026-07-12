@@ -15,8 +15,10 @@ struct SparklineSeries {
 
 /// 轻量趋势折线：把一条或多条等长时间序列归一化到统一纵轴后画成折线。
 /// 多序列共享同一纵轴，方便直接比较（如网络上/下行）。纯 SwiftUI `Path`，
-/// 不触碰 Core Graphics / Metal。
+/// 不触碰 Core Graphics / Metal。线色来自 `SparklineSeries`（调用方应传 `theme` 信号色）。
 struct Sparkline: View {
+    @Environment(\.theme) private var theme
+
     let series: [SparklineSeries]
     var lineWidth: CGFloat = 1.5
     /// 仅单序列时在折线下方填充淡渐变；多序列时关闭以免叠色杂乱。
@@ -26,6 +28,14 @@ struct Sparkline: View {
         GeometryReader { geo in
             let bounds = valueBounds
             ZStack {
+                // Subtle baseline so curves read against mesh / scrim.
+                Path { path in
+                    let y = geo.size.height * 0.5
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: geo.size.width, y: y))
+                }
+                .stroke(theme.lineHairline.opacity(0.55), lineWidth: 0.5)
+
                 ForEach(Array(series.enumerated()), id: \.offset) { _, line in
                     seriesView(line, in: geo.size, bounds: bounds)
                 }
@@ -36,16 +46,17 @@ struct Sparkline: View {
     @ViewBuilder
     private func seriesView(_ line: SparklineSeries, in size: CGSize, bounds: ClosedRange<Double>) -> some View {
         let pts = points(line.values, in: size, bounds: bounds)
+        let stroke = line.color
         if showsFill {
             areaPath(pts, height: size.height)
                 .fill(LinearGradient(
-                    colors: [line.color.opacity(0.28), line.color.opacity(0)],
+                    colors: [stroke.opacity(0.32), stroke.opacity(0)],
                     startPoint: .top,
                     endPoint: .bottom
                 ))
         }
         linePath(pts)
-            .stroke(line.color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            .stroke(stroke, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
     }
 
     /// 全部序列合并后的取值范围；恒定序列退化为围绕该值的 ±1 区间避免除零。

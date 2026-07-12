@@ -2,7 +2,9 @@
 //  OverviewTabView.swift
 //  Light Stats
 //
-//  Created on 2024/12/24.
+//  Two layouts:
+//  - Bento Grid theme → classic raised cards + 2×2 metric tiles
+//  - Film / Glass / Noir → instrument readout (sections + hairlines)
 //
 
 import SwiftUI
@@ -10,328 +12,643 @@ import SwiftUI
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
+    @Environment(\.theme) private var theme
     @ObservedObject private var settings = SettingsManager.shared
 
-    /// CPU/GPU/MEM/负载四张卡共享的固定高度，避免因数字字号不同导致 LazyVGrid 逐行自适应出高矮不一。
     private let quickStatCardHeight: CGFloat = 62
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 12) {
-                HealthCard(health: monitor.health, useColorIndicator: settings.useColorIndicator)
+            if theme.theme.usesBentoLayout {
+                bentoContent
+            } else {
+                instrumentContent
+            }
+        }
+    }
 
-                // Main Metrics Grid
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), spacing: 10),
-                    GridItem(.flexible(), spacing: 10)
-                ], spacing: 8) {
-                    // CPU Card
-                    QuickStatCard(title: "CPU", icon: "cpu", height: quickStatCardHeight, trend: cpuTrend) {
-                        HStack(alignment: .lastTextBaseline, spacing: 4) {
-                            Text(String(format: "%.0f", monitor.cpuUsage))
-                                .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                            Text("%")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.labelMuted)
-                        }
-                        .foregroundColor(colorForUsage(monitor.cpuUsage))
+    // MARK: - Instrument layout
+
+    private var instrumentContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            healthSection
+            PanelDivider().padding(.vertical, 10)
+            // CPU / GPU / Load / MEM — one readout group (not two section headers).
+            resourcesSection
+            if monitor.battery.state != .noBattery {
+                PanelDivider().padding(.vertical, 10)
+                batterySection
+            }
+            PanelDivider().padding(.vertical, 10)
+            thermalStrip
+            PanelDivider().padding(.vertical, 10)
+            aiSection
+            networkSection
+            PanelDivider().padding(.vertical, 10)
+            processesSection
+            PanelDivider().padding(.vertical, 10)
+            coresSection
+            PanelDivider().padding(.vertical, 12)
+            actionRows
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 18)
+    }
+
+    // MARK: - Bento Grid layout (original)
+
+    private var bentoContent: some View {
+        VStack(spacing: 12) {
+            BentoCard(title: "health.title".localized, icon: "stethoscope", padding: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HeroReadout(
+                        value: "\(monitor.health.score)",
+                        unit: "/ 100",
+                        caption: gradeText(monitor.health.grade),
+                        valueColor: gradeColor(monitor.health.grade)
+                    )
+                    healthSummary
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(theme.inkMuted)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 10),
+                GridItem(.flexible(), spacing: 10)
+            ], spacing: 8) {
+                QuickStatCard(title: "CPU", icon: "cpu", height: quickStatCardHeight, trend: cpuTrend) {
+                    metricPercent(monitor.cpuUsage)
+                }
+                QuickStatCard(title: "GPU", icon: "square.grid.2x2", height: quickStatCardHeight, trend: gpuTrend) {
+                    if let gpu = monitor.gpuUsage {
+                        metricPercent(gpu)
+                    } else {
+                        Text("—")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(theme.inkMuted)
                     }
+                }
+                QuickStatCard(title: "MEM", icon: "memorychip", height: quickStatCardHeight, trend: memoryTrend) {
+                    HStack(alignment: .lastTextBaseline, spacing: 2) {
+                        Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
+                            .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                        Text("/")
+                            .font(.system(size: 12))
+                            .foregroundStyle(theme.inkMuted)
+                        Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                    .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(monitor.memoryUsage))
+                }
+                QuickStatCard(
+                    title: "overview.load".localized,
+                    icon: "speedometer",
+                    height: quickStatCardHeight,
+                    trend: loadTrend
+                ) {
+                    Text(monitor.loadAverage.displayString)
+                        .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(loadUsagePercent))
+                }
+            }
 
-                    // GPU Card
-                    QuickStatCard(title: "GPU", icon: "square.grid.2x2", height: quickStatCardHeight, trend: gpuTrend) {
-                        if let gpu = monitor.gpuUsage {
-                            HStack(alignment: .lastTextBaseline, spacing: 4) {
-                                Text(String(format: "%.0f", gpu))
-                                    .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                                Text("%")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.labelMuted)
+            if monitor.battery.state != .noBattery {
+                BentoCard(title: "battery.title".localized, icon: batteryIcon(monitor.battery)) {
+                    bentoBatteryInner
+                }
+            }
+
+            BentoCard(padding: 10) {
+                systemMetricsGrid
+            }
+
+            bentoAICard
+            bentoNetworkCard
+            bentoProcessesCard
+            bentoCoresCard
+            actionRows
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+        .padding(.bottom, 16)
+    }
+
+    @ViewBuilder
+    private var bentoAICard: some View {
+        let aiProviders: [(AIProvider, ProviderFetchState)] = [
+            settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
+            settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
+            settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
+        ].compactMap { $0 }
+
+        if !aiProviders.isEmpty {
+            BentoCard {
+                VStack(spacing: 10) {
+                    ForEach(aiProviders, id: \.0.rawValue) { provider, state in
+                        AIProviderCompactRow(
+                            provider: provider,
+                            state: state,
+                            useFlatColors: useFlatColors
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private var bentoNetworkCard: some View {
+        BentoCard(title: "overview.network".localized, icon: "antenna.radiowaves.left.and.right") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up")
+                        Text(ByteFormatter.formatSpeed(monitor.networkUpload))
+                    }
+                    .foregroundStyle(theme.signalAccent)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down")
+                        Text(ByteFormatter.formatSpeed(monitor.networkDownload))
+                    }
+                    .foregroundStyle(theme.signalInfo)
+                }
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+
+                if monitor.trends.networkUp.count > 1 {
+                    Sparkline(series: [
+                        SparklineSeries(values: monitor.trends.networkDown, color: theme.signalInfo),
+                        SparklineSeries(values: monitor.trends.networkUp, color: theme.signalAccent)
+                    ])
+                    .frame(height: 24)
+                }
+
+                Divider()
+
+                MetaRow(
+                    icon: "lock.shield",
+                    label: "network.proxy.title".localized,
+                    value: proxyText(monitor.proxyConfig),
+                    valueColor: monitor.proxyConfig.isEnabled ? theme.inkPrimary : theme.inkSecondary
+                )
+
+                if settings.exitNodeDetectionEnabled {
+                    MetaRow(
+                        icon: "globe",
+                        label: "network.exit.title".localized,
+                        value: exitDisplayText
+                    )
+                }
+            }
+        }
+    }
+
+    private var bentoProcessesCard: some View {
+        BentoCard(title: "overview.processes".localized, icon: "list.bullet.rectangle") {
+            if monitor.topCPUProcesses.isEmpty {
+                Text("overview.loading".localized)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.inkMuted)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
+                        ProcessRow(process: process, useFlatColors: useFlatColors)
+                    }
+                }
+            }
+        }
+    }
+
+    private var bentoCoresCard: some View {
+        BentoCard(title: "overview.coreUsage".localized, icon: "circle.grid.3x3") {
+            let sortedCores = getSortedCores()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(sortedCores, id: \.index) { core in
+                        VStack(spacing: 4) {
+                            Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(theme.inkMuted)
+
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(theme.wellFill)
+                                    .frame(width: 12, height: 30)
+
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(colorForUsage(core.usage))
+                                    .frame(width: 12, height: CGFloat(30.0 * (core.usage / 100.0)))
                             }
-                            .foregroundColor(colorForUsage(gpu))
-                        } else {
-                            Text("—")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.labelMuted)
                         }
                     }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
 
-                    // MEM Card
-                    QuickStatCard(title: "MEM", icon: "memorychip", height: quickStatCardHeight, trend: memoryTrend) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(alignment: .lastTextBaseline, spacing: 2) {
-                                Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
-                                    .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                                Text("/")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.labelMuted)
-                                Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.labelMuted)
-                            }
-                        }
-                        .foregroundColor(colorForUsage(monitor.memoryUsage))
+    private var bentoBatteryInner: some View {
+        let battery = monitor.battery
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .lastTextBaseline, spacing: 4) {
+                Text(String(format: "%.0f", battery.percent))
+                    .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                    .foregroundStyle(batteryColor(battery))
+                Text("%")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(theme.inkMuted)
+                Text(batteryStateText(battery))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(theme.inkMuted)
+                    .padding(.leading, 4)
+                Spacer()
+                if let time = batteryTimeText(battery) {
+                    Text(time)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(theme.inkMuted)
+                }
+            }
+            Divider()
+            HStack {
+                SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
+                Spacer()
+                SubStat(label: "battery.health".localized, value: battery.healthPercent.map { "\($0)%" })
+                Spacer()
+                SubStat(
+                    label: "battery.power".localized,
+                    value: battery.powerWatts.map { String(format: "%.1fW", $0) }
+                )
+                Spacer()
+                SubStat(
+                    label: "battery.temp".localized,
+                    value: battery.temperature.map { settings.temperatureUnit.format($0) }
+                )
+            }
+        }
+    }
+
+    // MARK: - Health
+
+    private var healthSection: some View {
+        // Instrument themes (film / glass / noir): title only — no section glyph.
+        // Bento keeps card icons on BentoCard.
+        PanelSection(title: "health.title".localized) {
+            VStack(alignment: .leading, spacing: 6) {
+                HeroReadout(
+                    value: "\(monitor.health.score)",
+                    unit: "/ 100",
+                    caption: gradeText(monitor.health.grade),
+                    valueColor: gradeColor(monitor.health.grade)
+                )
+                healthSummary
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    // MARK: - Resources (CPU / GPU / Load / MEM as one group)
+
+    private var resourcesSection: some View {
+        PanelSection(title: "overview.resources".localized) {
+            VStack(spacing: 2) {
+                MetricRow(label: "CPU", icon: "cpu", trend: cpuTrend) {
+                    metricPercent(monitor.cpuUsage)
+                }
+                MetricRow(label: "GPU", icon: "square.grid.2x2", trend: gpuTrend) {
+                    if let gpu = monitor.gpuUsage {
+                        metricPercent(gpu)
+                    } else {
+                        Text("—")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(theme.inkMuted)
                     }
+                }
+                MetricRow(label: "overview.load".localized, icon: "speedometer", trend: loadTrend) {
+                    Text(monitor.loadAverage.displayString)
+                        .font(.system(size: 13, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+                        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(loadUsagePercent))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                MetricRow(label: "MEM", icon: "memorychip", trend: memoryTrend) {
+                    HStack(alignment: .lastTextBaseline, spacing: 2) {
+                        Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
+                            .font(.system(size: 16, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                        Text("/")
+                            .font(.system(size: 11))
+                            .foregroundStyle(theme.inkMuted)
+                        Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                    .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(monitor.memoryUsage))
+                }
+            }
+        }
+    }
 
-                    // Load Card
-                    QuickStatCard(title: "overview.load".localized, icon: "chart.bar.fill",
-                                  height: quickStatCardHeight, trend: loadTrend) {
-                        Text(monitor.loadAverage.displayString)
-                            .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+    // MARK: - Battery
+
+    private var batterySection: some View {
+        let battery = monitor.battery
+        return PanelSection(title: "battery.title".localized) {
+            VStack(alignment: .leading, spacing: 8) {
+                HeroReadout(
+                    value: String(format: "%.0f", battery.percent),
+                    unit: "%",
+                    caption: batteryStateText(battery),
+                    valueColor: batteryColor(battery)
+                ) {
+                    if let time = batteryTimeText(battery) {
+                        Text(time)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(theme.inkMuted)
+                    }
+                }
+
+                HStack {
+                    SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
+                    Spacer()
+                    SubStat(label: "battery.health".localized, value: battery.healthPercent.map { "\($0)%" })
+                    Spacer()
+                    SubStat(
+                        label: "battery.power".localized,
+                        value: battery.powerWatts.map { String(format: "%.1fW", $0) }
+                    )
+                    Spacer()
+                    SubStat(
+                        label: "battery.temp".localized,
+                        value: battery.temperature.map { settings.temperatureUnit.format($0) }
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Thermal / disk strip
+
+    /// Three equal columns (temp | fan | disk) with I/O row aligned under them —
+    /// same vertical grid discipline as Bento cards.
+    private var thermalStrip: some View {
+        PanelSection(title: "overview.system".localized) {
+            systemMetricsGrid
+        }
+    }
+
+    /// Shared by instrument + bento system blocks.
+    /// Three equal columns, each a VStack (sensor on top, I/O line below).
+    /// Leading-aligned so the first column sits flush with the section title (no leading gap).
+    private var systemMetricsGrid: some View {
+        HStack(alignment: .top, spacing: 8) {
+            systemMetricColumn(
+                top: {
+                    systemIconValue(
+                        icon: "thermometer.sun",
+                        text: monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "—"
+                    )
+                },
+                bottom: {
+                    Text("overview.diskIO".localized)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(theme.inkSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            )
+            systemMetricColumn(
+                top: {
+                    HStack(spacing: 4) {
+                        SpinningFanIcon(rpm: monitor.fanSpeed)
+                        Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
-                            .foregroundColor(colorForUsage(loadUsagePercent))
                     }
-                }
-
-                // Battery Card: 电量 + 状态 + 剩余时间 + 循环/健康/功耗/温度（无电池则不显示）
-                if monitor.battery.state != .noBattery {
-                    BatteryCard(battery: monitor.battery, temperatureUnit: settings.temperatureUnit, useFlatColors: useFlatColors)
-                }
-
-                // Status Strip
-                BentoCard(padding: 10) {
-                    VStack(spacing: 8) {
-                        HStack {
-                            // Temp
-                            HStack(spacing: 4) {
-                                Image(systemName: "thermometer.medium")
-                                Text(monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "—")
-                            }
-
-                            Spacer()
-
-                            // Fan（图标按转速旋转，封顶避免过快）
-                            HStack(spacing: 4) {
-                                SpinningFanIcon(rpm: monitor.fanSpeed)
-                                Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
-                            }
-
-                            Spacer()
-
-                            // Disk
-                            HStack(spacing: 4) {
-                                Image(systemName: "internaldrive.fill")
-                                Text(ByteFormatter.formatDisk(monitor.diskAvailable))
-                            }
-                        }
-
-                        Divider()
-
-                        // Disk I/O 读/写速率
-                        HStack {
-                            Text("overview.diskIO".localized)
-
-                            Spacer()
-
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.down")
-                                Text(formatMBs(monitor.diskIO.readMBs))
-                            }
-
-                            Spacer()
-
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.up")
-                                Text(formatMBs(monitor.diskIO.writeMBs))
-                            }
-                        }
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(theme.inkMuted)
+                },
+                bottom: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.down")
+                        Text(formatMBs(monitor.diskIO.readMBs))
                     }
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.labelMuted)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 }
-
-                // AI Usage Card — all enabled providers in one card
-                let aiProviders: [(AIProvider, ProviderFetchState)] = [
-                    settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
-                    settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
-                    settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
-                ].compactMap { $0 }
-
-                if !aiProviders.isEmpty {
-                    BentoCard {
-                        VStack(spacing: 10) {
-                            ForEach(aiProviders, id: \.0.rawValue) { provider, state in
-                                AIProviderCompactRow(
-                                    provider: provider,
-                                    state: state,
-                                    useFlatColors: useFlatColors
-                                )
-                            }
-                        }
+            )
+            systemMetricColumn(
+                top: {
+                    systemIconValue(
+                        icon: "externaldrive.fill",
+                        text: ByteFormatter.formatDisk(monitor.diskAvailable)
+                    )
+                },
+                bottom: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.up")
+                        Text(formatMBs(monitor.diskIO.writeMBs))
                     }
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(theme.inkMuted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 }
-
-                // Network Card: 速率 + 本地代理 + 出口节点
-                BentoCard(title: "overview.network".localized, icon: "network") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        // ① 速率行 —— 上/下行各自配色，与下方双线趋势一一对应。
-                        HStack {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.up")
-                                Text(ByteFormatter.formatSpeed(monitor.networkUpload))
-                            }
-                            .foregroundColor(.orange)
-                            Spacer()
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.down")
-                                Text(ByteFormatter.formatSpeed(monitor.networkDownload))
-                            }
-                            .foregroundColor(.cyan)
-                        }
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-
-                        // 上/下行速率双线趋势：共享纵轴，直接看出哪个方向在跑、是否突发。
-                        if monitor.trends.networkUp.count > 1 {
-                            Sparkline(series: [
-                                SparklineSeries(values: monitor.trends.networkDown, color: .cyan),
-                                SparklineSeries(values: monitor.trends.networkUp, color: .orange)
-                            ])
-                            .frame(height: 24)
-                        }
-
-                        Divider()
-
-                        // ② 本地代理行
-                        HStack(spacing: 4) {
-                            Image(systemName: "lock.shield")
-                                .foregroundColor(.labelMuted)
-                            Text("network.proxy.title".localized)
-                                .foregroundColor(.labelMuted)
-                            Spacer()
-                            Text(proxyText(monitor.proxyConfig))
-                                .foregroundColor(monitor.proxyConfig.isEnabled ? .primary : .secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .font(.system(size: 11, design: .monospaced))
-
-                        // ③ 出口行 — 探测关闭时整行不渲染
-                        if settings.exitNodeDetectionEnabled {
-                            HStack(spacing: 4) {
-                                Image(systemName: "globe")
-                                    .foregroundColor(.labelMuted)
-                                Text("network.exit.title".localized)
-                                    .foregroundColor(.labelMuted)
-                                Spacer()
-                                exitValueView
-                            }
-                            .font(.system(size: 11, design: .monospaced))
-                        }
-                    }
-                }
-
-                // Top Processes Section
-                BentoCard(title: "overview.processes".localized, icon: "list.bullet") {
-                    if monitor.topCPUProcesses.isEmpty {
-                        Text("overview.loading".localized)
-                            .font(.system(size: 11))
-                            .foregroundColor(.labelMuted)
-                    } else {
-                        VStack(spacing: 8) {
-                            ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
-                                ProcessRow(process: process, useFlatColors: useFlatColors)
-                            }
-                        }
-                    }
-                }
-
-                // Core Usage Section
-                BentoCard(title: "overview.coreUsage".localized, icon: "cpu.fill") {
-                    let sortedCores = getSortedCores()
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(sortedCores, id: \.index) { core in
-                                VStack(spacing: 4) {
-                                    Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundColor(.labelMuted)
-
-                                    ZStack(alignment: .bottom) {
-                                        RoundedRectangle(cornerRadius: 2)
-                                            .fill(Color.primary.opacity(0.05))
-                                            .frame(width: 12, height: 30)
-
-                                        RoundedRectangle(cornerRadius: 2)
-                                            .fill(colorForUsage(core.usage))
-                                            .frame(width: 12, height: CGFloat(30.0 * (core.usage / 100.0)))
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                ActionRowsCard(
-                    openAbout: openAbout,
-                    quit: { NSApp.terminate(nil) }
-                )
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-            .padding(.bottom, 16)
+            )
         }
     }
 
-    // MARK: - Helper: Sorted Cores
-
-    private struct CoreInfo {
-        let index: Int
-        let displayIndex: Int
-        let usage: Double
-        let type: CoreType
+    /// Equal-width column; content hugs the leading edge (no centered inset).
+    private func systemMetricColumn<Top: View, Bottom: View>(
+        @ViewBuilder top: () -> Top,
+        @ViewBuilder bottom: () -> Bottom
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            top()
+                .frame(maxWidth: .infinity, minHeight: 18, alignment: .leading)
+            bottom()
+                .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Get cores sorted by type: P-cores first (numbered 0..N), then E-cores (numbered 0..M)
-    private func getSortedCores() -> [CoreInfo] {
-        let topology = monitor.coreTopology
-        let usages = monitor.coreUsages
+    private func systemIconValue(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+            Text(text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .foregroundStyle(theme.inkMuted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-        guard !usages.isEmpty else { return [] }
+    // MARK: - AI
 
-        // If we have P/E core info, group them
-        if topology.performanceCores > 0 && topology.efficiencyCores > 0 {
-            var result: [CoreInfo] = []
-            let pCount = topology.performanceCores
-            let eCount = topology.efficiencyCores
+    @ViewBuilder
+    private var aiSection: some View {
+        let aiProviders: [(AIProvider, ProviderFetchState)] = [
+            settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
+            settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
+            settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
+        ].compactMap { $0 }
 
-            // P-cores first (assume they are the first N cores)
-            for i in 0..<min(pCount, usages.count) {
-                result.append(CoreInfo(
-                    index: i,
-                    displayIndex: i,
-                    usage: usages[i],
-                    type: .performance
-                ))
-            }
-
-            // E-cores after (assume they follow P-cores)
-            for i in 0..<min(eCount, usages.count - pCount) {
-                let actualIndex = pCount + i
-                if actualIndex < usages.count {
-                    result.append(CoreInfo(
-                        index: actualIndex,
-                        displayIndex: i,
-                        usage: usages[actualIndex],
-                        type: .efficiency
-                    ))
+        if !aiProviders.isEmpty {
+            PanelSection(title: "aiUsage.title".localized) {
+                VStack(spacing: 10) {
+                    ForEach(aiProviders, id: \.0.rawValue) { provider, state in
+                        AIProviderCompactRow(
+                            provider: provider,
+                            state: state,
+                            useFlatColors: useFlatColors
+                        )
+                    }
                 }
             }
+            PanelDivider().padding(.vertical, 10)
+        }
+    }
 
-            return result
-        } else {
-            // No P/E info, show all cores with unknown type
-            return usages.enumerated().map { index, usage in
-                CoreInfo(
-                    index: index,
-                    displayIndex: index,
-                    usage: usage,
-                    type: .unknown
+    // MARK: - Network
+
+    private var networkSection: some View {
+        PanelSection(title: "overview.network".localized) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up")
+                        Text(ByteFormatter.formatSpeed(monitor.networkUpload))
+                    }
+                    .foregroundStyle(theme.signalAccent)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down")
+                        Text(ByteFormatter.formatSpeed(monitor.networkDownload))
+                    }
+                    .foregroundStyle(theme.signalInfo)
+                }
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+
+                if monitor.trends.networkUp.count > 1 {
+                    Sparkline(series: [
+                        SparklineSeries(values: monitor.trends.networkDown, color: theme.signalInfo),
+                        SparklineSeries(values: monitor.trends.networkUp, color: theme.signalAccent)
+                    ])
+                    .frame(height: 22)
+                    .opacity(0.7)
+                }
+
+                MetaRow(
+                    icon: "lock.shield",
+                    label: "network.proxy.title".localized,
+                    value: proxyText(monitor.proxyConfig),
+                    valueColor: monitor.proxyConfig.isEnabled ? theme.inkPrimary : theme.inkSecondary
                 )
+
+                if settings.exitNodeDetectionEnabled {
+                    MetaRow(
+                        icon: "globe",
+                        label: "network.exit.title".localized,
+                        value: exitDisplayText
+                    )
+                }
             }
         }
     }
+
+    // MARK: - Processes
+
+    private var processesSection: some View {
+        PanelSection(title: "overview.processes".localized) {
+            if monitor.topCPUProcesses.isEmpty {
+                Text("overview.loading".localized)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.inkMuted)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
+                        ProcessRow(process: process, useFlatColors: useFlatColors)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Cores
+
+    private var coresSection: some View {
+        PanelSection(title: "overview.coreUsage".localized) {
+            let sortedCores = getSortedCores()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(sortedCores, id: \.index) { core in
+                        VStack(spacing: 4) {
+                            Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
+                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .foregroundStyle(theme.inkFaint)
+
+                            ZStack(alignment: .bottom) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(theme.wellFill)
+                                    .frame(width: 10, height: 28)
+
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(colorForUsage(core.usage))
+                                    .frame(width: 10, height: CGFloat(28.0 * (core.usage / 100.0)))
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    private var actionRows: some View {
+        VStack(spacing: 0) {
+            ActionRow(
+                icon: "info.circle",
+                title: "popover.action.about".localized,
+                action: openAbout,
+                foregroundColor: theme.inkSecondary
+            )
+            ActionRow(
+                icon: "power",
+                title: "popover.action.quit".localized,
+                action: { NSApp.terminate(nil) },
+                foregroundColor: theme.signalBad.opacity(0.9)
+            )
+        }
+    }
+
+    // MARK: - Small builders
+
+    private func metricPercent(_ usage: Double) -> some View {
+        HStack(alignment: .lastTextBaseline, spacing: 2) {
+            Text(String(format: "%.0f", usage))
+                .font(.system(size: 16, weight: useFlatColors ? .regular : .bold, design: .rounded))
+            Text("%")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(theme.inkMuted)
+        }
+        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(usage))
+    }
+
+    // MARK: - Trends / colors
+
+    private var useFlatColors: Bool { settings.useFlatColors }
 
     private var loadUsagePercent: Double {
         let coreCount = monitor.coreTopology.totalCores > 0
@@ -340,9 +657,6 @@ struct OverviewTabView: View {
         return min(100, max(0, monitor.loadAverage.load1 / Double(coreCount) * 100))
     }
 
-    // MARK: - Quick-stat trend series
-
-    // 折线用「当前值」决定线色，与卡片大字的配色一致；flat 模式下保持中性灰。
     private var cpuTrend: SparklineSeries {
         SparklineSeries(values: monitor.trends.cpu, color: colorForUsage(monitor.cpuUsage))
     }
@@ -359,46 +673,140 @@ struct OverviewTabView: View {
         SparklineSeries(values: monitor.trends.load, color: colorForUsage(loadUsagePercent))
     }
 
-    private var useFlatColors: Bool { settings.useFlatColors }
-
     private func colorForUsage(_ usage: Double) -> Color {
-        guard !useFlatColors else { return .primary }
-        if usage < 50 {
-            return .green
-        } else if usage < 80 {
-            return .yellow
-        } else {
-            return .red
+        guard !useFlatColors else { return theme.inkPrimary }
+        return theme.colorForUsage(usage)
+    }
+
+    // MARK: - Health helpers
+
+    private func gradeText(_ grade: HealthScore.Grade) -> String {
+        switch grade {
+        case .excellent: return "health.grade.excellent".localized
+        case .good: return "health.grade.good".localized
+        case .fair: return "health.grade.fair".localized
+        case .poor: return "health.grade.poor".localized
+        case .critical: return "health.grade.critical".localized
         }
     }
 
-    /// 磁盘 IO 速率文案：MB/s，固定一位小数。
-    private func formatMBs(_ mbs: Double) -> String {
-        String(format: "%.1f MB/s", mbs)
+    private func gradeColor(_ grade: HealthScore.Grade) -> Color {
+        switch grade {
+        case .excellent: return theme.signalGood
+        case .good: return theme.signalGood.opacity(0.85)
+        case .fair: return theme.signalWarn
+        case .poor: return theme.signalAccent
+        case .critical: return theme.signalBad
+        }
     }
 
-    // MARK: - Network Helpers
+    private var dimensionLabels: [(HealthScore.Dimension, String)] {
+        [
+            (.cpu, "health.dimension.cpu".localized),
+            (.memory, "health.dimension.memory".localized),
+            (.load, "health.dimension.load".localized),
+            (.temperature, "health.dimension.temperature".localized),
+            (.gpu, "health.dimension.gpu".localized),
+            (.battery, "health.dimension.battery".localized),
+            (.diskIO, "health.dimension.diskIO".localized)
+        ]
+    }
 
-    /// 出口行内容：探测开启时按结果切换成功/失败两态（关闭时整行不渲染）。
-    @ViewBuilder
-    private var exitValueView: some View {
+    private var healthSummary: Text {
+        var result = Text(verbatim: "")
+        var isFirst = true
+        for (dimension, label) in dimensionLabels {
+            guard let score = monitor.health.breakdown[dimension.rawValue] else { continue }
+            if !isFirst {
+                // swiftlint:disable:next shorthand_operator
+                result = result + Text(verbatim: " · ")
+                    .font(.system(size: 22, weight: .bold))
+                    .baselineOffset(-4)
+                    .foregroundStyle(theme.inkMuted.opacity(0.25))
+            }
+            isFirst = false
+            if settings.useColorIndicator {
+                // swiftlint:disable:next shorthand_operator
+                result = result + Text(verbatim: label).foregroundColor(levelColor(score: score))
+            } else {
+                result = result + Text(verbatim: label + " ") + Text(levelText(for: dimension, score: score))
+            }
+        }
+        return result
+    }
+
+    private func levelColor(score: Double) -> Color {
+        if score >= 85 { return theme.signalGood }
+        if score >= 60 { return theme.signalWarn }
+        return theme.signalBad
+    }
+
+    private func levelText(for dimension: HealthScore.Dimension, score: Double) -> String {
+        if dimension == .temperature {
+            if score >= 85 { return "health.level.normal".localized }
+            if score >= 60 { return "health.level.warm".localized }
+            return "health.level.hot".localized
+        }
+        if score >= 85 { return "health.level.low".localized }
+        if score >= 60 { return "health.level.medium".localized }
+        return "health.level.high".localized
+    }
+
+    // MARK: - Battery helpers
+
+    private func batteryIcon(_ battery: BatteryInfo) -> String {
+        switch battery.state {
+        case .charging, .charged: return "battery.100.bolt"
+        case .noBattery: return "battery.0"
+        case .acNotCharging, .discharging:
+            if battery.percent <= 20 { return "battery.25" }
+            if battery.percent <= 60 { return "battery.50" }
+            return "battery.100"
+        }
+    }
+
+    private func batteryColor(_ battery: BatteryInfo) -> Color {
+        guard !useFlatColors else { return theme.inkPrimary }
+        if battery.state == .charging || battery.state == .charged { return theme.signalGood }
+        if battery.percent < 20 { return theme.signalBad }
+        if battery.percent < 40 { return theme.signalWarn }
+        return theme.signalGood
+    }
+
+    private func batteryStateText(_ battery: BatteryInfo) -> String {
+        switch battery.state {
+        case .charging: return "battery.state.charging".localized
+        case .discharging: return "battery.state.discharging".localized
+        case .charged: return "battery.state.charged".localized
+        case .acNotCharging: return "battery.state.acNotCharging".localized
+        case .noBattery: return ""
+        }
+    }
+
+    private func batteryTimeText(_ battery: BatteryInfo) -> String? {
+        guard battery.state != .charged, battery.state != .acNotCharging,
+              let minutes = battery.timeRemaining, minutes > 0 else {
+            return nil
+        }
+        let hours = minutes / 60
+        let mins = minutes % 60
+        let hm = hours > 0 ? "\(hours)h \(mins)m" : "\(mins)m"
+        let key = battery.state == .charging ? "battery.timeToFull" : "battery.timeLeft"
+        return String(format: key.localized, hm)
+    }
+
+    // MARK: - Network helpers
+
+    private var exitDisplayText: String {
         if let exit = monitor.exitNode {
-            Text(exitText(exit))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        } else {
-            Text("network.exit.failed".localized)
-                .foregroundColor(.labelMuted)
+            return exitText(exit)
         }
+        return "network.exit.failed".localized
     }
 
-    /// 本地代理行文案。
     private func proxyText(_ proxy: ProxyConfig) -> String {
         guard proxy.isEnabled else { return "network.proxy.none".localized }
         switch proxy.kind {
-        case .tun:
-            return proxy.host.map { "TUN \($0)" } ?? "TUN"
         case .http:
             return "HTTP \(proxy.host ?? "")"
         case .https:
@@ -407,18 +815,61 @@ struct OverviewTabView: View {
             return "SOCKS \(proxy.host ?? "")"
         case .pac:
             return "PAC"
+        case .tun:
+            return "TUN \(proxy.host ?? "")"
         case .none:
             return "network.proxy.none".localized
         }
     }
 
-    /// 出口节点摘要：`ip · city, country · ASN`，缺失字段自动省略。
     private func exitText(_ exit: ExitNode) -> String {
         var parts: [String] = [exit.ip]
         let locality = [exit.city, exit.country].compactMap { $0 }.joined(separator: ", ")
         if !locality.isEmpty { parts.append(locality) }
         if let asn = exit.asn { parts.append(asn) }
         return parts.joined(separator: " · ")
+    }
+
+    private func formatMBs(_ mbs: Double) -> String {
+        String(format: "%.1f MB/s", mbs)
+    }
+
+    // MARK: - Cores
+
+    private struct CoreInfo {
+        let index: Int
+        let displayIndex: Int
+        let usage: Double
+        let type: CoreType
+    }
+
+    private func getSortedCores() -> [CoreInfo] {
+        let usages = monitor.coreUsages
+        let topology = monitor.coreTopology
+        let pCount = topology.performanceCores
+        let eCount = topology.efficiencyCores
+
+        if pCount > 0 || eCount > 0 {
+            var result: [CoreInfo] = []
+            for index in 0..<min(pCount, usages.count) {
+                result.append(CoreInfo(index: index, displayIndex: index, usage: usages[index], type: .performance))
+            }
+            for index in 0..<min(eCount, usages.count - pCount) {
+                let actualIndex = pCount + index
+                if actualIndex < usages.count {
+                    result.append(CoreInfo(
+                        index: actualIndex,
+                        displayIndex: index,
+                        usage: usages[actualIndex],
+                        type: .efficiency
+                    ))
+                }
+            }
+            return result
+        }
+        return usages.enumerated().map { index, usage in
+            CoreInfo(index: index, displayIndex: index, usage: usage, type: .unknown)
+        }
     }
 
     private func openAbout() {
@@ -433,265 +884,36 @@ struct OverviewTabView: View {
     }
 }
 
-// MARK: - Action Rows
-
-private struct ActionRowsCard: View {
-    let openAbout: () -> Void
-    let quit: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            ActionRow(icon: "info.circle", title: "popover.action.about".localized, action: openAbout)
-            ActionRow(
-                icon: "power",
-                title: "popover.action.quit".localized,
-                action: quit,
-                foregroundColor: Color(red: 0.90, green: 0.36, blue: 0.34)
-            )
-        }
-    }
-}
+// MARK: - Shared rows
 
 private struct ActionRow: View {
     let icon: String
     let title: String
     let action: () -> Void
-    var foregroundColor: Color = .secondary.opacity(0.58)
+    var foregroundColor: Color
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(foregroundColor)
-                    .frame(width: 20)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(foregroundColor)
+                    .frame(width: 18)
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(foregroundColor)
+                    .foregroundStyle(foregroundColor)
                 Spacer()
             }
-            .padding(.trailing, 12)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Battery Card
-
-/// 健康分卡片：总分 + 分档 + 各维度简评。
-private struct HealthCard: View {
-    let health: HealthScore
-    /// 监控列表等级用颜色圆点（true）还是「低/中/高」文字（false）。
-    let useColorIndicator: Bool
-
-    var body: some View {
-        BentoCard(title: "health.title".localized, icon: "heart.text.square", padding: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .lastTextBaseline, spacing: 5) {
-                    Text("\(health.score)")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundColor(gradeColor)
-                    Text("/ 100")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundColor(.labelMuted)
-                    Text(gradeText)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(gradeColor)
-                        .padding(.leading, 4)
-                    Spacer()
-                }
-
-                summaryText
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundColor(.labelMuted)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private var gradeText: String {
-        switch health.grade {
-        case .excellent: return "health.grade.excellent".localized
-        case .good: return "health.grade.good".localized
-        case .fair: return "health.grade.fair".localized
-        case .poor: return "health.grade.poor".localized
-        case .critical: return "health.grade.critical".localized
-        }
-    }
-
-    private var gradeColor: Color {
-        switch health.grade {
-        case .excellent: return .green
-        case .good: return Color(red: 0.35, green: 0.78, blue: 0.42)
-        case .fair: return .yellow
-        case .poor: return .orange
-        case .critical: return .red
-        }
-    }
-
-    // 计算属性而非 static let：static let 只在首次访问时求值并永久缓存，
-    // 切换语言后标签会停留在首次渲染时的语言。每次渲染重新读取 `.localized`。
-    private var dimensionLabels: [(HealthScore.Dimension, String)] {
-        [
-            (.cpu, "health.dimension.cpu".localized),
-            (.memory, "health.dimension.memory".localized),
-            (.load, "health.dimension.load".localized),
-            (.temperature, "health.dimension.temperature".localized),
-            (.gpu, "health.dimension.gpu".localized),
-            (.battery, "health.dimension.battery".localized),
-            (.diskIO, "health.dimension.diskIO".localized)
-        ]
-    }
-
-    /// 各维度等级一览。颜色模式用圆点（`circle.fill` 内嵌进 Text，保留换行排版），
-    /// 文字模式用「低/中/高」。两套并存，由设置项 `useColorIndicator` 决定。
-    private var summaryText: Text {
-        var result = Text(verbatim: "")
-        var isFirst = true
-        for (dimension, label) in dimensionLabels {
-            guard let score = health.breakdown[dimension.rawValue] else { continue }
-            if !isFirst {
-                // swiftlint:disable:next shorthand_operator
-                result = result + Text(verbatim: " · ")
-                    .font(.system(size: 22, weight: .bold))
-                    .baselineOffset(-4)
-                    .foregroundColor(.labelMuted.opacity(0.25))
-            }
-            isFirst = false
-            if useColorIndicator {
-                // 颜色模式：直接给维度名上色（绿/黄/红），不再额外画圆点。
-                // swiftlint:disable:next shorthand_operator
-                result = result + Text(verbatim: label).foregroundColor(levelColor(score: score))
-            } else {
-                result = result + Text(verbatim: label + " ") + Text(levelText(for: dimension, score: score))
-            }
-        }
-        return result
-    }
-
-    /// 等级颜色：得分越高越「轻」。绿（健康）/ 黄（注意）/ 红（吃紧）。
-    private func levelColor(score: Double) -> Color {
-        if score >= 85 { return .green }
-        if score >= 60 { return .yellow }
-        return .red
-    }
-
-    private func levelText(for dimension: HealthScore.Dimension, score: Double) -> String {
-        if dimension == .temperature {
-            if score >= 85 { return "health.level.normal".localized }
-            if score >= 60 { return "health.level.warm".localized }
-            return "health.level.hot".localized
-        }
-
-        if score >= 85 { return "health.level.low".localized }
-        if score >= 60 { return "health.level.medium".localized }
-        return "health.level.high".localized
-    }
-}
-
-/// 电池概览卡：电量百分比（大字+上色）、状态、剩余时间；副行循环/健康/功耗/温度。
-/// 无电池机型（台式 Mac）优雅显示横杠。
-private struct BatteryCard: View {
-    let battery: BatteryInfo
-    let temperatureUnit: SettingsManager.TemperatureUnit
-    let useFlatColors: Bool
-
-    var body: some View {
-        BentoCard(title: "battery.title".localized, icon: batteryIcon) {
-            if battery.state == .noBattery {
-                Text("battery.na".localized)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.labelMuted)
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    // 主行：电量大字 + 状态 + 剩余时间
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(String(format: "%.0f", battery.percent))
-                            .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                            .foregroundColor(batteryColor)
-                        Text("%")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.labelMuted)
-
-                        Text(stateText)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.labelMuted)
-                            .padding(.leading, 4)
-
-                        Spacer()
-
-                        if let time = timeRemainingText {
-                            Text(time)
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.labelMuted)
-                        }
-                    }
-
-                    Divider()
-
-                    // 副行：循环 / 健康 / 功耗 / 温度
-                    HStack {
-                        SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
-                        Spacer()
-                        SubStat(label: "battery.health".localized, value: battery.healthPercent.map { "\($0)%" })
-                        Spacer()
-                        SubStat(label: "battery.power".localized, value: battery.powerWatts.map { String(format: "%.1fW", $0) })
-                        Spacer()
-                        SubStat(label: "battery.temp".localized, value: battery.temperature.map { temperatureUnit.format($0) })
-                    }
-                }
-            }
-        }
-    }
-
-    private var batteryIcon: String {
-        switch battery.state {
-        case .charging, .charged: return "battery.100.bolt"
-        case .noBattery: return "battery.0"
-        case .acNotCharging, .discharging:
-            if battery.percent <= 20 { return "battery.25" }
-            if battery.percent <= 60 { return "battery.50" }
-            return "battery.100"
-        }
-    }
-
-    private var batteryColor: Color {
-        guard !useFlatColors else { return .primary }
-        if battery.state == .charging || battery.state == .charged { return .green }
-        if battery.percent < 20 { return .red }
-        if battery.percent < 40 { return .yellow }
-        return .green
-    }
-
-    private var stateText: String {
-        switch battery.state {
-        case .charging: return "battery.state.charging".localized
-        case .discharging: return "battery.state.discharging".localized
-        case .charged: return "battery.state.charged".localized
-        case .acNotCharging: return "battery.state.acNotCharging".localized
-        case .noBattery: return ""
-        }
-    }
-
-    /// 剩余/充满时间文案。计算中或已充满则不显示。
-    private var timeRemainingText: String? {
-        guard battery.state != .charged, battery.state != .acNotCharging,
-              let minutes = battery.timeRemaining, minutes > 0 else {
-            return nil
-        }
-        let h = minutes / 60
-        let m = minutes % 60
-        let hm = h > 0 ? "\(h)h \(m)m" : "\(m)m"
-        let key = battery.state == .charging ? "battery.timeToFull" : "battery.timeLeft"
-        return String(format: key.localized, hm)
-    }
-}
-
-/// 电池副行的小统计项：值在上、标签在下；缺值显示「—」。
 private struct SubStat: View {
+    @Environment(\.theme) private var theme
+
     let label: String
     let value: String?
 
@@ -699,56 +921,53 @@ private struct SubStat: View {
         VStack(spacing: 2) {
             Text(value ?? "—")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundColor(.primary)
+                .foregroundStyle(theme.inkPrimary)
             Text(label)
-                .font(.system(size: 9))
-                .foregroundColor(.labelMuted)
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(theme.inkFaint)
         }
     }
 }
 
-// MARK: - Process Row
-
 private struct ProcessRow: View {
+    @Environment(\.theme) private var theme
+
     let process: TopProcess
     let useFlatColors: Bool
 
     var color: Color {
-        guard !useFlatColors else { return .primary }
+        guard !useFlatColors else { return theme.inkPrimary }
         if process.cpuPercent < 30 {
-            return .green
+            return theme.signalGood
         } else if process.cpuPercent < 70 {
-            return .yellow
+            return theme.signalWarn
         } else {
-            return .red
+            return theme.signalBad
         }
     }
 
     var body: some View {
         HStack(spacing: 8) {
-            // Process name
             Text(process.name)
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.primary)
+                .foregroundStyle(theme.inkPrimary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Mini progress bar (5 blocks)
             HStack(spacing: 2) {
-                ForEach(0..<5, id: \.self) { i in
-                    let threshold = Double(i + 1) * 20
+                ForEach(0..<5, id: \.self) { index in
+                    let threshold = Double(index + 1) * 20
                     Rectangle()
-                        .fill(process.cpuPercent >= threshold - 10 ? color : Color.gray.opacity(0.3))
-                        .frame(width: 8, height: 10)
-                        .cornerRadius(2)
+                        .fill(process.cpuPercent >= threshold - 10 ? color : theme.wellFill)
+                        .frame(width: 7, height: 9)
+                        .cornerRadius(1)
                 }
             }
 
-            // CPU percentage
             Text(process.cpuDisplayString)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(color)
-                .frame(width: 50, alignment: .trailing)
+                .foregroundStyle(color)
+                .frame(width: 48, alignment: .trailing)
         }
     }
 }

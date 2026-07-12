@@ -16,6 +16,7 @@ struct AppCardView: View {
     let appManager: AppMemoryManager
     let onClose: () -> Void
 
+    @Environment(\.theme) private var theme
     @State private var isHovered = false
     @State private var isExpanded = false
     @State private var cachedChildProcesses: [TopProcessInfo] = []
@@ -53,6 +54,7 @@ struct AppCardView: View {
                 // App Name
                 Text(app.displayName)
                     .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(theme.inkPrimary)
                     .lineLimit(1)
                     .opacity(isTerminating ? 0.5 : 1.0)
 
@@ -61,7 +63,7 @@ struct AppCardView: View {
                 // Memory Usage
                 Text(app.memoryFormatted)
                     .font(.system(size: 12, design: .monospaced))
-                    .foregroundColor(.labelMuted)
+                    .foregroundStyle(theme.inkSecondary)
                     .opacity(isTerminating ? 0.5 : 1.0)
 
                 // Close Button or Loading Indicator
@@ -73,7 +75,7 @@ struct AppCardView: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundColor(isHovered ? .red.opacity(0.8) : .secondary.opacity(0.4))
+                            .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
                             .padding(4)
                             .contentShape(Rectangle())
                     }
@@ -83,18 +85,14 @@ struct AppCardView: View {
                     .help("关闭应用")
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 9)
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(isHovered ? 0.8 : 0.4))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.primary.opacity(isHovered ? 0.1 : 0.05), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isHovered ? theme.rowHoverFill : Color.clear)
             )
             .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(.easeInOut(duration: 0.15)) {
                     isHovered = hovering
                 }
             }
@@ -118,7 +116,7 @@ struct AppCardView: View {
     private var expandButton: some View {
         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
             .font(.system(size: 9, weight: .semibold))
-            .foregroundColor(.labelMuted)
+            .foregroundStyle(theme.inkSecondary)
             .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
     }
 
