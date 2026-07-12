@@ -20,6 +20,11 @@
 "settings.theme.glass.hint" = "System vibrancy / instrument readout";
 "settings.theme.noir" = "Noir";
 "settings.theme.noir.hint" = "Near-black grain, charcoal surfaces";
+"settings.theme.film.grain" = "Film grain";
+"settings.theme.film.grain.hint" = "Off keeps light shapes, cleaner surface";
+"settings.theme.film.lightFlow" = "Light flow";
+"settings.theme.film.lightPositionX" = "Light position · horizontal";
+"settings.theme.film.lightPositionY" = "Light position · vertical";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";

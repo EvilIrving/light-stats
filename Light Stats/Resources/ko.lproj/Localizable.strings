@@ -20,6 +20,11 @@
 "settings.theme.glass.hint" = "시스템 비브런시 / 계기판 읽기";
 "settings.theme.noir" = "느와르";
 "settings.theme.noir.hint" = "거의 검은 그레인, 차콜 표면";
+"settings.theme.film.grain" = "필름 그레인";
+"settings.theme.film.grain.hint" = "끄면 빛은 유지, 더 깔끔한 표면";
+"settings.theme.film.lightFlow" = "빛 흐름";
+"settings.theme.film.lightPositionX" = "빛 위치 · 가로";
+"settings.theme.film.lightPositionY" = "빛 위치 · 세로";
 "settings.logo" = "로고";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";

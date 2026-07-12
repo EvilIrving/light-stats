@@ -140,6 +140,46 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(appTheme.rawValue, for: .appTheme) }
     }
 
+    // MARK: - Film theme appearance (only applied when appTheme == .film)
+
+    /// Film-stock grain overlay. Off keeps mesh light art but removes grit (cleaner look).
+    @Published var filmGrainEnabled: Bool {
+        didSet { save(filmGrainEnabled, for: .filmGrainEnabled) }
+    }
+    /// Light-field motion intensity. 0 = frozen, 0.5 = product default, 1 = lively.
+    @Published var filmLightFlow: Double {
+        didSet {
+            let safeValue = min(max(filmLightFlow, 0), 1)
+            guard safeValue == filmLightFlow else {
+                filmLightFlow = safeValue
+                return
+            }
+            save(filmLightFlow, for: .filmLightFlow)
+        }
+    }
+    /// Horizontal bias of the film light field. 0 = left, 0.5 = default, 1 = right.
+    @Published var filmLightPositionX: Double {
+        didSet {
+            let safeValue = min(max(filmLightPositionX, 0), 1)
+            guard safeValue == filmLightPositionX else {
+                filmLightPositionX = safeValue
+                return
+            }
+            save(filmLightPositionX, for: .filmLightPositionX)
+        }
+    }
+    /// Vertical bias of the film light field. 0 = top, 0.5 = default, 1 = bottom.
+    @Published var filmLightPositionY: Double {
+        didSet {
+            let safeValue = min(max(filmLightPositionY, 0), 1)
+            guard safeValue == filmLightPositionY else {
+                filmLightPositionY = safeValue
+                return
+            }
+            save(filmLightPositionY, for: .filmLightPositionY)
+        }
+    }
+
     // MARK: - Other Settings
 
     /// 开机启动。真相源是系统登录项（`SMAppService`），不落 UserDefaults。
@@ -380,6 +420,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case useColorIndicator = "settings.useColorIndicator"
         case useFlatColors = "settings.useFlatColors"
         case appTheme = "settings.appTheme"
+        case filmGrainEnabled = "settings.filmGrainEnabled"
+        case filmLightFlow = "settings.filmLightFlow"
+        case filmLightPositionX = "settings.filmLightPositionX"
+        case filmLightPositionY = "settings.filmLightPositionY"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case appLanguage = "settings.appLanguage"
@@ -437,6 +481,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
         // 主题：默认 film（胶片棕）。兼容上一版短暂使用的 aurora 键。
         appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
+        // 胶片外观：颗粒默认开；光影流动/位置中点 = 产品默认构图。
+        filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true
+        let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.5
+        filmLightFlow = min(max(storedFlow, 0), 1)
+        let storedPosX = defaults.object(forKey: Key.filmLightPositionX.rawValue) as? Double ?? 0.5
+        filmLightPositionX = min(max(storedPosX, 0), 1)
+        let storedPosY = defaults.object(forKey: Key.filmLightPositionY.rawValue) as? Double ?? 0.5
+        filmLightPositionY = min(max(storedPosY, 0), 1)
 
         // 开机启动：以系统登录项注册状态为唯一真相源。
         launchAtLogin = LaunchAtLoginService.isEnabled
