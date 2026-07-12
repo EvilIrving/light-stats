@@ -180,6 +180,42 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
 
+    // MARK: - Noir theme appearance
+
+    @Published var noirGrainEnabled: Bool {
+        didSet { save(noirGrainEnabled, for: .noirGrainEnabled) }
+    }
+    @Published var noirLightFlow: Double {
+        didSet {
+            let safeValue = min(max(noirLightFlow, 0), 1)
+            guard safeValue == noirLightFlow else {
+                noirLightFlow = safeValue
+                return
+            }
+            save(noirLightFlow, for: .noirLightFlow)
+        }
+    }
+    @Published var noirLightPositionX: Double {
+        didSet {
+            let safeValue = min(max(noirLightPositionX, 0), 1)
+            guard safeValue == noirLightPositionX else {
+                noirLightPositionX = safeValue
+                return
+            }
+            save(noirLightPositionX, for: .noirLightPositionX)
+        }
+    }
+    @Published var noirLightPositionY: Double {
+        didSet {
+            let safeValue = min(max(noirLightPositionY, 0), 1)
+            guard safeValue == noirLightPositionY else {
+                noirLightPositionY = safeValue
+                return
+            }
+            save(noirLightPositionY, for: .noirLightPositionY)
+        }
+    }
+
     // MARK: - Other Settings
 
     /// 开机启动。真相源是系统登录项（`SMAppService`），不落 UserDefaults。
@@ -424,6 +460,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case filmLightFlow = "settings.filmLightFlow"
         case filmLightPositionX = "settings.filmLightPositionX"
         case filmLightPositionY = "settings.filmLightPositionY"
+        case noirGrainEnabled = "settings.noirGrainEnabled"
+        case noirLightFlow = "settings.noirLightFlow"
+        case noirLightPositionX = "settings.noirLightPositionX"
+        case noirLightPositionY = "settings.noirLightPositionY"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case appLanguage = "settings.appLanguage"
@@ -489,6 +529,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         filmLightPositionX = min(max(storedPosX, 0), 1)
         let storedPosY = defaults.object(forKey: Key.filmLightPositionY.rawValue) as? Double ?? 0.5
         filmLightPositionY = min(max(storedPosY, 0), 1)
+        noirGrainEnabled = defaults.object(forKey: Key.noirGrainEnabled.rawValue) as? Bool ?? true
+        let storedNoirFlow = defaults.object(forKey: Key.noirLightFlow.rawValue) as? Double ?? 0.25
+        noirLightFlow = min(max(storedNoirFlow, 0), 1)
+        let storedNoirPosX = defaults.object(forKey: Key.noirLightPositionX.rawValue) as? Double ?? 0.5
+        noirLightPositionX = min(max(storedNoirPosX, 0), 1)
+        let storedNoirPosY = defaults.object(forKey: Key.noirLightPositionY.rawValue) as? Double ?? 0.5
+        noirLightPositionY = min(max(storedNoirPosY, 0), 1)
 
         // 开机启动：以系统登录项注册状态为唯一真相源。
         launchAtLogin = LaunchAtLoginService.isEnabled

@@ -89,7 +89,11 @@ struct PopoverContentView: View {
         // Mesh art + grain live entirely inside ThemeBackgroundView (soft center
         // veil only). No full-frame scrim — that was burying light shapes + grit.
         .background(
-            ThemeBackgroundView(tokens: theme, cornerRadius: 12)
+            ThemeBackgroundView(
+                tokens: theme,
+                appearance: settings.themeAppearance(for: settings.appTheme),
+                cornerRadius: 12
+            )
                 .ignoresSafeArea()
         )
         .frame(width: 360, height: 780)

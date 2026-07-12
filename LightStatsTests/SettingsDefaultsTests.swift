@@ -120,6 +120,14 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.filmLightPositionY, 0.5, accuracy: 0.0001)
     }
 
+    func testNoirAppearanceDefaults() {
+        let settings = freshSettings()
+        XCTAssertTrue(settings.noirGrainEnabled)
+        XCTAssertEqual(settings.noirLightFlow, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(settings.noirLightPositionX, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(settings.noirLightPositionY, 0.5, accuracy: 0.0001)
+    }
+
     // MARK: - Persisted overrides are honored (DI sanity check)
 
     func testStoredValueOverridesDefault() {

@@ -14,9 +14,24 @@ import SwiftUI
 
 struct ThemeBackgroundView: View {
     let tokens: ThemeTokens
+    let appearance: ThemeAppearanceConfiguration
     var cornerRadius: CGFloat = 12
     var configuresWindow: Bool = false
     var fallbackMaterial: NSVisualEffectView.Material = .sidebar
+
+    init(
+        tokens: ThemeTokens,
+        appearance: ThemeAppearanceConfiguration? = nil,
+        cornerRadius: CGFloat = 12,
+        configuresWindow: Bool = false,
+        fallbackMaterial: NSVisualEffectView.Material = .sidebar
+    ) {
+        self.tokens = tokens
+        self.appearance = appearance ?? .defaults(for: tokens.theme)
+        self.cornerRadius = cornerRadius
+        self.configuresWindow = configuresWindow
+        self.fallbackMaterial = fallbackMaterial
+    }
 
     var body: some View {
         Group {
@@ -27,7 +42,7 @@ struct ThemeBackgroundView: View {
                     configuresWindow: configuresWindow
                 )
             } else if tokens.usesMesh {
-                FluidMeshBackground(tokens: tokens)
+                FluidMeshBackground(tokens: tokens, appearance: appearance)
             } else {
                 tokens.canvas
             }
@@ -40,36 +55,29 @@ struct ThemeBackgroundView: View {
 
 private struct FluidMeshBackground: View {
     let tokens: ThemeTokens
-    @ObservedObject private var settings = SettingsManager.shared
+    let appearance: ThemeAppearanceConfiguration
     @State private var phaseAnchorDate = Date()
     @State private var phaseAnchor: CGFloat = 0
 
-    /// Film-only user overrides; other mesh themes keep product defaults.
-    private var isFilm: Bool { tokens.theme == .film }
-    private var grainEnabled: Bool { !isFilm || settings.filmGrainEnabled }
-    private var lightFlow: Double { isFilm ? settings.filmLightFlow : 0.5 }
-    private var lightPosX: Double { isFilm ? settings.filmLightPositionX : 0.5 }
-    private var lightPosY: Double { isFilm ? settings.filmLightPositionY : 0.5 }
-
     /// Same grit strength for film + noir; film only warms the tint.
     private var grainWarmth: Double { tokens.theme == .film ? 0.5 : 0 }
-    private var grainOpacity: Double { grainEnabled ? 0.42 : 0 }
+    private var grainOpacity: Double { appearance.grainEnabled ? 0.42 : 0 }
 
     private var animationPaused: Bool {
-        lightFlow < 0.02
+        appearance.lightFlow < 0.02
     }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: animationPaused)) { context in
-            let phase = phase(at: context.date, flow: tokens.theme == .noir ? 0.25 : lightFlow)
+            let phase = phase(at: context.date, flow: appearance.lightFlow)
 
             GeometryReader { geo in
                 let width = geo.size.width
                 let height = geo.size.height
                 let scale = min(width, height)
                 // Keep the light mass inside the visible composition at slider extremes.
-                let shiftX = CGFloat(lightPosX - 0.5) * width * 0.4
-                let shiftY = CGFloat(lightPosY - 0.5) * height * 0.3
+                let shiftX = CGFloat(appearance.lightPositionX - 0.5) * width * 0.4
+                let shiftY = CGFloat(appearance.lightPositionY - 0.5) * height * 0.3
 
                 ZStack {
                     // 1) Light art — flattened for blur cost.
@@ -87,7 +95,13 @@ private struct FluidMeshBackground: View {
                             )
                         case .noir:
                             NoirLightField(
-                                tokens: tokens, width: width, height: height, scale: scale, phase: phase
+                                tokens: tokens,
+                                width: width,
+                                height: height,
+                                scale: scale,
+                                phase: phase,
+                                shiftX: shiftX,
+                                shiftY: shiftY
                             )
                         default:
                             tokens.meshBase
@@ -100,8 +114,8 @@ private struct FluidMeshBackground: View {
                         width: width,
                         height: height,
                         scale: scale,
-                        posX: lightPosX,
-                        posY: lightPosY
+                        posX: appearance.lightPositionX,
+                        posY: appearance.lightPositionY
                     )
 
                     // 3) Grain on top when enabled — must stay outside drawingGroup.
@@ -110,7 +124,7 @@ private struct FluidMeshBackground: View {
                 .frame(width: width, height: height)
             }
         }
-        .onChange(of: lightFlow) { oldFlow, _ in
+        .onChange(of: appearance.lightFlow) { oldFlow, _ in
             let now = Date()
             phaseAnchor = phase(at: now, flow: oldFlow)
             phaseAnchorDate = now
@@ -311,6 +325,8 @@ private struct NoirLightField: View {
     let height: CGFloat
     let scale: CGFloat
     let phase: CGFloat
+    let shiftX: CGFloat
+    let shiftY: CGFloat
 
     var body: some View {
         let driftX = sin(phase * 0.9) * width * 0.04
@@ -348,7 +364,7 @@ private struct NoirLightField: View {
                 )
                 .frame(width: width * 1.05, height: height * 1.7)
                 .blur(radius: scale * 0.16)
-                .offset(x: width * 0.14 + driftX, y: -height * 0.1 + driftY)
+                .offset(x: width * 0.14 + driftX + shiftX, y: -height * 0.1 + driftY + shiftY)
                 .blendMode(.screen)
 
             Ellipse()
@@ -366,7 +382,7 @@ private struct NoirLightField: View {
                 )
                 .frame(width: width * 1.05, height: height * 0.8)
                 .blur(radius: scale * 0.2)
-                .offset(x: -width * 0.26 + driftX2, y: height * 0.24 + driftY2)
+                .offset(x: -width * 0.26 + driftX2 + shiftX, y: height * 0.24 + driftY2 + shiftY)
                 .blendMode(.plusLighter)
                 .opacity(0.4)
 
@@ -386,7 +402,7 @@ private struct NoirLightField: View {
                 .frame(width: width * 0.48, height: height * 1.65)
                 .blur(radius: scale * 0.1)
                 .rotationEffect(.degrees(14 + Double(sin(phase)) * 5))
-                .offset(x: width * 0.1 + driftX * 0.5, y: driftY * 0.35)
+                .offset(x: width * 0.1 + driftX * 0.5 + shiftX, y: driftY * 0.35 + shiftY)
                 .blendMode(.screen)
 
             Capsule()
@@ -405,7 +421,7 @@ private struct NoirLightField: View {
                 .frame(width: width * 0.24, height: height * 1.2)
                 .blur(radius: scale * 0.14)
                 .rotationEffect(.degrees(-20 + Double(cos(phase * 0.9)) * 4))
-                .offset(x: -width * 0.18 + driftX2 * 0.6, y: height * 0.06 + driftY2 * 0.3)
+                .offset(x: -width * 0.18 + driftX2 * 0.6 + shiftX, y: height * 0.06 + driftY2 * 0.3 + shiftY)
                 .blendMode(.screen)
                 .opacity(0.35)
 
@@ -423,7 +439,7 @@ private struct NoirLightField: View {
                 )
                 .frame(width: width * 1.15, height: height * 0.5)
                 .blur(radius: scale * 0.14)
-                .offset(y: -height * 0.3 + driftY * 0.2)
+                .offset(x: shiftX, y: -height * 0.3 + driftY * 0.2 + shiftY)
                 .blendMode(.plusLighter)
                 .opacity(0.45)
 

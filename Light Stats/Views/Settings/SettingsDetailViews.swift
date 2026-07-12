@@ -26,9 +26,7 @@ struct GeneralDetail: View {
             SettingsSection("settings.theme".localized) {
                 VStack(alignment: .leading, spacing: 10) {
                     ThemePickerView(selection: $settings.appTheme)
-                    if settings.appTheme == .film {
-                        filmAppearanceControls
-                    }
+                    themeAppearanceControls
                 }
             }
             SettingsSection("settings.general.app".localized) {
@@ -79,46 +77,53 @@ struct GeneralDetail: View {
         }
     }
 
-    /// 胶片棕专属：实时预览 + 颗粒开关 + 光影流动 / 位置档位。
-    /// 设置窗本身不跟主题，所以必须内嵌预览，否则滑块没有可见反馈。
-    private var filmAppearanceControls: some View {
+    func meshAppearanceControls(
+        tokens: ThemeTokens,
+        grainEnabled: Binding<Bool>,
+        lightFlow: Binding<Double>,
+        lightPositionX: Binding<Double>,
+        lightPositionY: Binding<Double>,
+        presets: ThemeAppearancePresetConfiguration
+    ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            filmLivePreview
+            meshLivePreview(tokens: tokens)
             SettingsGroup {
                 SettingsRow(
                     "settings.theme.film.grain".localized,
                     subtitle: "settings.theme.film.grain.hint".localized
                 ) {
-                    SettingsToggle(isOn: $settings.filmGrainEnabled)
+                    SettingsToggle(isOn: grainEnabled)
                 }
                 rowDivider()
                 filmSegmentedRow(
                     title: "settings.theme.film.lightFlow".localized,
-                    value: $settings.filmLightFlow,
-                    options: FilmAppearanceLabel.flowValues,
+                    value: lightFlow,
+                    options: presets.flowValues,
                     format: FilmAppearanceLabel.flow
                 )
                 rowDivider()
                 filmSegmentedRow(
                     title: "settings.theme.film.lightPositionX".localized,
-                    value: $settings.filmLightPositionX,
-                    options: FilmAppearanceLabel.positionValues,
+                    value: lightPositionX,
+                    options: presets.positionValues,
                     format: FilmAppearanceLabel.horizontalPosition
                 )
                 rowDivider()
                 filmSegmentedRow(
                     title: "settings.theme.film.lightPositionY".localized,
-                    value: $settings.filmLightPositionY,
-                    options: FilmAppearanceLabel.positionValues,
+                    value: lightPositionY,
+                    options: presets.positionValues,
                     format: FilmAppearanceLabel.verticalPosition
                 )
             }
         }
     }
-
-    /// Compact film mesh so grain / flow / position updates are visible in-settings.
-    private var filmLivePreview: some View {
-        ThemeBackgroundView(tokens: .film, cornerRadius: 10)
+    private func meshLivePreview(tokens: ThemeTokens) -> some View {
+        ThemeBackgroundView(
+            tokens: tokens,
+            appearance: settings.themeAppearance(for: tokens.theme),
+            cornerRadius: 10
+        )
             .frame(maxWidth: .infinity)
             .frame(height: 120)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -126,7 +131,7 @@ struct GeneralDetail: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            .accessibilityLabel("settings.theme.film".localized)
+            .accessibilityLabel(tokens.theme.titleKey.localized)
     }
 
     private func filmSegmentedRow(
