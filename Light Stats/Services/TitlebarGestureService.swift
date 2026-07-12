@@ -29,6 +29,12 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         case cancel
     }
 
+    private enum ReleaseDisposition {
+        case ended
+        case cancelled
+        case none
+    }
+
     private struct GestureState {
         var deltaX: Double = 0
         var deltaY: Double = 0
@@ -198,9 +204,15 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
         guard isContinuous else { return }
 
-        if isReleaseEvent(event) {
+        switch releaseDisposition(for: event) {
+        case .ended:
             handleGestureEvent(releaseGesture())
             return
+        case .cancelled:
+            handleGestureEvent(cancelGesture())
+            return
+        case .none:
+            break
         }
 
         let point = event.location
@@ -255,8 +267,24 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         gestureState.deltaY += deltaY
         gestureState.lastPoint = point
 
-        guard dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: resistanceThreshold) != nil else {
+        guard let resistanceAction = dominantAction(
+            deltaX: gestureState.deltaX,
+            deltaY: gestureState.deltaY,
+            threshold: resistanceThreshold
+        ) else {
+            let shouldCancel = gestureState.thresholdAction != nil || gestureState.readyAction != nil
+            if shouldCancel {
+                gestureState = GestureState(lastEventAt: now)
+                previewToken += 1
+                return .cancel
+            }
             return nil
+        }
+
+        if let readyAction = gestureState.readyAction, readyAction != resistanceAction {
+            gestureState = GestureState(lastEventAt: now)
+            previewToken += 1
+            return .cancel
         }
 
         if let action = dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: hapticThreshold),
@@ -306,11 +334,28 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return nil
     }
 
-    private func isReleaseEvent(_ event: CGEvent) -> Bool {
-        let endedOrCancelledMask: Int64 = 0x1C
+    private func cancelGesture() -> GestureEvent? {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+
+        let wasActive = gestureState.thresholdAction != nil || gestureState.readyAction != nil
+        gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+        previewToken += 1
+        return wasActive ? .cancel : nil
+    }
+
+    private func releaseDisposition(for event: CGEvent) -> ReleaseDisposition {
+        let endedMask = Int64(CGScrollPhase.ended.rawValue)
+        let cancelledMask = Int64(CGScrollPhase.cancelled.rawValue)
         let scrollPhase = event.getIntegerValueField(.scrollWheelEventScrollPhase)
         let momentumPhase = event.getIntegerValueField(.scrollWheelEventMomentumPhase)
-        return scrollPhase & endedOrCancelledMask != 0 || momentumPhase & endedOrCancelledMask != 0
+        if scrollPhase & cancelledMask != 0 || momentumPhase & cancelledMask != 0 {
+            return .cancelled
+        }
+        if scrollPhase & endedMask != 0 || momentumPhase & endedMask != 0 {
+            return .ended
+        }
+        return .none
     }
 
     private func dominantAction(deltaX: Double, deltaY: Double, threshold: Double) -> WindowSnapAction? {
