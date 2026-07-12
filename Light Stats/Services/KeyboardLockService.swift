@@ -24,7 +24,7 @@ final class KeyboardLockService: KeyboardLocking {
     /// CGEventType 未包含 NX_SYSDEFINED (14)，用 raw value 直接构造。
     private static let nxSystemDefined = CGEventType(rawValue: 14)!
 
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "KeyboardLock")
+    private let logger = AppLogger(category: "KeyboardLock")
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 

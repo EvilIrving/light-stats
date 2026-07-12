@@ -22,7 +22,7 @@ final class CleaningModeViewModel: ObservableObject {
     @Published private(set) var remainingSeconds = CleaningModeViewModel.duration
 
     private let service: KeyboardLocking
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "CleaningMode")
+    private let logger = AppLogger(category: "CleaningMode")
     private var countdownTimer: Timer?
 
     init(service: KeyboardLocking = KeyboardLockService()) {

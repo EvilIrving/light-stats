@@ -13,7 +13,9 @@ import os
 
 final class FinderMenuController: FIFinderSync {
 
-    private let logger = Logger(subsystem: "com.lightstats.findermenu", category: "Extension")
+    // Extension process: use its own bundle id so Console filters match the process.
+    // Journal lives in the host app; this path only hits os.Logger for post-hoc triage.
+    private let logger = Logger(subsystem: FinderMenuShared.extensionBundleID, category: "Extension")
     private var commandsByTag: [Int: FinderMenuCommand] = [:]
 
     override init() {

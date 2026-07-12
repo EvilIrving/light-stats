@@ -13,7 +13,7 @@ import os
 /// 不落 UserDefaults——以登录项实际注册状态为准。纯同步调用，标 `nonisolated`。
 nonisolated enum LaunchAtLoginService {
 
-    private static let log = AppLogger(subsystem: "com.lightstats", category: "LaunchAtLogin")
+    private static let log = AppLogger(category: "LaunchAtLogin")
 
     /// 当前是否已注册为登录项。
     static var isEnabled: Bool {

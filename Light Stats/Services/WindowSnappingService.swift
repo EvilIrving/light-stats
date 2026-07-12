@@ -45,7 +45,7 @@ final class WindowSnappingService {
         var title: String
     }
 
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "WindowSnapping")
+    private let logger = AppLogger(category: "WindowSnapping")
     private var savedFrames: [WindowIdentity: CGRect] = [:]
 
     func checkPermission(promptIfNeeded: Bool) -> Bool {

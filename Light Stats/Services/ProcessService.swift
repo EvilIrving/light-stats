@@ -36,7 +36,7 @@ final class ProcessService: ProcessServiceProtocol {
     /// Bundle ID 缓存（避免重复读取 Info.plist）
     private var bundleIdCache: [String: String?] = [:]
     private let memoryCleanupLock = NSLock()
-    private let logger = AppLogger(subsystem: "com.lightstats.app", category: "ProcessService")
+    private let logger = AppLogger(category: "ProcessService")
     private var isMemoryCleanupRunning = false
 
     private init() {}

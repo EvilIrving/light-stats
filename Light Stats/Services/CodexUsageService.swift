@@ -32,7 +32,7 @@ import os
 /// Codex (ChatGPT) subscription usage — see file header for full logic chain.
 enum CodexUsageService {
 
-    private static let log = AppLogger(subsystem: "com.lightstats.app", category: "CodexUsage")
+    private static let log = AppLogger(category: "CodexUsage")
 
     private static let usageURL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
 

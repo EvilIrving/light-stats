@@ -22,7 +22,7 @@ final class KeepAwakeService {
 
     private(set) var isRunning = false
     private var assertionID = IOPMAssertionID(0)
-    private let log = AppLogger(subsystem: "com.lightstats.app", category: "KeepAwake")
+    private let log = AppLogger(category: "KeepAwake")
 
     private init() {}
 

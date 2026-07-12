@@ -19,7 +19,7 @@ import AppKit
 import os
 
 enum DebugSnapshot {
-    private static let logger = AppLogger(subsystem: "com.lightstats.app", category: "DebugSnapshot")
+    private static let logger = AppLogger(category: "DebugSnapshot")
 
     /// 面板内容固定宽度，与正式面板一致。
     private static let contentWidth: CGFloat = 360

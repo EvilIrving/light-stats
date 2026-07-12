@@ -21,7 +21,7 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
         var action: WindowSnapAction
     }
 
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "MagnetHotKeys")
+    private let logger = AppLogger(category: "MagnetHotKeys")
     private let snappingService: WindowSnappingService
     private var registrations: [UInt32: Registration] = [:]
     private var eventHandler: EventHandlerRef?

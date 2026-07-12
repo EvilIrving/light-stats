@@ -33,7 +33,7 @@ final class UpdateManager: ObservableObject {
     @Published private(set) var availableRelease: ReleaseInfo?
 
     private let service = UpdateService()
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "UpdateManager")
+    private let logger = AppLogger(category: "UpdateManager")
     private var window: NSWindow?
     private var windowDelegate: UpdateWindowDelegate?
 

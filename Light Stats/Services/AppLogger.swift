@@ -2,8 +2,10 @@
 //  AppLogger.swift
 //  Light Stats
 //
-//  Single logging entry point: mirrors human-readable messages to macOS unified
-//  logging and the app-owned five-day structured diagnostic journal.
+//  Single logging entry point. Primary sink is the app-owned diagnostic journal
+//  (five-day JSONL under Application Support) for post-hoc investigation.
+//  Messages are also handed to os.Logger with private privacy so they can show up
+//  in Console after a crash or support session — not for live developer streaming.
 //
 
 import Foundation
@@ -11,12 +13,16 @@ import os
 
 nonisolated struct AppLogger {
 
+    /// Host app OSLog subsystem. Matches `PRODUCT_BUNDLE_IDENTIFIER` so Console
+    /// predicates and the process identity stay aligned. One definition for the app.
+    static let subsystem = "cain.com.light-stats"
+
     private let logger: Logger
     private let category: String
     private let mirrorsToJournal: Bool
 
-    init(subsystem: String, category: String, mirrorsToJournal: Bool = true) {
-        logger = Logger(subsystem: subsystem, category: category)
+    init(category: String, mirrorsToJournal: Bool = true) {
+        logger = Logger(subsystem: Self.subsystem, category: category)
         self.category = category
         self.mirrorsToJournal = mirrorsToJournal
     }
@@ -33,7 +39,7 @@ nonisolated struct AppLogger {
 
     func notice(_ message: String) {
         logger.notice("\(message, privacy: .private)")
-        record(.warning, message)
+        record(.info, message)
     }
 
     func error(_ message: String) {

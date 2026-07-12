@@ -128,7 +128,7 @@ private actor ClaudeTokenCache {
 
 enum ClaudeUsageService {
 
-    private static let log = AppLogger(subsystem: "com.lightstats.app", category: "ClaudeUsage")
+    private static let log = AppLogger(category: "ClaudeUsage")
 
     private static let keychainService = "Claude Code-credentials"
     private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!

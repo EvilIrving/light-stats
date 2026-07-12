@@ -20,7 +20,7 @@ final class FinderMenuHostService {
 
     static let shared = FinderMenuHostService()
 
-    private let logger = AppLogger(subsystem: "com.lightstats.findermenu", category: "Host")
+    private let logger = AppLogger(category: "FinderMenuHost")
     private var localPort: CFMessagePort?
     private var runLoopSource: CFRunLoopSource?
     private var activeAction: FinderMenuAction?

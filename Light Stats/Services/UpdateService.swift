@@ -20,7 +20,7 @@ actor UpdateService {
     /// 本团队的 Developer ID Team ID，校验下载产物归属。
     static let expectedTeamID = "QZZ878S3NS"
 
-    private let logger = AppLogger(subsystem: "com.lightstats", category: "Update")
+    private let logger = AppLogger(category: "Update")
 
     enum UpdateError: LocalizedError {
         case network
@@ -51,8 +51,8 @@ actor UpdateService {
 
     // MARK: - 检查最新版本
 
-    /// `includePrereleases == true`：打 `/releases` 列表并接受 prerelease（手动「立即检查」
-    /// 的内测通道）；否则打 `/releases/latest`，GitHub 天然只回稳定版（自动检查）。
+    /// `includePrereleases == true`：打 `/releases` 列表并接受 prerelease（用户开启 Beta 尝鲜）；
+    /// 否则打 `/releases/latest`，GitHub 天然只回稳定版。
     func fetchLatest(includePrereleases: Bool = false) async throws -> ReleaseInfo {
         let path = includePrereleases ? "releases?per_page=20" : "releases/latest"
         let endpoint = "https://api.github.com/repos/\(Self.repo)/\(path)"
