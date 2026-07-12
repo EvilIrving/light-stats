@@ -80,10 +80,10 @@ struct OverviewTabView: View {
                 GridItem(.flexible(), spacing: 10),
                 GridItem(.flexible(), spacing: 10)
             ], spacing: 8) {
-                QuickStatCard(title: "CPU", icon: "cpu", height: quickStatCardHeight, trend: cpuTrend) {
+                QuickStatCard(title: "CPU", svgIcon: .cpu, height: quickStatCardHeight, trend: cpuTrend) {
                     metricPercent(monitor.cpuUsage)
                 }
-                QuickStatCard(title: "GPU", icon: "square.grid.2x2", height: quickStatCardHeight, trend: gpuTrend) {
+                QuickStatCard(title: "GPU", svgIcon: .gpu, height: quickStatCardHeight, trend: gpuTrend) {
                     if let gpu = monitor.gpuUsage {
                         metricPercent(gpu)
                     } else {
@@ -92,7 +92,7 @@ struct OverviewTabView: View {
                             .foregroundStyle(theme.inkMuted)
                     }
                 }
-                QuickStatCard(title: "MEM", icon: "memorychip", height: quickStatCardHeight, trend: memoryTrend) {
+                QuickStatCard(title: "MEM", svgIcon: .memory, height: quickStatCardHeight, trend: memoryTrend) {
                     HStack(alignment: .lastTextBaseline, spacing: 2) {
                         Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
                             .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
@@ -164,7 +164,7 @@ struct OverviewTabView: View {
     }
 
     private var bentoNetworkCard: some View {
-        BentoCard(title: "overview.network".localized, icon: "antenna.radiowaves.left.and.right") {
+        BentoCard(title: "overview.network".localized, svgIcon: .network) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     HStack(spacing: 4) {
@@ -192,7 +192,7 @@ struct OverviewTabView: View {
                 Divider()
 
                 MetaRow(
-                    icon: "lock.shield",
+                    svgIcon: .proxy,
                     label: "network.proxy.title".localized,
                     value: proxyText(monitor.proxyConfig),
                     valueColor: monitor.proxyConfig.isEnabled ? theme.inkPrimary : theme.inkSecondary
@@ -210,7 +210,7 @@ struct OverviewTabView: View {
     }
 
     private var bentoProcessesCard: some View {
-        BentoCard(title: "overview.processes".localized, icon: "list.bullet.rectangle") {
+        BentoCard(title: "overview.processes".localized, svgIcon: .processes) {
             if monitor.topCPUProcesses.isEmpty {
                 Text("overview.loading".localized)
                     .font(.system(size: 11))
@@ -320,10 +320,10 @@ struct OverviewTabView: View {
     private var resourcesSection: some View {
         PanelSection(title: "overview.resources".localized) {
             VStack(spacing: 2) {
-                MetricRow(label: "CPU", icon: "cpu", trend: cpuTrend) {
+                MetricRow(label: "CPU", svgIcon: .cpu, trend: cpuTrend) {
                     metricPercent(monitor.cpuUsage)
                 }
-                MetricRow(label: "GPU", icon: "square.grid.2x2", trend: gpuTrend) {
+                MetricRow(label: "GPU", svgIcon: .gpu, trend: gpuTrend) {
                     if let gpu = monitor.gpuUsage {
                         metricPercent(gpu)
                     } else {
@@ -339,7 +339,7 @@ struct OverviewTabView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
-                MetricRow(label: "MEM", icon: "memorychip", trend: memoryTrend) {
+                MetricRow(label: "MEM", svgIcon: .memory, trend: memoryTrend) {
                     HStack(alignment: .lastTextBaseline, spacing: 2) {
                         Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
                             .font(.system(size: 16, weight: useFlatColors ? .regular : .bold, design: .rounded))
@@ -411,8 +411,8 @@ struct OverviewTabView: View {
         HStack(alignment: .top, spacing: 8) {
             systemMetricColumn(
                 top: {
-                    systemIconValue(
-                        icon: "thermometer.sun",
+                    systemSVGIconValue(
+                        svgIcon: .temperature,
                         text: monitor.cpuTemperature.map { String(format: "%.0f°C", $0) } ?? "—"
                     )
                 },
@@ -448,8 +448,8 @@ struct OverviewTabView: View {
             )
             systemMetricColumn(
                 top: {
-                    systemIconValue(
-                        icon: "externaldrive.fill",
+                    systemSVGIconValue(
+                        svgIcon: .disk,
                         text: ByteFormatter.formatDisk(monitor.diskAvailable)
                     )
                 },
@@ -493,6 +493,18 @@ struct OverviewTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private func systemSVGIconValue(svgIcon: AppSVGIcon, text: String) -> some View {
+        HStack(spacing: 4) {
+            SVGIcon(svgIcon, size: 11)
+            Text(text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .foregroundStyle(theme.inkMuted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     // MARK: - AI
 
     @ViewBuilder
@@ -522,6 +534,7 @@ struct OverviewTabView: View {
     // MARK: - Network
 
     private var networkSection: some View {
+        // Instrument layout: section titles are text-only; Bento keeps card icons.
         PanelSection(title: "overview.network".localized) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -549,7 +562,7 @@ struct OverviewTabView: View {
                 }
 
                 MetaRow(
-                    icon: "lock.shield",
+                    svgIcon: .proxy,
                     label: "network.proxy.title".localized,
                     value: proxyText(monitor.proxyConfig),
                     valueColor: monitor.proxyConfig.isEnabled ? theme.inkPrimary : theme.inkSecondary

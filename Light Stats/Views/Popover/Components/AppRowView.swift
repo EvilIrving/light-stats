@@ -2,7 +2,8 @@
 //  AppRowView.swift
 //  Light Stats
 //
-//  Created on 2024/12/24.
+//  Running-app row for Cleanup. Bento keeps card chips; instrument themes
+//  (film / glass / noir) use a soft readout list aligned with Overview MetricRow.
 //
 
 import SwiftUI
@@ -21,84 +22,15 @@ struct AppCardView: View {
     @State private var isExpanded = false
     @State private var cachedChildProcesses: [TopProcessInfo] = []
 
+    private var usesBento: Bool { theme.theme.usesBentoLayout }
+
+    private var iconSize: CGFloat { usesBento ? 28 : 22 }
+    private var rowHSpacing: CGFloat { usesBento ? 12 : 10 }
+    private var clusterSpacing: CGFloat { usesBento ? 6 : 5 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 主卡片行
-            HStack(spacing: 12) {
-                // 展开区域 + 图标：整个簇（箭头 + 间隙 + 图标）作为一个真实的
-                // 可点击区域，避免依赖溢出 padding（会被图标/应用名覆盖而点不到）
-                HStack(spacing: 6) {
-                    Group {
-                        if !childProcesses.isEmpty {
-                            expandButton
-                        } else {
-                            Color.clear
-                                .frame(width: AppCardView.expandColumnWidth, height: AppCardView.expandColumnWidth)
-                        }
-                    }
-                    .frame(width: AppCardView.expandColumnWidth, height: AppCardView.expandColumnWidth)
-
-                    Image(nsImage: app.icon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 28, height: 28)
-                        .opacity(isTerminating ? 0.5 : 1.0)
-                }
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard !childProcesses.isEmpty else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
-                }
-
-                // App Name
-                Text(app.displayName)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(theme.inkPrimary)
-                    .lineLimit(1)
-                    .opacity(isTerminating ? 0.5 : 1.0)
-
-                Spacer()
-
-                // Memory Usage
-                Text(app.memoryFormatted)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(theme.inkSecondary)
-                    .opacity(isTerminating ? 0.5 : 1.0)
-
-                // Close Button or Loading Indicator
-                if isTerminating {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(width: 16, height: 16)
-                } else if app.isTerminable {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
-                            .padding(4)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .frame(minWidth: 24, minHeight: 24)
-                    .allowsHitTesting(true)
-                    .help("关闭应用")
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isHovered ? theme.rowHoverFill : Color.clear)
-            )
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isHovered = hovering
-                }
-            }
-            .allowsHitTesting(!isTerminating)
-
-            // 展开的子进程列表
+            mainRow
             if isExpanded {
                 childProcessList
             }
@@ -111,7 +43,97 @@ struct AppCardView: View {
         }
     }
 
-    // MARK: - Subviews
+    // MARK: - Main row
+
+    private var mainRow: some View {
+        HStack(spacing: rowHSpacing) {
+            expandCluster
+
+            Text(app.displayName)
+                .font(.system(size: usesBento ? 13 : 12, weight: .medium))
+                .foregroundStyle(theme.inkPrimary)
+                .lineLimit(1)
+                .opacity(isTerminating ? 0.5 : 1.0)
+
+            Spacer(minLength: 8)
+
+            Text(app.memoryFormatted)
+                .font(.system(size: usesBento ? 12 : 11, design: .monospaced))
+                .foregroundStyle(theme.inkSecondary)
+                .opacity(isTerminating ? 0.5 : 1.0)
+
+            trailingControl
+        }
+        .padding(.horizontal, usesBento ? 8 : 6)
+        .padding(.vertical, usesBento ? 9 : 6)
+        .background(rowHoverBackground)
+        .contentShape(RoundedRectangle(cornerRadius: usesBento ? 6 : 8, style: .continuous))
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
+        .allowsHitTesting(!isTerminating)
+    }
+
+    private var expandCluster: some View {
+        HStack(spacing: clusterSpacing) {
+            Group {
+                if !childProcesses.isEmpty {
+                    expandButton
+                } else {
+                    Color.clear
+                        .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
+                }
+            }
+            .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
+
+            Image(nsImage: app.icon)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: iconSize, height: iconSize)
+                .opacity(isTerminating ? 0.5 : 1.0)
+        }
+        .padding(.vertical, usesBento ? 6 : 2)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !childProcesses.isEmpty else { return }
+            withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
+        }
+    }
+
+    @ViewBuilder
+    private var trailingControl: some View {
+        if isTerminating {
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: 16, height: 16)
+        } else if app.isTerminable {
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: usesBento ? 16 : 14))
+                    .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
+                    .padding(usesBento ? 4 : 2)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(minWidth: usesBento ? 24 : 20, minHeight: usesBento ? 24 : 20)
+            .allowsHitTesting(true)
+            .help("关闭应用")
+        }
+    }
+
+    @ViewBuilder
+    private var rowHoverBackground: some View {
+        if usesBento {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isHovered ? theme.rowHoverFill : Color.clear)
+        } else {
+            // Soft instrument wash — continuous radius, inset so it never reads as a hard bar.
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(isHovered ? theme.rowHoverFill.opacity(0.40) : Color.clear)
+        }
+    }
 
     private var expandButton: some View {
         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
@@ -120,25 +142,58 @@ struct AppCardView: View {
             .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
     }
 
+    // MARK: - Children
+
     @ViewBuilder
     private var childProcessList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(childProcesses, id: \.pid) { process in
-                ChildProcessRowView(
-                    command: process.command,
-                    memoryBytes: process.memoryBytes,
-                    indentation: 12
-                )
-
-                if process.pid != childProcesses.last?.pid {
-                    Divider()
-                        .padding(.leading, 48)
-                        .opacity(0.5)
+        if usesBento {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(childProcesses, id: \.pid) { process in
+                    ChildProcessRowView(
+                        command: process.command,
+                        memoryBytes: process.memoryBytes,
+                        indentation: 12
+                    )
+                    if process.pid != childProcesses.last?.pid {
+                        Divider()
+                            .padding(.leading, 48)
+                            .opacity(0.5)
+                    }
                 }
             }
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+        } else {
+            HStack(alignment: .top, spacing: 0) {
+                // Rail under the icon cluster — film instrument tree cue.
+                Rectangle()
+                    .fill(theme.lineHairline)
+                    .frame(width: 1)
+                    .padding(.leading, Self.expandColumnWidth + clusterSpacing + iconSize / 2)
+                    .padding(.vertical, 2)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(childProcesses, id: \.pid) { process in
+                        ChildProcessRowView(
+                            command: process.command,
+                            memoryBytes: process.memoryBytes,
+                            indentation: 8,
+                            compact: true
+                        )
+                        if process.pid != childProcesses.last?.pid {
+                            Rectangle()
+                                .fill(theme.lineHairline.opacity(0.7))
+                                .frame(height: 1)
+                                .padding(.leading, 8)
+                        }
+                    }
+                }
+                .padding(.leading, 6)
+            }
+            .padding(.top, 2)
+            .padding(.bottom, 6)
+            .padding(.trailing, 6)
         }
-        .padding(.top, 4)
-        .padding(.bottom, 8)
     }
 
     // MARK: - Helpers
@@ -153,9 +208,16 @@ struct AppCardView: View {
 }
 
 #if DEBUG
-#Preview {
-    let icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil) ?? NSImage()
+#Preview("Film") {
+    previewStack.appThemed(.film)
+}
 
+#Preview("Bento") {
+    previewStack.appThemed(.bento)
+}
+
+private var previewStack: some View {
+    let icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil) ?? NSImage()
     let mockApp = AppGroup(
         id: 1234,
         name: "iTerm2",
@@ -169,30 +231,22 @@ struct AppCardView: View {
         bundlePath: "/Applications/iTerm.app",
         execPath: "/Applications/iTerm.app/Contents/MacOS/iTerm2"
     )
-
-    VStack(spacing: 12) {
-        AppCardView(app: mockApp, isTerminating: false, appManager: AppMemoryManager.shared) {
-            // 预览中无需处理关闭动作
-        }
-
-        // 单进程应用
-        let singleApp = AppGroup(
-            id: 9999,
-            name: "Safari",
-            icon: icon,
-            totalMemoryBytes: 500 * 1024 * 1024,
-            processCount: 1,
-            allPids: [9999],
-            terminablePids: [9999],
-            isTerminable: true,
-            bundleIdentifier: "com.apple.safari",
-            bundlePath: "/Applications/Safari.app",
-            execPath: "/Applications/Safari.app/Contents/MacOS/Safari"
-        )
-
-        AppCardView(app: singleApp, isTerminating: false, appManager: AppMemoryManager.shared) {
-            // 预览中无需处理关闭动作
-        }
+    let singleApp = AppGroup(
+        id: 9999,
+        name: "Safari",
+        icon: icon,
+        totalMemoryBytes: 500 * 1024 * 1024,
+        processCount: 1,
+        allPids: [9999],
+        terminablePids: [9999],
+        isTerminable: true,
+        bundleIdentifier: "com.apple.safari",
+        bundlePath: "/Applications/Safari.app",
+        execPath: "/Applications/Safari.app/Contents/MacOS/Safari"
+    )
+    return VStack(spacing: 0) {
+        AppCardView(app: mockApp, isTerminating: false, appManager: AppMemoryManager.shared) {}
+        AppCardView(app: singleApp, isTerminating: false, appManager: AppMemoryManager.shared) {}
     }
     .padding()
 }

@@ -18,7 +18,7 @@ struct CleanupTabView: View {
         VStack(spacing: 0) {
             Group {
                 if theme.theme.usesBentoLayout {
-                    BentoCard(title: "cleanup.memoryUsage".localized, icon: "memorychip.fill") {
+                    BentoCard(title: "cleanup.memoryUsage".localized, svgIcon: .memory) {
                         memoryHeaderBody
                     }
                 } else {
@@ -29,60 +29,17 @@ struct CleanupTabView: View {
             .padding(.top, 6)
             .padding(.bottom, 10)
 
-            if !theme.theme.usesBentoLayout {
-                PanelDivider()
-                    .padding(.horizontal, 16)
-            }
-
-            HStack {
-                Text(
-                    theme.theme.usesBentoLayout
-                        ? "cleanup.runningApps".localized
-                        : "cleanup.runningApps".localized.uppercased()
-                )
-                .font(.system(
-                    size: theme.theme.usesBentoLayout ? 12 : 10,
-                    weight: .semibold,
-                    design: theme.theme.usesBentoLayout ? .default : .monospaced
-                ))
-                .tracking(theme.theme.usesBentoLayout ? 0 : 0.9)
-                .foregroundStyle(theme.inkFaint)
-                Spacer()
-                Text(String(
-                    format: "cleanup.appCount".localized,
-                    appManager.runningApps.filter(\.isTerminable).count
-                ))
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(theme.inkSecondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+            runningAppsHeader
+                .padding(.horizontal, 16)
+                .padding(.top, theme.theme.usesBentoLayout ? 12 : 10)
+                .padding(.bottom, theme.theme.usesBentoLayout ? 8 : 6)
 
             if appManager.runningApps.isEmpty {
                 emptyStateView
+            } else if theme.theme.usesBentoLayout {
+                bentoAppList
             } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: theme.theme.usesBentoLayout ? 8 : 0) {
-                        ForEach(Array(appManager.runningApps.enumerated()), id: \.element.id) { index, app in
-                            AppCardView(
-                                app: app,
-                                isTerminating: terminatingApps.contains(app.id),
-                                appManager: appManager
-                            ) {
-                                terminateApp(app)
-                            }
-                            if !theme.theme.usesBentoLayout, index < appManager.runningApps.count - 1 {
-                                Rectangle()
-                                    .fill(theme.lineHairline)
-                                    .frame(height: 1)
-                                    .padding(.leading, 52)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-                }
+                instrumentAppList
             }
         }
         .alert("cleanup.appNotResponding".localized, isPresented: $showForceTerminateAlert) {
@@ -100,6 +57,70 @@ struct CleanupTabView: View {
         }
         .onDisappear {
             appManager.stopMonitoring()
+        }
+    }
+
+    private var usesBento: Bool { theme.theme.usesBentoLayout }
+
+    private var runningAppsHeader: some View {
+        HStack {
+            Text(
+                usesBento
+                    ? "cleanup.runningApps".localized
+                    : "cleanup.runningApps".localized.uppercased()
+            )
+            .font(.system(
+                size: usesBento ? 12 : 10,
+                weight: .semibold,
+                design: usesBento ? .default : .monospaced
+            ))
+            .tracking(usesBento ? 0 : 0.9)
+            .foregroundStyle(theme.inkFaint)
+            Spacer()
+            Text(String(
+                format: "cleanup.appCount".localized,
+                appManager.runningApps.filter(\.isTerminable).count
+            ))
+            .font(.system(size: 11, design: .monospaced))
+            .foregroundStyle(theme.inkSecondary)
+        }
+    }
+
+    /// Classic card-gap list for Bento Grid.
+    private var bentoAppList: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 8) {
+                ForEach(appManager.runningApps) { app in
+                    AppCardView(
+                        app: app,
+                        isTerminating: terminatingApps.contains(app.id),
+                        appManager: appManager
+                    ) {
+                        terminateApp(app)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+    }
+
+    /// Film / glass / noir: flat readout rows — no well chrome, no inter-row rules.
+    private var instrumentAppList: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                ForEach(appManager.runningApps) { app in
+                    AppCardView(
+                        app: app,
+                        isTerminating: terminatingApps.contains(app.id),
+                        appManager: appManager
+                    ) {
+                        terminateApp(app)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
         }
     }
 

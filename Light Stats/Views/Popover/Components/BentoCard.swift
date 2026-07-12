@@ -6,6 +6,8 @@ struct BentoCard<Content: View, Accessory: View>: View {
 
     let title: String?
     let icon: String?
+    /// Monochrome Reicon (or other) SVG from `Resources/Icons/`. Preferred over SF Symbol.
+    let svgIcon: AppSVGIcon?
     /// Asset catalog brand icon (e.g. Claude/Codex). Preferred over SF Symbol `icon`.
     let assetIcon: String?
     let content: Content
@@ -16,6 +18,7 @@ struct BentoCard<Content: View, Accessory: View>: View {
     init(
         title: String? = nil,
         icon: String? = nil,
+        svgIcon: AppSVGIcon? = nil,
         assetIcon: String? = nil,
         padding: CGFloat = 12,
         fixedHeight: CGFloat? = nil,
@@ -24,6 +27,7 @@ struct BentoCard<Content: View, Accessory: View>: View {
     ) {
         self.title = title
         self.icon = icon
+        self.svgIcon = svgIcon
         self.assetIcon = assetIcon
         self.padding = padding
         self.fixedHeight = fixedHeight
@@ -33,13 +37,16 @@ struct BentoCard<Content: View, Accessory: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if title != nil || icon != nil || assetIcon != nil {
+            if title != nil || icon != nil || svgIcon != nil || assetIcon != nil {
                 HStack(spacing: 6) {
                     if let assetIcon {
                         Image(assetIcon)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 13, height: 13)
+                    } else if let svgIcon {
+                        SVGIcon(svgIcon, size: 13)
+                            .foregroundStyle(theme.inkMuted)
                     } else if let icon {
                         Image(systemName: icon)
                             .font(.system(size: 12))

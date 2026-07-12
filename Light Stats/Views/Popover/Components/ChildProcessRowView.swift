@@ -2,7 +2,7 @@
 //  ChildProcessRowView.swift
 //  Light Stats
 //
-//  Created on 2026/02/04.
+//  Child-process line under an expanded app row (display only).
 //
 
 import SwiftUI
@@ -14,25 +14,28 @@ struct ChildProcessRowView: View {
     let command: String
     let memoryBytes: UInt64
     let indentation: CGFloat
+    /// Instrument readout: tighter type, fainter ink.
+    var compact: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: compact ? 6 : 8) {
             Color.clear.frame(width: indentation)
 
             Text(command)
-                .font(.system(size: 12))
-                .foregroundStyle(theme.inkSecondary)
+                .font(.system(size: compact ? 11 : 12, design: compact ? .monospaced : .default))
+                .foregroundStyle(compact ? theme.inkFaint : theme.inkSecondary)
                 .lineLimit(1)
                 .help(command)
 
-            Spacer()
+            Spacer(minLength: 6)
 
             Text(memoryFormatted)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: compact ? 10 : 11, design: .monospaced))
                 .foregroundStyle(theme.inkFaint)
         }
-        .padding(.leading, 8)
-        .padding(.vertical, 6)
+        .padding(.leading, compact ? 0 : 8)
+        .padding(.trailing, compact ? 4 : 0)
+        .padding(.vertical, compact ? 4 : 6)
     }
 
     private var memoryFormatted: String {
@@ -51,7 +54,8 @@ struct ChildProcessRowView: View {
         ChildProcessRowView(
             command: "node",
             memoryBytes: 512 * 1024 * 1024,
-            indentation: 24
+            indentation: 8,
+            compact: true
         )
     }
     .padding()

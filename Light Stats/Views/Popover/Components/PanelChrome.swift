@@ -16,30 +16,36 @@ struct PanelSection<Content: View>: View {
 
     let title: String?
     let icon: String?
+    let svgIcon: AppSVGIcon?
     let assetIcon: String?
     let content: Content
 
     init(
         title: String? = nil,
         icon: String? = nil,
+        svgIcon: AppSVGIcon? = nil,
         assetIcon: String? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.icon = icon
+        self.svgIcon = svgIcon
         self.assetIcon = assetIcon
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if title != nil || icon != nil || assetIcon != nil {
+            if title != nil || icon != nil || svgIcon != nil || assetIcon != nil {
                 HStack(spacing: 5) {
                     if let assetIcon {
                         Image(assetIcon)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 11, height: 11)
+                    } else if let svgIcon {
+                        SVGIcon(svgIcon, size: 11)
+                            .foregroundStyle(theme.inkFaint)
                     } else if let icon {
                         Image(systemName: icon)
                             .font(.system(size: 10, weight: .semibold))
@@ -80,17 +86,20 @@ struct MetricRow<Value: View>: View {
 
     let label: String
     let icon: String?
+    let svgIcon: AppSVGIcon?
     let trend: SparklineSeries?
     let value: Value
 
     init(
         label: String,
         icon: String? = nil,
+        svgIcon: AppSVGIcon? = nil,
         trend: SparklineSeries? = nil,
         @ViewBuilder value: () -> Value
     ) {
         self.label = label
         self.icon = icon
+        self.svgIcon = svgIcon
         self.trend = trend
         self.value = value()
     }
@@ -98,7 +107,11 @@ struct MetricRow<Value: View>: View {
     var body: some View {
         HStack(spacing: 10) {
             HStack(spacing: 5) {
-                if let icon {
+                if let svgIcon {
+                    SVGIcon(svgIcon, size: 12)
+                        .foregroundStyle(theme.inkSecondary)
+                        .frame(width: 14)
+                } else if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.inkSecondary)
@@ -133,13 +146,32 @@ struct MetaRow: View {
     @Environment(\.theme) private var theme
 
     let icon: String?
+    let svgIcon: AppSVGIcon?
     let label: String
     let value: String
     var valueColor: Color?
 
+    init(
+        icon: String? = nil,
+        svgIcon: AppSVGIcon? = nil,
+        label: String,
+        value: String,
+        valueColor: Color? = nil
+    ) {
+        self.icon = icon
+        self.svgIcon = svgIcon
+        self.label = label
+        self.value = value
+        self.valueColor = valueColor
+    }
+
     var body: some View {
         HStack(spacing: 6) {
-            if let icon {
+            if let svgIcon {
+                SVGIcon(svgIcon, size: 11)
+                    .foregroundStyle(theme.inkFaint)
+                    .frame(width: 12)
+            } else if let icon {
                 Image(systemName: icon)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(theme.inkFaint)
