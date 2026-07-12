@@ -97,6 +97,21 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().diagnosticLogLevel, .full)
     }
 
+    func testAppThemeDefaultsToFilm() {
+        // Cold start is 胶片棕 (film brown); other themes are opt-in.
+        XCTAssertEqual(freshSettings().appTheme, .film)
+    }
+
+    func testLegacyAuroraThemeKeyMigratesToFilm() {
+        cleanDefaults.set("aurora", forKey: "settings.appTheme")
+        XCTAssertEqual(freshSettings().appTheme, .film)
+    }
+
+    func testRetiredPaperThemeKeyMigratesToFilm() {
+        cleanDefaults.set("paper", forKey: "settings.appTheme")
+        XCTAssertEqual(freshSettings().appTheme, .film)
+    }
+
     // MARK: - Persisted overrides are honored (DI sanity check)
 
     func testStoredValueOverridesDefault() {

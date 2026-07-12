@@ -46,6 +46,7 @@ protocol SettingsManaging: ObservableObject {
     var healthIncludePower: Bool { get set }
     var useColorIndicator: Bool { get set }
     var useFlatColors: Bool { get set }
+    var appTheme: AppTheme { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
     var exitNodeDetectionEnabled: Bool { get set }
@@ -132,6 +133,11 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     /// 平缓色调：开启后除健康分外所有文本使用普通黑色，不再根据数值动态变色。
     @Published var useFlatColors: Bool {
         didSet { save(useFlatColors, for: .useFlatColors) }
+    }
+
+    /// Visual theme for popover / settings / about. Default `.film` (胶片棕).
+    @Published var appTheme: AppTheme {
+        didSet { save(appTheme.rawValue, for: .appTheme) }
     }
 
     // MARK: - Other Settings
@@ -373,6 +379,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case healthIncludePower = "settings.healthIncludePower"
         case useColorIndicator = "settings.useColorIndicator"
         case useFlatColors = "settings.useFlatColors"
+        case appTheme = "settings.appTheme"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case appLanguage = "settings.appLanguage"
@@ -428,6 +435,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
+        // 主题：默认 film（胶片棕）。兼容上一版短暂使用的 aurora 键。
+        appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
 
         // 开机启动：以系统登录项注册状态为唯一真相源。
         launchAtLogin = LaunchAtLoginService.isEnabled
