@@ -1,19 +1,52 @@
-## v1.9.0-beta.8（预发布 / Prerelease）
+## v2.0.0
+
+正式版。相对 **v1.8.0** 的全部变更（含原 1.9.0 beta 周期）。
 
 ### ✨ 新功能 / Features
+
+**主题与外观**
 
 - 四主题：`glass`（展示名「默认 / Default」，冷启动默认）/ `bento` / `film`（晒金）/ `noir`（墨夜）；选择器顺序 默认 → Bento → 晒金 → 墨夜；退役 `aurora`/`paper` 键映射到 film
 - 晒金与墨夜外观：颗粒开关 + 光影动态五档（静止 / 舒缓 / 自然 / 流畅 / 活跃）
 - Popover / About / Toast / Update / 辅助功能引导接入主题；`ThemeTokens` + mesh 背景 + 颗粒纹理
 - 指标图标改用 bundle 内 Reicon Outline SVG（`SVGIcon` 模板染色，零第三方）
 
+**Finder 扩展**
+
+- 右键菜单支持终端选择、cmux 新窗口与新工作区
+- 设置中显示 FinderSync 扩展的真实注册与启用状态
+- 新建文件按类型命名（index / main / notes…），模板列表扁平展开
+
+**更新与诊断**
+
+- 更新通道可选「正式版 / 尝鲜」：开启后自动与手动检查均纳入 Beta 预发布；SemVer 正确比较 `-beta.N`
+- 应用日志支持关 / 仅错误 / 完整三级，隐私感知的结构化诊断日志（本地、保留 5 天）
+- 自动更新默认关闭，干净安装保持零外联
+
+**设置与其它**
+
+- 设置页重组为通用 / 监控 / 更多三栏，统一白底浅色侧栏
+- AI 用量拉取失败改为可重试错误（不再静默 idle）；用量保活改为在 reset 窗口后触发并增强容错
+- 清洁模式仅在便携式 Mac 上显示
+
 ### 🔧 优化 / Improvements
 
 - 设置窗固定系统白底，不跟随 `appTheme`（主题只作用产品展示面）
 - Overview / Cleanup 按主题分叉布局（Bento 卡片网格 vs instrument 读数）
-- 辅助功能引导由 NSAlert 改为主题化 SwiftUI 面板（`PermissionAlertCenter`，borderless 无系统叉号）
+- 辅助功能引导由 NSAlert 改为主题化 SwiftUI 面板（`PermissionAlertCenter`，borderless）
+- Finder 常用目录 / 打开方式列表改为单行「名称 + 路径」；扩展已启用时隐藏「在系统设置中启用」
+- 分段控件等宽、说明文案更短；保持唤醒归入通用设置
+- 诊断日志精简高频采样、统一 AppLogger subsystem，降低隐私暴露
 
-**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.9.0-beta.7...v1.9.0-beta.8
+### 🐛 修复 / Fixes
+
+- 修复 Finder 文件面板与滚动/手势服务冲突；应用选择面板滚动卡死；在菜单创建时捕获 Finder 上下文
+- 清洁模式封锁媒体键与功能键
+- 修正便携机检测、AC 未充电状态与磁盘用量小数显示
+- 兼容 pnpm 新版 Codex 路径
+- 将同步 `runModal()` 改为异步 `begin()`，避免 SwiftUI 死锁
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.8.0...v2.0.0
 
 ---
 
