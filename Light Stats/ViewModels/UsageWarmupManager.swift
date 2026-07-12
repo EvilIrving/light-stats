@@ -29,11 +29,7 @@ final class UsageWarmupManager: ObservableObject {
     private static let retryDelays: [TimeInterval] = [30, 120]
 
     private let settings = SettingsManager.shared
-    private let log = AppLogger(
-        subsystem: "com.lightstats.app",
-        category: "UsageWarmup",
-        mirrorsToJournal: false
-    )
+    private let log = AppLogger(category: "UsageWarmup", mirrorsToJournal: false)
 
     private var loops: [AIProvider: Task<Void, Never>] = [:]
     private var lastSentReset: [AIProvider: Date] = [:]

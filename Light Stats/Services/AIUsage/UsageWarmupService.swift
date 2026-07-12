@@ -19,11 +19,7 @@ import os
 /// Returns `true` iff the CLI exited 0 — i.e. it is installed and logged in.
 nonisolated enum UsageWarmupService {
 
-    private static let log = AppLogger(
-        subsystem: "com.lightstats.app",
-        category: "UsageWarmup",
-        mirrorsToJournal: false
-    )
+    private static let log = AppLogger(category: "UsageWarmup", mirrorsToJournal: false)
     private static let maxStderrLogBytes = 2_048
 
     /// 窗口 anchor 只需要发出一条真实消息；内容越短，warmup 的 token 成本越低。
