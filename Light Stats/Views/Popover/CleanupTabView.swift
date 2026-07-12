@@ -42,6 +42,10 @@ struct CleanupTabView: View {
                 instrumentAppList
             }
         }
+        // Same full-bounds hit claim as Overview — mesh panel backgrounds do not
+        // intercept hits (decorative art), so empty chrome must still own the wheel.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
         .alert("cleanup.appNotResponding".localized, isPresented: $showForceTerminateAlert) {
             Button("cleanup.forceQuit".localized, role: .destructive) {
                 if let app = appToTerminate {

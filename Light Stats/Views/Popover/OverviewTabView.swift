@@ -25,6 +25,11 @@ struct OverviewTabView: View {
                 instrumentContent
             }
         }
+        // Claim the full tab bounds for hit testing so transparent gaps between
+        // instrument rows still route wheel events to this ScrollView (not through
+        // the non-opaque panel to the window behind — mesh themes especially).
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Instrument layout

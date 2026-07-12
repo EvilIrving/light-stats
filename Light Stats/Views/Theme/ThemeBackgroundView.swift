@@ -36,21 +36,31 @@ struct ThemeBackgroundView: View {
     var body: some View {
         Group {
             if tokens.usesGlass {
+                // NSVisualEffectView / NSGlassEffectView fills bounds and accepts hits,
+                // so wheel events stay inside the non-opaque panel.
                 GlassBackgroundView(
                     cornerRadius: cornerRadius,
                     fallbackMaterial: fallbackMaterial,
                     configuresWindow: configuresWindow
                 )
             } else if tokens.usesMesh {
-                // film ↔ noir share this branch; without a theme id, TimelineView +
-                // drawingGroup can keep the previous mesh theme’s Metal layer.
-                FluidMeshBackground(tokens: tokens, appearance: appearance)
-                    .id(tokens.theme)
+                // Mesh art disables hit testing (oversized light fields would otherwise
+                // leak targets past visual clip). Pair it with a solid canvas so the
+                // non-opaque NSPanel still owns the full bounds — otherwise scroll
+                // falls through to the app/desktop behind (macOS 26 especially).
+                ZStack {
+                    tokens.canvas
+                    FluidMeshBackground(tokens: tokens, appearance: appearance)
+                        .id(tokens.theme)
+                }
             } else {
                 tokens.canvas
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        // Match visual clip for hit testing — clipShape alone does not always
+        // constrain hits when children are offset larger than the frame.
+        .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 

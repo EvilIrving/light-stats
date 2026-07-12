@@ -84,10 +84,13 @@ struct PopoverContentView: View {
             }
             .animation(.easeInOut(duration: 0.16), value: selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
         }
         .ignoresSafeArea(.container, edges: .top)
         // Mesh art + grain live entirely inside ThemeBackgroundView (soft center
         // veil only). No full-frame scrim — that was burying light shapes + grit.
+        // ThemeBackgroundView’s mesh path keeps a solid canvas under decorative art
+        // so wheel events cannot fall through the non-opaque panel (film/noir).
         .background(
             ThemeBackgroundView(
                 tokens: theme,
@@ -97,6 +100,7 @@ struct PopoverContentView: View {
                 .ignoresSafeArea()
         )
         .frame(width: 360, height: 780)
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .cornerRadius(12)
         // Language + theme: mesh↔mesh (film/noir) must rebuild chrome, not only language.
         .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
