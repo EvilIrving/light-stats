@@ -1,3 +1,68 @@
+## 多主题 UI（胶片默认）+ Reicon SVG + 胶片外观旋钮 + 设置窗解耦 · 2026-07-12 · grok-4.5
+
+本轮把菜单栏弹窗从「单套 Bento 卡」扩成多主题，补了 Reicon Outline SVG、清理列表 instrument 适配、胶片颗粒/光影可调，并把设置窗从展示主题里拆出。已 **分 10 批 commit**（相对 `origin/main`），未 push。
+
+### 主题系统
+
+- 新增 `AppTheme`：`film`（胶片棕，冷启动默认）/ `bento` / `glass` / `noir`；退役 `paper`/`aurora` 读档映射到 `film`。
+- `ThemeTokens` + `@Environment(\.theme)` / `.appThemed()`；mesh 胶片/暗黑用光场 + 颗粒（`GrainTextureView`），玻璃/Bento 走系统毛玻璃。
+- **布局分叉**：`usesBentoLayout` 为真时 Overview/Cleanup 用 `BentoCard`/`QuickStatCard` 网格；否则 instrument 读数（`PanelSection` / `MetricRow` / 发丝线）。
+- 信号色、sparkline、分割线随主题；胶片与 noir 光场几何不同、颗粒共用。
+- **主题选择器**：去掉迷你预览画布，只保留标题 + 副标题 + 选中描边（更省高、更像系统设置）。
+- **设置窗固定系统白底**：`.appThemed(.bento)` + `controlBackgroundColor`，不再挂 `ThemeBackgroundView` / 不跟 `settings.appTheme`。主题只作用 popover / About / Toast / Update。
+
+### 胶片专属外观（仅 `appTheme == .film` 时 UI 露出）
+
+| 偏好 | 默认 | 作用 |
+|------|------|------|
+| `filmGrainEnabled` | `true` | 关 = 只留光影、无胶片 grit |
+| `filmLightFlow` | `0.5` | 0 = 静止，0.5 = 产品默认，1 = 更快更大幅漂移 |
+| `filmLightPositionX/Y` | `0.5` | 整组光影平移（约 ±40% 画布），构图可偏 |
+
+设置 › 通用 › 主题下：实时 120pt mesh 预览 + 开关/滑块。初版幅度太小且设置页无反馈 → 加大漂移与平移，并内嵌 `ThemeBackgroundView(tokens: .film)` 预览。
+
+### Reicon Outline SVG
+
+从 [dqev/reicon](https://github.com/dqev/reicon) 导出 Outline → `Resources/Icons/`；`SVGIcon` / `AppSVGIcon` 用 `NSImage` 解码 + template 着色（零第三方）。
+
+| 资源 | 用途 |
+|------|------|
+| cpu / gpu / memory | 快统卡、MetricRow |
+| network / proxy | Bento 网络卡 / 代理 MetaRow |
+| disk / temperature | System 列 |
+| processes | Bento 进程卡头 |
+
+`ATTRIBUTION.txt`：MIT + Solar/Zappicon 上游。负载/风扇/上下行等仍 SF Symbol。
+
+### 清理列表
+
+Instrument 路径：与 Bento 分叉 hover/行高/图标尺寸；去掉列表外包 well 与行间发丝；Bento 仍卡间距 + 圆角 hover。子进程 instrument 下细轨 + compact。
+
+### 涉及路径（主要）
+
+`Models/AppTheme.swift`、`Views/Theme/*`、`PanelChrome` / `BentoCard` / `QuickStatCard`、`OverviewTabView` / `CleanupTabView`、`AppRowView` / `ChildProcessRowView`、`Utilities/SVGIcon.swift`、`Resources/Icons/*`、四语言 Localizable、`SettingsManager` / `SettingsDetailViews` / `SettingsView`、`SettingsDefaultsTests`。
+
+### Git（本轮 10 commit，未 push）
+
+```
+08a645a ui(settings): 设置窗固定系统白底，不再跟随 appTheme
+f4698a7 feat(theme): 胶片实时预览与可感光影调节，精简主题选择器
+5c1f381 feat(theme): 胶片颗粒开关与光影流动/位置偏好
+e3dd7ef ui(popover): 指标图标改用 SVG，并理顺 Cleanup 列表布局
+09dd4e1 feat(icons): 引入 SVGIcon 与 Reicon Outline 资源
+ddb96ec feat(theme): About、Toast、Update 窗口接入主题
+8204e0e feat(theme): Popover 面板 chrome 与 Overview/Cleanup 主题适配
+ade770d feat(theme): 设置页接入主题选择与画布着色
+dce5f2c feat(theme): 增加 ThemeTokens、环境注入与背景/选择器基础设施
+29573b5 feat(theme): 引入 AppTheme 模型、偏好持久化与默认值测试
+```
+
+说明：中间有一版「设置也随主题」后改回固定白底；`ade770d` 仍在历史上，以 `08a645a` 为最终行为。
+
+状态：本地 `./debug-run.sh` 验证过；**已 commit、未 push**。后续可再调光影默认曲线或补更多 Reicon 位。
+
+---
+
 ## Finder 文件面板挂起滚动/手势服务 · 2026-07-10 · pi-coding-agent
 
 修复 Finder 菜单设置中的文件选择面板（NSOpenPanel）与 ScrollDirectionService / TitlebarGestureService 的冲突。这两个服务通过 CGEventTap 拦截系统级滚动事件，当 NSOpenPanel 以 sheet 形式打开时，tap 仍然在处理事件，导致面板内的滚动行为异常（比如反向滚动仍然生效，标题栏手势误触发）。
