@@ -14,20 +14,29 @@ import SwiftUI
 struct UpdateWindowView: View {
     @EnvironmentObject var manager: UpdateManager
     @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var settings = SettingsManager.shared
 
     private let contentWidth: CGFloat = 360
     private var appIcon: NSImage? { NSApp.applicationIconImage }
+    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     var body: some View {
         content
             .multilineTextAlignment(.center)
             .frame(width: contentWidth)
             .padding(24)
+            .foregroundStyle(theme.inkPrimary)
             .background(
-                GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
-                    .ignoresSafeArea()
+                ThemeBackgroundView(
+                    tokens: theme,
+                    cornerRadius: 0,
+                    configuresWindow: true,
+                    fallbackMaterial: .underWindowBackground
+                )
+                .ignoresSafeArea()
             )
             .id(localization.currentLanguage)
+            .appThemed(settings.appTheme)
     }
 
     @ViewBuilder
@@ -62,7 +71,7 @@ struct UpdateWindowView: View {
         } else {
             Image(systemName: "app.fill")
                 .font(.system(size: size))
-                .foregroundColor(.secondary)
+                .foregroundStyle(theme.inkSecondary)
         }
     }
 
@@ -73,7 +82,7 @@ struct UpdateWindowView: View {
             if spinner { ProgressView().scaleEffect(0.8) }
             Text(text)
                 .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                .foregroundStyle(theme.inkSecondary)
         }
     }
 
@@ -83,12 +92,13 @@ struct UpdateWindowView: View {
 
             Text("update.available.title".localized(release.tagName))
                 .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(theme.inkPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if !release.releaseNotes.isEmpty {
                 Text(release.releaseNotes)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(theme.inkSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -126,12 +136,13 @@ struct UpdateWindowView: View {
         VStack(spacing: 12) {
             Text("update.progress.downloading".localized)
                 .font(.system(size: 13))
-                .foregroundColor(.secondary)
+                .foregroundStyle(theme.inkSecondary)
             ProgressView(value: fraction)
                 .progressViewStyle(.linear)
                 .frame(width: 220)
             Text("\(Int(fraction * 100))%")
                 .font(.system(size: 24, weight: .medium, design: .rounded))
+                .foregroundStyle(theme.inkPrimary)
                 .monospacedDigit()
         }
     }
@@ -140,12 +151,13 @@ struct UpdateWindowView: View {
         VStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundStyle(theme.signalAccent)
             Text("update.error.title".localized)
                 .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(theme.inkPrimary)
             Text(message)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundStyle(theme.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
                 Button {

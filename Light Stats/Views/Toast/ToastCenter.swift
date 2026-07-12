@@ -80,9 +80,13 @@ final class ToastCenter {
 // MARK: - Toast 内容
 
 private struct ToastView: View {
+    @ObservedObject private var settings = SettingsManager.shared
+
     let message: String
     let systemImage: String
     let tint: Color
+
+    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -91,19 +95,26 @@ private struct ToastView: View {
                 .foregroundStyle(tint)
             Text(message)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary)
+                .foregroundStyle(theme.inkPrimary)
                 .fixedSize()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 11)
-        .background(GlassBackgroundView(cornerRadius: 14, fallbackMaterial: .hudWindow))
+        .background(
+            ThemeBackgroundView(
+                tokens: theme,
+                cornerRadius: 14,
+                fallbackMaterial: .hudWindow
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                .strokeBorder(theme.cardStroke, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .shadow(color: .black.opacity(0.18 + theme.cardShadowOpacity * 0.3), radius: 12, y: 4)
         .padding(12)
         .fixedSize()
+        .appThemed(settings.appTheme)
     }
 }

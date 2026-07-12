@@ -4,6 +4,9 @@ import AppKit
 struct AboutView: View {
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var updateManager = UpdateManager.shared
+    @ObservedObject private var settings = SettingsManager.shared
+
+    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     private let appName: String = {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -36,7 +39,7 @@ struct AboutView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 96, height: 96)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(theme.inkSecondary)
             }
 
             Spacer().frame(height: 20)
@@ -44,14 +47,14 @@ struct AboutView: View {
             // App Name
             Text(appName)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.primary)
+                .foregroundStyle(theme.inkPrimary)
 
             Spacer().frame(height: 6)
 
             // Version
             Text(version)
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .foregroundStyle(theme.inkSecondary)
 
             Spacer().frame(height: 12)
 
@@ -68,7 +71,7 @@ struct AboutView: View {
                 }
             }
             .buttonStyle(.borderless)
-            .foregroundColor(.accentColor)
+            .foregroundStyle(theme.accent)
             .disabled(updateManager.isChecking)
 
             Spacer().frame(height: 24)
@@ -97,16 +100,22 @@ struct AboutView: View {
             // Copyright
             Text(copyright)
                 .font(.system(size: 10))
-                .foregroundColor(Color(nsColor: .tertiaryLabelColor))
+                .foregroundStyle(theme.inkFaint)
 
             Spacer().frame(height: 28)
         }
         .frame(width: 280)
         .background(
-            GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
-                .ignoresSafeArea()
+            ThemeBackgroundView(
+                tokens: theme,
+                cornerRadius: 0,
+                configuresWindow: true,
+                fallbackMaterial: .underWindowBackground
+            )
+            .ignoresSafeArea()
         )
         .id(localization.currentLanguage)
+        .appThemed(settings.appTheme)
         .focusable(false)
     }
 
@@ -119,6 +128,8 @@ struct AboutView: View {
 // MARK: - Link Button
 
 struct LinkButton: View {
+    @Environment(\.theme) private var theme
+
     let icon: String
     let title: String
     let url: String
@@ -134,16 +145,16 @@ struct LinkButton: View {
             VStack(spacing: 6) {
                 linkIcon
                     .font(.system(size: 20))
-                    .foregroundColor(isHovered ? .primary : .secondary)
+                    .foregroundStyle(isHovered ? theme.inkPrimary : theme.inkSecondary)
 
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isHovered ? .primary : .secondary)
+                    .foregroundStyle(isHovered ? theme.inkPrimary : theme.inkSecondary)
             }
             .frame(width: 72, height: 60)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+                    .fill(isHovered ? theme.rowHoverFill : Color.clear)
             )
         }
         .buttonStyle(.plain)
