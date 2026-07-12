@@ -171,6 +171,9 @@
 "settings.update.manualCheckHint" = "新しいバージョンがあるか手動で確認します";
 "settings.update.installVersion" = "%@ にアップデート";
 "settings.update.automaticLabel" = "自動更新";
+"settings.update.channel.stable" = "正式";
+"settings.update.channel.beta" = "ベータ";
+"settings.update.channel.hint" = "正式は安定版のみ。ベータはプレリリースも含みます。";
 "update.available.title" = "Light Stats %@ が利用可能";
 "update.available.message" = "署名・公証済みの新バージョンです。設定はそのまま維持されます。";
 "update.action.install" = "今すぐ更新";

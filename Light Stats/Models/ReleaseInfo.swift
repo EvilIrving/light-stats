@@ -9,24 +9,59 @@
 import Foundation
 
 /// 语义化版本号，支持任意段数的数字比较（"1.2.10" > "1.2.9"）。
-/// 忽略前缀 v/V 与 `-beta` / `+build` 之类后缀，只比较主版本数字段。
+/// 遵循 SemVer 2.0：忽略前缀 v/V 与 `+build` 元数据；预发布标识（`-beta.1`）参与比较——
+/// 同核心版本下正式版 > 预发布版，预发布标识按点分段比较（数字段数值比，字母段字典序；
+/// 数字段 < 字母段；公共前缀相同则更长者更高）。
 nonisolated struct SemanticVersion: Comparable, Sendable, CustomStringConvertible {
     let components: [Int]
+    /// 预发布标识序列；空 = 正式版。
+    let prerelease: [PrereleaseIdentifier]
     let raw: String
+
+    enum PrereleaseIdentifier: Comparable, Sendable, Equatable {
+        case numeric(Int)
+        case text(String)
+
+        static func < (lhs: PrereleaseIdentifier, rhs: PrereleaseIdentifier) -> Bool {
+            switch (lhs, rhs) {
+            case (.numeric(let left), .numeric(let right)): return left < right
+            case (.text(let left), .text(let right)): return left < right
+            case (.numeric, .text): return true
+            case (.text, .numeric): return false
+            }
+        }
+    }
 
     init?(_ input: String) {
         var string = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if string.hasPrefix("v") || string.hasPrefix("V") { string.removeFirst() }
-        // 去掉 "-beta" / "+build" 等元数据，只取核心 "x.y.z"。
-        let core = string.split(whereSeparator: { $0 == "-" || $0 == "+" })
+        // 丢弃 `+build` 元数据（不参与比较）。
+        let withoutBuild = string.split(separator: "+", maxSplits: 1, omittingEmptySubsequences: false)
             .first.map(String.init) ?? string
+        // 核心版本与预发布标识以首个 `-` 分隔。
+        let coreAndPre = withoutBuild.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
+        let core = String(coreAndPre[0])
         let parsed = core.split(separator: ".").map { Int($0) }
         guard !parsed.isEmpty, !parsed.contains(where: { $0 == nil }) else { return nil }
         components = parsed.compactMap { $0 }
+        if coreAndPre.count > 1 {
+            prerelease = String(coreAndPre[1]).split(separator: ".").map { ident in
+                let token = String(ident)
+                if let number = Int(token), String(number) == token {
+                    return .numeric(number)
+                }
+                return .text(token)
+            }
+        } else {
+            prerelease = []
+        }
         raw = input
     }
 
     var description: String { raw }
+
+    /// 是否为预发布版本（含 `-beta` / `-rc` 等）。
+    var isPrerelease: Bool { !prerelease.isEmpty }
 
     static func < (lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
         let count = max(lhs.components.count, rhs.components.count)
@@ -35,7 +70,22 @@ nonisolated struct SemanticVersion: Comparable, Sendable, CustomStringConvertibl
             let right = index < rhs.components.count ? rhs.components[index] : 0
             if left != right { return left < right }
         }
-        return false
+        // 核心相等：正式版 > 预发布；两侧皆预发布则按标识序列比较。
+        switch (lhs.prerelease.isEmpty, rhs.prerelease.isEmpty) {
+        case (true, true): return false
+        case (true, false): return false
+        case (false, true): return true
+        case (false, false):
+            let limit = max(lhs.prerelease.count, rhs.prerelease.count)
+            for index in 0..<limit {
+                if index >= lhs.prerelease.count { return true }
+                if index >= rhs.prerelease.count { return false }
+                if lhs.prerelease[index] != rhs.prerelease[index] {
+                    return lhs.prerelease[index] < rhs.prerelease[index]
+                }
+            }
+            return false
+        }
     }
 
     static func == (lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
@@ -73,8 +123,8 @@ nonisolated struct ReleaseInfo: Sendable, Equatable {
     }
 
     /// 解析 GitHub `releases`（列表，按发布时间倒序）。取首个满足条件的版本。
-    /// `allowPrerelease == true` 时接受预发布版本——供「立即检查」的内测通道使用，
-    /// 让手动检查能拿到 beta，而自动检查仍只走稳定的 `releases/latest`。
+    /// `allowPrerelease == true` 时接受预发布版本——用户开启「尝鲜 Beta」后，
+    /// 自动/手动检查都走列表端点以纳入 prerelease。
     static func first(fromListJSON data: Data, allowPrerelease: Bool) -> ReleaseInfo? {
         guard let responses = try? JSONDecoder().decode([Response].self, from: data) else { return nil }
         for response in responses {

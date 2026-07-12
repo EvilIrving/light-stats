@@ -81,11 +81,20 @@ final class SettingsDefaultsTests: XCTestCase {
         let s = freshSettings()
         // Zero outbound on a clean install: even update checks are opt-in now.
         XCTAssertFalse(s.autoCheckUpdates)
+        XCTAssertFalse(s.includeBetaUpdates)
         XCTAssertFalse(s.exitNodeDetectionEnabled)
+    }
+
+    func testBetaUpdateChannelDefaultsOff() {
+        XCTAssertFalse(freshSettings().includeBetaUpdates)
     }
 
     func testScrollStepMultiplierDefaultsToNeutral() {
         XCTAssertEqual(freshSettings().scrollStepMultiplier, 1.0, accuracy: 0.0001)
+    }
+
+    func testDiagnosticLogLevelDefaultsToFull() {
+        XCTAssertEqual(freshSettings().diagnosticLogLevel, .full)
     }
 
     // MARK: - Persisted overrides are honored (DI sanity check)

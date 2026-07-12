@@ -169,6 +169,9 @@
 "settings.update.manualCheckHint" = "Manually check whether a new version is available";
 "settings.update.installVersion" = "Update to %@";
 "settings.update.automaticLabel" = "Automatic updates";
+"settings.update.channel.stable" = "Stable";
+"settings.update.channel.beta" = "Beta";
+"settings.update.channel.hint" = "Stable receives only final releases. Beta also includes prerelease builds.";
 "update.available.title" = "Light Stats %@ available";
 "update.available.message" = "Signed, notarized update. Settings preserved.";
 "update.action.install" = "Update Now";

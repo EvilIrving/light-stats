@@ -51,6 +51,7 @@ protocol SettingsManaging: ObservableObject {
     var exitNodeDetectionEnabled: Bool { get set }
     var exitNodeProvider: ExitNodeProvider { get set }
     var autoCheckUpdates: Bool { get set }
+    var includeBetaUpdates: Bool { get set }
     var windowManagementEnabled: Bool { get set }
     var finderMenuEnabled: Bool { get set }
 }
@@ -203,9 +204,14 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
     // MARK: - Software Update Settings
 
-    /// 启动时与定时自动检查更新。默认开启；用户可在设置关闭。
+    /// 启动时与定时自动检查更新。默认关闭（opt-in，零外发）。
     @Published var autoCheckUpdates: Bool {
         didSet { save(autoCheckUpdates, for: .autoCheckUpdates) }
+    }
+    /// 更新通道是否纳入 GitHub prerelease（beta）。默认关闭：只收正式版。
+    /// 开启后自动检查与手动「检查更新」均会接受预发布版本。
+    @Published var includeBetaUpdates: Bool {
+        didSet { save(includeBetaUpdates, for: .includeBetaUpdates) }
     }
     /// 独立输入设备滚动方向翻转：仅传统鼠标滚轮垂直反向，触控板保持自然滚动。
     @Published var scrollReverseEnabled: Bool {
@@ -379,6 +385,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case autoRefreshClaude = "settings.autoRefreshClaude"
         case autoRefreshCodex = "settings.autoRefreshCodex"
         case autoCheckUpdates = "settings.autoCheckUpdates"
+        case includeBetaUpdates = "settings.includeBetaUpdates"
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
         case windowManagementEnabled = "settings.windowManagementEnabled"
@@ -452,6 +459,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
         // 自动检查更新：默认关闭（opt-in）。彻底零外发：默认形态不发起任何网络请求。
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? false
+        // Beta 尝鲜：默认关闭，正式用户只收稳定版。
+        includeBetaUpdates = defaults.object(forKey: Key.includeBetaUpdates.rawValue) as? Bool ?? false
         // 滚动方向翻转：默认关闭（opt-in）。
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的 magnet/titlebar 子开关。

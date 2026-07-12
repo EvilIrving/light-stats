@@ -69,9 +69,10 @@ final class UpdateManager: ObservableObject {
         isChecking = true
         Task {
             do {
-                // 手动「立即检查」开放内测通道：纳入 prerelease（beta）；
-                // 自动检查仍只走稳定的 releases/latest。
-                let release = try await service.fetchLatest(includePrereleases: userInitiated)
+                // 通道由用户设置决定：开启「尝鲜 Beta」后自动/手动均纳入 prerelease；
+                // 默认只走稳定的 releases/latest。
+                let includeBeta = SettingsManager.shared.includeBetaUpdates
+                let release = try await service.fetchLatest(includePrereleases: includeBeta)
                 isChecking = false
                 handle(release: release, userInitiated: userInitiated)
             } catch {

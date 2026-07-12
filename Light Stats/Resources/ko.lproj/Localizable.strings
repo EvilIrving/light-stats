@@ -171,6 +171,9 @@
 "settings.update.manualCheckHint" = "새 버전이 있는지 수동으로 확인";
 "settings.update.installVersion" = "%@(으)로 업데이트";
 "settings.update.automaticLabel" = "자동 업데이트";
+"settings.update.channel.stable" = "정식";
+"settings.update.channel.beta" = "베타";
+"settings.update.channel.hint" = "정식은 안정 버전만, 베타는 프리릴리스도 포함합니다.";
 "update.available.title" = "Light Stats %@ 사용 가능";
 "update.available.message" = "서명 및 공증된 업데이트입니다. 설정은 유지됩니다.";
 "update.action.install" = "지금 업데이트";

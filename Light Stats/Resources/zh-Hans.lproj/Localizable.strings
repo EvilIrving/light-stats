@@ -171,6 +171,9 @@
 "settings.update.manualCheckHint" = "手动检查是否有新版本";
 "settings.update.installVersion" = "更新至 %@";
 "settings.update.automaticLabel" = "自动更新";
+"settings.update.channel.stable" = "正式版";
+"settings.update.channel.beta" = "尝鲜";
+"settings.update.channel.hint" = "正式版只接收稳定发布；尝鲜会纳入 Beta 预发布版本。";
 "update.available.title" = "Light Stats %@ 可更新";
 "update.available.message" = "已签公证，设置保留。";
 "update.action.install" = "立即更新";
