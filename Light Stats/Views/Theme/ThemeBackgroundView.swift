@@ -110,11 +110,10 @@ private struct FluidMeshBackground: View {
                 .frame(width: width, height: height)
             }
         }
-        .onChange(of: lightFlow) { oldFlow, newFlow in
+        .onChange(of: lightFlow) { oldFlow, _ in
             let now = Date()
             phaseAnchor = phase(at: now, flow: oldFlow)
             phaseAnchorDate = now
-            _ = newFlow
         }
     }
 
@@ -182,20 +181,20 @@ private struct FilmLightField: View {
         return ZStack {
             tokens.meshBase
 
-            // All light art moves as one composition — position slider is a clear pan.
-            ZStack {
-                // Full diagonal wash — cream → coral → burgundy.
-                LinearGradient(
-                    colors: [
-                        tokens.meshBlobHighlight.opacity(0.75),
-                        tokens.meshBlobSecondary.opacity(0.60),
-                        tokens.meshBlobPrimary.opacity(0.70),
-                        tokens.meshBase
-                    ],
-                    startPoint: UnitPoint(x: 0.0 + phaseX, y: 0.0),
-                    endPoint: UnitPoint(x: 1.0, y: 1.0)
-                )
+            // Keep the full-frame wash fixed so position extremes never expose an edge.
+            LinearGradient(
+                colors: [
+                    tokens.meshBlobHighlight.opacity(0.75),
+                    tokens.meshBlobSecondary.opacity(0.60),
+                    tokens.meshBlobPrimary.opacity(0.70),
+                    tokens.meshBase
+                ],
+                startPoint: UnitPoint(x: 0.0 + phaseX, y: 0.0),
+                endPoint: UnitPoint(x: 1.0, y: 1.0)
+            )
 
+            // Position controls pan only the oversized light masses above the wash.
+            ZStack {
                 // Coral mass (lower-right lobe of the S).
                 Ellipse()
                     .fill(
@@ -298,7 +297,7 @@ private struct FilmLightField: View {
                     .blendMode(.plusLighter)
                     .opacity(0.55)
             }
-            // Single pan of the whole light stack — position knobs read immediately.
+            // Pan the light masses without moving the full-frame coverage layer.
             .offset(x: shiftX, y: shiftY)
         }
     }

@@ -79,7 +79,7 @@ struct GeneralDetail: View {
         }
     }
 
-    /// 胶片棕专属：实时预览 + 颗粒开关 + 光影流动 / 位置滑块。
+    /// 胶片棕专属：实时预览 + 颗粒开关 + 光影流动 / 位置档位。
     /// 设置窗本身不跟主题，所以必须内嵌预览，否则滑块没有可见反馈。
     private var filmAppearanceControls: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -92,22 +92,25 @@ struct GeneralDetail: View {
                     SettingsToggle(isOn: $settings.filmGrainEnabled)
                 }
                 rowDivider()
-                filmSliderRow(
+                filmSegmentedRow(
                     title: "settings.theme.film.lightFlow".localized,
                     value: $settings.filmLightFlow,
-                    format: { String(format: "%.0f%%", $0 * 100) }
+                    options: FilmAppearanceLabel.flowValues,
+                    format: FilmAppearanceLabel.flow
                 )
                 rowDivider()
-                filmSliderRow(
+                filmSegmentedRow(
                     title: "settings.theme.film.lightPositionX".localized,
                     value: $settings.filmLightPositionX,
-                    format: positionLabel
+                    options: FilmAppearanceLabel.positionValues,
+                    format: FilmAppearanceLabel.horizontalPosition
                 )
                 rowDivider()
-                filmSliderRow(
+                filmSegmentedRow(
                     title: "settings.theme.film.lightPositionY".localized,
                     value: $settings.filmLightPositionY,
-                    format: positionLabel
+                    options: FilmAppearanceLabel.positionValues,
+                    format: FilmAppearanceLabel.verticalPosition
                 )
             }
         }
@@ -126,34 +129,29 @@ struct GeneralDetail: View {
             .accessibilityLabel("settings.theme.film".localized)
     }
 
-    private func filmSliderRow(
+    private func filmSegmentedRow(
         title: String,
         value: Binding<Double>,
+        options: [Double],
         format: @escaping (Double) -> String
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.primary)
-                Spacer()
-                Text(format(value.wrappedValue))
-                    .font(.system(size: 12, weight: .medium).monospacedDigit())
-                    .foregroundStyle(.secondary)
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.primary)
+            Picker("", selection: FilmAppearanceLabel.discreteBinding(value, options: options)) {
+                ForEach(options, id: \.self) { option in
+                    Text(format(option)).tag(option)
+                }
             }
-            Slider(value: value, in: 0...1, step: 0.01)
-                .controlSize(.small)
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .controlSize(.regular)
+            .frame(maxWidth: .infinity)
                 .focusable(false)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-    }
-
-    /// 0…1 → L50 / Center / R50 style readout for position sliders.
-    private func positionLabel(_ value: Double) -> String {
-        let bias = Int(((value - 0.5) * 200).rounded())
-        if abs(bias) < 3 { return "·" }
-        return bias < 0 ? "\(bias)" : "+\(bias)"
     }
 
     /// 单行：检查按钮 + 可用版本入口 + 稳定/Beta 通道 + 自动更新开关。
