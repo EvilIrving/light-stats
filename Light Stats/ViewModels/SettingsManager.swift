@@ -242,11 +242,41 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
     }
 
+    /// Local diagnostic JSONL verbosity: off / errors only / full (rate-limited samples).
+    @Published var diagnosticLogLevel: DiagnosticLogLevel {
+        didSet {
+            DiagnosticLogService.setJournalMode(diagnosticLogLevel.journalMode)
+            save(diagnosticLogLevel.rawValue, for: .diagnosticLogLevel)
+        }
+    }
+
     // MARK: - Singleton
 
     static let shared = SettingsManager()
 
     // MARK: - Enums
+
+    enum DiagnosticLogLevel: String, CaseIterable {
+        case off
+        case errorsOnly
+        case full
+
+        var journalMode: DiagnosticLogService.JournalMode {
+            switch self {
+            case .off: return .off
+            case .errorsOnly: return .errorsOnly
+            case .full: return .full
+            }
+        }
+
+        var displayName: String {
+            switch self {
+            case .off: return "settings.diagnosticLog.off".localized
+            case .errorsOnly: return "settings.diagnosticLog.errorsOnly".localized
+            case .full: return "settings.diagnosticLog.full".localized
+            }
+        }
+    }
 
     enum RefreshRate: String, CaseIterable {
         case low       // 5 seconds
@@ -356,6 +386,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
+        case diagnosticLogLevel = "settings.diagnosticLogLevel"
     }
 
     // MARK: - Init
@@ -435,6 +466,12 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 保持唤醒：默认关闭（opt-in）。
         keepAwakeEnabled = defaults.object(forKey: Key.keepAwakeEnabled.rawValue) as? Bool ?? false
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
+
+        // 诊断日志：默认完整（含限速 sample）；关 / 仅错误可在设置中收窄。
+        let logLevelStr = defaults.string(forKey: Key.diagnosticLogLevel.rawValue)
+            ?? DiagnosticLogLevel.full.rawValue
+        diagnosticLogLevel = DiagnosticLogLevel(rawValue: logLevelStr) ?? .full
+        DiagnosticLogService.setJournalMode(diagnosticLogLevel.journalMode)
 
         // 所有存储属性初始化完成后，把 Finder 菜单开关初值镜像进 App Group 容器，
         // 确保沙盒扩展冷启动即读到正确状态。

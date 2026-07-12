@@ -158,7 +158,10 @@
 "settings.general" = "일반";
 "settings.general.app" = "앱";
 "settings.appLogs" = "앱 로그";
-"settings.appLogs.hint" = "최근 5일간의 로컬 진단 로그 보기";
+"settings.appLogs.hint" = "이 Mac에만 저장되며 5일간 보관됩니다.";
+"settings.diagnosticLog.off" = "끔";
+"settings.diagnosticLog.errorsOnly" = "오류만";
+"settings.diagnosticLog.full" = "전체";
 "settings.view" = "보기";
 "settings.launchAtLogin" = "로그인 시 실행";
 "settings.update.section" = "소프트웨어 업데이트";

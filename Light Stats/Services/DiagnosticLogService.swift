@@ -3,7 +3,9 @@
 //  Light Stats
 //
 //  App-owned structured diagnostics with privacy-aware fields, bounded sample
-//  coalescing, a single writer actor, five-day retention, and explicit flush.
+//  coalescing (time + pressure-signature throttle), a single writer actor,
+//  five-day retention, and explicit flush. Journal verbosity is gated by
+//  `JournalMode` (off / errorsOnly / full).
 //
 
 import Foundation
@@ -16,6 +18,16 @@ actor DiagnosticLogService {
         case info
         case warning
         case error
+    }
+
+    /// User-facing journal verbosity. Independent of os.Logger dual-write.
+    enum JournalMode: String, Codable, Sendable, CaseIterable {
+        /// No JSONL writes.
+        case off
+        /// Only `error` level important records; samples dropped.
+        case errorsOnly
+        /// All important records + rate-limited samples.
+        case full
     }
 
     enum Privacy: String, Codable, Sendable {
@@ -115,8 +127,12 @@ actor DiagnosticLogService {
     static let shared = DiagnosticLogService(configuration: .production)
     nonisolated static var diagnosticsDirectoryURL: URL { Configuration.production.directory }
 
-    private static let systemLog = Logger(subsystem: "com.lightstats.app", category: "Diagnostics")
+    /// Default sample spacing under `.full`. Pressure-signature changes bypass the wait.
+    nonisolated static let defaultSampleInterval: TimeInterval = 45
+
+    private static let systemLog = Logger(subsystem: AppLogger.subsystem, category: "Diagnostics")
     private static let buffer = DiagnosticRecordBuffer()
+    private static let policy = DiagnosticJournalPolicy(sampleInterval: defaultSampleInterval)
     private static let cleanupInterval: TimeInterval = 3600
 
     private let configuration: Configuration
@@ -135,12 +151,30 @@ actor DiagnosticLogService {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
     }
 
+    /// Apply user preference from Settings. Safe to call from MainActor.
+    nonisolated static func setJournalMode(_ mode: JournalMode) {
+        policy.setMode(mode)
+    }
+
+    nonisolated static func journalMode() -> JournalMode {
+        policy.mode
+    }
+
+    /// Test seam: reset mode, sample interval, and throttle state.
+    nonisolated static func resetPolicyForTesting(
+        mode: JournalMode = .full,
+        sampleInterval: TimeInterval = defaultSampleInterval
+    ) {
+        policy.reset(mode: mode, sampleInterval: sampleInterval)
+    }
+
     nonisolated static func record(
         level: Level = .info,
         category: String,
         action: String,
         fields: [String: Field] = [:]
     ) {
+        guard policy.allows(level: level) else { return }
         let record = Record(
             timestamp: Date(),
             level: level,
@@ -157,12 +191,14 @@ actor DiagnosticLogService {
         action: String,
         fields: [String: Field] = [:]
     ) {
+        let cleaned = sanitized(fields)
+        guard policy.allowsSample(category: category, fields: cleaned, at: Date()) else { return }
         let record = Record(
             timestamp: Date(),
             level: .info,
             category: category,
             action: action,
-            fields: sanitized(fields)
+            fields: cleaned
         )
         guard buffer.enqueue(record, kind: .sample) else { return }
         Task { await shared.drain() }
@@ -329,6 +365,117 @@ actor DiagnosticLogService {
         let url: URL
         let modifiedAt: Date
         let size: UInt64
+    }
+}
+
+/// Process-wide journal gate: mode filter + per-category sample throttle.
+/// Time window (default 45s) OR discrete pressure-signature change admits a sample.
+nonisolated final class DiagnosticJournalPolicy: @unchecked Sendable {
+
+    private static let signatureKeys = [
+        "memory.pressure",
+        "temperature.thermalState",
+        "battery.state",
+        "pressure"
+    ]
+
+    private let lock = NSLock()
+    private var _mode: DiagnosticLogService.JournalMode
+    private var sampleInterval: TimeInterval
+    private var lastSampleAt: [String: Date] = [:]
+    private var lastSignature: [String: String] = [:]
+
+    var mode: DiagnosticLogService.JournalMode {
+        lock.lock()
+        defer { lock.unlock() }
+        return _mode
+    }
+
+    init(
+        mode: DiagnosticLogService.JournalMode = .full,
+        sampleInterval: TimeInterval = DiagnosticLogService.defaultSampleInterval
+    ) {
+        _mode = mode
+        self.sampleInterval = sampleInterval
+    }
+
+    func setMode(_ mode: DiagnosticLogService.JournalMode) {
+        lock.lock()
+        _mode = mode
+        lock.unlock()
+    }
+
+    func reset(mode: DiagnosticLogService.JournalMode, sampleInterval: TimeInterval) {
+        lock.lock()
+        _mode = mode
+        self.sampleInterval = sampleInterval
+        lastSampleAt.removeAll()
+        lastSignature.removeAll()
+        lock.unlock()
+    }
+
+    func allows(level: DiagnosticLogService.Level) -> Bool {
+        lock.lock()
+        let current = _mode
+        lock.unlock()
+        switch current {
+        case .off: return false
+        case .errorsOnly: return level == .error
+        case .full: return true
+        }
+    }
+
+    func allowsSample(
+        category: String,
+        fields: [String: DiagnosticLogService.Field],
+        at date: Date
+    ) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard _mode == .full else { return false }
+
+        let signature = Self.pressureSignature(fields)
+        if lastSignature[category] != signature {
+            lastSignature[category] = signature
+            lastSampleAt[category] = date
+            return true
+        }
+        if let last = lastSampleAt[category], date.timeIntervalSince(last) < sampleInterval {
+            return false
+        }
+        lastSampleAt[category] = date
+        return true
+    }
+
+    private static func pressureSignature(_ fields: [String: DiagnosticLogService.Field]) -> String {
+        var parts: [String] = []
+        for key in signatureKeys where fields[key] != nil {
+            parts.append("\(key)=\(stringValue(fields[key]?.value))")
+        }
+        if let score = fields["health.score"]?.value {
+            switch score {
+            case .integer(let value):
+                parts.append("health.bucket=\(value / 10)")
+            case .double(let value):
+                parts.append("health.bucket=\(Int(value) / 10)")
+            default:
+                break
+            }
+        }
+        return parts.joined(separator: "|")
+    }
+
+    private static func stringValue(_ value: DiagnosticLogService.Value?) -> String {
+        guard let value else { return "" }
+        switch value {
+        case .string(let string): return string
+        case .integer(let number): return String(number)
+        case .unsignedInteger(let number): return String(number)
+        case .double(let number): return String(number)
+        case .bool(let flag): return flag ? "true" : "false"
+        case .null: return "null"
+        case .array, .object: return "<complex>"
+        }
     }
 }
 

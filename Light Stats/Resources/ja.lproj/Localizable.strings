@@ -158,7 +158,10 @@
 "settings.general" = "一般";
 "settings.general.app" = "アプリ";
 "settings.appLogs" = "アプリログ";
-"settings.appLogs.hint" = "過去5日間のローカル診断ログを表示します";
+"settings.appLogs.hint" = "この Mac にのみ保存し、5日間保持します。";
+"settings.diagnosticLog.off" = "オフ";
+"settings.diagnosticLog.errorsOnly" = "エラーのみ";
+"settings.diagnosticLog.full" = "すべて";
 "settings.view" = "表示";
 "settings.launchAtLogin" = "ログイン時に起動";
 "settings.update.section" = "ソフトウェアアップデート";

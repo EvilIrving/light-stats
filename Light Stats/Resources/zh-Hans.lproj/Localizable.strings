@@ -158,7 +158,10 @@
 "settings.general" = "通用";
 "settings.general.app" = "应用";
 "settings.appLogs" = "应用日志";
-"settings.appLogs.hint" = "查看最近 5 天的本地诊断日志";
+"settings.appLogs.hint" = "仅保存在本机，自动保留 5 天。";
+"settings.diagnosticLog.off" = "关";
+"settings.diagnosticLog.errorsOnly" = "仅错误";
+"settings.diagnosticLog.full" = "完整";
 "settings.view" = "查看";
 "settings.launchAtLogin" = "开机启动";
 "settings.update.section" = "软件更新";

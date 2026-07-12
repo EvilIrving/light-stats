@@ -156,7 +156,10 @@
 "settings.general" = "General";
 "settings.general.app" = "App";
 "settings.appLogs" = "App Logs";
-"settings.appLogs.hint" = "View local diagnostic logs from the last five days";
+"settings.appLogs.hint" = "Stored on this Mac for 5 days.";
+"settings.diagnosticLog.off" = "Off";
+"settings.diagnosticLog.errorsOnly" = "Errors";
+"settings.diagnosticLog.full" = "Full";
 "settings.view" = "View";
 "settings.launchAtLogin" = "Launch at Login";
 "settings.update.section" = "Software Update";

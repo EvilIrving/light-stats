@@ -8,6 +8,16 @@ import XCTest
 
 final class DiagnosticLogServiceTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        DiagnosticLogService.resetPolicyForTesting(mode: .full, sampleInterval: 45)
+    }
+
+    override func tearDown() {
+        DiagnosticLogService.resetPolicyForTesting(mode: .full, sampleInterval: 45)
+        super.tearDown()
+    }
+
     func testAppendWritesDecodableJSONLine() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -176,6 +186,79 @@ final class DiagnosticLogServiceTests: XCTestCase {
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: older.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: newer.path))
+    }
+
+    // MARK: - Journal mode + sample throttle
+
+    func testJournalModeOffBlocksAllLevels() {
+        let policy = DiagnosticJournalPolicy(mode: .off, sampleInterval: 45)
+        XCTAssertFalse(policy.allows(level: .debug))
+        XCTAssertFalse(policy.allows(level: .info))
+        XCTAssertFalse(policy.allows(level: .warning))
+        XCTAssertFalse(policy.allows(level: .error))
+        XCTAssertFalse(policy.allowsSample(category: "system", fields: [:], at: Date()))
+    }
+
+    func testJournalModeErrorsOnlyAllowsErrorsOnly() {
+        let policy = DiagnosticJournalPolicy(mode: .errorsOnly, sampleInterval: 45)
+        XCTAssertFalse(policy.allows(level: .info))
+        XCTAssertFalse(policy.allows(level: .warning))
+        XCTAssertTrue(policy.allows(level: .error))
+        XCTAssertFalse(policy.allowsSample(category: "system", fields: [:], at: Date()))
+    }
+
+    func testSampleThrottleDropsWithinInterval() {
+        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        let fields: [String: DiagnosticLogService.Field] = [
+            "memory.pressure": .privateValue(.string("normal"))
+        ]
+
+        XCTAssertTrue(policy.allowsSample(category: "system", fields: fields, at: base))
+        XCTAssertFalse(policy.allowsSample(
+            category: "system",
+            fields: fields,
+            at: base.addingTimeInterval(10)
+        ))
+        XCTAssertTrue(policy.allowsSample(
+            category: "system",
+            fields: fields,
+            at: base.addingTimeInterval(45)
+        ))
+    }
+
+    func testSampleThrottleAllowsEarlyWriteOnPressureChange() {
+        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        let normal: [String: DiagnosticLogService.Field] = [
+            "memory.pressure": .privateValue(.string("normal"))
+        ]
+        let warning: [String: DiagnosticLogService.Field] = [
+            "memory.pressure": .privateValue(.string("warning"))
+        ]
+
+        XCTAssertTrue(policy.allowsSample(category: "system", fields: normal, at: base))
+        XCTAssertTrue(policy.allowsSample(
+            category: "system",
+            fields: warning,
+            at: base.addingTimeInterval(5)
+        ))
+    }
+
+    func testSampleThrottleIsPerCategory() {
+        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        let fields: [String: DiagnosticLogService.Field] = [
+            "pressure": .privateValue(.string("normal"))
+        ]
+
+        XCTAssertTrue(policy.allowsSample(category: "system", fields: fields, at: base))
+        XCTAssertTrue(policy.allowsSample(category: "processMemory", fields: fields, at: base))
+        XCTAssertFalse(policy.allowsSample(
+            category: "system",
+            fields: fields,
+            at: base.addingTimeInterval(1)
+        ))
     }
 
     private func makeService(directory: URL, maximumBytes: UInt64 = 1_024) -> DiagnosticLogService {
