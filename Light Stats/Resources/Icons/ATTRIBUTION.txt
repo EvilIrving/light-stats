@@ -1,0 +1,5 @@
+Icons from Reicon (https://github.com/dqev/reicon), MIT License.
+Upstream: Solar Icons (CC BY 4.0 / MIT packaging), Zappicon.
+Outline weight SVGs used: cpu, microchip (gpu), ram2 (memory),
+station (network), shield-network (proxy), ssd (disk), temperature,
+layers (processes).
