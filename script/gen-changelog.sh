@@ -4,8 +4,11 @@
 # =============================================================================
 #
 # 【这个脚本做什么】
-#   把「上一个 tag → 当前 tag」之间的 git 提交，整理成面向终端用户的发布说明：
-#     1. 取该区间的非 merge 提交。
+#   生成面向终端用户的 GitHub Release 正文：
+#     0. 若存在 docs/releases/<tag>.md（或 docs/releases/<version>.md），
+#        直接使用该文件——正式版 / major 必须写这份，禁止用 docs: commit 当说明。
+#     1. 否则取「上一个 tag → 当前 tag」之间的非 merge 提交。
+#        可用环境变量 PREV_TAG 覆盖基线（如 PREV_TAG=v1.8.0）。
 #     2. 过滤掉对用户无意义的类型：chore / ci / build / docs / test。
 #     3. 若配置了 OpenAI 兼容 API → 调用 /chat/completions 改写成
 #        精炼的「中英双语、按功能分组」release notes。
@@ -52,7 +55,31 @@ set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-}"
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || echo HEAD)}"
-PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")"
+# 允许显式指定对比基线（如 major 发布：PREV_TAG=v1.8.0 TAG=v2.0.0）
+PREV_TAG="${PREV_TAG:-$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")}"
+
+# 仓库根（CI checkout 与本地均可）
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# ---- 优先：手工撰写的面向用户 Release Notes ----
+# 存在 docs/releases/<tag>.md 时直接使用（正式版/major 应写这份，勿把 docs: commit 当发布说明）。
+curated_notes() {
+    local f1="${ROOT}/docs/releases/${TAG}.md"
+    local f2="${ROOT}/docs/releases/${TAG#v}.md"
+    if [ -f "$f1" ]; then
+        cat "$f1"
+        return 0
+    fi
+    if [ -f "$f2" ]; then
+        cat "$f2"
+        return 0
+    fi
+    return 1
+}
+
+if curated_notes; then
+    exit 0
+fi
 
 if [ -n "$PREV_TAG" ]; then
     RANGE="${PREV_TAG}..${TAG}"
