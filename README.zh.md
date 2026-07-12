@@ -73,13 +73,13 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 | 概览 | 内存清理 |
 |------|----------|
-| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="概览面板 — 默认主题" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="内存清理 — 默认主题" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="320" alt="概览面板 — 默认主题" /> | <img src="docs/screenshots/default/popover-cleanup.jpeg" width="320" alt="内存清理 — 默认主题" /> |
 
 四主题（概览）：
 
 | 默认 | Bento 网格 | 晒金 | 墨夜 |
 |------|------------|------|------|
-| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="默认主题" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento 网格" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="晒金" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="墨夜" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="200" alt="默认主题" /> | <img src="docs/screenshots/bento/popover-overview.jpeg" width="200" alt="Bento 网格" /> | <img src="docs/screenshots/sun-gold/popover-overview.jpeg" width="200" alt="晒金" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="200" alt="墨夜" /> |
 
 ---
 

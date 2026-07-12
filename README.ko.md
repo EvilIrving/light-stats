@@ -16,13 +16,13 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 | 개요 | 메모리 |
 |------|--------|
-| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="개요 — Default" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="메모리 — Default" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="320" alt="개요 — Default" /> | <img src="docs/screenshots/default/popover-cleanup.jpeg" width="320" alt="메모리 — Default" /> |
 
 테마 (개요):
 
 | Default | Bento Grid | Sun Gold | Ink Night |
 |---------|------------|----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="Default" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="Sun Gold" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="Ink Night" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="200" alt="Default" /> | <img src="docs/screenshots/bento/popover-overview.jpeg" width="200" alt="Bento" /> | <img src="docs/screenshots/sun-gold/popover-overview.jpeg" width="200" alt="Sun Gold" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="200" alt="Ink Night" /> |
 
 ---
 

@@ -19,13 +19,13 @@ Default theme (cold-start) — Overview and Memory:
 
 | Overview | Memory |
 |----------|--------|
-| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="Overview panel — Default theme" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="Memory cleanup — Default theme" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="320" alt="Overview panel — Default theme" /> | <img src="docs/screenshots/default/popover-cleanup.jpeg" width="320" alt="Memory cleanup — Default theme" /> |
 
 Themes (Overview):
 
 | Default | Bento Grid | Sun Gold | Ink Night |
 |---------|------------|----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="Default theme" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento Grid theme" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="Sun Gold theme" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="Ink Night theme" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="200" alt="Default theme" /> | <img src="docs/screenshots/bento/popover-overview.jpeg" width="200" alt="Bento Grid theme" /> | <img src="docs/screenshots/sun-gold/popover-overview.jpeg" width="200" alt="Sun Gold theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="200" alt="Ink Night theme" /> |
 
 ---
 

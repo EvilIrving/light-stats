@@ -50,7 +50,7 @@
 - Latest tagged prerelease observed: v1.9.0-beta.7 (Beta channel, diagnostic log levels, settings 3-tab layout, Finder UX).
 - Unreleased on main after beta.7 (as of 2026-07-12): multi-theme system (Default / Bento / Sun Gold / Ink Night; raw keys glass/bento/film/noir), Reicon Outline SVG metric icons, themed permission panel, Sun Gold/Ink Night appearance controls. Documented in README; not yet a GitHub Release tag.
 - GitHub Actions build and release workflows exist.
-- Screenshots under `docs/screenshots/{default,bento,sun-gold,ink-night}/` (overview + cleanup each). Root `popover-*.png` mirrors Default for stable links.
+- Screenshots under `docs/screenshots/{default,bento,sun-gold,ink-night}/` (overview + cleanup each, JPEG). Root `popover-*.jpeg` mirrors Default for stable links.
 - No adoption, testimonial, or benchmark claim is approved for marketing copy; any public count must be rechecked immediately before use.
 
 ## Links
