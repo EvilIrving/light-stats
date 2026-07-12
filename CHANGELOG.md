@@ -1,3 +1,16 @@
+## v2.0.1-beta.1（预发布 / Prerelease）
+
+相对 **v2.0.0** 的补丁预发布。
+
+### 🐛 修复 / Fixes
+
+- 修复晒金 / 墨夜主题下总览与清理页滚动时，滚轮穿透到面板后方窗口的问题（macOS 26 更明显）
+- 修复更新窗口中较长 release notes 把安装/下载按钮顶出屏幕的问题
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v2.0.0...v2.0.1-beta.1
+
+---
+
 ## v2.0.0
 
 相对 **v1.8.0** 的正式版更新（含原 1.9.0 beta 周期全部内容）。
