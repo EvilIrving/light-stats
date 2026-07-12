@@ -167,7 +167,8 @@ final class UpdateManager: ObservableObject {
         w.titlebarAppearsTransparent = true
         w.isReleasedWhenClosed = false
         // 固定宽度、高度随内容动态:.preferredContentSize 让窗口跟随 SwiftUI 内容
-        // 尺寸变化(发现新版 → 下载 → 安装)自动收放,无需 ScrollView。
+        // 尺寸变化(发现新版 → 下载 → 安装)自动收放。超长 release notes 在
+        // UpdateWindowView 内滚动,保证操作按钮始终在可见区域内。
         let hosting = NSHostingController(rootView: UpdateWindowView().environmentObject(self))
         hosting.sizingOptions = [.preferredContentSize]
         w.contentViewController = hosting
@@ -178,6 +179,11 @@ final class UpdateManager: ObservableObject {
         }
         w.delegate = delegate
         windowDelegate = delegate
+        // Cap hard max so even a preferred-size glitch can't push past the screen.
+        if let screen = NSScreen.main {
+            let maxH = screen.visibleFrame.height * 0.85
+            w.maxSize = NSSize(width: 480, height: maxH)
+        }
         w.center()
         window = w
         w.makeKeyAndOrderFront(nil)

@@ -2,13 +2,15 @@
 //  UpdateWindowView.swift
 //  Light Stats
 //
-//  更新窗口内容视图。由 UpdateManager.showWindow() 弹出,所有更新阶段
-//  (检查,已最新,发现新版本,下载进度,安装,出错)在此窗口内闭环展示。
+//  更新窗口内容视图。由 UpdateManager.showUpdateWindow() 弹出,所有更新阶段
+//  (发现新版本,下载进度,安装,出错)在此窗口内闭环展示。
 //
 //  根视图固定宽度、高度随内容动态(配合 NSHostingController.sizingOptions =
-//  .preferredContentSize)。更新说明直接整段展示,不用 ScrollView。
+//  .preferredContentSize)。Release notes / 错误文案过长时在滚动区内裁切,
+//  操作按钮始终贴在底部可见区域,避免窗口超出屏幕后点不到「更新」。
 //
 
+import AppKit
 import SwiftUI
 
 struct UpdateWindowView: View {
@@ -19,6 +21,30 @@ struct UpdateWindowView: View {
     private let contentWidth: CGFloat = 360
     private var appIcon: NSImage? { NSApp.applicationIconImage }
     private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
+
+    /// Cap scrollable body so the whole window stays within the visible screen.
+    /// Leaves room for title bar, icon, title, action row, and padding.
+    private var maxScrollBodyHeight: CGFloat {
+        let visible = NSScreen.main?.visibleFrame.height ?? 800
+        // ~200pt for chrome (titlebar + icon + title + buttons + padding + spacing).
+        let budget = visible * 0.7 - 200
+        return max(100, min(280, budget))
+    }
+
+    /// Prefer a tight frame for short text; hard-cap long release notes.
+    /// Uses an explicit height (not only maxHeight) so preferredContentSize cannot
+    /// grow the NSWindow past the screen and hide the install button.
+    private func scrollBodyHeight(for text: String) -> CGFloat {
+        let maxHeight = maxScrollBodyHeight
+        // ~52 chars/line at 11pt in a 360pt-wide padded column; ~15pt line height.
+        let newlineCount = text.reduce(into: 0) { count, char in
+            if char == "\n" { count += 1 }
+        }
+        let wrappedLines = max(1, Int(ceil(Double(text.count) / 52.0)))
+        let estimatedLines = max(newlineCount + 1, wrappedLines)
+        let estimated = CGFloat(estimatedLines) * 15 + 8
+        return min(max(estimated, 48), maxHeight)
+    }
 
     var body: some View {
         content
@@ -97,12 +123,17 @@ struct UpdateWindowView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if !release.releaseNotes.isEmpty {
-                Text(release.releaseNotes)
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.inkSecondary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Explicit height (not only maxHeight): preferredContentSize otherwise
+                // measures the full notes ideal size and the install button falls off-screen.
+                ScrollView(.vertical, showsIndicators: true) {
+                    Text(release.releaseNotes)
+                        .font(.system(size: 11))
+                        .foregroundStyle(theme.inkSecondary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .frame(height: scrollBodyHeight(for: release.releaseNotes))
             }
 
             availableButtons(release)
@@ -130,6 +161,7 @@ struct UpdateWindowView: View {
                     .frame(minWidth: 88)
             }
             .buttonStyle(.borderedProminent)
+            .keyboardShortcut(.defaultAction)
         }
     }
 
@@ -156,10 +188,15 @@ struct UpdateWindowView: View {
             Text("update.error.title".localized)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(theme.inkPrimary)
-            Text(message)
-                .font(.system(size: 11))
-                .foregroundStyle(theme.inkSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.vertical, showsIndicators: true) {
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.inkSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .textSelection(.enabled)
+            }
+            .frame(height: scrollBodyHeight(for: message))
             HStack(spacing: 10) {
                 Button {
                     if let url = URL(string: "https://github.com/EvilIrving/light-stats/releases/latest") {
@@ -173,6 +210,7 @@ struct UpdateWindowView: View {
                 Button { manager.dismissWindow() } label: {
                     Text("update.action.ok".localized).font(.system(size: 12, weight: .medium))
                 }
+                .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 4)
         }
