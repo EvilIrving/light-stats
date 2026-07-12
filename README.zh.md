@@ -6,7 +6,7 @@
 
 **原生 macOS 菜单栏状态仪表,看的是「你的 Mac 此刻卡不卡」,并把开发工作流上下文放在手边。**
 
-0-100 健康分常驻菜单栏,一眼看压力;点开弹窗查看 CPU、GPU、内存压力、磁盘与 I/O、网络、电池、温度、风扇、进程和 AI CLI 用量,还可按需启用 Finder、窗口与保持唤醒工具。
+0-100 健康分常驻菜单栏,一眼看压力;点开弹窗查看 CPU、GPU、内存压力、磁盘与 I/O、网络、电池、温度、风扇、进程和 AI CLI 用量,还可按需启用 Finder、窗口与保持唤醒工具。弹窗支持四种视觉主题(冷启动为「默认」),设置窗保持系统白底工具面板。
 
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
@@ -37,7 +37,8 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 - **AI CLI 用量也在里面。** 常用 Claude Code、Codex 或 Gemini 的话,开启后概览面板会显示订阅用量,凭据只用来查各家自己的接口。
 - **原生写的,没有第三方依赖。** SwiftUI 加 AppKit,直接调 Mach、IOKit、SMC、Network,没有任何运行时依赖。
 - **开发工作流上下文集中在一处。** AI 用量、代理和出口节点与系统压力并列显示;可选 Finder 菜单支持终端、文件模板、复制、移动和打开方式等高频操作。
-- **默认零外联。** 没有遥测;出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认都关闭。
+- **多主题读数面板。** 「默认」主题、Bento 卡片、晒金、墨夜;晒金与墨夜可调颗粒与光影动态。设置窗固定白底,不跟展示主题。
+- **默认零外联。** 没有遥测;出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认都关闭。诊断日志只写本机。
 - **监控是核心,附加工具按需启用。** Finder 菜单、清洁模式、窗口管理、滚动方向反转和保持唤醒都默认关闭。只用监控时,菜单栏只有读数:不多一个图标、不弹辅助功能授权、不创建 event tap、不发任何网络请求。
 
 ---
@@ -68,9 +69,17 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 ## 界面预览
 
-| 概览 | 清理 |
-|------|------|
-| <img src="docs/screenshots/popover-overview.png" width="320" alt="概览面板" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="清理面板" /> |
+冷启动「默认」主题 — 概览与内存清理：
+
+| 概览 | 内存清理 |
+|------|----------|
+| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="概览面板 — 默认主题" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="内存清理 — 默认主题" /> |
+
+四主题（概览）：
+
+| 默认 | Bento 网格 | 晒金 | 墨夜 |
+|------|------------|------|------|
+| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="默认主题" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento 网格" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="晒金" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="墨夜" /> |
 
 ---
 
@@ -95,6 +104,17 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 - 系统健康分、各维度摘要和维度开关
 - 开启 AI 监控后显示 Claude Code、Codex、Gemini 订阅用量
 - 关键指标短期趋势折线
+- 指标图标使用可模板染色的 SVG 轮廓(CPU、GPU、内存、磁盘、网络、代理、温度、进程)
+
+### 外观主题
+
+- 产品表面(弹窗、关于、Toast、更新窗、辅助功能引导)可选四种主题:
+  - **默认**(冷启动默认):系统 instrument 读数(无卡片框；macOS 26+ 为 Liquid Glass，macOS 15 为普通系统表面)
+  - **Bento 网格**:原始卡片网格 + 系统材质
+  - **晒金**:暖金颗粒光场
+  - **墨夜**:墨色颗粒光场与深炭灰表面
+- 晒金与墨夜共用外观调节:颗粒开关,以及光影动态五档(静止 / 舒缓 / 自然 / 流畅 / 活跃)
+- 设置窗固定系统白底,不跟随展示主题,配置界面保持工具面板气质
 
 ### 内存清理
 
@@ -102,12 +122,14 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 - 按内存占用排序的 App 列表
 - 正常关闭和二次确认后的强制退出
 - 可展开查看子进程
+- 列表布局跟随当前主题(Bento 用卡片网格,其余主题用 instrument 行)
 
 ### Finder 右键菜单
 
 - 可选 FinderSync 扩展,默认关闭
 - 复制路径或文件名、在所选终端中打开、切换隐藏状态
 - 按文档、网页、数据和代码分类的新建文件模板
+- 新建文件按类型使用起点名(如 `index`、`main`、`notes`),不再统一 Untitled
 - 将所选项目移动或复制到常用目录,或使用配置的 App 打开
 - 可选 cmux 新窗口和新工作区操作
 - 设置页显示扩展注册状态,并提供 Finder 刷新入口
@@ -143,9 +165,17 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 ### 更新
 
 - 手动检查或选择开启自动检查,自动检查默认关闭
+- 更新通道:**正式版**(仅正式发布)或 **尝鲜 / Beta**(同时纳入 `v1.9.0-beta.N` 等预发布)
+- SemVer 2.0 正确比较预发布标识,beta 递增与转正可识别
 - 下载 DMG 后验证 codesign 签名、公证状态和 Team ID
 - 应用退出后通过独立脚本替换运行中的 app bundle
 - 下载和安装期间显示轻量进度窗口
+
+### 诊断日志
+
+- 结构化诊断日志同步写入 Unified Logging 与本地 JSONL,不上传远程
+- 三级:关闭 / 仅错误 / 完整(默认完整);约保留 5 天,带轮转与脱敏
+- 设置中可打开本地日志目录;不完整写入进程身份、网络地址和出口节点详情
 
 ### AI 用量窗口保活
 
@@ -178,11 +208,12 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 Light Stats 没有远程遥测。本地系统指标、本地代理检测、进程列表、滚动行为和窗口控制都留在本机。
 
-- **干净安装零外联。** 出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认全部关闭。
+- **干净安装零外联。** 出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认全部关闭;Beta 更新通道也默认关闭。
 - **出口节点探测。** 开启后向所选 geo-IP provider 查询当前公网 IP、位置、ASN 和 ISP,结果缓存 60 秒。
 - **AI 用量监控。** 开启后只请求对应 provider 自己的用量接口,使用该 provider CLI 已保存在本机的凭据,不会发送给其他 provider 或 Light Stats 开发者。
 - **用量窗口保活。** 单独开启后,会在 Claude Code 或 Codex 滚动窗口重置后通过对应 CLI 发送最小提示词 `ok`;Gemini 不参与。
 - **更新检查。** 手动检查或选择开启的自动检查会访问 GitHub Releases,下载后仍需通过签名、公证和 Team ID 校验。
+- **诊断日志。** 默认完整写入本地结构化日志(可改为仅错误或关闭),隐私脱敏,不会发送给 Light Stats 开发者。
 
 应用没有分析、崩溃上报、广告、账户系统或由开发者运营的遥测接口。完整说明见[官网隐私页](https://evilirving.github.io/light-stats/#privacy)。
 
@@ -229,10 +260,12 @@ xcodebuild -project "Light Stats.xcodeproj" \
 
 ## 设置
 
+- 视觉主题(默认 / Bento / 晒金 / 墨夜),以及晒金与墨夜的颗粒、光影动态
 - 菜单栏项目显示开关
 - 刷新频率:低 (5s)、中 (2s)、高 (1s)
 - 温度单位:摄氏度或华氏度
-- 登录时启动、自动检查更新和保持唤醒
+- 登录时启动、自动检查更新、正式版/尝鲜通道、保持唤醒
+- 诊断日志级别(关 / 仅错误 / 完整)与打开日志目录
 - 出口节点探测和 provider 选择
 - Claude Code、Codex、Gemini AI 监控,以及 Claude/Codex 独立的用量窗口保活开关
 - 垂直滚动反转、水平滚动反转和步长倍率
@@ -241,7 +274,7 @@ xcodebuild -project "Light Stats.xcodeproj" \
 - 健康分维度开关
 - 语言:简体中文、English、日本語、한국어、跟随系统
 
-设置页分为「通用」「监控」与「附加工具」三组,侧栏状态点会标出当前已启用的可选能力。
+设置页分为「通用」「监控」与「附加工具」三组,侧栏状态点会标出当前已启用的可选能力。窗口固定系统白底与浅色侧栏;只有弹窗等产品表面跟随所选主题。
 
 ---
 
@@ -299,7 +332,7 @@ xcodebuild test \
 - 覆盖 Intel、Apple Silicon、笔记本和台式 Mac 的更多验证
 - 按 App 统计网络用量
 - 更细的清理建议
-- 持续调优窗口手势和菜单栏密度
+- 持续调优主题、窗口手势和菜单栏密度
 
 ---
 

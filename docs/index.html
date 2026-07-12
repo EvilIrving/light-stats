@@ -15,8 +15,8 @@
   <meta property="og:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
   <meta property="og:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows in the menu bar. Native, no telemetry, zero outbound requests by default.">
   <meta property="og:url" content="https://evilirving.github.io/light-stats/">
-  <meta property="og:image" content="https://evilirving.github.io/light-stats/screenshots/popover-overview.png">
-  <meta property="og:image:alt" content="The Light Stats panel showing a 100 health score with CPU, GPU, memory, network, and AI usage readouts.">
+  <meta property="og:image" content="https://evilirving.github.io/light-stats/screenshots/default/popover-overview.png">
+  <meta property="og:image:alt" content="Light Stats overview panel in the Default theme: live health score, CPU, GPU, memory, battery, network, and AI usage.">
   <meta property="og:video" content="https://evilirving.github.io/light-stats/light-stats-readme.mp4">
   <meta property="og:video:type" content="video/mp4">
 
@@ -24,7 +24,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
   <meta name="twitter:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
-  <meta name="twitter:image" content="https://evilirving.github.io/light-stats/screenshots/popover-overview.png">
+  <meta name="twitter:image" content="https://evilirving.github.io/light-stats/screenshots/default/popover-overview.png">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='100%25' stop-color='%235AC8FA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Crect x='140' y='226' width='60' height='120' rx='10' fill='white' opacity='.9'/%3E%3Crect x='226' y='166' width='60' height='180' rx='10' fill='white' opacity='.9'/%3E%3Crect x='312' y='196' width='60' height='150' rx='10' fill='white' opacity='.9'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,7 +129,7 @@
       box-shadow: 0 1px 1px oklch(22% 0.012 260 / 0.04), 0 18px 40px -18px oklch(22% 0.05 260 / 0.28);
     }
     .hero-media video {
-      display: block; width: 100%; aspect-ratio: 1512 / 982; height: auto;
+      display: block; width: 100%; aspect-ratio: 1662 / 1080; height: auto;
       background: var(--sunken);
     }
 
@@ -147,6 +147,20 @@
     .shots figcaption {
       font-family: var(--mono); font-size: 0.7rem; color: var(--faint);
       letter-spacing: 0.02em; padding: 0.5rem 0.7rem; border-top: 1px solid var(--line);
+    }
+    .themes-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(0.75rem, 2vw, 1.1rem);
+      max-width: 720px;
+    }
+    @media (min-width: 760px) { .themes-grid { grid-template-columns: repeat(4, 1fr); max-width: none; } }
+    .themes-grid figure {
+      border-radius: 14px; overflow: hidden; background: var(--surface); border: 1px solid var(--line);
+      box-shadow: 0 1px 1px oklch(22% 0.012 260 / 0.04), 0 12px 28px -16px oklch(22% 0.05 260 / 0.22);
+    }
+    .themes-grid img { display: block; width: 100%; height: auto; }
+    .themes-grid figcaption {
+      font-family: var(--mono); font-size: 0.68rem; color: var(--faint);
+      letter-spacing: 0.02em; padding: 0.45rem 0.6rem; border-top: 1px solid var(--line);
     }
 
     /* ── Readout grid ────────────────────────── */
@@ -224,7 +238,7 @@
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "screenshot": "https://evilirving.github.io/light-stats/screenshots/popover-overview.png",
+        "screenshot": "https://evilirving.github.io/light-stats/screenshots/default/popover-overview.png",
         "author": { "@type": "Person", "name": "EvilIrving", "url": "https://github.com/EvilIrving" },
         "sameAs": "https://github.com/EvilIrving/light-stats"
       },
@@ -232,7 +246,7 @@
         "@type": "VideoObject",
         "name": "Light Stats demo",
         "description": "A walkthrough of the Light Stats menu bar item, the detail panel, memory cleanup, and settings on macOS.",
-        "thumbnailUrl": "https://evilirving.github.io/light-stats/screenshots/popover-overview.png",
+        "thumbnailUrl": "https://evilirving.github.io/light-stats/screenshots/default/popover-overview.png",
         "contentUrl": "https://evilirving.github.io/light-stats/light-stats-readme.mp4",
         "uploadDate": "2026-06-21"
       }
@@ -299,20 +313,46 @@
             </div>
           </div>
 
-          <!-- Screenshot pair -->
+          <!-- Screenshot pair (Default theme) -->
           <div class="shots">
             <div class="shots-head">
               <h2>The panel</h2>
-              <span class="eyebrow count">Overview · Memory</span>
+              <span class="eyebrow count">Default · Overview · Memory</span>
             </div>
             <div class="shots-grid">
               <figure>
-                <img src="screenshots/popover-overview.png" alt="The Light Stats overview panel: health score 100, CPU 15%, GPU 38%, memory 14.4 of 32 GB, load, temperature, fan, disk I/O, network throughput, proxy and exit node, Claude Code and Codex usage, top processes, and per-core CPU bars.">
-                <figcaption>Overview</figcaption>
+                <img src="screenshots/default/popover-overview.png" alt="Light Stats overview panel in the Default theme: health score, CPU, GPU, memory, battery, AI usage, network, processes, and per-core bars.">
+                <figcaption>Overview · Default</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/popover-cleanup.png" alt="The Memory tab: 14.4 GB of 32 GB used, with running apps listed by memory footprint, from Google Chrome at 4.02 GB down to background processes, each with a force-quit button.">
-                <figcaption>Memory</figcaption>
+                <img src="screenshots/default/popover-cleanup.png" alt="Light Stats Memory tab in the Default theme: apps listed by memory footprint with quit actions.">
+                <figcaption>Memory · Default</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <!-- Theme gallery -->
+          <div class="shots">
+            <div class="shots-head">
+              <h2>Themes</h2>
+              <span class="eyebrow count">Default · Bento · Sun Gold · Ink Night</span>
+            </div>
+            <div class="themes-grid">
+              <figure>
+                <img src="screenshots/default/popover-overview.png" alt="Default theme overview">
+                <figcaption>Default</figcaption>
+              </figure>
+              <figure>
+                <img src="screenshots/bento/popover-overview.png" alt="Bento Grid theme overview">
+                <figcaption>Bento Grid</figcaption>
+              </figure>
+              <figure>
+                <img src="screenshots/sun-gold/popover-overview.png" alt="Sun Gold theme overview">
+                <figcaption>Sun Gold</figcaption>
+              </figure>
+              <figure>
+                <img src="screenshots/ink-night/popover-overview.png" alt="Ink Night theme overview">
+                <figcaption>Ink Night</figcaption>
               </figure>
             </div>
           </div>
@@ -368,6 +408,7 @@
                 <ul>
                   <li>Claude Code <span class="note">5h / 7d</span></li>
                   <li>Codex <span class="note">5h / 7d</span></li>
+                  <li>Gemini <span class="note">quota</span></li>
                 </ul>
               </div>
             </div>
@@ -414,7 +455,15 @@
               <div class="idx">05 / Defaults</div>
               <div>
                 <h3>Nothing extra runs until you ask</h3>
-                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, Finder actions, window and scroll event taps, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
+                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, the Beta update channel, Finder actions, window and scroll event taps, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="idx">06 / Appearance</div>
+              <div>
+                <h3>Four looks for the instrument, not the settings sheet</h3>
+                <p><strong>Default</strong> is the cold-start readout (system materials: Liquid Glass on macOS 26+, ordinary chrome on macOS 15). <strong>Bento Grid</strong> keeps the classic card layout. <strong>Sun Gold</strong> and <strong>Ink Night</strong> are optional mesh surfaces with grain and light-dynamics controls. Settings stays a plain white tool panel so configuration never competes with the dial.</p>
               </div>
             </div>
           </div>
@@ -426,7 +475,7 @@
 
           <div class="callout">
             <div class="k">Zero outbound by default</div>
-            <p>Exit-node lookup, AI usage requests, Claude/Codex usage-window warmup, and automatic update checks are all <strong>off by default</strong>. A clean install reads local system metrics only and makes no network request.</p>
+            <p>Exit-node lookup, AI usage requests, Claude/Codex usage-window warmup, automatic update checks, and the Beta update channel are all <strong>off by default</strong>. A clean install reads local system metrics only and makes no network request.</p>
           </div>
 
           <h2>Data collection</h2>
@@ -453,7 +502,10 @@
           <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
 
           <h2>Update checks</h2>
-          <p>A manual update check, or the off-by-default automatic update setting, contacts GitHub Releases. Downloaded updates must pass codesign, notarization, and Team ID verification before installation.</p>
+          <p>A manual update check, or the off-by-default automatic update setting, contacts GitHub Releases. The update channel can be Stable (final releases only) or Beta (also considers prereleases such as <code>v1.9.0-beta.N</code>); Beta is off by default. Downloaded updates must pass codesign, notarization, and Team ID verification before installation.</p>
+
+          <h2>Local diagnostic logs</h2>
+          <p>The app can write structured diagnostic logs to disk under its support directory (and to Unified Logging). Levels are Off, Errors only, or Full (default Full). Logs are rotated, retained for a limited window, redacted for sensitive fields, and never uploaded to the Light Stats developer.</p>
 
           <h2>Third parties</h2>
           <p>No analytics, crash reporting, advertising, or third-party SDKs. Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
@@ -464,7 +516,7 @@
           <h2>Changes</h2>
           <p>Any change to this policy will appear here and in the app's release notes. Data handling will never change silently.</p>
 
-          <p class="updated">Last updated: July 10, 2026</p>
+          <p class="updated">Last updated: July 12, 2026</p>
         </section>
 
         <!-- ══════════ SUPPORT ══════════ -->
@@ -488,6 +540,10 @@
                 <div>
                   <dt>How do I change what shows in the menu bar?</dt>
                   <dd>Click the ellipsis (…) in the panel to open Settings, then toggle items under Status Bar Items. You can also choose which dimensions feed the health score.</dd>
+                </div>
+                <div>
+                  <dt>What are the visual themes?</dt>
+                  <dd>Settings → General → Theme. Default is the cold-start instrument look; Bento Grid uses cards; Sun Gold and Ink Night are optional mesh surfaces. The Settings window itself stays white and does not follow the panel theme.</dd>
                 </div>
                 <div>
                   <dt>Does exit-node detection cost me privacy?</dt>

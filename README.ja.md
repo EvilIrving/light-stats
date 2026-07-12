@@ -1,6 +1,6 @@
 # Light Stats
 
-Light Stats は、「いま Mac に負荷がかかっているか」を示すネイティブ macOS メニューバー型の状態計器です。0〜100 の健康度とリアルタイム信号を表示し、必要に応じて AI CLI 使用量、ネットワーク出口、Finder 操作、ウィンドウ配置、ディスプレイのスリープ防止を追加できます。
+Light Stats は、「いま Mac に負荷がかかっているか」を示すネイティブ macOS メニューバー型の状態計器です。0〜100 の健康度とリアルタイム信号を表示し、必要に応じて AI CLI 使用量、ネットワーク出口、Finder 操作、ウィンドウ配置、ディスプレイのスリープ防止を追加できます。ポップオーバーは 4 つの視覚テーマ(既定はデフォルト)に対応し、設定ウィンドウはシステム白のツールパネルのままです。
 
 [English](README.md) · [简体中文](README.zh.md) · **日本語** · [한국어](README.ko.md)
 
@@ -12,9 +12,17 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## スクリーンショット
 
-| 概要 | クリーンアップ |
-|------|------|
-| <img src="docs/screenshots/popover-overview.png" width="320" alt="概要パネル" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="クリーンアップパネル" /> |
+コールドスタートの「デフォルト」テーマ — 概要とメモリ:
+
+| 概要 | メモリ |
+|------|--------|
+| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="概要パネル — デフォルト" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="メモリ — デフォルト" /> |
+
+テーマ（概要）:
+
+| デフォルト | Bento グリッド | サンゴールド | インクナイト |
+|------------|----------------|--------------|--------------|
+| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="デフォルト" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="サンゴールド" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="インクナイト" /> |
 
 ---
 
@@ -47,6 +55,17 @@ Light Stats は Mac のライブな負荷シグナルをメニューバーに常
 - システム健康度スコア、各次元の概要、次元ごとの切り替え
 - AI 監視を有効にすると Claude Code・Codex・Gemini のサブスクリプション使用量
 - 主要指標の短期スパークライン
+- 指標アイコンはテンプレート着色可能な SVG アウトライン(CPU・GPU・メモリ・ディスク・ネットワーク・プロキシ・温度・プロセス)
+
+### 外観
+
+- 製品面(ポップオーバー、About、Toast、更新、権限案内)向けに 4 テーマ:
+  - **デフォルト**(コールドスタート既定):システムの計器表示(カード枠なし。macOS 26+ は Liquid Glass、macOS 15 は通常のシステム表面)
+  - **Bento グリッド**:従来のカードグリッド + システム素材
+  - **サンゴールド**:暖かな金のグレインメッシュ
+  - **インクナイト**:墨黒のグレインメッシュとチャコール表面
+- サンゴールド / インクナイト は共通の外観調整:グレインのオンオフと、光の動き 5 段階(静止・穏やか・自然・滑らか・活発)
+- 設定ウィンドウはシステム白のまま表示テーマに追従せず、落ち着いたツールパネルとして保つ
 
 ### メモリクリーンアップ
 
@@ -54,12 +73,14 @@ Light Stats は Mac のライブな負荷シグナルをメニューバーに常
 - メモリ使用量順に並べた App 一覧
 - 通常終了と確認付きの強制終了
 - 子プロセスの詳細を展開表示
+- レイアウトはテーマに追随(Bento はカード、それ以外は instrument 行)
 
 ### Finder メニュー
 
 - 既定でオフの FinderSync 拡張
 - パスまたはファイル名のコピー、選択したターミナルで開く、隠し属性の切り替え
 - 文書、Web、データ、コードに分類された新規ファイルテンプレート
+- 新規ファイルは種類ごとの開始名(例:`index`・`main`・`notes`)で、一律 Untitled ではない
 - お気に入りフォルダへの移動／コピー、設定した App で開く操作
 - 現在位置で cmux の新規ウィンドウまたはワークスペースを開く任意操作
 - 設定画面で拡張の登録状態を確認し、Finder を再読み込み
@@ -95,9 +116,17 @@ Light Stats は Mac のライブな負荷シグナルをメニューバーに常
 ### 更新
 
 - 手動確認と任意の自動確認で GitHub Releases を使用。自動確認は既定でオフ
+- 更新チャネル:**Stable**(正式版のみ)または **Beta**(`v1.9.0-beta.N` などの prerelease も含む)
+- SemVer 2.0 でプレリリース識別子を正しく比較し、beta の増分と正式版への昇格を判別
 - DMG をダウンロードし、codesign 署名・公証・Team ID を検証
 - アプリ終了後に独立スクリプトで app bundle を置き換え
 - ダウンロードとインストール中は軽量な進捗ウィンドウを表示
+
+### 診断ログ
+
+- Unified Logging とローカル JSONL への構造化診断ログ(リモート送信なし)
+- 3 段階:オフ / エラーのみ / フル(既定はフル)。約 5 日保持、ローテーションとマスキングあり
+- 設定からローカルログフォルダを開ける。プロセス識別子・ネットワークアドレス・出口ノード詳細はフルでは書かない
 
 ### ネットワークとプロキシ
 
@@ -121,11 +150,12 @@ Claude Code と Codex には、別々の使用量ウィンドウ保活スイッ�
 
 Light Stats にはリモートテレメトリはありません。ローカルシステム指標、ローカルプロキシ検出、プロセス一覧、スクロール動作、ウィンドウ操作は Mac 上に留まります。
 
-- クリーンインストールは外部リクエストを行いません。出口ノード照会、AI 使用量監視、Claude/Codex の保活、自動更新確認はすべて既定でオフです。
+- クリーンインストールは外部リクエストを行いません。出口ノード照会、AI 使用量監視、Claude/Codex の保活、自動更新確認はすべて既定でオフです。Beta 更新チャネルも既定でオフです。
 - 出口ノード検出は、選択した geo-IP プロバイダに公開 IP、位置、ASN、ISP を照会し、結果を 60 秒間キャッシュします。
 - AI 監視は、有効にしたプロバイダ自身の使用量エンドポイントだけに接続し、その CLI が保存済みの認証情報を使用します。
 - 任意の Claude/Codex 保活は、上記の最小プロンプトを各プロバイダの CLI から送信します。
 - 手動更新確認と任意の自動確認は GitHub Releases に接続し、ダウンロード後は署名、公証、Team ID を検証します。
+- 診断ログ(既定フル、エラーのみ／オフに変更可)はディスク上にのみ残り、プライバシー配慮のマスキングがあり、Light Stats 開発者へは送られません。
 
 分析、クラッシュレポート、広告、アカウントシステム、開発者運営のテレメトリエンドポイントはありません。詳細は[プライバシーポリシー](https://evilirving.github.io/light-stats/#privacy)を参照してください。
 
@@ -141,10 +171,12 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 
 ## 設定
 
+- 視覚テーマ(デフォルト / Bento / サンゴールド / インクナイト)と、サンゴールド/インクナイト のグレイン・光の動き
 - メニューバー項目の表示切り替え
 - 更新頻度：低 (5s)、中 (2s)、高 (1s)
 - 温度単位：摂氏または華氏
-- ログイン時起動、自動更新確認、ディスプレイのスリープ防止
+- ログイン時起動、自動更新確認、Stable/Beta チャネル、ディスプレイのスリープ防止
+- 診断ログレベル(オフ / エラー / フル)とログフォルダを開く操作
 - 出口ノード検出とプロバイダの選択
 - Claude Code・Codex・Gemini の AI 監視と、Claude/Codex 個別の保活スイッチ
 - 垂直スクロール反転、水平スクロール反転、ステップ倍率
@@ -153,7 +185,7 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 - 健康度スコアの次元切り替え
 - 言語：简体中文、English、日本語、한국어、システム言語
 
-設定は「一般」「モニタリング」「追加ツール」に分かれ、サイドバーの状態点で有効な任意機能を確認できます。
+設定は「一般」「モニタリング」「追加ツール」に分かれ、サイドバーの状態点で有効な任意機能を確認できます。ウィンドウはシステム白の固定キャンバス。表示テーマはポップオーバーなど製品面のみに適用されます。
 
 ---
 
@@ -224,18 +256,21 @@ xcodebuild test \
 
 ### プロジェクト構成
 
-- `Light Stats/Models/`: 指標データ構造、健康度、リリース情報
-- `Light Stats/Services/`: システム収集、スコアリング、更新、スクロール反転、ウィンドウスナップ、ホットキー、タイトルバージェスチャー、キーボードロック、AI 使用量
+- `Light Stats/Models/`: 指標データ構造、健康度、リリース情報、`AppTheme`
+- `Light Stats/Services/`: システム収集、スコアリング、更新、スクロール反転、ウィンドウスナップ、ホットキー、タイトルバージェスチャー、キーボードロック、AI 使用量、診断ログ
 - `Light Stats/ViewModels/`: アプリ状態、サンプリング、設定、清掃モード、更新統括
 - `Light Stats/Views/StatusBar/`: メニューバー描画
 - `Light Stats/Views/Popover/`: 浮動パネル UI と再利用コンポーネント
-- `Light Stats/Views/Settings/`: 設定 UI
+- `Light Stats/Views/Theme/`: テーマトークン、メッシュ背景、グレイン、ピッカー、外観プリセット
+- `Light Stats/Views/Settings/`: 設定 UI(システム白のツールパネル)
 - `Light Stats/Views/About/`: About ウィンドウ
 - `Light Stats/Views/CleaningMode/`: 清掃モードオーバーレイ
 - `Light Stats/Views/Update/`: 更新進捗ウィンドウ
-- `Light Stats/Resources/`: ローカライズ文字列とウィンドウ操作アイコン
+- `Light Stats/Views/Permission/`: テーマ付きアクセシビリティ案内
+- `Light Stats/Utilities/`: フォーマッタ、メトリック履歴、`SVGIcon`
+- `Light Stats/Resources/`: ローカライズ文字列、ウィンドウ操作アイコン、指標 SVG
 - `FinderMenu/` と `FinderMenuExtension/`: 共通 Finder 操作と FinderSync 統合
-- `LightStatsTests/`: XCTest smoke tests
+- `LightStatsTests/`: XCTest(健康度、既定値、AI パーサ、PTY、診断、SemVer、Finder テンプレート)
 - `.github/workflows/`: ビルド、デプロイ、リリース自動化
 
 ---
@@ -246,4 +281,4 @@ xcodebuild test \
 - Intel・Apple Silicon・ノート・デスクトップ Mac でのさらなる検証
 - App ごとのネットワーク使用量
 - より細かなクリーンアップ提案
-- ウィンドウジェスチャーとメニューバー密度の継続的な調整
+- テーマ、ウィンドウジェスチャー、メニューバー密度の継続的な調整

@@ -1,3 +1,21 @@
+## 四主题视觉模型与单参数光影动力学 · 2026-07-12 19:18 · codex
+
+Light Stats 当前有 `film`（胶片棕）、`noir`（暗黑）、`bento` 和 `glass` 四种主题。主题色、表面、文字、信号色等静态视觉语义集中在 `Views/Theme/ThemeTokens.swift`；背景策略集中在 `ThemeBackgroundView`。设置窗口始终使用系统白底，不跟随展示主题，主题只影响 Popover、About、Toast、Update 等产品表面。
+
+`film` 是暖色胶片模型：深棕底板上叠加珊瑚/酒红径向光团、两条倾斜的 S 形光带和奶油色 bloom，文字使用高对比暖白，状态色采用金黄、鼠尾草绿、琥珀和珊瑚色。`noir` 是冷色暗黑模型：近黑底板上使用冰蓝/灰紫的纵向光柱、窄光带和顶部微光，文字为冷白，状态色采用薄荷、冰蓝和紫色。两者共用 `GrainTextureView` 的确定性双尺度噪声纹理：256px 高频颗粒以 soft-light 混合，128px body 颗粒以 overlay 混合；纹理每进程只生成一次并缓存，film 只额外增加暖色 tint，noir 保持中性颗粒。
+
+`bento` 保留原始产品模型：系统 Liquid Glass、浮起卡片、QuickStat 网格和标准 macOS 信号色，信息组织依赖卡片层级。`glass` 同样使用系统毛玻璃和 vibrancy，但布局采用连续的 instrument readout、发丝分隔线与密集读数，不使用 Bento 卡片网格。两者没有自定义 mesh、颗粒或动态光场，跟随系统明暗外观。
+
+胶片棕和暗黑的外观设置最终收敛为“胶片颗粒”开关与单一“光影动态”五档选择（静止、舒缓、自然、流畅、活跃）。旧方案曾分别暴露流速、水平位置、垂直位置；该方案已废弃，相关位置偏好和持久化键已移除，不要恢复三个控件。`ThemeAppearanceConfiguration` 只向背景传入颗粒状态与 dynamics 强度，`ThemeAppearancePresetConfiguration` 负责可传参的五档实际数值，渲染组件不再直接读取 `SettingsManager.shared`。
+
+动态算法在 `ThemeBackgroundView.FluidMeshBackground`。单一 dynamics 先经 `smoothstep(u) = u²(3-2u)` 映射，再生成基础相位；相位叠加 0.19 和 0.37 两个低频正弦带，形成连续的轻微加速与减速。二维位置采用准周期李萨如轨迹：X 由 0.61 与 1.17 倍频正弦叠加，Y 由 0.43 倍频余弦与 0.83 倍频正弦叠加；相位不取模，避免非整数倍频在周期边界跳帧。改变档位时保留相位锚点，因此速度变化不会让光场瞬移；静止档冻结相位并把轨迹位移归零。
+
+film 使用横向更宽、纵向较克制的轨迹，保持斜向胶片光洗感。noir 使用独立系数，低档收敛在中心，活跃档的最大横向跨度约为画面宽度 29%，纵向约 25%，让冷色光柱能明显巡游画面。全幅基础渐变固定不参与平移，只移动超尺寸光团和光带，所以轨迹达到边缘时不会在顶部、底部或左右露出底层空隙；阅读 veil 仅小幅跟随轨迹，以维持文字对比度。
+
+最终验证基线：四语言本地化覆盖通过，相关文件 `swiftlint --strict` 零违规，Debug 构建成功，`SettingsDefaultsTests` 15 项通过。
+
+---
+
 ## 多主题 UI（胶片默认）+ Reicon SVG + 胶片外观旋钮 + 设置窗解耦 · 2026-07-12 · grok-4.5
 
 本轮把菜单栏弹窗从「单套 Bento 卡」扩成多主题，补了 Reicon Outline SVG、清理列表 instrument 适配、胶片颗粒/光影可调，并把设置窗从展示主题里拆出。已 **分 10 批 commit**（相对 `origin/main`），未 push。

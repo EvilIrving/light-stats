@@ -1,3 +1,20 @@
+## Unreleased（main，相对 v1.9.0-beta.7）
+
+### ✨ 新功能 / Features
+
+- 四主题：`glass`（展示名「默认 / Default」，冷启动默认）/ `bento` / `film`（晒金）/ `noir`（墨夜）；选择器顺序 默认 → Bento → 晒金 → 墨夜；退役 `aurora`/`paper` 键映射到 film
+- 晒金与墨夜外观：颗粒开关 + 光影动态五档（静止 / 舒缓 / 自然 / 流畅 / 活跃）
+- Popover / About / Toast / Update / 辅助功能引导接入主题；`ThemeTokens` + mesh 背景 + 颗粒纹理
+- 指标图标改用 bundle 内 Reicon Outline SVG（`SVGIcon` 模板染色，零第三方）
+
+### 🔧 优化 / Improvements
+
+- 设置窗固定系统白底，不跟随 `appTheme`（主题只作用产品展示面）
+- Overview / Cleanup 按主题分叉布局（Bento 卡片网格 vs instrument 读数）
+- 辅助功能引导由 NSAlert 改为主题化 SwiftUI 面板（`PermissionAlertCenter`，borderless 无系统叉号）
+
+---
+
 ## v1.9.0-beta.7（预发布 / Prerelease）
 
 ### ✨ 新功能 / Features

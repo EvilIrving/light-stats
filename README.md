@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, and display keep-awake.
+Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, and display keep-awake. The popover can wear one of four visual themes (Default by default), while Settings stays a plain system-white tool panel.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -15,9 +15,17 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## Screenshots
 
-| Overview | Cleanup |
-|----------|---------|
-| <img src="docs/screenshots/popover-overview.png" width="320" alt="Overview panel" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="Cleanup panel" /> |
+Default theme (cold-start) — Overview and Memory:
+
+| Overview | Memory |
+|----------|--------|
+| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="Overview panel — Default theme" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="Memory cleanup — Default theme" /> |
+
+Themes (Overview):
+
+| Default | Bento Grid | Sun Gold | Ink Night |
+|---------|------------|----------|-----------|
+| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="Default theme" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento Grid theme" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="Sun Gold theme" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="Ink Night theme" /> |
 
 ---
 
@@ -50,6 +58,17 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - System health score with dimension-level summary and toggles
 - Claude Code, Codex, and Gemini subscription usage when AI monitoring is enabled
 - Short-term sparklines for key metrics
+- Metric icons use template-tinted SVG outlines (CPU, GPU, memory, disk, network, proxy, temperature, processes)
+
+### Appearance
+
+- Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
+  - **Default** (cold-start default): system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
+  - **Bento Grid**: original card grid plus system materials
+  - **Sun Gold**: warm sun-gold grain mesh with coral and wine light fields
+  - **Ink Night**: ink-black grain mesh with cool charcoal surfaces
+- Sun Gold and Ink Night share mesh appearance controls: film grain on/off, and light dynamics as five semantic steps (Still, Gentle, Natural, Smooth, Lively)
+- The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
 
@@ -57,12 +76,14 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - App list sorted by memory usage
 - Normal quit and force quit with confirmation
 - Expandable child process details
+- Layout follows the active theme (card grid under Bento, instrument rows under Default / Sun Gold / Ink Night)
 
 ### Finder Menu
 
 - Optional FinderSync extension, disabled by default
 - Copy path or file name, open a chosen terminal, and toggle hidden state
 - Create files from curated templates grouped by document, web, data, and code types
+- Type-aware starting names for new files (for example `index`, `main`, `notes`) instead of a single Untitled label
 - Move or copy selections to favorite directories and open them with configured apps
 - Optional cmux actions for a new window or workspace at the current Finder location
 - Extension registration status and Finder refresh controls in Settings
@@ -98,9 +119,17 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 ### Auto-Update
 
 - Manual checks and optional automatic checks use GitHub Releases; automatic checks are off by default
+- Update channel: **Stable** (final releases only) or **Beta** (also considers prerelease builds such as `v1.9.0-beta.N`)
+- SemVer 2.0 comparison understands pre-release identifiers so beta increments and promotion to a final release are ordered correctly
 - Downloads and verifies DMG with codesign, notarization, and Team ID checks
 - Replaces the running app via a detached script after exit
 - Shows a minimal progress window during download and install
+
+### Diagnostic Logging
+
+- Local structured diagnostic log written alongside Unified Logging (no remote upload)
+- Three levels: Off, Errors only, or Full (default Full); retained for a limited window (about five days) with rotation and redaction
+- Settings can open the local log directory; process identity, network addresses, and exit-node details are not written in full form
 
 ### Network and Proxy
 
@@ -124,11 +153,12 @@ The health score summarizes CPU, memory pressure and swap, load average, tempera
 
 Light Stats has no remote telemetry. Local system metrics, local proxy detection, process lists, scroll behavior, and window control stay on the Mac.
 
-- A clean install makes no outbound request. Exit-node lookup, AI usage monitoring, Claude/Codex warmup, and automatic update checks are all disabled by default.
+- A clean install makes no outbound request. Exit-node lookup, AI usage monitoring, Claude/Codex warmup, and automatic update checks are all disabled by default. The Beta update channel is also off by default.
 - Exit-node detection contacts the selected geo-IP provider to identify the public IP, location, ASN, and ISP, then caches the result for 60 seconds.
 - AI monitoring contacts only the enabled provider's own usage endpoint using credentials already stored by that provider's CLI.
 - Optional Claude/Codex warmup sends the headless prompt described above through the selected provider's CLI.
 - Manual update checks and opt-in automatic checks contact GitHub Releases; downloaded updates are verified before installation.
+- Diagnostic logging (default Full, switchable to Errors or Off) stays on disk under the app's support directory. It is privacy-aware and never sent to the Light Stats developer.
 
 There is no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. See the full [privacy policy](https://evilirving.github.io/light-stats/#privacy).
 
@@ -144,10 +174,12 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ## Settings
 
+- Visual theme (Default, Bento Grid, Sun Gold, Ink Night) plus Sun Gold/Ink Night grain and light-dynamics controls
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit
-- Launch at login, automatic update checks, and display keep-awake
+- Launch at login, automatic update checks, Stable/Beta update channel, and display keep-awake
+- Diagnostic log level (Off / Errors / Full) and open-log-folder control
 - Exit-node detection and provider selection
 - AI monitoring for Claude Code, Codex, and Gemini, plus separate Claude/Codex warmup switches
 - Scroll reversal, horizontal reversal, and step multiplier
@@ -156,7 +188,7 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 - Health score dimension toggles
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
-Settings are grouped into **General**, **Monitoring**, and **Extra Tools** so it is obvious which capabilities are optional and currently active.
+Settings are grouped into **General**, **Monitoring**, and **Extra Tools** so it is obvious which capabilities are optional and currently active. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.
 
 ---
 
@@ -227,18 +259,21 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 
 ### Project Layout
 
-- `Light Stats/Models/`: metric data structures, health score, release info
-- `Light Stats/Services/`: system collectors, scoring, update, scroll reversal, window snapping, hotkeys, titlebar gestures, keyboard lock, AI usage
+- `Light Stats/Models/`: metric data structures, health score, release info, `AppTheme`
+- `Light Stats/Services/`: system collectors, scoring, update, scroll reversal, window snapping, hotkeys, titlebar gestures, keyboard lock, AI usage, diagnostic logging
 - `Light Stats/ViewModels/`: app state, sampling, settings, cleaning mode, update coordination
 - `Light Stats/Views/StatusBar/`: menu bar rendering
 - `Light Stats/Views/Popover/`: floating panel UI and reusable components
-- `Light Stats/Views/Settings/`: settings UI
+- `Light Stats/Views/Theme/`: theme tokens, mesh backgrounds, grain, picker, appearance presets
+- `Light Stats/Views/Settings/`: settings UI (system-white tool panel)
 - `Light Stats/Views/About/`: about window
 - `Light Stats/Views/CleaningMode/`: cleaning mode overlay
 - `Light Stats/Views/Update/`: update progress window
-- `Light Stats/Resources/`: localized strings and window-control icons
+- `Light Stats/Views/Permission/`: themed Accessibility guidance panel
+- `Light Stats/Utilities/`: formatters, metric history, `SVGIcon`
+- `Light Stats/Resources/`: localized strings, window-control icons, metric SVG outlines
 - `FinderMenu/` and `FinderMenuExtension/`: shared Finder actions and FinderSync integration
-- `LightStatsTests/`: starter XCTest smoke tests
+- `LightStatsTests/`: XCTest suites (health score, defaults, AI parsers, PTY, diagnostics, SemVer, Finder templates)
 - `.github/workflows/`: build, deploy, and release automation
 
 ---
@@ -249,4 +284,4 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 - Additional validation across Intel, Apple Silicon, laptop, and desktop Macs
 - Per-app network usage tracking
 - More granular cleanup recommendations
-- Continued tuning for window gestures and menu bar density
+- Continued tuning for themes, window gestures, and menu bar density

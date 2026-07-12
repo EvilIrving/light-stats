@@ -1,6 +1,6 @@
 # Light Stats
 
-Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 네이티브 macOS 메뉴 막대 상태 계기입니다. 0-100 건강도와 실시간 신호를 표시하고, 필요할 때 AI CLI 사용량, 네트워크 출구, Finder 작업, 창 배치, 디스플레이 잠자기 방지를 추가할 수 있습니다.
+Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 네이티브 macOS 메뉴 막대 상태 계기입니다. 0-100 건강도와 실시간 신호를 표시하고, 필요할 때 AI CLI 사용량, 네트워크 출구, Finder 작업, 창 배치, 디스플레이 잠자기 방지를 추가할 수 있습니다. 팝오버는 네 가지 시각 테마(기본은 Default)를 지원하며, 설정 창은 시스템 흰색 도구 패널을 유지합니다.
 
 [English](README.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **한국어**
 
@@ -12,9 +12,17 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## 스크린샷
 
-| 개요 | 정리 |
-|------|------|
-| <img src="docs/screenshots/popover-overview.png" width="320" alt="개요 패널" /> | <img src="docs/screenshots/popover-cleanup.png" width="320" alt="정리 패널" /> |
+콜드 스타트 Default 테마 — 개요와 메모리:
+
+| 개요 | 메모리 |
+|------|--------|
+| <img src="docs/screenshots/default/popover-overview.png" width="320" alt="개요 — Default" /> | <img src="docs/screenshots/default/popover-cleanup.png" width="320" alt="메모리 — Default" /> |
+
+테마 (개요):
+
+| Default | Bento Grid | Sun Gold | Ink Night |
+|---------|------------|----------|-----------|
+| <img src="docs/screenshots/default/popover-overview.png" width="200" alt="Default" /> | <img src="docs/screenshots/bento/popover-overview.png" width="200" alt="Bento" /> | <img src="docs/screenshots/sun-gold/popover-overview.png" width="200" alt="Sun Gold" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="200" alt="Ink Night" /> |
 
 ---
 
@@ -47,6 +55,17 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 - 시스템 건강도 점수, 항목별 요약, 항목 토글
 - AI 모니터링을 켜면 Claude Code, Codex, Gemini 구독 사용량 표시
 - 주요 지표의 단기 스파크라인
+- 지표 아이콘은 템플릿 색을 입힐 수 있는 SVG 아웃라인(CPU, GPU, 메모리, 디스크, 네트워크, 프록시, 온도, 프로세스)
+
+### 외관
+
+- 제품 표면(팝오버, 정보, Toast, 업데이트, 권한 안내)용 네 가지 테마:
+  - **Default**(콜드 스타트 기본): 시스템 계기판 읽기(카드 프레임 없음. macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
+  - **Bento Grid**: 기존 카드 그리드 + 시스템 머티리얼
+  - **Sun Gold**: 따뜻한 금빛 그레인 메시
+  - **Ink Night**: 먹빛 그레인 메시와 차콜 표면
+- Sun Gold / Ink Night는 공통 외관 조절: 그레인 on/off, 빛 움직임 5단계(정지, 완만, 자연, 부드러움, 활발)
+- 설정 창은 시스템 흰색을 유지하고 표시 테마를 따르지 않아 차분한 도구 패널로 남습니다
 
 ### 메모리 정리
 
@@ -54,12 +73,14 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 - 메모리 사용량 기준으로 정렬된 앱 목록
 - 일반 종료 및 확인 후 강제 종료
 - 하위 프로세스 세부 정보 펼치기
+- 레이아웃은 활성 테마를 따름(Bento는 카드, 나머지는 instrument 행)
 
 ### Finder 메뉴
 
 - 기본적으로 꺼진 선택형 FinderSync 확장
 - 경로나 파일 이름 복사, 선택한 터미널에서 열기, 숨김 상태 전환
 - 문서, 웹, 데이터, 코드로 분류된 새 파일 템플릿
+- 새 파일은 유형별 시작 이름 사용(예: `index`, `main`, `notes`). 일괄 Untitled 아님
 - 즐겨찾기 디렉터리로 이동 또는 복사하고 설정한 앱으로 열기
 - 현재 Finder 위치에서 cmux 새 창 또는 작업 공간 열기
 - 설정에서 확장 등록 상태 확인 및 Finder 새로 고침
@@ -95,9 +116,17 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 ### 업데이트
 
 - 수동 확인과 선택형 자동 확인에서 GitHub Releases 사용. 자동 확인은 기본적으로 꺼짐
+- 업데이트 채널: **Stable**(정식 릴리스만) 또는 **Beta**(`v1.9.0-beta.N` 같은 prerelease 포함)
+- SemVer 2.0으로 프리릴리스 식별자를 올바르게 비교해 beta 증가와 정식 전환을 인식
 - DMG 다운로드 후 codesign 서명, 공증, Team ID 검증
 - 앱 종료 후 별도 스크립트로 실행 중인 app bundle 교체
 - 다운로드 및 설치 중 가벼운 진행률 창 표시
+
+### 진단 로그
+
+- Unified Logging과 로컬 JSONL에 쓰는 구조화 진단 로그(원격 전송 없음)
+- 3단계: 끔 / 오류만 / 전체(기본 전체). 약 5일 보관, 로테이션과 마스킹
+- 설정에서 로컬 로그 폴더를 열 수 있음. 프로세스 신원, 네트워크 주소, 출구 노드 상세는 전체 형태로 쓰지 않음
 
 ### 네트워크 및 프록시
 
@@ -121,11 +150,12 @@ Claude Code와 Codex에는 별도의 사용량 창 유지 스위치가 있으며
 
 Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지표, 로컬 프록시 감지, 프로세스 목록, 스크롤 동작, 창 제어는 Mac 안에 머뭅니다.
 
-- 새로 설치한 앱은 외부 요청을 보내지 않습니다. 출구 노드 조회, AI 사용량 모니터링, Claude/Codex 창 유지, 자동 업데이트 확인은 모두 기본적으로 꺼져 있습니다.
+- 새로 설치한 앱은 외부 요청을 보내지 않습니다. 출구 노드 조회, AI 사용량 모니터링, Claude/Codex 창 유지, 자동 업데이트 확인은 모두 기본적으로 꺼져 있습니다. Beta 업데이트 채널도 기본 꺼짐입니다.
 - 출구 노드 감지는 선택한 geo-IP 공급자에 공개 IP, 위치, ASN, ISP를 조회하고 결과를 60초 동안 캐시합니다.
 - AI 모니터링은 켠 공급자 자체의 사용량 엔드포인트에만 연결하고 해당 CLI가 저장한 인증 정보를 사용합니다.
 - 선택형 Claude/Codex 창 유지는 위에서 설명한 최소 프롬프트를 해당 공급자의 CLI로 보냅니다.
 - 수동 업데이트 확인과 선택형 자동 확인은 GitHub Releases에 연결하며, 다운로드 후 서명, 공증, Team ID를 검증합니다.
+- 진단 로그(기본 전체, 오류만/끔으로 변경 가능)는 디스크에만 남고 프라이버시 마스킹이 있으며 Light Stats 개발자에게 전송되지 않습니다.
 
 분석, 충돌 보고, 광고, 계정 시스템, 개발자가 운영하는 텔레메트리 엔드포인트가 없습니다. 자세한 내용은 [개인정보 보호 정책](https://evilirving.github.io/light-stats/#privacy)을 확인하세요.
 
@@ -141,10 +171,12 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ## 설정
 
+- 시각 테마(Default / Bento / Sun Gold / Ink Night)와 Sun Gold/Ink Night 그레인·빛 움직임
 - 메뉴 막대 항목 표시 여부
 - 새로 고침 속도: 낮음 (5s), 중간 (2s), 높음 (1s)
 - 온도 단위: 섭씨 또는 화씨
-- 로그인 시 실행, 자동 업데이트 확인, 디스플레이 잠자기 방지
+- 로그인 시 실행, 자동 업데이트 확인, Stable/Beta 채널, 디스플레이 잠자기 방지
+- 진단 로그 수준(끔 / 오류 / 전체)과 로그 폴더 열기
 - 출구 노드 감지 및 공급자 선택
 - Claude Code, Codex, Gemini AI 모니터링과 Claude/Codex 개별 창 유지 스위치
 - 수직 스크롤 반전, 수평 스크롤 반전, 단계 배율
@@ -153,7 +185,7 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 - 건강도 점수 항목 토글
 - 언어: 简体中文, English, 日本語, 한국어, 시스템 언어
 
-설정은 "일반", "모니터링", "추가 도구"로 나뉘며 사이드바 상태 점으로 현재 켜진 선택형 기능을 확인할 수 있습니다.
+설정은 "일반", "모니터링", "추가 도구"로 나뉘며 사이드바 상태 점으로 현재 켜진 선택형 기능을 확인할 수 있습니다. 창은 시스템 흰색 고정 캔버스이며, 표시 테마는 팝오버 등 제품 표면에만 적용됩니다.
 
 ---
 
@@ -223,18 +255,21 @@ xcodebuild test \
 
 ### 프로젝트 구조
 
-- `Light Stats/Models/`: 지표 데이터 구조, 건강도, 릴리스 정보
-- `Light Stats/Services/`: 시스템 수집, 점수 계산, 업데이트, 스크롤 반전, 창 스내핑, 단축키, 제목 표시줄 제스처, 키보드 잠금, AI 사용량
+- `Light Stats/Models/`: 지표 데이터 구조, 건강도, 릴리스 정보, `AppTheme`
+- `Light Stats/Services/`: 시스템 수집, 점수 계산, 업데이트, 스크롤 반전, 창 스내핑, 단축키, 제목 표시줄 제스처, 키보드 잠금, AI 사용량, 진단 로그
 - `Light Stats/ViewModels/`: 앱 상태, 샘플링, 설정, 청소 모드, 업데이트 조율
 - `Light Stats/Views/StatusBar/`: 메뉴 막대 렌더링
 - `Light Stats/Views/Popover/`: 떠 있는 패널 UI 및 재사용 컴포넌트
-- `Light Stats/Views/Settings/`: 설정 UI
+- `Light Stats/Views/Theme/`: 테마 토큰, 메시 배경, 그레인, 피커, 외관 프리셋
+- `Light Stats/Views/Settings/`: 설정 UI(시스템 흰색 도구 패널)
 - `Light Stats/Views/About/`: 정보 창
 - `Light Stats/Views/CleaningMode/`: 청소 모드 오버레이
 - `Light Stats/Views/Update/`: 업데이트 진행 창
-- `Light Stats/Resources/`: 현지화 문자열 및 창 제어 아이콘
+- `Light Stats/Views/Permission/`: 테마형 손쉬운 사용 안내
+- `Light Stats/Utilities/`: 포맷터, 지표 이력, `SVGIcon`
+- `Light Stats/Resources/`: 현지화 문자열, 창 제어 아이콘, 지표 SVG
 - `FinderMenu/` 및 `FinderMenuExtension/`: 공통 Finder 작업과 FinderSync 통합
-- `LightStatsTests/`: XCTest smoke tests
+- `LightStatsTests/`: XCTest(건강도, 기본값, AI 파서, PTY, 진단, SemVer, Finder 템플릿)
 - `.github/workflows/`: 빌드, 배포, 릴리스 자동화
 
 ---
@@ -245,4 +280,4 @@ xcodebuild test \
 - Intel, Apple Silicon, 노트북, 데스크톱 Mac 전반의 추가 검증
 - 앱별 네트워크 사용량 추적
 - 더 세분화된 정리 추천
-- 창 제스처와 메뉴 막대 밀도 지속 조정
+- 테마, 창 제스처, 메뉴 막대 밀도 지속 조정

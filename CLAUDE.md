@@ -25,6 +25,7 @@ Light Stats/
 │   ├── ProcessStats.swift
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
+│   ├── AppTheme.swift               # Default / Bento / Sun Gold / Ink Night (raw: glass/bento/film/noir)
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -85,6 +86,8 @@ Light Stats/
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
+│   ├── Theme/                           # ThemeTokens, mesh bg, grain, picker
+│   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
 │   ├── CleaningMode/
 │   │   ├── CleaningModeOverlayController.swift
@@ -94,8 +97,10 @@ Light Stats/
 ├── Utilities/
 │   ├── ByteFormatter.swift          # Stateless byte/rate formatting
 │   ├── MetricHistory.swift          # Ring buffer of recent samples (sparklines)
+│   ├── SVGIcon.swift                # Template-tinted bundle SVG
 │   └── WindowSnapIconProvider.swift # SF Symbol icons for snap actions
 └── Resources/
+    ├── Icons/                       # Reicon Outline metric SVGs
     ├── en.lproj/Localizable.strings
     ├── zh-Hans.lproj/Localizable.strings
     ├── ja.lproj/Localizable.strings
