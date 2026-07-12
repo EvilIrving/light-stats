@@ -1,4 +1,4 @@
-## Unreleased（main，相对 v1.9.0-beta.7）
+## v1.9.0-beta.8（预发布 / Prerelease）
 
 ### ✨ 新功能 / Features
 
@@ -12,6 +12,8 @@
 - 设置窗固定系统白底，不跟随 `appTheme`（主题只作用产品展示面）
 - Overview / Cleanup 按主题分叉布局（Bento 卡片网格 vs instrument 读数）
 - 辅助功能引导由 NSAlert 改为主题化 SwiftUI 面板（`PermissionAlertCenter`，borderless 无系统叉号）
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.9.0-beta.7...v1.9.0-beta.8
 
 ---
 
