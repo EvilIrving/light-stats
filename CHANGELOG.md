@@ -1,3 +1,23 @@
+## v1.9.0-beta.7（预发布 / Prerelease）
+
+### ✨ 新功能 / Features
+
+- 更新通道可选「正式版 / 尝鲜」：开启后自动与手动检查均纳入 Beta 预发布
+- 应用日志支持关 / 仅错误 / 完整三级，结构化诊断日志（本地、保留 5 天）
+- 设置页重组为通用 / 监控 / 更多三栏，并统一白底浅色侧栏
+
+### 🔧 优化 / Improvements
+
+- Finder 新建文件按类型命名（index / main / notes…），不再统一 Untitled
+- Finder 扩展已启用时隐藏「在系统设置中启用」；模板列表改为扁平展开
+- 常用目录 / 打开方式列表改为单行「名称 + 路径」
+- 分段控件等宽、说明文案更短，减少设置页折行
+- SemVer 正确比较 `-beta.N`，保证 beta 递增与转正可识别
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.9.0-beta.6...v1.9.0-beta.7
+
+---
+
 ## v1.9.0-beta.6（预发布 / Prerelease）
 
 ### ✨ 新功能 / Features
