@@ -51,27 +51,34 @@ struct SettingsView: View {
         SettingsCategory(rawValue: selectedRaw) ?? .general
     }
 
+    /// 设置窗统一画布：与分组卡片同用 `controlBackgroundColor`（浅色下为白），
+    /// 侧栏 / 详情 / 窗口底同一白色表面，不再用偏灰的 windowBackground。
+    private var settingsCanvas: Color {
+        Color(nsColor: .controlBackgroundColor)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             sidebar
-            Divider()
+            // 发丝分隔，比系统 Divider 更轻，贴近两侧同色画布。
+            Rectangle()
+                .fill(Color.primary.opacity(0.06))
+                .frame(width: 1)
+                .ignoresSafeArea()
             // 详情面板包一层垂直 ScrollView：内容超过固定窗高（如 Finder 文件模板有
             // 一二十行）时可滚动，短页面照常顶部对齐不受影响。
             ScrollView(.vertical) {
                 detail
-                    .frame(width: 560, alignment: .topLeading)
-                    .frame(maxWidth: .infinity, alignment: .top)
+                    // 详情区加宽：左侧标签 + 副文案更不易折行，右侧分段控件也有呼吸感。
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor))
+            .background(settingsCanvas)
         }
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
-        .frame(width: 900, height: 640)
-        .background(
-            GlassBackgroundView(cornerRadius: 0, fallbackMaterial: .underWindowBackground, configuresWindow: true)
-                .ignoresSafeArea()
-        )
+        .frame(width: 980, height: 640)
+        .background(settingsCanvas.ignoresSafeArea())
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
@@ -89,30 +96,47 @@ struct SettingsView: View {
 
     // MARK: Sidebar
 
+    /// 自绘浅色侧栏：与详情同画布，选中项用圆角浅色高亮，不再用系统深灰 `.sidebar` 样式。
     private var sidebar: some View {
-        List(selection: Binding<SettingsCategory?>(
-            get: { selectedCategory },
-            set: { if let value = $0 { selectedRaw = value.rawValue } }
-        )) {
+        VStack(alignment: .leading, spacing: 3) {
             ForEach(SettingsCategory.allCases) { category in
-                sidebarRow(category)
-                    .tag(category)
+                Button {
+                    selectedRaw = category.rawValue
+                } label: {
+                    sidebarRow(category, isSelected: selectedCategory == category)
+                }
+                .buttonStyle(.plain)
             }
+            Spacer(minLength: 0)
         }
-        .listStyle(.sidebar)
-        .frame(width: 190)
+        .padding(.horizontal, 10)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .frame(width: 190, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(settingsCanvas)
         .focusable(false)
     }
 
-    private func sidebarRow(_ category: SettingsCategory) -> some View {
+    private func sidebarRow(_ category: SettingsCategory, isSelected: Bool) -> some View {
         HStack(spacing: 9) {
             Image(systemName: category.icon)
-                .font(.system(size: 14))
-                .frame(width: 19)
+                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                .frame(width: 18)
             Text(category.titleKey.localized)
-                .font(.system(size: 13))
+                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.82))
+            Spacer(minLength: 0)
         }
-        .frame(minHeight: 28)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     // MARK: Detail
@@ -209,8 +233,8 @@ struct SettingsSection<Content: View>: View {
     }
 }
 
-/// 分组容器：把相关行收进一个下沉、发丝边框的圆角面板（macOS / Linear 设置组的样子），
-/// 用留白与分隔线表达层级，而非嵌套卡片。行之间的 `Divider` 由调用方插入。
+/// 分组容器：与页面同为白色底，靠发丝描边 + 极轻阴影区分卡片边界。
+/// 行之间的 `Divider` 由调用方插入。
 struct SettingsGroup<Content: View>: View {
     private let content: Content
 
@@ -222,8 +246,15 @@ struct SettingsGroup<Content: View>: View {
         VStack(spacing: 0) {
             content
         }
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.025)))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.09)))
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .shadow(color: Color.primary.opacity(0.04), radius: 1.5, y: 0.5)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.primary.opacity(0.08))
+        )
     }
 }
 
@@ -249,15 +280,64 @@ struct SettingsRow<Control: View>: View {
                     Text(subtitle)
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Spacer()
+            // 文案优先占宽，右侧控件保持 intrinsic 宽度，减少副标题折行。
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
             control
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, subtitle == nil ? 8 : 7)
         .frame(minHeight: 40)
+    }
+}
+
+/// 分段选择器统一样式：各段等宽、固定高度，避免「关 / 仅错误 / 完整」这种长短不一的视觉抖动。
+struct SettingsSegmentedPicker<Selection: Hashable, Content: View>: View {
+    @Binding var selection: Selection
+    /// 单段最小宽度；语言 5 段用窄一些，日志 3 段用宽一些。
+    var segmentMinWidth: CGFloat = 48
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        Picker("", selection: $selection) {
+            content()
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .controlSize(.regular)
+        .fixedSize()
+        .focusable(false)
+        // 通过环境把 minWidth 传给各段 Text（调用方用 SettingsSegmentLabel）。
+        .environment(\.settingsSegmentMinWidth, segmentMinWidth)
+    }
+}
+
+/// 分段选项标签：等宽居中，保证选中/未选中胶囊视觉一致。
+struct SettingsSegmentLabel: View {
+    @Environment(\.settingsSegmentMinWidth) private var minWidth
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 12))
+            .frame(minWidth: minWidth, alignment: .center)
+            .multilineTextAlignment(.center)
+    }
+}
+
+private struct SettingsSegmentMinWidthKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 48
+}
+
+extension EnvironmentValues {
+    var settingsSegmentMinWidth: CGFloat {
+        get { self[SettingsSegmentMinWidthKey.self] }
+        set { self[SettingsSegmentMinWidthKey.self] = newValue }
     }
 }
 

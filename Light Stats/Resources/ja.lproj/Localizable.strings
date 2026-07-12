@@ -280,4 +280,4 @@
 "window.action.center" = "中央";
 "window.action.restore" = "復元";
 "settings.keepAwake" = "スリープ防止";
-"settings.keepAwake.description" = "オンの間ディスプレイのスリープを防ぎます。オフにするか Light Stats を終了するまで有効です。";
+"settings.keepAwake.description" = "オンの間ディスプレイをスリープさせません。オフまたは終了で解除。";

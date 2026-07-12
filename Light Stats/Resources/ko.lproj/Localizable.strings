@@ -280,4 +280,4 @@
 "window.action.center" = "가운데";
 "window.action.restore" = "복원";
 "settings.keepAwake" = "화면 켜짐 유지";
-"settings.keepAwake.description" = "켜져 있는 동안 디스플레이가 잠자기로 전환되지 않습니다. 끄거나 Light Stats를 종료할 때까지 유지됩니다.";
+"settings.keepAwake.description" = "켜져 있는 동안 화면이 꺼지지 않습니다. 끄거나 종료하면 해제됩니다.";

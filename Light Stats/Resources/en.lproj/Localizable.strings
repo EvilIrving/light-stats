@@ -278,4 +278,4 @@
 "window.action.center" = "Center";
 "window.action.restore" = "Restore";
 "settings.keepAwake" = "Keep Awake";
-"settings.keepAwake.description" = "Prevents the display from sleeping while on. Stays active until you turn it off or quit Light Stats.";
+"settings.keepAwake.description" = "Keeps the screen on while enabled. Turns off when you quit.";
