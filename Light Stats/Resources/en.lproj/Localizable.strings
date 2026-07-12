@@ -11,6 +11,15 @@
 // MARK: - Settings View
 "settings.statusBar" = "Status Bar Display";
 "settings.appearance" = "Appearance";
+"settings.theme" = "Theme";
+"settings.theme.film" = "Film Brown";
+"settings.theme.film.hint" = "Warm grain mesh — product default";
+"settings.theme.bento" = "Bento Grid";
+"settings.theme.bento.hint" = "Original card grid + glass";
+"settings.theme.glass" = "Glass";
+"settings.theme.glass.hint" = "System vibrancy / instrument readout";
+"settings.theme.noir" = "Noir";
+"settings.theme.noir.hint" = "Near-black grain, charcoal surfaces";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -47,6 +56,10 @@
 
 // MARK: - Overview Tab
 "overview.load" = "Load";
+"overview.compute" = "Compute";
+"overview.memory" = "Memory";
+"overview.resources" = "Resources";
+"overview.system" = "System";
 "overview.network" = "Network";
 "overview.loading" = "Loading...";
 "overview.coreUsage" = "Core Usage";
@@ -131,6 +144,7 @@
 // MARK: - AI Usage
 "settings.aiUsage" = "AI Usage";
 "settings.aiUsageInterval" = "Refresh Interval";
+"aiUsage.title" = "AI Usage";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";

@@ -4,7 +4,7 @@
 //
 //  设置面板各分类的详情视图。每个 detail 复用既有控件（SettingsToggle / SettingsGridItem /
 //  HealthDimButton / Picker / Slider），用 SettingsDetailScaffold + SettingsGroup 取代
-//  BentoCard——分组下沉面板 + 发丝分隔线表达层级。与 SettingsView.swift 拆分以控制单文件长度。
+//  SettingsGroup + 发丝分隔线表达层级。与 SettingsView.swift 拆分以控制单文件长度。
 //
 
 import SwiftUI
@@ -23,6 +23,9 @@ struct GeneralDetail: View {
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
+            SettingsSection("settings.theme".localized) {
+                ThemePickerView(selection: $settings.appTheme)
+            }
             SettingsSection("settings.general.app".localized) {
                 SettingsGroup {
                     SettingsRow("settings.launchAtLogin".localized) {
@@ -183,7 +186,7 @@ struct MonitoringDetail: View {
                     dim("settings.healthDimensions.power", $settings.healthIncludePower, .low)
                 }
                 Text("settings.healthDimensions.hint".localized)
-                    .font(.system(size: 10)).foregroundColor(.secondary)
+                    .font(.system(size: 10)).foregroundStyle(Color.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -371,6 +374,7 @@ struct NetworkDetail: View {
 // MARK: - Finder Menu (the list-detail editor)
 
 struct FinderMenuDetail: View {
+    @Environment(\.theme) private var theme
     @ObservedObject var settings: SettingsManager
     @ObservedObject private var store = FinderMenuConfigStore.shared
     let openSettings: () -> Void
@@ -450,10 +454,10 @@ struct FinderMenuDetail: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: statusSymbol)
-                    .foregroundColor(statusColor)
+                    .foregroundStyle(statusColor)
                 Text(statusMessageKey.localized)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(theme.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
                 if isReady {
@@ -462,7 +466,7 @@ struct FinderMenuDetail: View {
                     }
                     .buttonStyle(.borderless)
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(theme.inkSecondary)
                     .controlSize(.small)
                 }
             }
@@ -486,11 +490,11 @@ struct FinderMenuDetail: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isReady ? Color.green.opacity(0.06) : Color.orange.opacity(0.07))
+                .fill(isReady ? theme.signalGood.opacity(0.12) : theme.signalWarn.opacity(0.12))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isReady ? Color.green.opacity(0.15) : Color.orange.opacity(0.18))
+                .stroke(isReady ? theme.signalGood.opacity(0.28) : theme.signalWarn.opacity(0.28))
         )
     }
 
@@ -504,9 +508,9 @@ struct FinderMenuDetail: View {
 
     private var statusColor: Color {
         switch store.extensionStatus {
-        case .enabled: return .green
-        case .disabled, .notRegistered: return .orange
-        case .unknown: return .secondary
+        case .enabled: return theme.signalGood
+        case .disabled, .notRegistered: return theme.signalWarn
+        case .unknown: return theme.inkSecondary
         }
     }
 
@@ -596,6 +600,8 @@ private struct EditableListRow: Identifiable {
 /// 原生 macOS 风格的 +/- 列表编辑器：定高发丝边框区域（内部滚动）+ 底部 + / − 栏。
 /// 刻意不用 SwiftUI List（避免嵌套滚动与焦点环传播问题，见方案评审）。行支持悬停与选中高亮。
 private struct EditableListView: View {
+    @Environment(\.theme) private var theme
+
     let title: String
     let rows: [EditableListRow]
     let emptyHint: String
@@ -611,21 +617,21 @@ private struct EditableListView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .textCase(.uppercase)
                 .tracking(0.5)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(theme.inkFaint)
             VStack(spacing: 0) {
                 rowsRegion
                 Divider()
                 footer
             }
-            // 与 SettingsGroup 同白底，靠发丝描边区分，不再用偏灰的 primary 填充。
+            // 与 SettingsGroup 同表面策略：glass 用系统控件底，其它主题用 cardFill。
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-                    .shadow(color: Color.primary.opacity(0.04), radius: 1.5, y: 0.5)
+                    .fill(theme.usesGlass ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
+                    .shadow(color: Color.black.opacity(theme.surfaceShadowOpacity * 0.7), radius: 1.5, y: 0.5)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(Color.primary.opacity(0.08))
+                    .stroke(theme.surfaceStroke)
             )
         }
     }

@@ -11,6 +11,15 @@
 // MARK: - Settings View
 "settings.statusBar" = "메뉴 막대 표시";
 "settings.appearance" = "외관";
+"settings.theme" = "테마";
+"settings.theme.film" = "필름 브라운";
+"settings.theme.film.hint" = "따뜻한 그레인 메시 — 기본값";
+"settings.theme.bento" = "Bento 그리드";
+"settings.theme.bento.hint" = "기존 카드 그리드 + 글래스";
+"settings.theme.glass" = "글래스";
+"settings.theme.glass.hint" = "시스템 비브런시 / 계기판 읽기";
+"settings.theme.noir" = "느와르";
+"settings.theme.noir.hint" = "거의 검은 그레인, 차콜 표면";
 "settings.logo" = "로고";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -49,6 +58,10 @@
 
 // MARK: - Overview Tab
 "overview.load" = "부하";
+"overview.compute" = "컴퓨트";
+"overview.memory" = "메모리";
+"overview.resources" = "리소스";
+"overview.system" = "시스템";
 "overview.network" = "네트워크";
 "overview.loading" = "불러오는 중...";
 "overview.coreUsage" = "코어 사용률";
@@ -133,6 +146,7 @@
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 사용량";
 "settings.aiUsageInterval" = "새로 고침 간격";
+"aiUsage.title" = "AI 사용량";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";

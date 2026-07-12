@@ -11,6 +11,15 @@
 // MARK: - Settings View
 "settings.statusBar" = "状态栏显示";
 "settings.appearance" = "外观";
+"settings.theme" = "主题";
+"settings.theme.film" = "胶片棕";
+"settings.theme.film.hint" = "暖色胶片颗粒 — 产品默认";
+"settings.theme.bento" = "Bento 网格";
+"settings.theme.bento.hint" = "原来的卡片网格 + 毛玻璃";
+"settings.theme.glass" = "玻璃";
+"settings.theme.glass.hint" = "系统毛玻璃 / 仪表读数";
+"settings.theme.noir" = "暗黑";
+"settings.theme.noir.hint" = "近黑颗粒，炭灰表面";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -49,6 +58,10 @@
 
 // MARK: - Overview Tab
 "overview.load" = "负载";
+"overview.compute" = "算力";
+"overview.memory" = "内存";
+"overview.resources" = "资源";
+"overview.system" = "系统";
 "overview.network" = "网络";
 "overview.loading" = "加载中...";
 "overview.coreUsage" = "核心使用率";
@@ -133,6 +146,7 @@
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 用量";
 "settings.aiUsageInterval" = "刷新间隔";
+"aiUsage.title" = "AI 用量";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";

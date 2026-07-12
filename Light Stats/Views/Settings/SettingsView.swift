@@ -51,10 +51,19 @@ struct SettingsView: View {
         SettingsCategory(rawValue: selectedRaw) ?? .general
     }
 
-    /// 设置窗统一画布：与分组卡片同用 `controlBackgroundColor`（浅色下为白），
-    /// 侧栏 / 详情 / 窗口底同一白色表面，不再用偏灰的 windowBackground。
+    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
+
+    /// Canvas under sidebar / detail. Glass keeps system control background;
+    /// mesh themes use a near-opaque dark surface so labels stay readable.
     private var settingsCanvas: Color {
-        Color(nsColor: .controlBackgroundColor)
+        if theme.usesGlass {
+            return Color(nsColor: .controlBackgroundColor)
+        }
+        if theme.usesMesh {
+            // Solid-enough reading field (scrim sits under this in the window bg stack).
+            return theme.canvas.opacity(0.92)
+        }
+        return theme.canvas
     }
 
     var body: some View {
@@ -62,7 +71,7 @@ struct SettingsView: View {
             sidebar
             // 发丝分隔，比系统 Divider 更轻，贴近两侧同色画布。
             Rectangle()
-                .fill(Color.primary.opacity(0.06))
+                .fill(theme.inkPrimary.opacity(theme.dividerOpacity))
                 .frame(width: 1)
                 .ignoresSafeArea()
             // 详情面板包一层垂直 ScrollView：内容超过固定窗高（如 Finder 文件模板有
@@ -78,7 +87,16 @@ struct SettingsView: View {
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
         .frame(width: 980, height: 640)
-        .background(settingsCanvas.ignoresSafeArea())
+        .background(
+            Group {
+                if theme.usesMesh {
+                    ThemeBackgroundView(tokens: theme, cornerRadius: 0, configuresWindow: true)
+                } else {
+                    settingsCanvas
+                }
+            }
+            .ignoresSafeArea()
+        )
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
@@ -91,6 +109,7 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
+        .appThemed(settings.appTheme)
         .focusable(false)
     }
 
@@ -122,11 +141,11 @@ struct SettingsView: View {
         HStack(spacing: 9) {
             Image(systemName: category.icon)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                .foregroundStyle(isSelected ? theme.accent : theme.inkSecondary)
                 .frame(width: 18)
             Text(category.titleKey.localized)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.82))
+                .foregroundStyle(isSelected ? theme.inkPrimary : theme.inkPrimary.opacity(0.82))
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
@@ -134,7 +153,7 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+                .fill(isSelected ? theme.accent.opacity(0.14) : Color.clear)
         )
         .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -184,6 +203,7 @@ struct SettingsView: View {
 /// 详情面板骨架：标题（可带右侧开关等附件）+ 内容，统一内边距。取代旧的 BentoCard，
 /// 用留白与发丝分隔线表达层级，而非嵌套卡片。
 struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
+    @Environment(\.theme) private var theme
     private let title: String
     private let accessory: Accessory
     private let content: Content
@@ -199,7 +219,9 @@ struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Text(title).font(.system(size: 22, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(theme.inkPrimary)
                 Spacer()
                 accessory
             }
@@ -216,6 +238,7 @@ struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
 
 /// 页面内的语义分组：标题在容器外，相关设置行收进同一个连续面板。
 struct SettingsSection<Content: View>: View {
+    @Environment(\.theme) private var theme
     private let title: String
     private let content: Content
 
@@ -228,6 +251,7 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.inkPrimary)
             content
         }
     }
@@ -236,6 +260,7 @@ struct SettingsSection<Content: View>: View {
 /// 分组容器：与页面同为白色底，靠发丝描边 + 极轻阴影区分卡片边界。
 /// 行之间的 `Divider` 由调用方插入。
 struct SettingsGroup<Content: View>: View {
+    @Environment(\.theme) private var theme
     private let content: Content
 
     init(@ViewBuilder content: () -> Content) {
@@ -248,18 +273,19 @@ struct SettingsGroup<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .shadow(color: Color.primary.opacity(0.04), radius: 1.5, y: 0.5)
+                .fill(theme.usesGlass ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
+                .shadow(color: Color.black.opacity(theme.surfaceShadowOpacity * 0.7), radius: 1.5, y: 0.5)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.primary.opacity(0.08))
+                .stroke(theme.surfaceStroke)
         )
     }
 }
 
 /// 一行设置：左标签 + 右控件，统一内边距，置于 SettingsGroup 内。
 struct SettingsRow<Control: View>: View {
+    @Environment(\.theme) private var theme
     private let title: String
     private let subtitle: String?
     private let control: Control
@@ -275,11 +301,11 @@ struct SettingsRow<Control: View>: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
+                    .foregroundStyle(theme.inkPrimary)
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(theme.inkSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -347,11 +373,12 @@ struct SettingsGridItem: View {
     enum DemoLevel {
         case low, medium, high
 
+        /// Legacy helper — prefer `ThemeTokens` signal colors at call sites.
         var color: Color {
             switch self {
-            case .low: return .green
-            case .medium: return .yellow
-            case .high: return .red
+            case .low: return Color(red: 0.20, green: 0.72, blue: 0.38)
+            case .medium: return Color(red: 0.92, green: 0.72, blue: 0.12)
+            case .high: return Color(red: 0.90, green: 0.28, blue: 0.24)
             }
         }
 
@@ -371,6 +398,8 @@ struct SettingsGridItem: View {
     var assetIcon: String?
     let onChange: () -> Void
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         Button {
             isOn.toggle()
@@ -378,21 +407,21 @@ struct SettingsGridItem: View {
         } label: {
             VStack(spacing: 5) {
                 iconView
-                    .foregroundColor(isOn ? .blue : .secondary)
+                    .foregroundStyle(isOn ? theme.accent : theme.inkSecondary)
 
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(isOn ? .primary : .secondary)
+                    .foregroundStyle(isOn ? theme.inkPrimary : theme.inkSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isOn ? Color.blue.opacity(0.1) : Color.primary.opacity(0.03))
+                    .fill(isOn ? theme.accent.opacity(0.14) : theme.wellFill)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isOn ? Color.blue.opacity(0.2) : Color.clear, lineWidth: 1)
+                    .stroke(isOn ? theme.accent.opacity(0.35) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -417,6 +446,8 @@ struct SettingsGridItem: View {
 
 /// 健康分维度按钮：纯文字，无图标，点击切换开关。
 struct HealthDimButton: View {
+    @Environment(\.theme) private var theme
+
     let title: String
     @Binding var isOn: Bool
     let demoLevel: SettingsGridItem.DemoLevel
@@ -429,16 +460,16 @@ struct HealthDimButton: View {
             VStack(spacing: 3) {
                 Text(title)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(isOn ? .primary : .secondary)
+                    .foregroundStyle(isOn ? theme.inkPrimary : theme.inkSecondary)
                 Text(demoLevel.label)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(levelColor)
+                    .foregroundStyle(levelColor)
             }
             .frame(maxWidth: .infinity, minHeight: 26)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isOn ? Color.primary.opacity(0.06) : Color.primary.opacity(0.03))
+                    .fill(isOn ? theme.rowHoverFill : theme.wellFill)
             )
         }
         .buttonStyle(.plain)
@@ -446,8 +477,15 @@ struct HealthDimButton: View {
 
     /// 等级词的颜色：关闭时统一灰；开启时按偏好——颜色模式用红/黄/绿，文字模式保持中性。
     private var levelColor: Color {
-        guard isOn else { return .secondary }
-        return useColorIndicator ? demoLevel.color : .secondary
+        guard isOn else { return theme.inkSecondary }
+        if useColorIndicator {
+            switch demoLevel {
+            case .low: return theme.signalGood
+            case .medium: return theme.signalWarn
+            case .high: return theme.signalBad
+            }
+        }
+        return theme.inkSecondary
     }
 }
 

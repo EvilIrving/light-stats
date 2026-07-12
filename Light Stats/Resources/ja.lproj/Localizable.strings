@@ -11,6 +11,15 @@
 // MARK: - Settings View
 "settings.statusBar" = "ステータスバー表示";
 "settings.appearance" = "外観";
+"settings.theme" = "テーマ";
+"settings.theme.film" = "フィルムブラウン";
+"settings.theme.film.hint" = "暖色粒状メッシュ — デフォルト";
+"settings.theme.bento" = "Bento グリッド";
+"settings.theme.bento.hint" = "従来のカードグリッド + ガラス";
+"settings.theme.glass" = "ガラス";
+"settings.theme.glass.hint" = "システムバイブランス / 計器表示";
+"settings.theme.noir" = "ノワール";
+"settings.theme.noir.hint" = "ほぼ黒の粒状、チャコール表面";
 "settings.logo" = "ロゴ";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";
@@ -49,6 +58,10 @@
 
 // MARK: - Overview Tab
 "overview.load" = "負荷";
+"overview.compute" = "コンピュート";
+"overview.memory" = "メモリ";
+"overview.resources" = "リソース";
+"overview.system" = "システム";
 "overview.network" = "ネットワーク";
 "overview.loading" = "読み込み中...";
 "overview.coreUsage" = "コア使用率";
@@ -133,6 +146,7 @@
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 使用量";
 "settings.aiUsageInterval" = "更新間隔";
+"aiUsage.title" = "AI 使用量";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "Codex";
 "aiUsage.gemini" = "Gemini";
