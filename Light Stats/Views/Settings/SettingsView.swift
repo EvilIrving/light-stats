@@ -51,19 +51,9 @@ struct SettingsView: View {
         SettingsCategory(rawValue: selectedRaw) ?? .general
     }
 
-    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
-
-    /// Canvas under sidebar / detail. Glass keeps system control background;
-    /// mesh themes use a near-opaque dark surface so labels stay readable.
+    /// Shared white canvas for sidebar + detail. Settings never follows `appTheme`.
     private var settingsCanvas: Color {
-        if theme.usesGlass {
-            return Color(nsColor: .controlBackgroundColor)
-        }
-        if theme.usesMesh {
-            // Solid-enough reading field (scrim sits under this in the window bg stack).
-            return theme.canvas.opacity(0.92)
-        }
-        return theme.canvas
+        Color(nsColor: .controlBackgroundColor)
     }
 
     var body: some View {
@@ -71,7 +61,7 @@ struct SettingsView: View {
             sidebar
             // 发丝分隔，比系统 Divider 更轻，贴近两侧同色画布。
             Rectangle()
-                .fill(theme.inkPrimary.opacity(theme.dividerOpacity))
+                .fill(Color.primary.opacity(0.06))
                 .frame(width: 1)
                 .ignoresSafeArea()
             // 详情面板包一层垂直 ScrollView：内容超过固定窗高（如 Finder 文件模板有
@@ -87,16 +77,7 @@ struct SettingsView: View {
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
         .frame(width: 980, height: 640)
-        .background(
-            Group {
-                if theme.usesMesh {
-                    ThemeBackgroundView(tokens: theme, cornerRadius: 0, configuresWindow: true)
-                } else {
-                    settingsCanvas
-                }
-            }
-            .ignoresSafeArea()
-        )
+        .background(settingsCanvas.ignoresSafeArea())
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
@@ -109,7 +90,8 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
-        .appThemed(settings.appTheme)
+        // Lock chrome to bento; do not pass `settings.appTheme`.
+        .appThemed(.bento)
         .focusable(false)
     }
 
@@ -141,11 +123,11 @@ struct SettingsView: View {
         HStack(spacing: 9) {
             Image(systemName: category.icon)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? theme.accent : theme.inkSecondary)
+                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                 .frame(width: 18)
             Text(category.titleKey.localized)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? theme.inkPrimary : theme.inkPrimary.opacity(0.82))
+                .foregroundStyle(isSelected ? Color.primary : Color.primary.opacity(0.82))
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
@@ -153,7 +135,7 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isSelected ? theme.accent.opacity(0.14) : Color.clear)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
         )
         .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
