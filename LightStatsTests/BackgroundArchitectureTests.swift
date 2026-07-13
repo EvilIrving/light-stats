@@ -57,7 +57,7 @@ final class BackgroundArchitectureTests: XCTestCase {
             configuration: naturalConfiguration
         )
         XCTAssertEqual(firstFrame, repeatedFrame)
-        XCTAssertEqual(firstFrame.primitives.count, 15)
+        XCTAssertEqual(firstFrame.primitives.count, 49)
 
         let moonlight = try XCTUnwrap(projectedLights(in: firstFrame).first)
         XCTAssertGreaterThan(moonlight.source.x, panelSize.width * 0.10)
@@ -170,7 +170,7 @@ final class BackgroundArchitectureTests: XCTestCase {
         XCTAssertEqual(radialLights(in: sunFrame).count, 1)
         XCTAssertTrue(directionalLights(in: sunFrame).isEmpty)
         XCTAssertTrue(projectedLights(in: sunFrame).isEmpty)
-        XCTAssertTrue(radialLights(in: nightFrame).isEmpty)
+        XCTAssertEqual(radialLights(in: nightFrame).count, 1)
         XCTAssertTrue(directionalLights(in: nightFrame).isEmpty)
         XCTAssertEqual(projectedLights(in: nightFrame).count, 1)
         XCTAssertNotEqual(sunFrame, nightFrame)
@@ -264,7 +264,7 @@ final class BackgroundArchitectureTests: XCTestCase {
         XCTAssertNotEqual(firstLunarState.intensity, laterLunarState.intensity)
 
         let lunarState = InkNightPhysics.lunarState(time: 5, size: panelSize, seed: seed)
-        let aperture = CGPoint(x: panelSize.width * 0.5, y: panelSize.height * 0.15)
+        let aperture = lunarState.haloCenter
         let sourceToAperture = CGVector(
             dx: aperture.x - lunarState.source.x,
             dy: aperture.y - lunarState.source.y
@@ -302,7 +302,7 @@ final class BackgroundArchitectureTests: XCTestCase {
         )
         let referenceDistance = panelSize.height * 1.42
         let falloff = pow(referenceDistance / propagationDistance, 2)
-        let expectedIntensity = 0.68 * min(max(falloff, 0.80), 1.04)
+        let expectedIntensity = 0.50 * min(max(falloff, 0.80), 1.04)
             * InkNightPhysics.apparentLightTransmission(at: lunarTime, seed: seed)
         XCTAssertEqual(lunarState.intensity, expectedIntensity, accuracy: 0.000_001)
     }
@@ -354,12 +354,23 @@ final class BackgroundArchitectureTests: XCTestCase {
         let clouds = softMasks(in: frame).filter { $0.role == .lightOccluder }
 
         XCTAssertEqual(projectedLights(in: frame).count, 1)
-        XCTAssertEqual(clouds.count, 12)
+        let silverEdges = softMasks(in: frame).filter { $0.role == .surfaceHighlight }
+        XCTAssertEqual(clouds.count, 35)
+        XCTAssertEqual(silverEdges.count, 10)
+        XCTAssertTrue(clouds.allSatisfy { $0.shape == .inkWash })
+        XCTAssertTrue(silverEdges.allSatisfy { $0.shape == .inkWash })
         XCTAssertGreaterThan(clouds.map(\.opacity).max() ?? 0, 0.80)
         XCTAssertLessThan(clouds.map(\.opacity).min() ?? 1, 0.60)
         XCTAssertTrue(clouds.allSatisfy { $0.bodyOpacity < $0.opacity })
         let distinctWidths = Set(clouds.map { Int($0.size.width.rounded()) })
-        XCTAssertGreaterThanOrEqual(distinctWidths.count, 6)
+        XCTAssertGreaterThanOrEqual(distinctWidths.count, 20)
+
+        let laterFrame = definition.makeFrame(time: 13, size: panelSize, configuration: naturalConfiguration)
+        let laterEdges = softMasks(in: laterFrame).filter { $0.role == .surfaceHighlight }
+        let largestEdgeChange = zip(silverEdges, laterEdges).map {
+            abs($0.opacity - $1.opacity)
+        }.max() ?? 0
+        XCTAssertGreaterThan(largestEdgeChange, 0.02)
     }
 
     func testInkCloudTransmissionFollowsBeerLambertLaw() {

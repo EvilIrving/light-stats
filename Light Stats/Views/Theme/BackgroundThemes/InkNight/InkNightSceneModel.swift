@@ -19,6 +19,15 @@ struct InkNightSceneModel: BackgroundSceneModel {
             size: size,
             seed: configuration.sceneSeed
         )
+        let halo = BackgroundSceneFrame.RadialLight(
+            center: lunarState.haloCenter,
+            radius: lunarState.haloRadius,
+            innerColor: palette.moonCore,
+            outerColor: palette.moonlight,
+            intensity: lunarState.haloIntensity,
+            softness: min(size.width, size.height) * 0.035,
+            blendMode: .screen
+        )
         let moonlight = BackgroundSceneFrame.ProjectedLight(
             source: lunarState.source,
             target: lunarState.target,
@@ -26,11 +35,12 @@ struct InkNightSceneModel: BackgroundSceneModel {
             targetWidth: lunarState.targetWidth,
             color: palette.moonlight,
             intensity: lunarState.intensity,
-            softness: min(size.width, size.height) * 0.085,
+            softness: min(size.width, size.height) * 0.055,
             blendMode: .screen
         )
         return BackgroundSceneFrame(primitives: [
             .colorFill(palette.base),
+            .radialLight(halo),
             .projectedLight(moonlight)
         ])
     }

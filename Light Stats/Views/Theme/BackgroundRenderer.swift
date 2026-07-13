@@ -297,6 +297,8 @@ struct BackgroundRenderer: View {
             path = Path(ellipseIn: rect)
         case .leaf:
             path = leafPath(in: rect)
+        case .inkWash:
+            path = inkWashPath(in: rect)
         case .capsule:
             path = Path(roundedRect: rect, cornerRadius: min(mask.size.width, mask.size.height) / 2)
         }
@@ -318,6 +320,33 @@ struct BackgroundRenderer: View {
             to: CGPoint(x: rect.minX, y: rect.midY),
             control1: CGPoint(x: rect.minX + rect.width * 0.70, y: rect.maxY),
             control2: CGPoint(x: rect.minX + rect.width * 0.26, y: rect.maxY - rect.height * 0.06)
+        )
+        path.closeSubpath()
+        return path
+    }
+
+    private func inkWashPath(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY + rect.height * 0.10))
+        path.addCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.34, y: rect.minY + rect.height * 0.08),
+            control1: CGPoint(x: rect.minX + rect.width * 0.08, y: rect.minY + rect.height * 0.44),
+            control2: CGPoint(x: rect.minX + rect.width * 0.18, y: rect.minY + rect.height * 0.02)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.midY - rect.height * 0.06),
+            control1: CGPoint(x: rect.minX + rect.width * 0.58, y: rect.minY + rect.height * 0.15),
+            control2: CGPoint(x: rect.minX + rect.width * 0.84, y: rect.minY + rect.height * 0.28)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.63, y: rect.maxY - rect.height * 0.06),
+            control1: CGPoint(x: rect.minX + rect.width * 0.92, y: rect.maxY - rect.height * 0.18),
+            control2: CGPoint(x: rect.minX + rect.width * 0.76, y: rect.maxY - rect.height * 0.02)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.minX, y: rect.midY + rect.height * 0.10),
+            control1: CGPoint(x: rect.minX + rect.width * 0.35, y: rect.maxY - rect.height * 0.14),
+            control2: CGPoint(x: rect.minX + rect.width * 0.10, y: rect.maxY - rect.height * 0.26)
         )
         path.closeSubpath()
         return path

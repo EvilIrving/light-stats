@@ -35,8 +35,10 @@ enum InkNightBackgroundTheme {
 
     struct Palette: Sendable {
         let base = BackgroundSceneFrame.Color(red: 0.025, green: 0.028, blue: 0.052)
-        let moonlight = BackgroundSceneFrame.Color(red: 0.57, green: 0.64, blue: 0.86)
+        let moonCore = BackgroundSceneFrame.Color(red: 0.68, green: 0.73, blue: 0.91)
+        let moonlight = BackgroundSceneFrame.Color(red: 0.39, green: 0.46, blue: 0.70)
         let cloud = BackgroundSceneFrame.Color(red: 0.026, green: 0.031, blue: 0.061)
+        let cloudSilver = BackgroundSceneFrame.Color(red: 0.45, green: 0.52, blue: 0.76)
         let readingInk = BackgroundSceneFrame.Color(red: 0.015, green: 0.018, blue: 0.035)
         let vignette = BackgroundSceneFrame.Color(red: 0.07, green: 0.08, blue: 0.16)
     }

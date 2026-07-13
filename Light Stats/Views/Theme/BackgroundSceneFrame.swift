@@ -116,6 +116,7 @@ struct BackgroundSceneFrame: Equatable, Sendable {
     enum SoftMaskShape: Equatable, Sendable {
         case ellipse
         case leaf
+        case inkWash
         case capsule
     }
 
