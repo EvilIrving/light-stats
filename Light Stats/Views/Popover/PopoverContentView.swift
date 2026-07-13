@@ -89,12 +89,10 @@ struct PopoverContentView: View {
             .contentShape(Rectangle())
         }
         .ignoresSafeArea(.container, edges: .top)
-        // Mesh art + grain live entirely inside ThemeBackgroundView (soft center
-        // veil only). No full-frame scrim — that was burying light shapes + grit.
+        // Static tonal artwork lives entirely inside ThemeBackgroundView.
         .background(
             ThemeBackgroundView(
                 tokens: theme,
-                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 12
             )
                 .ignoresSafeArea()
@@ -102,7 +100,7 @@ struct PopoverContentView: View {
         .frame(width: Self.canvasSize.width, height: Self.canvasSize.height)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .cornerRadius(12)
-        // Language + theme: mesh↔mesh (film/noir) must rebuild chrome, not only language.
+        // Language and theme changes rebuild the complete chrome hierarchy.
         .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
         .appThemed(settings.appTheme)
         .focusable(false)

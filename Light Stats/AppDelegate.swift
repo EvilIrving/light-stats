@@ -184,27 +184,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             UpdateManager.shared.checkOnLaunch()
         }
 
-#if DEBUG
-        if ProcessInfo.processInfo.environment["LIGHT_STATS_OPEN_PANEL"] == "1" {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                guard let self, let panel = self.panel else { return }
-                panel.center()
-                panel.makeKeyAndOrderFront(nil)
-                NSApp.activate(ignoringOtherApps: true)
-                self.monitor.setPopoverVisible(true)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    guard let contentView = panel.contentView else { return }
-                    contentView.layoutSubtreeIfNeeded()
-                    guard let bitmap = contentView.bitmapImageRepForCachingDisplay(in: contentView.bounds) else {
-                        return
-                    }
-                    contentView.cacheDisplay(in: contentView.bounds, to: bitmap)
-                    guard let png = bitmap.representation(using: .png, properties: [:]) else { return }
-                    try? png.write(to: URL(fileURLWithPath: "/tmp/ink-night-panel-live.png"))
-                }
-            }
-        }
-#endif
     }
 
     @objc private func handleShowAbout() {

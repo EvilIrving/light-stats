@@ -86,7 +86,7 @@ Light Stats/
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
-│   ├── Theme/                           # ThemeTokens, mesh bg, grain, picker
+│   ├── Theme/                           # ThemeTokens, static tonal bg, microtexture, picker
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
 │   ├── CleaningMode/

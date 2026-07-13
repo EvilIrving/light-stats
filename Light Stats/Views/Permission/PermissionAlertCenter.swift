@@ -171,7 +171,6 @@ struct PermissionAlertView: View {
         .background(
             ThemeBackgroundView(
                 tokens: theme,
-                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 14,
                 configuresWindow: true,
                 fallbackMaterial: .underWindowBackground
@@ -205,13 +204,7 @@ private struct PermissionPrimaryButtonStyle: ButtonStyle {
     }
 
     private var primaryLabelColor: Color {
-        // Dark enough ink on warm film accent; white on cool noir/glass accents.
-        switch theme.theme {
-        case .film:
-            return Color(red: 0.12, green: 0.06, blue: 0.04)
-        case .bento, .glass, .noir:
-            return .white
-        }
+        Color(red: 0.97, green: 0.95, blue: 0.92)
     }
 }
 

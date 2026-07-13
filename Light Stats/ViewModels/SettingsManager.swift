@@ -140,38 +140,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(appTheme.rawValue, for: .appTheme) }
     }
 
-    // MARK: - Film theme appearance (only applied when appTheme == .film)
-
-    /// Film-stock grain overlay. Off keeps mesh light art but removes grit (cleaner look).
-    @Published var filmGrainEnabled: Bool {
-        didSet { save(filmGrainEnabled, for: .filmGrainEnabled) }
-    }
-    /// Light-field motion intensity. 0 = frozen, 0.4 = natural (default), 1 = lively.
-    @Published var filmLightFlow: Double {
-        didSet {
-            let safeValue = min(max(filmLightFlow, 0), 1)
-            guard safeValue == filmLightFlow else {
-                filmLightFlow = safeValue
-                return
-            }
-            save(filmLightFlow, for: .filmLightFlow)
-        }
-    }
-    // MARK: - Noir theme appearance
-
-    @Published var noirGrainEnabled: Bool {
-        didSet { save(noirGrainEnabled, for: .noirGrainEnabled) }
-    }
-    @Published var noirLightFlow: Double {
-        didSet {
-            let safeValue = min(max(noirLightFlow, 0), 1)
-            guard safeValue == noirLightFlow else {
-                noirLightFlow = safeValue
-                return
-            }
-            save(noirLightFlow, for: .noirLightFlow)
-        }
-    }
     // MARK: - Other Settings
 
     /// 开机启动。真相源是系统登录项（`SMAppService`），不落 UserDefaults。
@@ -412,10 +380,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case useColorIndicator = "settings.useColorIndicator"
         case useFlatColors = "settings.useFlatColors"
         case appTheme = "settings.appTheme"
-        case filmGrainEnabled = "settings.filmGrainEnabled"
-        case filmLightFlow = "settings.filmLightFlow"
-        case noirGrainEnabled = "settings.noirGrainEnabled"
-        case noirLightFlow = "settings.noirLightFlow"
         case refreshRate = "settings.refreshRate"
         case temperatureUnit = "settings.temperatureUnit"
         case appLanguage = "settings.appLanguage"
@@ -473,14 +437,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
         // 主题：默认 glass（展示名「默认」）。aurora/paper 仍映射到 film（晒金）。
         appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
-        // Mesh appearance: grain on; light dynamics default = Natural (0.4).
-        filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true
-        let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.4
-        filmLightFlow = min(max(storedFlow, 0), 1)
-        noirGrainEnabled = defaults.object(forKey: Key.noirGrainEnabled.rawValue) as? Bool ?? true
-        let storedNoirFlow = defaults.object(forKey: Key.noirLightFlow.rawValue) as? Double ?? 0.4
-        noirLightFlow = min(max(storedNoirFlow, 0), 1)
-
         // 开机启动：以系统登录项注册状态为唯一真相源。
         launchAtLogin = LaunchAtLoginService.isEnabled
 

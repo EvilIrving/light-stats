@@ -7,9 +7,9 @@ import AppKit
 import CoreImage
 import SwiftUI
 
-/// Full-bleed cached grain generated once by Core Image, never per pixel on the CPU.
+/// Full-bleed cached microtexture generated once by Core Image.
 struct GrainTextureView: View {
-    /// Four source pixels per layout point keep Retina captures from enlarging individual noise cells.
+    /// Four source pixels per layout point keep Retina captures from exposing noise cells.
     static let samplingScale: CGFloat = 4
 
     let opacity: Double
@@ -18,17 +18,11 @@ struct GrainTextureView: View {
     var body: some View {
         if opacity > 0.001 {
             ZStack {
-                Image(nsImage: GrainTextureCache.fine)
+                Image(nsImage: GrainTextureCache.texture)
                     .resizable(resizingMode: .tile)
                     .interpolation(.high)
-                    .opacity(opacity * 0.82)
+                    .opacity(opacity)
                     .blendMode(.softLight)
-
-                Image(nsImage: GrainTextureCache.body)
-                    .resizable(resizingMode: .tile)
-                    .interpolation(.high)
-                    .opacity(opacity * 0.28)
-                    .blendMode(.overlay)
 
                 if warmth > 0.001 {
                     Color(red: 0.90, green: 0.45, blue: 0.25)
@@ -42,8 +36,7 @@ struct GrainTextureView: View {
 }
 
 private enum GrainTextureCache {
-    static let fine = makeNoise(pointDimension: 256, contrast: 1.28, blurRadius: 0.45)
-    static let body = makeNoise(pointDimension: 192, contrast: 1.18, blurRadius: 1.8)
+    static let texture = makeNoise(pointDimension: 256, contrast: 1.22, blurRadius: 0.55)
 
     private static func makeNoise(
         pointDimension: Int,

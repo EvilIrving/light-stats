@@ -23,7 +23,7 @@ struct GeneralDetail: View {
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
-            // Theme first: picker, monochrome UI, then mesh preview / grain / dynamics.
+            // Theme first: picker, monochrome UI, then the static artwork preview.
             SettingsSection("settings.theme".localized) {
                 themeSectionContent
             }
@@ -75,35 +75,6 @@ struct GeneralDetail: View {
         }
     }
 
-    func meshAppearanceControls(
-        grainEnabled: Binding<Bool>,
-        dynamics: Binding<Double>,
-        presets: ThemeAppearancePresetConfiguration
-    ) -> some View {
-        SettingsGroup {
-            SettingsRow(
-                "settings.theme.film.grain".localized,
-                subtitle: "settings.theme.film.grain.hint".localized
-            ) {
-                SettingsToggle(isOn: grainEnabled)
-            }
-            rowDivider()
-            SettingsRow("settings.theme.film.lightFlow".localized) {
-                SettingsSegmentedPicker(
-                    selection: FilmAppearanceLabel.discreteBinding(
-                        dynamics,
-                        options: presets.dynamicsValues
-                    ),
-                    segmentMinWidth: 44
-                ) {
-                    ForEach(presets.dynamicsValues, id: \.self) { option in
-                        SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
-                    }
-                }
-            }
-        }
-    }
-
     var themeConfigurationControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsGroup {
@@ -121,21 +92,20 @@ struct GeneralDetail: View {
                     SettingsToggle(isOn: $settings.useFlatColors)
                 }
             }
-            themeAppearanceControls
         }
     }
 
-    func meshThemeLayout(tokens: ThemeTokens) -> some View {
+    func staticThemeLayout(tokens: ThemeTokens) -> some View {
         HStack(alignment: .top, spacing: 12) {
             themeConfigurationControls
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .layoutPriority(1)
-            meshLivePreview(tokens: tokens)
+            staticThemePreview(tokens: tokens)
                 .frame(width: 260, alignment: .top)
         }
     }
 
-    private func meshLivePreview(tokens: ThemeTokens) -> some View {
+    private func staticThemePreview(tokens: ThemeTokens) -> some View {
         let sourceSize = PopoverContentView.canvasSize
         let previewScale: CGFloat = 1.2
         let previewHeight: CGFloat = 320 * previewScale
@@ -143,7 +113,6 @@ struct GeneralDetail: View {
         let previewCornerRadius: CGFloat = 10 * previewScale
         return ThemeBackgroundView(
             tokens: tokens,
-            appearance: settings.themeAppearance(for: tokens.theme),
             cornerRadius: previewCornerRadius
         )
             .frame(width: previewWidth, height: previewHeight)

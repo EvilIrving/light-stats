@@ -5,36 +5,17 @@
 
 import SwiftUI
 
-/// Selects a registered scene without knowing any concrete background theme.
+/// Renders native glass or one of the two curated, fully static tonal backgrounds.
 struct ThemeBackgroundView: View {
     let tokens: ThemeTokens
-    let appearance: ThemeAppearanceConfiguration
     var cornerRadius: CGFloat = 12
     var configuresWindow: Bool = false
     var fallbackMaterial: NSVisualEffectView.Material = .sidebar
 
-    init(
-        tokens: ThemeTokens,
-        appearance: ThemeAppearanceConfiguration? = nil,
-        cornerRadius: CGFloat = 12,
-        configuresWindow: Bool = false,
-        fallbackMaterial: NSVisualEffectView.Material = .sidebar
-    ) {
-        self.tokens = tokens
-        self.appearance = appearance ?? .defaults(for: tokens.theme)
-        self.cornerRadius = cornerRadius
-        self.configuresWindow = configuresWindow
-        self.fallbackMaterial = fallbackMaterial
-    }
-
     var body: some View {
         Group {
-            if let definition = BackgroundThemeRegistry.definition(for: tokens.theme) {
-                RegisteredBackgroundScene(
-                    definition: definition,
-                    appearance: appearance
-                )
-                .id(definition.identifier)
+            if tokens.usesStaticArtwork {
+                StaticTonalBackground(tokens: tokens)
             } else if tokens.usesGlass {
                 GlassBackgroundView(
                     cornerRadius: cornerRadius,
@@ -50,57 +31,177 @@ struct ThemeBackgroundView: View {
     }
 }
 
-private struct RegisteredBackgroundScene: View {
-    let definition: BackgroundThemeDefinition
-    let appearance: ThemeAppearanceConfiguration
+private struct StaticTonalBackground: View {
+    let tokens: ThemeTokens
 
-    @StateObject private var clock: BackgroundMotionClock
-
-    init(
-        definition: BackgroundThemeDefinition,
-        appearance: ThemeAppearanceConfiguration
-    ) {
-        self.definition = definition
-        self.appearance = appearance
-        _clock = StateObject(
-            wrappedValue: BackgroundMotionClock(intensity: appearance.dynamics)
-        )
+    @ViewBuilder
+    var body: some View {
+        switch tokens.theme {
+        case .film:
+            SunGoldTonalBackground(tokens: tokens)
+        case .noir:
+            InkNightTonalBackground(tokens: tokens)
+        case .bento, .glass:
+            tokens.canvas
+        }
     }
+}
+
+private struct SunGoldTonalBackground: View {
+    let tokens: ThemeTokens
 
     var body: some View {
-        TimelineView(
-            .animation(minimumInterval: 1.0 / 24.0, paused: clock.isPaused)
-        ) { context in
-            GeometryReader { geometry in
-                scene(at: context.date, size: geometry.size)
+        GeometryReader { geometry in
+            let size = geometry.size
+            let scale = max(size.width, size.height)
+
+            ZStack {
+                tokens.canvas
+
+                RadialGradient(
+                    colors: [
+                        tokens.artworkGlow,
+                        tokens.artworkGlow.opacity(0.62),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: -0.04, y: -0.02),
+                    startRadius: 0,
+                    endRadius: scale * 0.72
+                )
+
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                tokens.artworkShadow.opacity(0.62),
+                                tokens.artworkMidtone.opacity(0.40),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: min(size.width, size.height) * 0.52
+                        )
+                    )
+                    .frame(width: size.width * 1.55, height: size.height * 0.43)
+                    .rotationEffect(.degrees(-23))
+                    .offset(x: size.width * 0.10, y: -size.height * 0.16)
+                    .blur(radius: scale * 0.055)
+
+                Ellipse()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                tokens.artworkMidtone.opacity(0.34),
+                                tokens.artworkMidtone.opacity(0.17),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: min(size.width, size.height) * 0.46
+                        )
+                    )
+                    .frame(width: size.width * 1.10, height: size.height * 0.48)
+                    .rotationEffect(.degrees(-14))
+                    .offset(x: -size.width * 0.36, y: size.height * 0.18)
+                    .blur(radius: scale * 0.10)
+
+                RadialGradient(
+                    colors: [
+                        Color(red: 1.0, green: 0.49, blue: 0.35).opacity(0.94),
+                        Color(red: 0.97, green: 0.40, blue: 0.31).opacity(0.54),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 1.04, y: 0.96),
+                    startRadius: 0,
+                    endRadius: scale * 0.68
+                )
+
+                LinearGradient(
+                    colors: [
+                        tokens.artworkGlow.opacity(0.08),
+                        tokens.artworkGlow.opacity(0.04),
+                        tokens.artworkGlow.opacity(0.08)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                GrainTextureView(opacity: tokens.textureOpacity, warmth: 0.44)
             }
+            .frame(width: size.width, height: size.height)
+            .clipped()
         }
         .allowsHitTesting(false)
-        .onChange(of: appearance.dynamics) { _, dynamics in
-            clock.setIntensity(dynamics)
-        }
     }
+}
 
-    private func scene(at date: Date, size: CGSize) -> some View {
-        let sample = clock.sample(at: date)
-        let configuration = BackgroundSceneConfiguration(
-            intensity: sample.intensity,
-            sceneSeed: sample.sceneSeed
-        )
-        let frame = definition.makeFrame(
-            time: sample.time,
-            size: size,
-            configuration: configuration
-        )
-        return ZStack {
-            BackgroundRenderer(frame: frame)
-            BackgroundMaterialOverlay(
-                effects: definition.materialEffects,
-                configuration: BackgroundMaterialConfiguration(
-                    grainEnabled: appearance.grainEnabled
+private struct InkNightTonalBackground: View {
+    let tokens: ThemeTokens
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            let scale = max(size.width, size.height)
+
+            ZStack {
+                tokens.canvas
+
+                LinearGradient(
+                    colors: [
+                        tokens.artworkShadow,
+                        tokens.canvas,
+                        tokens.artworkShadow
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-            )
+
+                RoundedRectangle(cornerRadius: scale * 0.20, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                tokens.artworkGlow.opacity(0.30),
+                                tokens.artworkMidtone.opacity(0.19),
+                                Color.clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: size.width * 0.62, height: size.height * 1.08)
+                    .rotationEffect(.degrees(8))
+                    .offset(x: -size.width * 0.25, y: -size.height * 0.08)
+                    .blur(radius: scale * 0.075)
+
+                Ellipse()
+                    .fill(tokens.artworkGlow.opacity(0.11))
+                    .frame(width: size.width * 0.78, height: size.height * 0.24)
+                    .rotationEffect(.degrees(-7))
+                    .offset(x: -size.width * 0.23, y: -size.height * 0.39)
+                    .blur(radius: scale * 0.065)
+
+                RoundedRectangle(cornerRadius: scale * 0.12, style: .continuous)
+                    .fill(tokens.artworkShadow.opacity(0.66))
+                    .frame(width: size.width * 0.34, height: size.height * 1.18)
+                    .rotationEffect(.degrees(5))
+                    .offset(x: size.width * 0.13, y: size.height * 0.03)
+                    .blur(radius: scale * 0.045)
+
+                RadialGradient(
+                    colors: [
+                        tokens.artworkMidtone.opacity(0.08),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 0.17, y: 0.43),
+                    startRadius: 0,
+                    endRadius: scale * 0.46
+                )
+
+                GrainTextureView(opacity: tokens.textureOpacity, warmth: 0)
+            }
+            .frame(width: size.width, height: size.height)
+            .clipped()
         }
-        .frame(width: size.width, height: size.height)
+        .allowsHitTesting(false)
     }
 }
