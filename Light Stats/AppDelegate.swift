@@ -26,6 +26,14 @@ final class KeyablePanel: NSPanel {
     }
 }
 
+/// Keeps events inside the popover when SwiftUI has no painted descendant at a point.
+/// Real controls and scroll views retain their normal AppKit hit targets.
+final class HitRetainingHostingView<Content: View>: NSHostingView<Content> {
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        super.hitTest(point) ?? (bounds.contains(point) ? self : nil)
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
@@ -328,11 +336,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
+        panel.ignoresMouseEvents = false
         panel.hasShadow = true
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.contentViewController = NSHostingController(
+        panel.contentView = HitRetainingHostingView(
             rootView: PopoverContentView()
                 .environmentObject(monitor)
                 .environmentObject(AIUsageMonitor.shared)
