@@ -55,7 +55,7 @@ set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-}"
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || echo HEAD)}"
-# 允许显式指定对比基线（如 major 发布：PREV_TAG=v1.8.0 TAG=v2.0.0）
+# 允许显式指定对比基线（如跨多个预发布：PREV_TAG=v1.8.0 TAG=v1.9.0）
 PREV_TAG="${PREV_TAG:-$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")}"
 
 # 仓库根（CI checkout 与本地均可）
