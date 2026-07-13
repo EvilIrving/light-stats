@@ -9,7 +9,7 @@ import XCTest
 @MainActor
 final class BackgroundArchitectureTests: XCTestCase {
     private let panelSize = PopoverContentView.canvasSize
-    private let naturalConfiguration = BackgroundSceneConfiguration(intensity: 0.4)
+    private let naturalConfiguration = BackgroundSceneConfiguration(intensity: 0.4, sceneSeed: 7_301)
 
     func testSunGoldKeyframesAreDeterministic() throws {
         let definition = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .film))
@@ -24,20 +24,23 @@ final class BackgroundArchitectureTests: XCTestCase {
             configuration: naturalConfiguration
         )
         XCTAssertEqual(firstFrame, repeatedFrame)
-        XCTAssertEqual(firstFrame.primitives.count, 13)
+        XCTAssertEqual(firstFrame.primitives.count, 213)
 
         let firstSun = try XCTUnwrap(radialLights(in: firstFrame).first)
-        XCTAssertEqual(firstSun.center.x, 180, accuracy: 0.001)
-        XCTAssertEqual(firstSun.center.y, 222.3, accuracy: 0.02)
-        XCTAssertEqual(firstSun.intensity, 0.76, accuracy: 0.001)
+        XCTAssertGreaterThan(firstSun.center.x, -panelSize.width * 0.5)
+        XCTAssertLessThan(firstSun.center.x, panelSize.width * 1.5)
+        XCTAssertGreaterThan(firstSun.center.y, panelSize.height * 0.16)
+        XCTAssertLessThan(firstSun.center.y, panelSize.height * 0.30)
+        XCTAssertGreaterThan(firstSun.intensity, 0.35)
+        XCTAssertLessThanOrEqual(firstSun.intensity, 0.88)
 
         let quarterFrame = definition.makeFrame(
-            time: SunGoldPhysics.orbitPeriod / 4,
+            time: SunGoldPhysics.nominalTraversalDuration / 4,
             size: panelSize,
             configuration: naturalConfiguration
         )
         let quarterSun = try XCTUnwrap(radialLights(in: quarterFrame).first)
-        XCTAssertGreaterThan(quarterSun.center.x, panelSize.width)
+        XCTAssertGreaterThan(distance(from: firstSun.center, to: quarterSun.center), 40)
         XCTAssertNotEqual(firstFrame, quarterFrame)
     }
 
@@ -57,7 +60,8 @@ final class BackgroundArchitectureTests: XCTestCase {
         XCTAssertEqual(firstFrame.primitives.count, 15)
 
         let moonlight = try XCTUnwrap(projectedLights(in: firstFrame).first)
-        XCTAssertEqual(moonlight.source.x, 180, accuracy: 0.001)
+        XCTAssertGreaterThan(moonlight.source.x, panelSize.width * 0.10)
+        XCTAssertLessThan(moonlight.source.x, panelSize.width * 0.90)
         XCTAssertLessThan(moonlight.source.y, 0)
         XCTAssertEqual(moonlight.target.y, panelSize.height * 1.12, accuracy: 0.001)
 
@@ -73,7 +77,7 @@ final class BackgroundArchitectureTests: XCTestCase {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
         let tenSeconds = start.addingTimeInterval(10)
         let thirtySeconds = start.addingTimeInterval(30)
-        let clock = BackgroundMotionClock(intensity: 0.4, startDate: start)
+        let clock = BackgroundMotionClock(intensity: 0.4, startDate: start, sceneSeed: 91)
         let definition = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .film))
 
         let runningSample = clock.sample(at: tenSeconds)
@@ -86,14 +90,21 @@ final class BackgroundArchitectureTests: XCTestCase {
         let runningFrame = definition.makeFrame(
             time: runningSample.time,
             size: panelSize,
-            configuration: BackgroundSceneConfiguration(intensity: runningSample.intensity)
+            configuration: BackgroundSceneConfiguration(
+                intensity: runningSample.intensity,
+                sceneSeed: runningSample.sceneSeed
+            )
         )
         let pausedFrame = definition.makeFrame(
             time: pausedSample.time,
             size: panelSize,
-            configuration: BackgroundSceneConfiguration(intensity: pausedSample.intensity)
+            configuration: BackgroundSceneConfiguration(
+                intensity: pausedSample.intensity,
+                sceneSeed: pausedSample.sceneSeed
+            )
         )
         XCTAssertEqual(runningFrame, pausedFrame)
+        XCTAssertEqual(runningSample.sceneSeed, pausedSample.sceneSeed)
 
         clock.setIntensity(0.4, at: thirtySeconds)
         let resumedSample = clock.sample(at: thirtySeconds.addingTimeInterval(5))
@@ -106,7 +117,7 @@ final class BackgroundArchitectureTests: XCTestCase {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
         let levels = [0.2, 0.4, 0.65, 1.0]
         let sceneTimes = levels.map { intensity in
-            let clock = BackgroundMotionClock(intensity: intensity, startDate: start)
+            let clock = BackgroundMotionClock(intensity: intensity, startDate: start, sceneSeed: 91)
             return clock.sample(at: start.addingTimeInterval(1)).time
         }
         for pair in zip(sceneTimes, sceneTimes.dropFirst()) {
@@ -169,13 +180,31 @@ final class BackgroundArchitectureTests: XCTestCase {
         let configuration = BackgroundSceneConfiguration(intensity: 1)
         let sunGold = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .film))
         let firstSunFrame = sunGold.makeFrame(time: 0, size: panelSize, configuration: configuration)
-        let nextSunFrame = sunGold.makeFrame(time: 1, size: panelSize, configuration: configuration)
         let firstSun = try XCTUnwrap(radialLights(in: firstSunFrame).first)
-        let nextSun = try XCTUnwrap(radialLights(in: nextSunFrame).first)
-        XCTAssertGreaterThan(distance(from: firstSun.center, to: nextSun.center), 70)
+        let laterSuns = try (1...6).map { second in
+            let frame = sunGold.makeFrame(
+                time: TimeInterval(second),
+                size: panelSize,
+                configuration: configuration
+            )
+            return try XCTUnwrap(radialLights(in: frame).first)
+        }
+        let largestSunDisplacement = laterSuns.map {
+            distance(from: firstSun.center, to: $0.center)
+        }.max() ?? 0
+        let largestSunlightChange = laterSuns.map {
+            abs(firstSun.intensity - $0.intensity)
+        }.max() ?? 0
+        XCTAssertGreaterThan(largestSunDisplacement, 70)
+        XCTAssertGreaterThan(largestSunlightChange, 0.05)
 
-        let firstLeaves = softMasks(in: firstSunFrame).filter { $0.shape == .ellipse }
-        let nextLeaves = softMasks(in: nextSunFrame).filter { $0.shape == .ellipse }
+        let firstLeaves = softMasks(in: firstSunFrame).filter {
+            $0.role == .surfaceShadow && $0.shape == .leaf
+        }
+        let nextSunFrame = sunGold.makeFrame(time: 1, size: panelSize, configuration: configuration)
+        let nextLeaves = softMasks(in: nextSunFrame).filter {
+            $0.role == .surfaceShadow && $0.shape == .leaf
+        }
         let largestLeafDisplacement = zip(firstLeaves, nextLeaves).reduce(CGFloat.zero) { result, pair in
             max(result, distance(from: pair.0.center, to: pair.1.center))
         }
@@ -183,11 +212,27 @@ final class BackgroundArchitectureTests: XCTestCase {
 
         let inkNight = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .noir))
         let firstNightFrame = inkNight.makeFrame(time: 0, size: panelSize, configuration: configuration)
-        let nextNightFrame = inkNight.makeFrame(time: 1, size: panelSize, configuration: configuration)
         let firstMoonlight = try XCTUnwrap(projectedLights(in: firstNightFrame).first)
-        let nextMoonlight = try XCTUnwrap(projectedLights(in: nextNightFrame).first)
-        XCTAssertGreaterThan(distance(from: firstMoonlight.source, to: nextMoonlight.source), 20)
-        XCTAssertGreaterThan(distance(from: firstMoonlight.target, to: nextMoonlight.target), 40)
+        let laterMoonlights = try (1...8).map { second in
+            let frame = inkNight.makeFrame(
+                time: TimeInterval(second),
+                size: panelSize,
+                configuration: configuration
+            )
+            return try XCTUnwrap(projectedLights(in: frame).first)
+        }
+        let largestMoonSourceDisplacement = laterMoonlights.map {
+            distance(from: firstMoonlight.source, to: $0.source)
+        }.max() ?? 0
+        let largestMoonTargetDisplacement = laterMoonlights.map {
+            distance(from: firstMoonlight.target, to: $0.target)
+        }.max() ?? 0
+        let largestMoonlightChange = laterMoonlights.map {
+            abs(firstMoonlight.intensity - $0.intensity)
+        }.max() ?? 0
+        XCTAssertGreaterThan(largestMoonSourceDisplacement, 20)
+        XCTAssertGreaterThan(largestMoonTargetDisplacement, 40)
+        XCTAssertGreaterThan(largestMoonlightChange, 0.02)
 
         let laterCloudFrame = inkNight.makeFrame(time: 3, size: panelSize, configuration: configuration)
         let firstClouds = softMasks(in: firstNightFrame).filter { $0.role == .lightOccluder }
@@ -198,19 +243,27 @@ final class BackgroundArchitectureTests: XCTestCase {
         XCTAssertGreaterThan(largestCloudDisplacement, 20)
     }
 
-    func testThemePhysicsCloseTheirOrbitsAndPreserveProjectionLaws() {
-        XCTAssertLessThanOrEqual(SunGoldPhysics.orbitPeriod, 30)
-        XCTAssertLessThanOrEqual(InkNightPhysics.orbitPeriod, 30)
-
-        let firstSolarState = SunGoldPhysics.solarState(time: 0, size: panelSize)
-        let loopedSolarState = SunGoldPhysics.solarState(
-            time: SunGoldPhysics.orbitPeriod,
-            size: panelSize
+    func testThemePhysicsAvoidClosedLoopsAndPreserveProjectionLaws() {
+        let seed: UInt64 = 7_301
+        let firstSolarState = SunGoldPhysics.solarState(time: 0, size: panelSize, seed: seed)
+        let laterSolarState = SunGoldPhysics.solarState(
+            time: SunGoldPhysics.nominalTraversalDuration,
+            size: panelSize,
+            seed: seed
         )
-        XCTAssertEqual(firstSolarState.center.x, loopedSolarState.center.x, accuracy: 0.001)
-        XCTAssertEqual(firstSolarState.center.y, loopedSolarState.center.y, accuracy: 0.001)
+        XCTAssertGreaterThan(distance(from: firstSolarState.center, to: laterSolarState.center), 1)
+        XCTAssertNotEqual(firstSolarState.brightness, laterSolarState.brightness)
 
-        let lunarState = InkNightPhysics.lunarState(time: 5, size: panelSize)
+        let firstLunarState = InkNightPhysics.lunarState(time: 0, size: panelSize, seed: seed)
+        let laterLunarState = InkNightPhysics.lunarState(
+            time: InkNightPhysics.nominalTraversalDuration,
+            size: panelSize,
+            seed: seed
+        )
+        XCTAssertGreaterThan(distance(from: firstLunarState.source, to: laterLunarState.source), 1)
+        XCTAssertNotEqual(firstLunarState.intensity, laterLunarState.intensity)
+
+        let lunarState = InkNightPhysics.lunarState(time: 5, size: panelSize, seed: seed)
         let aperture = CGPoint(x: panelSize.width * 0.5, y: panelSize.height * 0.15)
         let sourceToAperture = CGVector(
             dx: aperture.x - lunarState.source.x,
@@ -224,6 +277,75 @@ final class BackgroundArchitectureTests: XCTestCase {
             - sourceToAperture.dy * sourceToTarget.dx
         XCTAssertEqual(crossProduct, 0, accuracy: 0.01)
         XCTAssertGreaterThan(lunarState.targetWidth, lunarState.sourceWidth)
+    }
+
+    func testNoiseChannelsAreContinuousSeededAndPhysicallyCoupled() {
+        let seed: UInt64 = 7_301
+        let firstNoise = CoherentNoise.fractal(at: 4.25, seed: seed, octaves: 4)
+        let adjacentNoise = CoherentNoise.fractal(at: 4.251, seed: seed, octaves: 4)
+        XCTAssertLessThan(abs(firstNoise - adjacentNoise), 0.01)
+        XCTAssertEqual(firstNoise, CoherentNoise.fractal(at: 4.25, seed: seed, octaves: 4))
+        XCTAssertNotEqual(firstNoise, CoherentNoise.fractal(at: 4.25, seed: seed + 1, octaves: 4))
+
+        let solarTime = 8.0
+        let solarState = SunGoldPhysics.solarState(time: solarTime, size: panelSize, seed: seed)
+        let elevation = (0.285 - solarState.center.y / panelSize.height) / 0.11
+        let expectedBrightness = (0.74 + Double(elevation) * 0.14)
+            * SunGoldPhysics.apparentLightTransmission(at: solarTime, seed: seed)
+        XCTAssertEqual(solarState.brightness, expectedBrightness, accuracy: 0.000_001)
+
+        let lunarTime = 11.0
+        let lunarState = InkNightPhysics.lunarState(time: lunarTime, size: panelSize, seed: seed)
+        let propagationDistance = hypot(
+            lunarState.target.x - lunarState.source.x,
+            lunarState.target.y - lunarState.source.y
+        )
+        let referenceDistance = panelSize.height * 1.42
+        let falloff = pow(referenceDistance / propagationDistance, 2)
+        let expectedIntensity = 0.68 * min(max(falloff, 0.80), 1.04)
+            * InkNightPhysics.apparentLightTransmission(at: lunarTime, seed: seed)
+        XCTAssertEqual(lunarState.intensity, expectedIntensity, accuracy: 0.000_001)
+    }
+
+    func testSceneSeedChangesTheWeatherWithoutBreakingDeterminism() throws {
+        let definition = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .film))
+        let firstConfiguration = BackgroundSceneConfiguration(intensity: 0.4, sceneSeed: 11)
+        let secondConfiguration = BackgroundSceneConfiguration(intensity: 0.4, sceneSeed: 12)
+        let firstFrame = definition.makeFrame(time: 9, size: panelSize, configuration: firstConfiguration)
+        let repeatedFrame = definition.makeFrame(time: 9, size: panelSize, configuration: firstConfiguration)
+        let differentWeather = definition.makeFrame(time: 9, size: panelSize, configuration: secondConfiguration)
+        XCTAssertEqual(firstFrame, repeatedFrame)
+        XCTAssertNotEqual(firstFrame, differentWeather)
+    }
+
+    func testSunGoldUsesDenseShimmeringFoliageWithoutTrunkShapes() throws {
+        let definition = try XCTUnwrap(BackgroundThemeRegistry.definition(for: .film))
+        let firstFrame = definition.makeFrame(time: 0, size: panelSize, configuration: naturalConfiguration)
+        let laterFrame = definition.makeFrame(time: 2, size: panelSize, configuration: naturalConfiguration)
+        let firstBranches = softMasks(in: firstFrame).filter {
+            $0.role == .surfaceShadow && $0.shape == .capsule
+        }
+        let firstFoliage = softMasks(in: firstFrame).filter {
+            $0.role == .surfaceShadow && $0.shape == .leaf
+        }
+        let laterFoliage = softMasks(in: laterFrame).filter {
+            $0.role == .surfaceShadow && $0.shape == .leaf
+        }
+        let firstFlecks = softMasks(in: firstFrame).filter { $0.role == .surfaceHighlight }
+        let laterFlecks = softMasks(in: laterFrame).filter { $0.role == .surfaceHighlight }
+        XCTAssertEqual(firstBranches.count, 18)
+        XCTAssertEqual(firstFoliage.count, 160)
+        XCTAssertEqual(firstFlecks.count, 32)
+        XCTAssertTrue(firstBranches.allSatisfy { $0.size.width < 6 })
+        XCTAssertGreaterThan(firstFoliage.filter { $0.size.width / $0.size.height < 2.5 }.count, 150)
+        let largestShimmer = zip(firstFoliage, laterFoliage).map {
+            abs($0.opacity - $1.opacity)
+        }.max() ?? 0
+        XCTAssertGreaterThan(largestShimmer, 0.06)
+        let largestFleckChange = zip(firstFlecks, laterFlecks).map {
+            abs($0.opacity - $1.opacity)
+        }.max() ?? 0
+        XCTAssertGreaterThan(largestFleckChange, 0.05)
     }
 
     func testInkCloudsOccludeTheLightLayerInsteadOfPaintingOpaqueCover() throws {
@@ -332,7 +454,7 @@ final class BackgroundArchitectureTests: XCTestCase {
                     XCTFail("Every scene must begin with a full-canvas color fill")
                     continue
                 }
-                XCTAssertLessThanOrEqual(frame.primitives.count, 16)
+                XCTAssertLessThanOrEqual(frame.primitives.count, 216)
             }
         }
     }

@@ -16,6 +16,8 @@ struct BackgroundRenderer: View {
             for primitive in frame.primitives {
                 drawLight(primitive, occluders: occluders, in: &context)
             }
+            drawSurfaceMasks(surfaceShadows, blendMode: .multiply, in: &context)
+            drawSurfaceMasks(surfaceHighlights, blendMode: .plusLighter, in: &context)
             for primitive in frame.primitives {
                 drawForeground(primitive, in: &context)
             }
@@ -25,6 +27,24 @@ struct BackgroundRenderer: View {
     private var lightOccluders: [BackgroundSceneFrame.SoftMask] {
         frame.primitives.compactMap { primitive in
             guard case let .softMask(mask) = primitive, mask.role == .lightOccluder else {
+                return nil
+            }
+            return mask
+        }
+    }
+
+    private var surfaceShadows: [BackgroundSceneFrame.SoftMask] {
+        frame.primitives.compactMap { primitive in
+            guard case let .softMask(mask) = primitive, mask.role == .surfaceShadow else {
+                return nil
+            }
+            return mask
+        }
+    }
+
+    private var surfaceHighlights: [BackgroundSceneFrame.SoftMask] {
+        frame.primitives.compactMap { primitive in
+            guard case let .softMask(mask) = primitive, mask.role == .surfaceHighlight else {
                 return nil
             }
             return mask
@@ -74,13 +94,33 @@ struct BackgroundRenderer: View {
         in context: inout GraphicsContext
     ) {
         switch primitive {
-        case let .softMask(mask):
+        case let .softMask(mask) where mask.role == .lightOccluder:
             drawVisibleMask(mask, in: &context)
         case let .readabilityRegion(region):
             drawReadabilityRegion(region, in: &context)
         default:
             break
         }
+    }
+
+    private func drawSurfaceMasks(
+        _ masks: [BackgroundSceneFrame.SoftMask],
+        blendMode: GraphicsContext.BlendMode,
+        in context: inout GraphicsContext
+    ) {
+        guard !masks.isEmpty else { return }
+        let softness = masks.map(\.softness).reduce(0, +) / CGFloat(masks.count)
+        context.blendMode = blendMode
+        context.drawLayer { layer in
+            layer.addFilter(.blur(radius: softness))
+            for mask in masks {
+                layer.fill(
+                    maskPath(mask),
+                    with: .color(swiftUIColor(mask.color).opacity(mask.opacity))
+                )
+            }
+        }
+        context.blendMode = .normal
     }
 
     private func drawRadialLight(
@@ -255,6 +295,8 @@ struct BackgroundRenderer: View {
         switch mask.shape {
         case .ellipse:
             path = Path(ellipseIn: rect)
+        case .leaf:
+            path = leafPath(in: rect)
         case .capsule:
             path = Path(roundedRect: rect, cornerRadius: min(mask.size.width, mask.size.height) / 2)
         }
@@ -262,6 +304,23 @@ struct BackgroundRenderer: View {
             .rotated(by: mask.angle)
             .translatedBy(x: -mask.center.x, y: -mask.center.y)
         return path.applying(transform)
+    }
+
+    private func leafPath(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX, y: rect.midY),
+            control1: CGPoint(x: rect.minX + rect.width * 0.30, y: rect.minY),
+            control2: CGPoint(x: rect.minX + rect.width * 0.72, y: rect.minY + rect.height * 0.08)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.minX, y: rect.midY),
+            control1: CGPoint(x: rect.minX + rect.width * 0.70, y: rect.maxY),
+            control2: CGPoint(x: rect.minX + rect.width * 0.26, y: rect.maxY - rect.height * 0.06)
+        )
+        path.closeSubpath()
+        return path
     }
 
     private func projectedPath(

@@ -83,7 +83,10 @@ private struct RegisteredBackgroundScene: View {
 
     private func scene(at date: Date, size: CGSize) -> some View {
         let sample = clock.sample(at: date)
-        let configuration = BackgroundSceneConfiguration(intensity: sample.intensity)
+        let configuration = BackgroundSceneConfiguration(
+            intensity: sample.intensity,
+            sceneSeed: sample.sceneSeed
+        )
         let frame = definition.makeFrame(
             time: sample.time,
             size: size,

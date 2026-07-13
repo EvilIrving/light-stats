@@ -12,19 +12,39 @@ struct InkNightCloudOcclusionModel: BackgroundOcclusionModel {
     func makeOcclusions(
         time: TimeInterval,
         size: CGSize,
-        configuration _: BackgroundSceneConfiguration
+        configuration: BackgroundSceneConfiguration
     ) -> [BackgroundSceneFrame.Primitive] {
-        let coverageWave = 0.5 + sin(time * 2 * Double.pi / 31) * 0.27
-            + sin(time * 2 * Double.pi / 19 + 1.4) * 0.15
-            + sin(time * 2 * Double.pi / 43 + 3.6) * 0.08
+        let seed = CoherentNoise.derivedSeed(configuration.sceneSeed, channel: 0x43_4C_4F_55_44)
+        let coverageNoise = CoherentNoise.fractal(
+            at: time * 0.047,
+            seed: seed,
+            octaves: 4,
+            persistence: 0.55
+        )
+        let coverage = 0.50 + coverageNoise * 0.42
         var primitives: [BackgroundSceneFrame.Primitive] = []
         primitives.reserveCapacity(Self.clouds.count * Self.lobes.count)
 
-        for cloud in Self.clouds {
-            let progress = wrappedProgress(time * cloud.speed + cloud.phase)
-            let localWave = sin(time * cloud.edgeFrequency + cloud.phase * 2 * Double.pi)
+        for (index, cloud) in Self.clouds.enumerated() {
+            let cloudSeed = CoherentNoise.derivedSeed(seed, channel: UInt64(index) + 1)
+            let speedVariation = CoherentNoise.fractal(
+                at: time * 0.034 + cloud.phase,
+                seed: cloudSeed,
+                octaves: 3,
+                persistence: 0.48
+            )
+            let sessionOffset = CoherentNoise.value(at: Double(index) * 3.71, seed: cloudSeed) * 0.36
+            let progress = wrappedProgress(
+                time * cloud.speed + cloud.phase + sessionOffset + speedVariation * 0.11
+            )
+            let localWave = CoherentNoise.fractal(
+                at: time * cloud.edgeFrequency + cloud.phase,
+                seed: CoherentNoise.derivedSeed(cloudSeed, channel: 0x45_44_47_45),
+                octaves: 3,
+                persistence: 0.54
+            )
             let columnOpticalDepth = max(
-                cloud.density + coverageWave * 0.72 + localWave * 0.10,
+                cloud.density + coverage * 0.72 + localWave * 0.10,
                 0.18
             )
             let bandWidth = size.width * cloud.width
@@ -42,6 +62,7 @@ struct InkNightCloudOcclusionModel: BackgroundOcclusionModel {
                 bandHeight: bandHeight,
                 columnOpticalDepth: columnOpticalDepth,
                 localWave: localWave,
+                seed: cloudSeed,
                 to: &primitives
             )
         }
@@ -57,10 +78,16 @@ struct InkNightCloudOcclusionModel: BackgroundOcclusionModel {
         bandHeight: CGFloat,
         columnOpticalDepth: Double,
         localWave: Double,
+        seed: UInt64,
         to primitives: inout [BackgroundSceneFrame.Primitive]
     ) {
-        for lobe in Self.lobes {
-            let evolution = sin(time * 0.11 + cloud.phase * 2 * Double.pi + lobe.evolutionPhase)
+        for (index, lobe) in Self.lobes.enumerated() {
+            let evolution = CoherentNoise.fractal(
+                at: time * 0.11 + cloud.phase + lobe.evolutionPhase,
+                seed: CoherentNoise.derivedSeed(seed, channel: 0x4C_4F_42_45 + UInt64(index)),
+                octaves: 3,
+                persistence: 0.50
+            )
             let opticalDepth = columnOpticalDepth * lobe.opticalDepthScale
             let extinction = InkNightCloudPhysics.extinction(forOpticalDepth: opticalDepth)
             let center = CGPoint(

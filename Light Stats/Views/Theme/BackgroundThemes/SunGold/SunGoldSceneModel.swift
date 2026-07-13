@@ -12,9 +12,13 @@ struct SunGoldSceneModel: BackgroundSceneModel {
     func makeFrame(
         time: TimeInterval,
         size: CGSize,
-        configuration _: BackgroundSceneConfiguration
+        configuration: BackgroundSceneConfiguration
     ) -> BackgroundSceneFrame {
-        let solarState = SunGoldPhysics.solarState(time: time, size: size)
+        let solarState = SunGoldPhysics.solarState(
+            time: time,
+            size: size,
+            seed: configuration.sceneSeed
+        )
         let sun = BackgroundSceneFrame.RadialLight(
             center: solarState.center,
             radius: max(size.width, size.height) * 0.88,

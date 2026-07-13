@@ -7,8 +7,10 @@ import Foundation
 
 struct BackgroundSceneConfiguration: Equatable, Sendable {
     let intensity: Double
+    let sceneSeed: UInt64
 
-    init(intensity: Double) {
+    init(intensity: Double, sceneSeed: UInt64 = 0) {
+        self.sceneSeed = sceneSeed
         guard intensity.isFinite else {
             self.intensity = 0
             return

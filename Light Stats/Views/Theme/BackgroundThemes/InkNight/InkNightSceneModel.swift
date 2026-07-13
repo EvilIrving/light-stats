@@ -12,9 +12,13 @@ struct InkNightSceneModel: BackgroundSceneModel {
     func makeFrame(
         time: TimeInterval,
         size: CGSize,
-        configuration _: BackgroundSceneConfiguration
+        configuration: BackgroundSceneConfiguration
     ) -> BackgroundSceneFrame {
-        let lunarState = InkNightPhysics.lunarState(time: time, size: size)
+        let lunarState = InkNightPhysics.lunarState(
+            time: time,
+            size: size,
+            seed: configuration.sceneSeed
+        )
         let moonlight = BackgroundSceneFrame.ProjectedLight(
             source: lunarState.source,
             target: lunarState.target,

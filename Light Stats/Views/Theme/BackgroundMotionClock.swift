@@ -13,6 +13,7 @@ final class BackgroundMotionClock: ObservableObject {
         let time: TimeInterval
         let isPaused: Bool
         let intensity: Double
+        let sceneSeed: UInt64
     }
 
     @Published private(set) var normalizedIntensity: Double
@@ -20,14 +21,20 @@ final class BackgroundMotionClock: ObservableObject {
     private var accumulatedTime: TimeInterval = 0
     private var lastDate: Date
     private var frozenIntensity: Double
+    private let sceneSeed: UInt64
 
     var isPaused: Bool { normalizedIntensity == 0 }
 
-    init(intensity: Double, startDate: Date = Date()) {
+    init(
+        intensity: Double,
+        startDate: Date = Date(),
+        sceneSeed: UInt64 = UInt64.random(in: UInt64.min ... UInt64.max)
+    ) {
         let normalizedIntensity = Self.normalize(intensity)
         self.normalizedIntensity = normalizedIntensity
         self.frozenIntensity = normalizedIntensity
         self.lastDate = startDate
+        self.sceneSeed = sceneSeed
     }
 
     func sample(at date: Date) -> Sample {
@@ -35,7 +42,8 @@ final class BackgroundMotionClock: ObservableObject {
         return Sample(
             time: accumulatedTime,
             isPaused: isPaused,
-            intensity: isPaused ? frozenIntensity : normalizedIntensity
+            intensity: isPaused ? frozenIntensity : normalizedIntensity,
+            sceneSeed: sceneSeed
         )
     }
 

@@ -25,24 +25,7 @@ struct GeneralDetail: View {
         SettingsDetailScaffold("settings.general".localized) {
             // Theme first: picker, monochrome UI, then mesh preview / grain / dynamics.
             SettingsSection("settings.theme".localized) {
-                VStack(alignment: .leading, spacing: 10) {
-                    SettingsGroup {
-                        HStack {
-                            Spacer(minLength: 0)
-                            ThemePickerView(selection: $settings.appTheme)
-                        }
-                        .padding(.horizontal, 12)
-                        .frame(minHeight: 40)
-                        rowDivider()
-                        SettingsRow(
-                            "settings.flatColors.section".localized,
-                            subtitle: "settings.flatColors.hint".localized
-                        ) {
-                            SettingsToggle(isOn: $settings.useFlatColors)
-                        }
-                    }
-                    themeAppearanceControls
-                }
+                themeSectionContent
             }
             SettingsSection("settings.general.app".localized) {
                 SettingsGroup {
@@ -93,37 +76,65 @@ struct GeneralDetail: View {
     }
 
     func meshAppearanceControls(
-        tokens: ThemeTokens,
         grainEnabled: Binding<Bool>,
         dynamics: Binding<Double>,
         presets: ThemeAppearancePresetConfiguration
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            meshLivePreview(tokens: tokens)
-            SettingsGroup {
-                SettingsRow(
-                    "settings.theme.film.grain".localized,
-                    subtitle: "settings.theme.film.grain.hint".localized
+        SettingsGroup {
+            SettingsRow(
+                "settings.theme.film.grain".localized,
+                subtitle: "settings.theme.film.grain.hint".localized
+            ) {
+                SettingsToggle(isOn: grainEnabled)
+            }
+            rowDivider()
+            SettingsRow("settings.theme.film.lightFlow".localized) {
+                SettingsSegmentedPicker(
+                    selection: FilmAppearanceLabel.discreteBinding(
+                        dynamics,
+                        options: presets.dynamicsValues
+                    ),
+                    segmentMinWidth: 44
                 ) {
-                    SettingsToggle(isOn: grainEnabled)
-                }
-                rowDivider()
-                SettingsRow("settings.theme.film.lightFlow".localized) {
-                    SettingsSegmentedPicker(
-                        selection: FilmAppearanceLabel.discreteBinding(
-                            dynamics,
-                            options: presets.dynamicsValues
-                        ),
-                        segmentMinWidth: 44
-                    ) {
-                        ForEach(presets.dynamicsValues, id: \.self) { option in
-                            SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
-                        }
+                    ForEach(presets.dynamicsValues, id: \.self) { option in
+                        SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
                     }
                 }
             }
         }
     }
+
+    var themeConfigurationControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsGroup {
+                HStack {
+                    Spacer(minLength: 0)
+                    ThemePickerView(selection: $settings.appTheme)
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 40)
+                rowDivider()
+                SettingsRow(
+                    "settings.flatColors.section".localized,
+                    subtitle: "settings.flatColors.hint".localized
+                ) {
+                    SettingsToggle(isOn: $settings.useFlatColors)
+                }
+            }
+            themeAppearanceControls
+        }
+    }
+
+    func meshThemeLayout(tokens: ThemeTokens) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            themeConfigurationControls
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .layoutPriority(1)
+            meshLivePreview(tokens: tokens)
+                .frame(width: 260, alignment: .top)
+        }
+    }
+
     private func meshLivePreview(tokens: ThemeTokens) -> some View {
         let sourceSize = PopoverContentView.canvasSize
         let previewHeight: CGFloat = 320

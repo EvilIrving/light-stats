@@ -115,11 +115,13 @@ struct BackgroundSceneFrame: Equatable, Sendable {
 
     enum SoftMaskShape: Equatable, Sendable {
         case ellipse
+        case leaf
         case capsule
     }
 
     enum SoftMaskRole: Equatable, Sendable {
         case surfaceShadow
+        case surfaceHighlight
         case lightOccluder
     }
 
