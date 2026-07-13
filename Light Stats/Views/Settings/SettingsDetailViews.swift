@@ -137,19 +137,21 @@ struct GeneralDetail: View {
 
     private func meshLivePreview(tokens: ThemeTokens) -> some View {
         let sourceSize = PopoverContentView.canvasSize
-        let previewHeight: CGFloat = 320
+        let previewScale: CGFloat = 1.2
+        let previewHeight: CGFloat = 320 * previewScale
         let previewWidth = previewHeight * sourceSize.width / sourceSize.height
+        let previewCornerRadius: CGFloat = 10 * previewScale
         return ThemeBackgroundView(
             tokens: tokens,
             appearance: settings.themeAppearance(for: tokens.theme),
-            cornerRadius: 10
+            cornerRadius: previewCornerRadius
         )
             .frame(width: previewWidth, height: previewHeight)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous))
             .allowsHitTesting(false)
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
             .frame(maxWidth: .infinity, alignment: .center)
