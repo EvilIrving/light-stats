@@ -3,7 +3,7 @@
 //  Light Stats
 //
 //  Mesh stack (bottom → top):
-//    1. Light field (film S-curve vs noir vertical shaft) — bold enough to read
+//    1. Light field (moving radial sources + sinusoidal flow bands)
 //    2. Soft radial reading veil (center only) — text contrast without burying art
 //    3. Shared film grain — optional; always on top so grit stays crisp
 //
@@ -97,18 +97,8 @@ private struct FluidMeshBackground: View {
                     // 1) Light art — flattened for blur cost.
                     Group {
                         switch tokens.theme {
-                        case .film:
-                            FilmLightField(
-                                tokens: tokens,
-                                width: width,
-                                height: height,
-                                scale: scale,
-                                phase: phase,
-                                shiftX: motion.x,
-                                shiftY: motion.y
-                            )
-                        case .noir:
-                            NoirLightField(
+                        case .film, .noir:
+                            FlowLightField(
                                 tokens: tokens,
                                 width: width,
                                 height: height,
@@ -217,157 +207,17 @@ private struct FluidMeshBackground: View {
     }
 }
 
-// MARK: - Film: warm diagonal S-curve (bold)
+// MARK: - Flow light field
 
-private struct FilmLightField: View {
-    let tokens: ThemeTokens
-    let width: CGFloat
-    let height: CGFloat
-    let scale: CGFloat
-    let phase: CGFloat
-    /// Static composition bias in points, constrained by the mesh shell.
-    var shiftX: CGFloat = 0
-    var shiftY: CGFloat = 0
-
-    var body: some View {
-        let driftX = cos(phase) * width * 0.12
-        let driftY = sin(phase * 0.75) * height * 0.08
-        let driftX2 = cos(phase * 0.95 + 1.1) * width * 0.09
-        let driftY2 = sin(phase * 1.05 + 0.5) * height * 0.075
-        let phaseX = cos(phase) * 0.08
-        let ribbonTwist = Double(sin(phase)) * 9
-        let ribbonTwist2 = Double(cos(phase * 0.85)) * 7
-        // Slight composition tilt from horizontal position.
-        let compositionTilt = Double(shiftX / max(width, 1)) * 12
-
-        return ZStack {
-            tokens.meshBase
-
-            // Keep the full-frame wash fixed so position extremes never expose an edge.
-            LinearGradient(
-                colors: [
-                    tokens.meshBlobHighlight.opacity(0.75),
-                    tokens.meshBlobSecondary.opacity(0.60),
-                    tokens.meshBlobPrimary.opacity(0.70),
-                    tokens.meshBase
-                ],
-                startPoint: UnitPoint(x: 0.0 + phaseX, y: 0.0),
-                endPoint: UnitPoint(x: 1.0, y: 1.0)
-            )
-
-            // Position controls pan only the oversized light masses above the wash.
-            ZStack {
-                // Coral mass (lower-right lobe of the S).
-                Ellipse()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                tokens.meshBlobSecondary.opacity(0.98),
-                                tokens.meshBlobSecondary.opacity(0.60),
-                                tokens.meshBlobPrimary.opacity(0.30),
-                                Color.clear
-                            ],
-                            center: UnitPoint(x: 0.65, y: 0.6),
-                            startRadius: 0,
-                            endRadius: scale * 0.9
-                        )
-                    )
-                    .frame(width: width * 1.7, height: height * 1.25)
-                    .blur(radius: scale * 0.18)
-                    .offset(x: width * 0.22 + driftX, y: height * 0.2 + driftY)
-                    .blendMode(.plusLighter)
-
-                // Burgundy counter-lobe.
-                Ellipse()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                tokens.meshBlobPrimary.opacity(0.60),
-                                tokens.meshBlobPrimary.opacity(0.25),
-                                Color.clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: scale * 0.75
-                        )
-                    )
-                    .frame(width: width * 1.2, height: height * 0.9)
-                    .blur(radius: scale * 0.18)
-                    .offset(x: -width * 0.22 + driftX * 0.45, y: -height * 0.1 - driftY * 0.35)
-                    .blendMode(.normal)
-                    .opacity(0.6)
-
-                // Primary S-ribbon.
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.clear,
-                                tokens.meshBlobHighlight.opacity(0.90),
-                                tokens.meshBlobSecondary.opacity(0.80),
-                                tokens.meshBlobHighlight.opacity(0.50),
-                                Color.clear
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: width * 1.85, height: height * 0.40)
-                    .blur(radius: scale * 0.08)
-                    .rotationEffect(.degrees(-26 + ribbonTwist + compositionTilt))
-                    .offset(x: driftX * 0.8, y: height * 0.04 + driftY * 0.7)
-                    .blendMode(.screen)
-
-                // Secondary ribbon.
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.clear,
-                                tokens.meshBlobSecondary.opacity(0.35),
-                                tokens.meshBlobHighlight.opacity(0.20),
-                                Color.clear
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: width * 1.35, height: height * 0.18)
-                    .blur(radius: scale * 0.12)
-                    .rotationEffect(.degrees(-16 + ribbonTwist2 + compositionTilt * 0.5))
-                    .offset(x: -width * 0.06 + driftX2, y: -height * 0.14 + driftY2)
-                    .blendMode(.screen)
-                    .opacity(0.5)
-
-                // Cream bloom.
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                tokens.meshBlobHighlight.opacity(0.40),
-                                tokens.meshBlobHighlight.opacity(0.10),
-                                Color.clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: scale * 0.55
-                        )
-                    )
-                    .frame(width: width * 0.9, height: height * 0.7)
-                    .blur(radius: scale * 0.14)
-                    .offset(x: -width * 0.32 + driftX2 * 0.4, y: -height * 0.32 + driftY2 * 0.3)
-                    .blendMode(.plusLighter)
-                    .opacity(0.55)
-            }
-            // Pan the light masses without moving the full-frame coverage layer.
-            .offset(x: shiftX, y: shiftY)
-        }
+private struct FlowLightField: View {
+    private struct FieldPoint {
+        let x: CGFloat
+        let y: CGFloat
+        let radius: CGFloat
+        let strength: Double
+        let color: Color
     }
-}
 
-// MARK: - Noir: cool vertical shaft (bold, different geometry)
-
-private struct NoirLightField: View {
     let tokens: ThemeTokens
     let width: CGFloat
     let height: CGFloat
@@ -377,130 +227,204 @@ private struct NoirLightField: View {
     let shiftY: CGFloat
 
     var body: some View {
-        let driftX = sin(phase * 0.9) * width * 0.04
-        let driftY = cos(phase) * height * 0.065
-        let driftX2 = cos(phase * 1.1 + 0.5) * width * 0.05
-        let driftY2 = sin(phase * 0.7 + 1.0) * height * 0.05
+        Canvas { context, size in
+            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(tokens.meshBase))
+            drawWash(in: &context, size: size)
+            drawBlobs(in: &context, size: size)
+            drawFlowBands(in: &context, size: size)
+            drawEdgeShade(in: &context, size: size)
+        }
+        .background(tokens.meshBase)
+    }
 
-        return ZStack {
-            tokens.meshBase
+    private var isNoir: Bool {
+        tokens.theme == .noir
+    }
 
-            LinearGradient(
-                colors: [
-                    tokens.meshBlobHighlight.opacity(0.45),
-                    tokens.meshBlobSecondary.opacity(0.35),
-                    tokens.meshBlobPrimary.opacity(0.5),
-                    tokens.meshBase
-                ],
-                startPoint: UnitPoint(x: 0.5 + sin(phase) * 0.04, y: 0.0),
-                endPoint: UnitPoint(x: 0.5, y: 1.0)
+    private var fieldPoints: [FieldPoint] {
+        let baseShiftX = shiftX / max(width, 1)
+        let baseShiftY = shiftY / max(height, 1)
+        if isNoir {
+            return [
+                FieldPoint(
+                    x: 0.57 + baseShiftX + sin(phase * 0.55 + 0.4) * 0.05,
+                    y: 0.24 + baseShiftY + cos(phase * 0.47) * 0.06,
+                    radius: 0.78,
+                    strength: 0.86,
+                    color: tokens.meshBlobHighlight
+                ),
+                FieldPoint(
+                    x: 0.32 + baseShiftX + cos(phase * 0.63 + 1.1) * 0.07,
+                    y: 0.62 + baseShiftY + sin(phase * 0.51 + 0.8) * 0.06,
+                    radius: 0.66,
+                    strength: 0.44,
+                    color: tokens.meshBlobSecondary
+                ),
+                FieldPoint(
+                    x: 0.62 + baseShiftX + sin(phase * 0.39 + 2.2) * 0.04,
+                    y: -0.06 + baseShiftY + cos(phase * 0.58 + 0.5) * 0.04,
+                    radius: 0.48,
+                    strength: 0.34,
+                    color: tokens.meshBlobHighlight
+                )
+            ]
+        }
+        return [
+            FieldPoint(
+                x: 0.68 + baseShiftX + cos(phase * 0.52) * 0.09,
+                y: 0.62 + baseShiftY + sin(phase * 0.43 + 0.6) * 0.08,
+                radius: 0.74,
+                strength: 0.92,
+                color: tokens.meshBlobSecondary
+            ),
+            FieldPoint(
+                x: 0.28 + baseShiftX + sin(phase * 0.48 + 1.4) * 0.08,
+                y: 0.20 + baseShiftY + cos(phase * 0.38 + 0.2) * 0.06,
+                radius: 0.62,
+                strength: 0.54,
+                color: tokens.meshBlobHighlight
+            ),
+            FieldPoint(
+                x: 0.20 + baseShiftX + cos(phase * 0.57 + 2.0) * 0.05,
+                y: 0.76 + baseShiftY + sin(phase * 0.49 + 1.1) * 0.05,
+                radius: 0.56,
+                strength: 0.42,
+                color: tokens.meshBlobPrimary
             )
+        ]
+    }
 
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobHighlight.opacity(0.85),
-                            tokens.meshBlobSecondary.opacity(0.55),
-                            tokens.meshBlobPrimary.opacity(0.2),
-                            Color.clear
-                        ],
-                        center: UnitPoint(x: 0.5, y: 0.3),
-                        startRadius: 0,
-                        endRadius: scale * 0.95
-                    )
-                )
-                .frame(width: width * 1.05, height: height * 1.7)
-                .blur(radius: scale * 0.16)
-                .offset(x: width * 0.14 + driftX + shiftX, y: -height * 0.1 + driftY + shiftY)
-                .blendMode(.screen)
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobSecondary.opacity(0.32),
-                            tokens.meshBlobPrimary.opacity(0.18),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: scale * 0.7
-                    )
-                )
-                .frame(width: width * 1.05, height: height * 0.8)
-                .blur(radius: scale * 0.2)
-                .offset(x: -width * 0.26 + driftX2 + shiftX, y: height * 0.24 + driftY2 + shiftY)
-                .blendMode(.plusLighter)
-                .opacity(0.4)
-
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            tokens.meshBlobHighlight.opacity(0.8),
-                            tokens.meshBlobSecondary.opacity(0.55),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: width * 0.48, height: height * 1.65)
-                .blur(radius: scale * 0.1)
-                .rotationEffect(.degrees(14 + Double(sin(phase)) * 5))
-                .offset(x: width * 0.1 + driftX * 0.5 + shiftX, y: driftY * 0.35 + shiftY)
-                .blendMode(.screen)
-
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            tokens.meshBlobSecondary.opacity(0.28),
-                            tokens.meshBlobHighlight.opacity(0.14),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: width * 0.24, height: height * 1.2)
-                .blur(radius: scale * 0.14)
-                .rotationEffect(.degrees(-20 + Double(cos(phase * 0.9)) * 4))
-                .offset(x: -width * 0.18 + driftX2 * 0.6 + shiftX, y: height * 0.06 + driftY2 * 0.3 + shiftY)
-                .blendMode(.screen)
-                .opacity(0.35)
-
-            Ellipse()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            tokens.meshBlobHighlight.opacity(0.28),
-                            Color.clear
-                        ],
-                        center: UnitPoint(x: 0.5, y: 0.0),
-                        startRadius: 0,
-                        endRadius: scale * 0.6
-                    )
-                )
-                .frame(width: width * 1.15, height: height * 0.5)
-                .blur(radius: scale * 0.14)
-                .offset(x: shiftX, y: -height * 0.3 + driftY * 0.2 + shiftY)
-                .blendMode(.plusLighter)
-                .opacity(0.45)
-
-            LinearGradient(
-                colors: [
-                    Color.clear,
-                    tokens.meshBase.opacity(0.35),
-                    tokens.meshBase.opacity(0.75)
-                ],
-                startPoint: UnitPoint(x: 0.5, y: 0.35),
-                endPoint: .bottom
+    private func drawWash(in context: inout GraphicsContext, size: CGSize) {
+        let startX = isNoir ? 0.5 + sin(phase) * 0.04 : 0.06 + cos(phase) * 0.06
+        let endX = isNoir ? 0.5 : 0.96
+        let endY = isNoir ? 1.0 : 0.94
+        let colors = isNoir
+            ? [
+                tokens.meshBlobHighlight.opacity(0.34),
+                tokens.meshBlobSecondary.opacity(0.28),
+                tokens.meshBlobPrimary.opacity(0.42),
+                tokens.meshBase
+            ]
+            : [
+                tokens.meshBlobHighlight.opacity(0.58),
+                tokens.meshBlobSecondary.opacity(0.50),
+                tokens.meshBlobPrimary.opacity(0.56),
+                tokens.meshBase
+            ]
+        context.fill(
+            Path(CGRect(origin: .zero, size: size)),
+            with: .linearGradient(
+                Gradient(colors: colors),
+                startPoint: CGPoint(x: size.width * startX, y: 0),
+                endPoint: CGPoint(x: size.width * endX, y: size.height * endY)
             )
-            .blendMode(.multiply)
+        )
+    }
+
+    private func drawBlobs(in context: inout GraphicsContext, size: CGSize) {
+        for point in fieldPoints {
+            let center = CGPoint(x: size.width * point.x, y: size.height * point.y)
+            let radius = scale * point.radius
+            let bounds = CGRect(
+                x: center.x - radius,
+                y: center.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            )
+            context.drawLayer { layer in
+                layer.blendMode = isNoir ? .screen : .plusLighter
+                layer.addFilter(.blur(radius: scale * (isNoir ? 0.11 : 0.13)))
+                layer.fill(
+                    Path(bounds),
+                    with: .radialGradient(
+                        Gradient(colors: [
+                            point.color.opacity(point.strength),
+                            point.color.opacity(point.strength * 0.45),
+                            tokens.meshBase.opacity(point.strength * 0.10),
+                            Color.clear
+                        ]),
+                        center: center,
+                        startRadius: 0,
+                        endRadius: radius
+                    )
+                )
+            }
+        }
+    }
+
+    private func drawFlowBands(in context: inout GraphicsContext, size: CGSize) {
+        let bandCount = isNoir ? 3 : 4
+        let angle = isNoir ? CGFloat.pi * 0.55 : -CGFloat.pi * 0.15
+        let normal = CGVector(dx: -sin(angle), dy: cos(angle))
+        let tangent = CGVector(dx: cos(angle), dy: sin(angle))
+        let origin = CGPoint(
+            x: size.width * (isNoir ? 0.55 : 0.48) + shiftX * 0.35,
+            y: size.height * (isNoir ? 0.42 : 0.48) + shiftY * 0.35
+        )
+
+        for index in 0..<bandCount {
+            let wave = sin(phase * (0.46 + CGFloat(index) * 0.08) + CGFloat(index) * 1.7)
+            let distance = (CGFloat(index) - CGFloat(bandCount - 1) / 2) * scale * (isNoir ? 0.18 : 0.14)
+            let curveOffset = wave * scale * (isNoir ? 0.09 : 0.12)
+            let center = CGPoint(
+                x: origin.x + normal.dx * (distance + curveOffset),
+                y: origin.y + normal.dy * (distance + curveOffset)
+            )
+            let length = scale * (isNoir ? 2.2 : 2.5)
+            let thickness = scale * (isNoir ? 0.23 : 0.18) * (1 - CGFloat(index) * 0.12)
+            let rect = CGRect(
+                x: center.x - length / 2,
+                y: center.y - thickness / 2,
+                width: length,
+                height: thickness
+            )
+            var band = Path(roundedRect: rect, cornerRadius: thickness / 2)
+            let transform = CGAffineTransform(translationX: center.x, y: center.y)
+                .rotated(by: angle + wave * 0.08)
+                .translatedBy(x: -center.x, y: -center.y)
+            band = band.applying(transform)
+            context.drawLayer { layer in
+                layer.blendMode = .screen
+                layer.addFilter(.blur(radius: scale * (isNoir ? 0.07 : 0.06)))
+                layer.fill(
+                    band,
+                    with: .linearGradient(
+                        Gradient(colors: [
+                            Color.clear,
+                            tokens.meshBlobHighlight.opacity(isNoir ? 0.48 : 0.58),
+                            tokens.meshBlobSecondary.opacity(isNoir ? 0.30 : 0.50),
+                            Color.clear
+                        ]),
+                        startPoint: CGPoint(
+                            x: center.x - tangent.dx * length / 2,
+                            y: center.y - tangent.dy * length / 2
+                        ),
+                        endPoint: CGPoint(
+                            x: center.x + tangent.dx * length / 2,
+                            y: center.y + tangent.dy * length / 2
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    private func drawEdgeShade(in context: inout GraphicsContext, size: CGSize) {
+        guard isNoir else { return }
+        context.drawLayer { layer in
+            layer.blendMode = .multiply
+            layer.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .linearGradient(
+                    Gradient(colors: [
+                        Color.clear,
+                        tokens.meshBase.opacity(0.35),
+                        tokens.meshBase.opacity(0.78)
+                    ]),
+                    startPoint: CGPoint(x: size.width * 0.5, y: size.height * 0.32),
+                    endPoint: CGPoint(x: size.width * 0.5, y: size.height)
+                )
+            )
         }
     }
 }
