@@ -7,6 +7,8 @@
 
 import SwiftUI
 struct PopoverContentView: View {
+    static let canvasSize = CGSize(width: 360, height: 780)
+
     @State private var selectedTab: Int = 0
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
@@ -97,7 +99,7 @@ struct PopoverContentView: View {
             )
                 .ignoresSafeArea()
         )
-        .frame(width: 360, height: 780)
+        .frame(width: Self.canvasSize.width, height: Self.canvasSize.height)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .cornerRadius(12)
         // Language + theme: mesh↔mesh (film/noir) must rebuild chrome, not only language.

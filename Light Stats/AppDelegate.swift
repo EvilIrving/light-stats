@@ -322,8 +322,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - Panel Setup
 
     private func setupPanel() {
+        let canvasSize = PopoverContentView.canvasSize
         let panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 780),
+            contentRect: NSRect(origin: .zero, size: canvasSize),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false

@@ -125,24 +125,23 @@ struct GeneralDetail: View {
         }
     }
     private func meshLivePreview(tokens: ThemeTokens) -> some View {
-        ThemeBackgroundView(
+        let sourceSize = PopoverContentView.canvasSize
+        let previewHeight: CGFloat = 320
+        let previewWidth = previewHeight * sourceSize.width / sourceSize.height
+        return ThemeBackgroundView(
             tokens: tokens,
             appearance: settings.themeAppearance(for: tokens.theme),
             cornerRadius: 10
         )
-            .frame(maxWidth: .infinity)
-            .frame(height: 120)
+            .frame(width: previewWidth, height: previewHeight)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            // Decorative only. Mesh light fields are oversized + offset upward; without this
-            // their hit targets steal taps from the theme tiles above (esp. film when noir
-            // is lively). Visual clip does not clip hit-testing.
             .allowsHitTesting(false)
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            // film ↔ noir are both mesh previews; pin identity so the raster cannot stick.
+            .frame(maxWidth: .infinity, alignment: .center)
             .id(tokens.theme)
             .accessibilityLabel(tokens.theme.titleKey.localized)
     }

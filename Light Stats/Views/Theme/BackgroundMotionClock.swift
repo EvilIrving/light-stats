@@ -60,7 +60,7 @@ final class BackgroundMotionClock: ObservableObject {
     private var timeScale: Double {
         guard normalizedIntensity > 0 else { return 0 }
         let smoothIntensity = normalizedIntensity * normalizedIntensity * (3 - 2 * normalizedIntensity)
-        return 0.18 + smoothIntensity * 0.82
+        return 0.08 + smoothIntensity * 0.92
     }
 
     private static func normalize(_ intensity: Double) -> Double {
