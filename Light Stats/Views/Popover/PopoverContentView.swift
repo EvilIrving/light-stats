@@ -89,8 +89,6 @@ struct PopoverContentView: View {
         .ignoresSafeArea(.container, edges: .top)
         // Mesh art + grain live entirely inside ThemeBackgroundView (soft center
         // veil only). No full-frame scrim — that was burying light shapes + grit.
-        // ThemeBackgroundView’s mesh path keeps a solid canvas under decorative art
-        // so wheel events cannot fall through the non-opaque panel (film/noir).
         .background(
             ThemeBackgroundView(
                 tokens: theme,

@@ -45,14 +45,10 @@ struct ThemeBackgroundView: View {
                 )
             } else if tokens.usesMesh {
                 // Mesh art disables hit testing (oversized light fields would otherwise
-                // leak targets past visual clip). Pair it with a solid canvas so the
-                // non-opaque NSPanel still owns the full bounds — otherwise scroll
-                // falls through to the app/desktop behind (macOS 26 especially).
-                ZStack {
-                    tokens.canvas
-                    FluidMeshBackground(tokens: tokens, appearance: appearance)
-                        .id(tokens.theme)
-                }
+                // leak targets past visual clip). FluidMeshBackground flattens its
+                // canvas and art into one opaque surface for the non-opaque panel.
+                FluidMeshBackground(tokens: tokens, appearance: appearance)
+                    .id(tokens.theme)
             } else {
                 tokens.canvas
             }
@@ -96,9 +92,9 @@ private struct FluidMeshBackground: View {
                 )
 
                 ZStack {
+                    tokens.canvas
+
                     // 1) Light art — flattened for blur cost.
-                    // Identity must include theme: opaque drawingGroup caches the
-                    // raster and will not swap FilmLightField ↔ NoirLightField on its own.
                     Group {
                         switch tokens.theme {
                         case .film:
@@ -125,7 +121,6 @@ private struct FluidMeshBackground: View {
                             tokens.meshBase
                         }
                     }
-                    .drawingGroup(opaque: true, colorMode: .extendedLinear)
                     .id(tokens.theme)
 
                     // 2) Soft center darken — tracks light bias slightly so shift stays visible.
@@ -141,6 +136,9 @@ private struct FluidMeshBackground: View {
                     GrainTextureView(opacity: grainOpacity, warmth: grainWarmth)
                 }
                 .frame(width: width, height: height)
+                // One opaque pass keeps the panel's full alpha without the CPU and
+                // memory cost of nesting a second full-frame drawing group.
+                .drawingGroup(opaque: true, colorMode: .extendedLinear)
             }
         }
         // Light ellipses/capsules are larger than the view and drift with negative Y.
