@@ -16,11 +16,9 @@ import SwiftUI
 struct UpdateWindowView: View {
     @EnvironmentObject var manager: UpdateManager
     @ObservedObject private var localization = LocalizationManager.shared
-    @ObservedObject private var settings = SettingsManager.shared
 
     private let contentWidth: CGFloat = 360
     private var appIcon: NSImage? { NSApp.applicationIconImage }
-    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     /// Cap scrollable body so the whole window stays within the visible screen.
     /// Leaves room for title bar, icon, title, action row, and padding.
@@ -51,19 +49,9 @@ struct UpdateWindowView: View {
             .multilineTextAlignment(.center)
             .frame(width: contentWidth)
             .padding(24)
-            .foregroundStyle(theme.inkPrimary)
-            .background(
-                ThemeBackgroundView(
-                    tokens: theme,
-                    appearance: settings.themeAppearance(for: settings.appTheme),
-                    cornerRadius: 0,
-                    configuresWindow: true,
-                    fallbackMaterial: .underWindowBackground
-                )
-                .ignoresSafeArea()
-            )
-            .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
-            .appThemed(settings.appTheme)
+            .foregroundStyle(.primary)
+            .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+            .id(localization.currentLanguage.rawValue)
     }
 
     @ViewBuilder
@@ -98,7 +86,7 @@ struct UpdateWindowView: View {
         } else {
             Image(systemName: "app.fill")
                 .font(.system(size: size))
-                .foregroundStyle(theme.inkSecondary)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -109,7 +97,7 @@ struct UpdateWindowView: View {
             if spinner { ProgressView().scaleEffect(0.8) }
             Text(text)
                 .font(.system(size: 13))
-                .foregroundStyle(theme.inkSecondary)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -119,7 +107,7 @@ struct UpdateWindowView: View {
 
             Text("update.available.title".localized(release.tagName))
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.inkPrimary)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if !release.releaseNotes.isEmpty {
@@ -128,7 +116,7 @@ struct UpdateWindowView: View {
                 ScrollView(.vertical, showsIndicators: true) {
                     Text(release.releaseNotes)
                         .font(.system(size: 11))
-                        .foregroundStyle(theme.inkSecondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
@@ -169,13 +157,13 @@ struct UpdateWindowView: View {
         VStack(spacing: 12) {
             Text("update.progress.downloading".localized)
                 .font(.system(size: 13))
-                .foregroundStyle(theme.inkSecondary)
+                .foregroundStyle(.secondary)
             ProgressView(value: fraction)
                 .progressViewStyle(.linear)
                 .frame(width: 220)
             Text("\(Int(fraction * 100))%")
                 .font(.system(size: 24, weight: .medium, design: .rounded))
-                .foregroundStyle(theme.inkPrimary)
+                .foregroundStyle(.primary)
                 .monospacedDigit()
         }
     }
@@ -184,14 +172,14 @@ struct UpdateWindowView: View {
         VStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 40))
-                .foregroundStyle(theme.signalAccent)
+                .foregroundStyle(.orange)
             Text("update.error.title".localized)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.inkPrimary)
+                .foregroundStyle(.primary)
             ScrollView(.vertical, showsIndicators: true) {
                 Text(message)
                     .font(.system(size: 11))
-                    .foregroundStyle(theme.inkSecondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .textSelection(.enabled)

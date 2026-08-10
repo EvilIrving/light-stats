@@ -159,12 +159,11 @@ final class UpdateManager: ObservableObject {
         }
         let w = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         w.title = "update.window.title".localized
-        w.titlebarAppearsTransparent = true
         w.isReleasedWhenClosed = false
         // 固定宽度、高度随内容动态:.preferredContentSize 让窗口跟随 SwiftUI 内容
         // 尺寸变化(发现新版 → 下载 → 安装)自动收放。超长 release notes 在

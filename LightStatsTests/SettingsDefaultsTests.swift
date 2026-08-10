@@ -97,10 +97,15 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().diagnosticLogLevel, .full)
     }
 
-    func testAppThemeDefaultsToGlass() {
-        // Cold start is Default (raw `.glass`); picker order Default → Bento → Sun Gold → Ink Night.
-        XCTAssertEqual(freshSettings().appTheme, .glass)
+    func testAppThemeDefaultsToNoir() {
+        // Cold start is Ink Night (raw `.noir`); picker order remains unchanged.
+        XCTAssertEqual(freshSettings().appTheme, .noir)
         XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir])
+    }
+
+    func testStoredGlassThemeRemainsGlass() {
+        cleanDefaults.set("glass", forKey: "settings.appTheme")
+        XCTAssertEqual(freshSettings().appTheme, .glass)
     }
 
     func testLegacyAuroraThemeKeyMigratesToFilm() {

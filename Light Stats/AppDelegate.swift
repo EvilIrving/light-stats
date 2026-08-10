@@ -492,11 +492,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 380),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isReleasedWhenClosed = false
         window.center()

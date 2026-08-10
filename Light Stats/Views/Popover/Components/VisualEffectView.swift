@@ -4,18 +4,33 @@ import AppKit
 struct VisualEffectView: NSViewRepresentable {
     let material: NSVisualEffectView.Material
     let blendingMode: NSVisualEffectView.BlendingMode
+    var configuresWindow: Bool = false
 
-    func makeNSView(context: Context) -> NSVisualEffectView {
+    func makeNSView(context: Context) -> NSView {
         let view = NSVisualEffectView()
         view.material = material
         view.blendingMode = blendingMode
-        view.state = .active
-        return view
+        view.state = .followsWindowActiveState
+        guard configuresWindow else { return view }
+
+        let host = TransparentWindowHostView()
+        view.frame = host.bounds
+        view.autoresizingMask = [.width, .height]
+        host.addSubview(view)
+        return host
     }
 
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = material
-        nsView.blendingMode = blendingMode
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let view = effectView(in: nsView) else { return }
+        view.material = material
+        view.blendingMode = blendingMode
+    }
+
+    private func effectView(in view: NSView) -> NSVisualEffectView? {
+        if let effectView = view as? NSVisualEffectView {
+            return effectView
+        }
+        return view.subviews.first as? NSVisualEffectView
     }
 }
 
@@ -34,7 +49,7 @@ struct GlassBackgroundView: NSViewRepresentable {
         guard configuresWindow else { return effect }
         // 包一层我们可控的容器，在它进入窗口层级后再配置宿主窗口透明——
         // 此时 `window` 已就绪，比在 makeNSView 里直接取 `window`（多半为 nil）可靠。
-        let host = GlassHostView()
+        let host = TransparentWindowHostView()
         effect.frame = host.bounds
         effect.autoresizingMask = [.width, .height]
         host.addSubview(effect)
@@ -42,7 +57,7 @@ struct GlassBackgroundView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        let effect = (nsView as? GlassHostView)?.subviews.first ?? nsView
+        let effect = (nsView as? TransparentWindowHostView)?.subviews.first ?? nsView
         #if compiler(>=6.2)
         if #available(macOS 26.0, *), let glass = effect as? NSGlassEffectView {
             glass.cornerRadius = cornerRadius
@@ -68,8 +83,8 @@ struct GlassBackgroundView: NSViewRepresentable {
     }
 }
 
-/// 玻璃背景容器：进入窗口层级后把宿主窗口设为非透明，使 behind-window 玻璃透出桌面。
-private final class GlassHostView: NSView {
+/// 透明窗口容器：进入窗口层级后允许 behind-window 材质透出桌面。
+private final class TransparentWindowHostView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         guard let window else { return }

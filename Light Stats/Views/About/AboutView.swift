@@ -4,9 +4,6 @@ import AppKit
 struct AboutView: View {
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var updateManager = UpdateManager.shared
-    @ObservedObject private var settings = SettingsManager.shared
-
-    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
 
     private let appName: String = {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -39,7 +36,7 @@ struct AboutView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 96, height: 96)
-                    .foregroundStyle(theme.inkSecondary)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer().frame(height: 20)
@@ -47,14 +44,14 @@ struct AboutView: View {
             // App Name
             Text(appName)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(theme.inkPrimary)
+                .foregroundStyle(.primary)
 
             Spacer().frame(height: 6)
 
             // Version
             Text(version)
                 .font(.system(size: 12))
-                .foregroundStyle(theme.inkSecondary)
+                .foregroundStyle(.secondary)
 
             Spacer().frame(height: 12)
 
@@ -71,7 +68,6 @@ struct AboutView: View {
                 }
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(theme.accent)
             .disabled(updateManager.isChecking)
 
             Spacer().frame(height: 24)
@@ -100,23 +96,13 @@ struct AboutView: View {
             // Copyright
             Text(copyright)
                 .font(.system(size: 10))
-                .foregroundStyle(theme.inkFaint)
+                .foregroundStyle(.tertiary)
 
             Spacer().frame(height: 28)
         }
         .frame(width: 280)
-        .background(
-            ThemeBackgroundView(
-                tokens: theme,
-                appearance: settings.themeAppearance(for: settings.appTheme),
-                cornerRadius: 0,
-                configuresWindow: true,
-                fallbackMaterial: .underWindowBackground
-            )
-            .ignoresSafeArea()
-        )
-        .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
-        .appThemed(settings.appTheme)
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+        .id(localization.currentLanguage.rawValue)
         .focusable(false)
     }
 
@@ -129,8 +115,6 @@ struct AboutView: View {
 // MARK: - Link Button
 
 struct LinkButton: View {
-    @Environment(\.theme) private var theme
-
     let icon: String
     let title: String
     let url: String
@@ -146,16 +130,16 @@ struct LinkButton: View {
             VStack(spacing: 6) {
                 linkIcon
                     .font(.system(size: 20))
-                    .foregroundStyle(isHovered ? theme.inkPrimary : theme.inkSecondary)
+                    .foregroundStyle(isHovered ? Color.primary : Color.secondary)
 
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(isHovered ? theme.inkPrimary : theme.inkSecondary)
+                    .foregroundStyle(isHovered ? Color.primary : Color.secondary)
             }
             .frame(width: 72, height: 60)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isHovered ? theme.rowHoverFill : Color.clear)
+                    .fill(isHovered ? Color.primary.opacity(0.06) : Color.clear)
             )
         }
         .buttonStyle(.plain)

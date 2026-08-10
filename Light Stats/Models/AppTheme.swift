@@ -8,11 +8,11 @@
 
 import Foundation
 
-/// App-wide visual theme. Default is `.glass` (shown as Default / 默认).
+/// App-wide visual theme. Cold-start default is `.noir` (Ink Night / 墨夜).
 /// On macOS 26+ this uses Liquid Glass vibrancy; on macOS 15 it is ordinary system chrome.
 /// `allCases` order is the picker display order: Default → Bento → Sun Gold → Ink Night.
 enum AppTheme: String, CaseIterable, Identifiable, Sendable {
-    /// System instrument readout (no card chrome). Cold-start default. Display name: Default.
+    /// System instrument readout (no card chrome). Display name: Default.
     case glass
     /// Original Light Stats look: Liquid Glass + rounded bento cards / metric grid.
     case bento
@@ -35,11 +35,11 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Resolve from UserDefaults. Cold start and unknown keys → `.glass`.
+    /// Resolve from UserDefaults. Cold start and unknown keys → `.noir`.
     /// Retired keys (`aurora`, `paper`) map to `.film` (their historical mesh look).
     static func resolve(stored raw: String?) -> AppTheme {
-        guard let raw else { return .glass }
+        guard let raw else { return .noir }
         if raw == "aurora" || raw == "paper" { return .film }
-        return AppTheme(rawValue: raw) ?? .glass
+        return AppTheme(rawValue: raw) ?? .noir
     }
 }

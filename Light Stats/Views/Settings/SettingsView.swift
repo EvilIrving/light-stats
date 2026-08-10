@@ -51,15 +51,10 @@ struct SettingsView: View {
         SettingsCategory(rawValue: selectedRaw) ?? .general
     }
 
-    /// Shared white canvas for sidebar + detail. Settings never follows `appTheme`.
-    private var settingsCanvas: Color {
-        Color(nsColor: .controlBackgroundColor)
-    }
-
     var body: some View {
         HStack(spacing: 0) {
             sidebar
-            // 发丝分隔，比系统 Divider 更轻，贴近两侧同色画布。
+            // 发丝分隔，比系统 Divider 更轻，区分原生侧栏材质与内容画布。
             Rectangle()
                 .fill(Color.primary.opacity(0.06))
                 .frame(width: 1)
@@ -72,12 +67,12 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(settingsCanvas)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         // 固定尺寸：Settings 窗口会记忆上次 frame，用 min/ideal 会被记忆值盖过导致窗口
         // 失控变大。固定宽高由内容驱动窗口尺寸（沿用旧版做法），稳定可预期。
         .frame(width: 980, height: 640)
-        .background(settingsCanvas.ignoresSafeArea())
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .alert("settings.minimumItemAlert".localized, isPresented: $showMinimumItemAlert) {
             Button("settings.ok".localized, role: .cancel) {}
         }
@@ -97,7 +92,7 @@ struct SettingsView: View {
 
     // MARK: Sidebar
 
-    /// 自绘浅色侧栏：与详情同画布，选中项用圆角浅色高亮，不再用系统深灰 `.sidebar` 样式。
+    /// 自绘导航内容保留稳定布局，背景使用原生 `.sidebar` 材质。
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 3) {
             ForEach(SettingsCategory.allCases) { category in
@@ -115,7 +110,10 @@ struct SettingsView: View {
         .padding(.bottom, 12)
         .frame(width: 190, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(settingsCanvas)
+        .background(
+            VisualEffectView(material: .sidebar, blendingMode: .withinWindow)
+                .ignoresSafeArea()
+        )
         .focusable(false)
     }
 
