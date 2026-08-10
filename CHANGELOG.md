@@ -1,3 +1,27 @@
+## v1.9.1-beta.2（预发布 / Prerelease）
+
+相对 **v1.9.0** 的补丁预发布。面向用户的完整说明见 `docs/releases/v1.9.1-beta.2.md`。
+
+### ✨ 主题 / Themes
+
+- 恢复晒金 / 墨夜动态 mesh 背景，并隔离面板滚轮
+- 重塑墨夜月光与水墨云层；自然光影更顺滑
+- 设置页主题预览放大；工具窗回归系统外观
+- 冷启动默认主题改为墨夜
+
+### 🐛 修复 / Fixes
+
+- 修复浮层空白区域点击穿透到下方窗口
+- 取消标题栏手势时不再错误提交窗口吸附
+
+### 🔧 优化 / Improvements
+
+- 合并主题网格背景绘制，降低渲染开销
+
+**Full Changelog**: https://github.com/EvilIrving/light-stats/compare/v1.9.1-beta.1...v1.9.1-beta.2
+
+---
+
 ## v1.9.1-beta.1（预发布 / Prerelease）
 
 相对 **v1.9.0** 的补丁预发布。
