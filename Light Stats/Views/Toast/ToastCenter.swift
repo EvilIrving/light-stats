@@ -103,6 +103,7 @@ private struct ToastView: View {
         .background(
             ThemeBackgroundView(
                 tokens: theme,
+                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 14,
                 fallbackMaterial: .hudWindow
             )

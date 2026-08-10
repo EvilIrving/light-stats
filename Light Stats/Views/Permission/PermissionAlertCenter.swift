@@ -171,6 +171,7 @@ struct PermissionAlertView: View {
         .background(
             ThemeBackgroundView(
                 tokens: theme,
+                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 14,
                 configuresWindow: true,
                 fallbackMaterial: .underWindowBackground

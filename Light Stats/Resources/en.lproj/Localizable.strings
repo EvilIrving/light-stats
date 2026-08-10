@@ -16,6 +16,14 @@
 "settings.theme.bento" = "Bento Grid";
 "settings.theme.glass" = "Default";
 "settings.theme.noir" = "Ink Night";
+"settings.theme.film.grain" = "Film grain";
+"settings.theme.film.grain.hint" = "Off keeps light shapes, cleaner surface";
+"settings.theme.film.lightFlow" = "Light dynamics";
+"settings.theme.film.flow.paused" = "Still";
+"settings.theme.film.flow.gentle" = "Gentle";
+"settings.theme.film.flow.natural" = "Natural";
+"settings.theme.film.flow.smooth" = "Smooth";
+"settings.theme.film.flow.lively" = "Lively";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";

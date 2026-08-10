@@ -89,10 +89,11 @@ struct PopoverContentView: View {
             .contentShape(Rectangle())
         }
         .ignoresSafeArea(.container, edges: .top)
-        // Static tonal artwork lives entirely inside ThemeBackgroundView.
+        // Mesh art and grain live entirely inside ThemeBackgroundView.
         .background(
             ThemeBackgroundView(
                 tokens: theme,
+                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 12
             )
                 .ignoresSafeArea()

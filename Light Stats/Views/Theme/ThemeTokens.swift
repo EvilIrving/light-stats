@@ -2,8 +2,11 @@
 //  ThemeTokens.swift
 //  Light Stats
 //
-//  Resolved paint tokens for a single AppTheme. Views read these through
-//  `@Environment(\.theme)` and never hard-code theme-specific chrome colors.
+//  Resolved color / material tokens for a single AppTheme. Views read these via
+//  `@Environment(\.theme)` — never hard-code theme-specific colors in chrome.
+//
+//  Mesh themes (film / noir) pair a decorative light field with a content scrim
+//  so ink always meets WCAG-ish contrast on a stable dark reading surface.
 //
 
 import SwiftUI
@@ -12,20 +15,26 @@ import SwiftUI
 struct ThemeTokens: Equatable {
     let theme: AppTheme
 
-    /// `nil` follows the system appearance for native glass themes.
+    /// `nil` = follow system appearance (glass only).
     let preferredColorScheme: ColorScheme?
 
-    // MARK: Background artwork
+    // MARK: Background strategy
 
     let usesGlass: Bool
-    let usesStaticArtwork: Bool
-    let textureOpacity: Double
-    let canvas: Color
-    let artworkShadow: Color
-    let artworkMidtone: Color
-    let artworkGlow: Color
+    let usesMesh: Bool
+    let grainOpacity: Double
 
-    // MARK: Surfaces
+    let canvas: Color
+    let meshBase: Color
+    let meshBlobPrimary: Color
+    let meshBlobSecondary: Color
+    let meshBlobHighlight: Color
+
+    /// Drawn *above* the mesh / glass, *under* UI content. Clear for glass.
+    /// Gives text a stable dark field while mesh still shows at the edges.
+    let contentScrim: Color
+
+    // MARK: Surfaces (list rows / wells — not floating cards)
 
     let surfaceFill: Color
     let surfaceStroke: Color
@@ -35,34 +44,36 @@ struct ThemeTokens: Equatable {
     let rowHoverFill: Color
     let wellFill: Color
 
-    // MARK: Ink
+    // MARK: Ink (must stay readable on contentScrim + residual mesh glow)
 
     let inkPrimary: Color
     let inkMuted: Color
     let inkSecondary: Color
     let inkFaint: Color
 
-    // MARK: Signals
+    // MARK: Signals (metric text, bars, health — fully theme-specific)
 
-    /// Healthy or low pressure.
+    /// Healthy / low pressure (historically “green”).
     let signalGood: Color
-    /// Caution or medium pressure.
+    /// Caution / mid pressure.
     let signalWarn: Color
-    /// Critical or high pressure.
+    /// Critical / high pressure.
     let signalBad: Color
-    /// Secondary series, such as network download.
+    /// Secondary series (e.g. network down).
     let signalInfo: Color
-    /// Primary series, such as network upload.
+    /// Primary series / warm accent (e.g. network up, battery mid).
     let signalAccent: Color
 
     // MARK: Chrome
 
+    /// Hairline rules between sections.
     let lineHairline: Color
+    /// Default stroke for sparklines when a series doesn’t supply its own tint.
     let chartLine: Color
     let dividerOpacity: Double
     let accent: Color
 
-    // MARK: Backward-compatible aliases
+    // MARK: Back-compat aliases
 
     var cardFill: Color { surfaceFill }
     var cardStroke: Color { surfaceStroke }
@@ -79,50 +90,60 @@ struct ThemeTokens: Equatable {
         }
     }
 
-    /// Sun Gold: a static ivory, dusty-rose, and coral tonal field.
+    /// Sun Gold / 晒金 — warm mesh atmosphere + dark reading scrim + high-contrast cream ink.
     static let film = ThemeTokens(
         theme: .film,
-        preferredColorScheme: .light,
+        preferredColorScheme: .dark,
         usesGlass: false,
-        usesStaticArtwork: true,
-        textureOpacity: 0.10,
-        canvas: Color(red: 0.91, green: 0.77, blue: 0.72),
-        artworkShadow: Color(red: 0.42, green: 0.23, blue: 0.25),
-        artworkMidtone: Color(red: 0.64, green: 0.36, blue: 0.36),
-        artworkGlow: Color(red: 0.99, green: 0.93, blue: 0.89),
-        surfaceFill: Color(red: 0.99, green: 0.94, blue: 0.90).opacity(0.44),
-        surfaceStroke: Color(red: 0.27, green: 0.14, blue: 0.15).opacity(0.13),
-        surfaceShadowOpacity: 0.08,
-        tabTrackFill: Color(red: 0.25, green: 0.13, blue: 0.14).opacity(0.07),
-        tabSelectedFill: Color(red: 0.99, green: 0.94, blue: 0.90).opacity(0.72),
-        rowHoverFill: Color(red: 0.99, green: 0.94, blue: 0.90).opacity(0.34),
-        wellFill: Color(red: 0.27, green: 0.14, blue: 0.15).opacity(0.07),
-        inkPrimary: Color(red: 0.16, green: 0.075, blue: 0.085),
-        inkMuted: Color(red: 0.24, green: 0.13, blue: 0.14),
-        inkSecondary: Color(red: 0.34, green: 0.22, blue: 0.22),
-        inkFaint: Color(red: 0.46, green: 0.33, blue: 0.32),
-        signalGood: Color(red: 0.31, green: 0.43, blue: 0.13),
-        signalWarn: Color(red: 0.66, green: 0.39, blue: 0.06),
-        signalBad: Color(red: 0.72, green: 0.20, blue: 0.17),
-        signalInfo: Color(red: 0.22, green: 0.42, blue: 0.48),
-        signalAccent: Color(red: 0.74, green: 0.28, blue: 0.18),
-        lineHairline: Color(red: 0.27, green: 0.14, blue: 0.15).opacity(0.13),
-        chartLine: Color(red: 0.43, green: 0.49, blue: 0.18),
-        dividerOpacity: 0.12,
-        accent: Color(red: 0.65, green: 0.22, blue: 0.16)
+        usesMesh: true,
+        // Shared grit strength with noir — only warmth tint differs in GrainTextureView.
+        grainOpacity: 0.32,
+        canvas: Color(red: 0.10, green: 0.06, blue: 0.05),
+        // Darker base so residual mesh glow doesn’t wash ink.
+        meshBase: Color(red: 0.16, green: 0.08, blue: 0.07),
+        meshBlobPrimary: Color(red: 0.42, green: 0.20, blue: 0.18),
+        meshBlobSecondary: Color(red: 0.78, green: 0.40, blue: 0.30),
+        meshBlobHighlight: Color(red: 0.90, green: 0.72, blue: 0.58),
+        // External full-frame scrim disabled — reading veil lives inside mesh bg.
+        contentScrim: .clear,
+        surfaceFill: Color(red: 0.14, green: 0.09, blue: 0.07).opacity(0.88),
+        surfaceStroke: Color.white.opacity(0.14),
+        surfaceShadowOpacity: 0.30,
+        tabTrackFill: Color.white.opacity(0.10),
+        tabSelectedFill: Color(red: 0.22, green: 0.14, blue: 0.11).opacity(0.96),
+        rowHoverFill: Color.white.opacity(0.10),
+        wellFill: Color.white.opacity(0.12),
+        // Near-white cream ink — high contrast on dark scrim.
+        inkPrimary: Color(red: 1.0, green: 0.98, blue: 0.95),
+        inkMuted: Color(red: 0.96, green: 0.92, blue: 0.88),
+        inkSecondary: Color(red: 0.90, green: 0.84, blue: 0.78),
+        inkFaint: Color(red: 0.78, green: 0.70, blue: 0.62),
+        // Warm film “live” ramp — gold-sage / amber / coral (not system green).
+        signalGood: Color(red: 0.82, green: 0.90, blue: 0.48),
+        signalWarn: Color(red: 1.0, green: 0.78, blue: 0.38),
+        signalBad: Color(red: 1.0, green: 0.48, blue: 0.40),
+        signalInfo: Color(red: 0.72, green: 0.88, blue: 0.92),
+        signalAccent: Color(red: 1.0, green: 0.62, blue: 0.38),
+        lineHairline: Color(red: 0.96, green: 0.82, blue: 0.68).opacity(0.22),
+        chartLine: Color(red: 0.90, green: 0.78, blue: 0.48),
+        dividerOpacity: 0.20,
+        accent: Color(red: 1.0, green: 0.68, blue: 0.48)
     )
 
-    /// Original bento-grid product look with raised cards and classic signals.
+    /// Original bento-grid product look — glass + raised cards + classic metric greens.
     static let bento = ThemeTokens(
         theme: .bento,
         preferredColorScheme: nil,
         usesGlass: true,
-        usesStaticArtwork: false,
-        textureOpacity: 0,
+        usesMesh: false,
+        grainOpacity: 0,
         canvas: Color(nsColor: .windowBackgroundColor),
-        artworkShadow: .clear,
-        artworkMidtone: .clear,
-        artworkGlow: .clear,
+        meshBase: .clear,
+        meshBlobPrimary: .clear,
+        meshBlobSecondary: .clear,
+        meshBlobHighlight: .clear,
+        contentScrim: .clear,
+        // Matches the pre-redesign BentoCard fill.
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.78),
         surfaceStroke: Color.primary.opacity(0.08),
         surfaceShadowOpacity: 0.06,
@@ -145,17 +166,19 @@ struct ThemeTokens: Equatable {
         accent: Color.accentColor
     )
 
-    /// System glass or vibrancy with the continuous instrument layout.
+    /// System glass / vibrancy — instrument readout (no bento card chrome).
     static let glass = ThemeTokens(
         theme: .glass,
         preferredColorScheme: nil,
         usesGlass: true,
-        usesStaticArtwork: false,
-        textureOpacity: 0,
+        usesMesh: false,
+        grainOpacity: 0,
         canvas: Color(nsColor: .windowBackgroundColor),
-        artworkShadow: .clear,
-        artworkMidtone: .clear,
-        artworkGlow: .clear,
+        meshBase: .clear,
+        meshBlobPrimary: .clear,
+        meshBlobSecondary: .clear,
+        meshBlobHighlight: .clear,
+        contentScrim: .clear,
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.55),
         surfaceStroke: Color.primary.opacity(0.08),
         surfaceShadowOpacity: 0.04,
@@ -178,37 +201,41 @@ struct ThemeTokens: Equatable {
         accent: Color.accentColor
     )
 
-    /// Ink Night: an almost-black field with a restrained neutral graphite bloom.
+    /// Near-black grain — cool mesh + strong white ink.
     static let noir = ThemeTokens(
         theme: .noir,
         preferredColorScheme: .dark,
         usesGlass: false,
-        usesStaticArtwork: true,
-        textureOpacity: 0.035,
-        canvas: Color(red: 0.024, green: 0.026, blue: 0.026),
-        artworkShadow: Color(red: 0.01, green: 0.011, blue: 0.011),
-        artworkMidtone: Color(red: 0.20, green: 0.205, blue: 0.205),
-        artworkGlow: Color(red: 0.36, green: 0.365, blue: 0.355),
-        surfaceFill: Color(red: 0.065, green: 0.07, blue: 0.07).opacity(0.78),
-        surfaceStroke: Color.white.opacity(0.10),
-        surfaceShadowOpacity: 0.20,
-        tabTrackFill: Color.white.opacity(0.055),
-        tabSelectedFill: Color(red: 0.14, green: 0.145, blue: 0.145).opacity(0.88),
-        rowHoverFill: Color.white.opacity(0.065),
-        wellFill: Color.white.opacity(0.075),
-        inkPrimary: Color(red: 0.95, green: 0.945, blue: 0.925),
-        inkMuted: Color(red: 0.84, green: 0.835, blue: 0.815),
-        inkSecondary: Color(red: 0.69, green: 0.69, blue: 0.67),
-        inkFaint: Color(red: 0.47, green: 0.475, blue: 0.46),
-        signalGood: Color(red: 0.66, green: 0.79, blue: 0.55),
-        signalWarn: Color(red: 0.84, green: 0.68, blue: 0.43),
-        signalBad: Color(red: 0.84, green: 0.46, blue: 0.43),
-        signalInfo: Color(red: 0.54, green: 0.68, blue: 0.72),
-        signalAccent: Color(red: 0.70, green: 0.60, blue: 0.54),
-        lineHairline: Color.white.opacity(0.10),
-        chartLine: Color(red: 0.68, green: 0.73, blue: 0.69),
-        dividerOpacity: 0.10,
-        accent: Color(red: 0.82, green: 0.81, blue: 0.77)
+        usesMesh: true,
+        // Match film grainOpacity so fine/body grit reads the same.
+        grainOpacity: 0.32,
+        canvas: Color(red: 0.03, green: 0.03, blue: 0.04),
+        meshBase: Color(red: 0.04, green: 0.04, blue: 0.06),
+        meshBlobPrimary: Color(red: 0.10, green: 0.10, blue: 0.15),
+        meshBlobSecondary: Color(red: 0.22, green: 0.22, blue: 0.36),
+        meshBlobHighlight: Color(red: 0.48, green: 0.52, blue: 0.68),
+        contentScrim: .clear,
+        surfaceFill: Color(red: 0.10, green: 0.10, blue: 0.12).opacity(0.90),
+        surfaceStroke: Color.white.opacity(0.14),
+        surfaceShadowOpacity: 0.32,
+        tabTrackFill: Color.white.opacity(0.10),
+        tabSelectedFill: Color(red: 0.18, green: 0.18, blue: 0.22),
+        rowHoverFill: Color.white.opacity(0.10),
+        wellFill: Color.white.opacity(0.12),
+        inkPrimary: Color.white,
+        inkMuted: Color.white.opacity(0.92),
+        inkSecondary: Color.white.opacity(0.78),
+        inkFaint: Color.white.opacity(0.58),
+        // Cool mint / ice / violet ramp — distinct from film gold-sage.
+        signalGood: Color(red: 0.38, green: 0.96, blue: 0.72),
+        signalWarn: Color(red: 1.0, green: 0.86, blue: 0.42),
+        signalBad: Color(red: 1.0, green: 0.42, blue: 0.48),
+        signalInfo: Color(red: 0.48, green: 0.78, blue: 1.0),
+        signalAccent: Color(red: 0.78, green: 0.62, blue: 1.0),
+        lineHairline: Color.white.opacity(0.16),
+        chartLine: Color(red: 0.50, green: 0.82, blue: 1.0),
+        dividerOpacity: 0.18,
+        accent: Color(red: 0.72, green: 0.78, blue: 1.0)
     )
 
     // MARK: Metric ramp

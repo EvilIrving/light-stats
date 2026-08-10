@@ -108,6 +108,7 @@ struct AboutView: View {
         .background(
             ThemeBackgroundView(
                 tokens: theme,
+                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 0,
                 configuresWindow: true,
                 fallbackMaterial: .underWindowBackground

@@ -16,6 +16,14 @@
 "settings.theme.bento" = "Bento 그리드";
 "settings.theme.glass" = "기본";
 "settings.theme.noir" = "잉크 나이트";
+"settings.theme.film.grain" = "필름 그레인";
+"settings.theme.film.grain.hint" = "끄면 빛은 유지, 더 깔끔한 표면";
+"settings.theme.film.lightFlow" = "빛 움직임";
+"settings.theme.film.flow.paused" = "정지";
+"settings.theme.film.flow.gentle" = "잔잔함";
+"settings.theme.film.flow.natural" = "자연스러움";
+"settings.theme.film.flow.smooth" = "부드러움";
+"settings.theme.film.flow.lively" = "활발함";
 "settings.logo" = "로고";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";

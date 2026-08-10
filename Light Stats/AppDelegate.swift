@@ -26,11 +26,18 @@ final class KeyablePanel: NSPanel {
     }
 }
 
-/// Keeps events inside the popover when SwiftUI has no painted descendant at a point.
-/// Real controls and scroll views retain their normal AppKit hit targets.
+/// Keeps mouse / scroll events inside the popover when SwiftUI has no painted
+/// descendant at a point. Real controls and scroll views keep normal hit targets.
+/// Unhandled `scrollWheel` is absorbed so a non-opaque panel does not forward
+/// wheel events through to the desktop (macOS 26). Does not paint or change colors.
 final class HitRetainingHostingView<Content: View>: NSHostingView<Content> {
     override func hitTest(_ point: NSPoint) -> NSView? {
         super.hitTest(point) ?? (bounds.contains(point) ? self : nil)
+    }
+
+    override func scrollWheel(with _: NSEvent) {
+        // Descendants that handle scrolling receive the event via hit-testing.
+        // Anything that lands here must not continue past this panel.
     }
 }
 

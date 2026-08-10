@@ -16,9 +16,9 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     case glass
     /// Original Light Stats look: Liquid Glass + rounded bento cards / metric grid.
     case bento
-    /// Sun Gold: static warm ivory, dusty-rose, and coral tonal field.
+    /// Sun Gold: warm grain mesh with coral and wine light fields.
     case film
-    /// Ink Night: static near-black field with a neutral graphite bloom.
+    /// Ink Night: ink-black grain mesh with cool charcoal light fields.
     case noir
 
     var id: String { rawValue }

@@ -16,6 +16,14 @@
 "settings.theme.bento" = "Bento 网格";
 "settings.theme.glass" = "默认";
 "settings.theme.noir" = "墨夜";
+"settings.theme.film.grain" = "胶片颗粒";
+"settings.theme.film.grain.hint" = "关闭后保留光影，表面更干净";
+"settings.theme.film.lightFlow" = "光影动态";
+"settings.theme.film.flow.paused" = "静止";
+"settings.theme.film.flow.gentle" = "舒缓";
+"settings.theme.film.flow.natural" = "自然";
+"settings.theme.film.flow.smooth" = "流畅";
+"settings.theme.film.flow.lively" = "活跃";
 "settings.logo" = "Logo";
 "settings.cpu" = "CPU";
 "settings.gpu" = "GPU";

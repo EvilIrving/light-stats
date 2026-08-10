@@ -65,9 +65,9 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
   - **Default** (cold-start default): system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
   - **Bento Grid**: original card grid plus system materials
-  - **Sun Gold**: static ivory, dusty-rose, and coral tonal artwork with dark warm ink
-  - **Ink Night**: static near-black artwork with a restrained neutral graphite bloom
-- Sun Gold and Ink Night are fixed compositions with subtle cached microtexture and no background animation
+  - **Sun Gold**: warm sun-gold grain mesh with coral and wine light fields
+  - **Ink Night**: ink-black grain mesh with cool charcoal surfaces
+- Sun Gold and Ink Night share mesh appearance controls: film grain on/off, and light dynamics as five semantic steps (Still, Gentle, Natural, Smooth, Lively)
 - The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
@@ -264,7 +264,7 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 - `Light Stats/ViewModels/`: app state, sampling, settings, cleaning mode, update coordination
 - `Light Stats/Views/StatusBar/`: menu bar rendering
 - `Light Stats/Views/Popover/`: floating panel UI and reusable components
-- `Light Stats/Views/Theme/`: theme tokens, static tonal backgrounds, microtexture, picker
+- `Light Stats/Views/Theme/`: theme tokens, mesh backgrounds, grain, picker, appearance presets
 - `Light Stats/Views/Settings/`: settings UI (system-white tool panel)
 - `Light Stats/Views/About/`: about window
 - `Light Stats/Views/CleaningMode/`: cleaning mode overlay

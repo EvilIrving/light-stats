@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class VisualThemeCaptureTests: XCTestCase {
-    func testCaptureStaticThemesForVisualReview() throws {
+    func testCaptureDynamicThemesForVisualReview() throws {
         let settings = SettingsManager.shared
         let originalTheme = settings.appTheme
         let originalLanguage = settings.appLanguage

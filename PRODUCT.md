@@ -22,11 +22,11 @@ This web page is its external presence: a landing page that shows the real instr
 - **One honest health number.** The score reflects responsiveness pressure, not capacity. A Mac with 30 GB used stays green if it isn't actually struggling.
 - **Developer context in the menu bar.** Subscription windows for Claude Code, Codex, and Gemini sit beside proxy and exit-node context; Finder actions open terminals, create files from type-aware templates, and route selected files without leaving Finder.
 - **Opt-in by construction.** Monitoring is read-only and always on; capabilities that touch the system or network are off until enabled and stop when disabled. Automatic update checks, Beta channel, AI provider requests, usage-window warmup, exit-node lookup, Finder actions, event taps, and keep-awake assertions do not run on a clean install.
-- **Instrument chrome you can choose.** Default system instrument readout, classic Bento cards, or static Sun Gold / Ink Night tonal artwork; configuration UI stays plain white so it never competes with the dial.
+- **Instrument chrome you can choose.** Default system instrument readout, classic Bento cards, or Sun Gold / Ink Night mesh; configuration UI stays plain white so it never competes with the dial.
 
 ## Brand Personality
 
-A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Default is the product cold-start look: a continuous instrument readout (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15). Bento keeps the classic card grid; Sun Gold is a static warm tonal field, while Ink Night is a static near-black graphite field.
+A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Default is the product cold-start look: a continuous instrument readout (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15). Bento keeps the classic card grid; Sun Gold and Ink Night are optional mesh looks with warm gold or deep ink grain.
 
 ## Anti-references
 
