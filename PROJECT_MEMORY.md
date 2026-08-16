@@ -1,5 +1,19 @@
 # Project Memory
 
+## 主题以 ThemeDefinition 固定组合，不向用户暴露混搭 · 2026-08-16 17:01 · Grok
+
+这条取代 2026-08-16 16:36「主题拆成 UITheme + BackgroundTheme 两个正交维度」。那次把界面和背景做成了可独立持久化的产品维度，并准备以后加背景选择器。产品决定不走这条路：用户仍然只看见 `glass / bento / film / noir` 四个预设，不出现背景选择或主题组合。
+
+正确边界是：`AppTheme` 只是产品预设 ID；`ThemeDefinition` 是唯一组合入口，固定写出 `ui + background + layout`；`UITokens` 管文字 / surface / signal / divider / accent / 卡片与布局语义；`BackgroundConfiguration` 管 `glass / mesh / solid`、canvas、mesh 色、grain、dynamics；Film / Noir 光场是独立 Renderer。业务 View 只读解析结果，禁止 `theme == .film` / `theme == .noir`。`aurora` / `paper` 不再映射到 film，未知键回落到 noir。以后加第五个主题只改 `ThemeDefinition` 表，复用或新增内部能力，不改 Overview / Cleanup / 卡片，也不把组合能力做成设置项。
+
+## 主题拆成 UITheme + BackgroundTheme 两个正交维度 · 2026-08-16 16:36 · Grok
+
+`AppTheme` 不再同时拥有布局/配色和背景策略。它现在只是四个策展配对：`glass = glass UI + glass 背景`，`bento = bento UI + glass 背景`，`film = film UI + film 背景`，`noir = noir UI + noir 背景`。界面半边是 `UITheme`（layout、ink、surface、tab、signal；`usesBentoLayout` / `usesVibrantSurfaces` 留在这里）。背景半边是 `BackgroundTheme`（`glass / film / noir`，外加 `BackgroundKind`：`glass / mesh / solid`）。
+
+`ThemeTokens` 只服务界面，禁止再长回 `usesGlass` / `usesMesh` / `canvas` / `meshBlob*` / `grainOpacity`。`ThemeBackgroundView` 只接收 `BackgroundTokens`，按 `kind` 选 renderer，按 `BackgroundTheme` 选 Film/Noir 光场，完全不知道 `UITheme` 或 `AppTheme`。设置仍用一个配对选择器，但已分别持久化 `settings.appTheme` 与 `settings.backgroundTheme`。读档时若已有独立的 background 键会尊重它（因此数据层已经能混搭）；改配对选择器仍会把 background 写回该配对，直到出现独立背景选择器。
+
+以后加背景只新增 `BackgroundTheme` case + renderer + `BackgroundTokens` 工厂。不要回头改 Overview / Cleanup / 卡片，也不要把背景判断写回 `ThemeTokens.ui`。自由组合的下一步是设置里拆开两个选择器，并停止在 `appTheme.didSet` 里覆盖 `backgroundTheme`。
+
 ## macOS 26 Popover 滚轮隔离与动态主题基线 · 2026-08-10 10:48 · Codex
 
 macOS 26 会让非透明 `NSPanel` 中未被 SwiftUI 子视图处理的滚轮事件继续落到桌面或下方窗口；用户报告 macOS 17 没有同样现象。稳定修复边界是在 `HitRetainingHostingView` 中保留现有 `hitTest` 全边界兜底，并在宿主层吸收最终未处理的 `scrollWheel`，而实际 `ScrollView` 等后代仍通过正常命中测试接收滚动。不要通过增加不透明绘制层、改变主题材质或强制 `.glass` 来解决事件穿透，因为事件隔离与视觉渲染必须互不耦合。

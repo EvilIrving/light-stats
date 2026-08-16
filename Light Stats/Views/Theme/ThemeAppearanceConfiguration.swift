@@ -9,20 +9,18 @@ struct ThemeAppearanceConfiguration: Equatable, Sendable {
     let grainEnabled: Bool
     let dynamics: Double
 
-    /// Natural light dynamics (segment value 0.4) for both mesh themes.
+    /// Natural light dynamics (segment value 0.4) for both mesh backgrounds.
     static let defaultDynamics: Double = 0.4
 
-    static func defaults(for _: AppTheme) -> ThemeAppearanceConfiguration {
-        ThemeAppearanceConfiguration(
-            grainEnabled: true,
-            dynamics: defaultDynamics
-        )
-    }
+    static let defaults = ThemeAppearanceConfiguration(
+        grainEnabled: true,
+        dynamics: defaultDynamics
+    )
 }
 
 extension SettingsManager {
-    func themeAppearance(for theme: AppTheme) -> ThemeAppearanceConfiguration {
-        switch theme {
+    func themeAppearance(for background: BackgroundConfiguration) -> ThemeAppearanceConfiguration {
+        switch background.appearanceSlot {
         case .film:
             return ThemeAppearanceConfiguration(
                 grainEnabled: filmGrainEnabled,
@@ -33,8 +31,8 @@ extension SettingsManager {
                 grainEnabled: noirGrainEnabled,
                 dynamics: noirLightFlow
             )
-        default:
-            return .defaults(for: theme)
+        case nil:
+            return .defaults
         }
     }
 }

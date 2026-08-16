@@ -108,14 +108,9 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().appTheme, .glass)
     }
 
-    func testLegacyAuroraThemeKeyMigratesToFilm() {
+    func testUnknownStoredThemeFallsBackToNoir() {
         cleanDefaults.set("aurora", forKey: "settings.appTheme")
-        XCTAssertEqual(freshSettings().appTheme, .film)
-    }
-
-    func testRetiredPaperThemeKeyMigratesToFilm() {
-        cleanDefaults.set("paper", forKey: "settings.appTheme")
-        XCTAssertEqual(freshSettings().appTheme, .film)
+        XCTAssertEqual(freshSettings().appTheme, .noir)
     }
 
     func testFilmAppearanceDefaults() {

@@ -2,9 +2,9 @@
 //  OverviewTabView.swift
 //  Light Stats
 //
-//  Two layouts:
-//  - Bento Grid theme → classic raised cards + 2×2 metric tiles
-//  - Film / Glass / Noir → instrument readout (sections + hairlines)
+//  Two layouts, driven by resolved `UITokens.usesBentoLayout`:
+//  - Bento → classic raised cards + 2×2 metric tiles
+//  - Instrument → sections + hairlines
 //
 
 import SwiftUI
@@ -19,7 +19,7 @@ struct OverviewTabView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            if theme.theme.usesBentoLayout {
+            if theme.usesBentoLayout {
                 bentoContent
             } else {
                 instrumentContent

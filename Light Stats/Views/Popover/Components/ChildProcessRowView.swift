@@ -59,6 +59,6 @@ struct ChildProcessRowView: View {
         )
     }
     .padding()
-    .appThemed(.film)
+    .appThemed(AppTheme.film)
 }
 #endif

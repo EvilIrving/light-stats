@@ -25,7 +25,7 @@ Light Stats/
 │   ├── ProcessStats.swift
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
-│   ├── AppTheme.swift               # Default / Bento / Sun Gold / Ink Night (raw: glass/bento/film/noir)
+│   ├── AppTheme.swift               # Product preset ID (glass/bento/film/noir)
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -86,7 +86,7 @@ Light Stats/
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
-│   ├── Theme/                           # ThemeTokens, mesh bg, grain, picker
+│   ├── Theme/                           # ThemeDefinition, UITokens, BackgroundConfiguration, renderers
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
 │   ├── CleaningMode/

@@ -18,7 +18,8 @@ struct PopoverContentView: View {
 
     /// Resolved at this root from settings — `@Environment(\.theme)` only reaches children
     /// after `.appThemed`, so the root itself must not depend on it.
-    private var theme: ThemeTokens { ThemeTokens.tokens(for: settings.appTheme) }
+    private var definition: ThemeDefinition { ThemeDefinition.definition(for: settings.appTheme) }
+    private var theme: UITokens { definition.ui }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -92,8 +93,8 @@ struct PopoverContentView: View {
         // Mesh art and grain live entirely inside ThemeBackgroundView.
         .background(
             ThemeBackgroundView(
-                tokens: theme,
-                appearance: settings.themeAppearance(for: settings.appTheme),
+                configuration: definition.background,
+                appearance: settings.themeAppearance(for: definition.background),
                 cornerRadius: 12
             )
                 .ignoresSafeArea()
@@ -133,7 +134,7 @@ struct PopoverContentView: View {
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(theme.usesGlass ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(theme.cardFill))
+                    .fill(theme.usesVibrantSurfaces ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(theme.cardFill))
                     .shadow(color: .black.opacity(theme.cardShadowOpacity + 0.06), radius: 4, y: 2)
             )
             .overlay(

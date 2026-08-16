@@ -125,25 +125,25 @@ struct GeneralDetail: View {
         }
     }
 
-    func meshThemeLayout(tokens: ThemeTokens) -> some View {
+    func meshThemeLayout(configuration: BackgroundConfiguration) -> some View {
         HStack(alignment: .top, spacing: 12) {
             themeConfigurationControls
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .layoutPriority(1)
-            meshLivePreview(tokens: tokens)
+            meshLivePreview(configuration: configuration)
                 .frame(width: 260, alignment: .top)
         }
     }
 
-    private func meshLivePreview(tokens: ThemeTokens) -> some View {
+    private func meshLivePreview(configuration: BackgroundConfiguration) -> some View {
         let sourceSize = PopoverContentView.canvasSize
         let previewScale: CGFloat = 1.2
         let previewHeight: CGFloat = 320 * previewScale
         let previewWidth = previewHeight * sourceSize.width / sourceSize.height
         let previewCornerRadius: CGFloat = 10 * previewScale
         return ThemeBackgroundView(
-            tokens: tokens,
-            appearance: settings.themeAppearance(for: tokens.theme),
+            configuration: configuration,
+            appearance: settings.themeAppearance(for: configuration),
             cornerRadius: previewCornerRadius
         )
             .frame(width: previewWidth, height: previewHeight)
@@ -155,8 +155,8 @@ struct GeneralDetail: View {
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
             .frame(maxWidth: .infinity, alignment: .center)
-            .id(tokens.theme)
-            .accessibilityLabel(tokens.theme.titleKey.localized)
+            .id(configuration.meshRenderer)
+            .accessibilityLabel(settings.appTheme.titleKey.localized)
     }
 
     /// 单行：检查按钮 + 可用版本入口 + 稳定/Beta 通道 + 自动更新开关。
@@ -701,10 +701,10 @@ private struct EditableListView: View {
                 Divider()
                 footer
             }
-            // 与 SettingsGroup 同表面策略：glass 用系统控件底，其它主题用 cardFill。
+            // 与 SettingsGroup 同表面策略：vibrant UI 用系统控件底，其它主题用 cardFill。
             .background(
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(theme.usesGlass ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
+                    .fill(theme.usesVibrantSurfaces ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
                     .shadow(color: Color.black.opacity(theme.surfaceShadowOpacity * 0.7), radius: 1.5, y: 0.5)
             )
             .overlay(

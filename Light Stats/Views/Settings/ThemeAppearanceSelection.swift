@@ -8,10 +8,9 @@ import SwiftUI
 extension GeneralDetail {
     @ViewBuilder
     var themeSectionContent: some View {
-        if settings.appTheme == .film {
-            meshThemeLayout(tokens: .film)
-        } else if settings.appTheme == .noir {
-            meshThemeLayout(tokens: .noir)
+        let definition = ThemeDefinition.definition(for: settings.appTheme)
+        if definition.background.kind == .mesh {
+            meshThemeLayout(configuration: definition.background)
         } else {
             themeConfigurationControls
         }
@@ -19,19 +18,23 @@ extension GeneralDetail {
 
     @ViewBuilder
     var themeAppearanceControls: some View {
+        let definition = ThemeDefinition.definition(for: settings.appTheme)
         Group {
-            if settings.appTheme == .film {
+            switch definition.background.appearanceSlot {
+            case .film:
                 meshAppearanceControls(
                     grainEnabled: $settings.filmGrainEnabled,
                     dynamics: $settings.filmLightFlow,
                     presets: .film
                 )
-            } else if settings.appTheme == .noir {
+            case .noir:
                 meshAppearanceControls(
                     grainEnabled: $settings.noirGrainEnabled,
                     dynamics: $settings.noirLightFlow,
                     presets: .noir
                 )
+            case nil:
+                EmptyView()
             }
         }
         .id(settings.appTheme)

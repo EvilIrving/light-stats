@@ -22,7 +22,7 @@ struct AppCardView: View {
     @State private var isExpanded = false
     @State private var cachedChildProcesses: [TopProcessInfo] = []
 
-    private var usesBento: Bool { theme.theme.usesBentoLayout }
+    private var usesBento: Bool { theme.usesBentoLayout }
 
     private var iconSize: CGFloat { usesBento ? 28 : 22 }
     private var rowHSpacing: CGFloat { usesBento ? 12 : 10 }
@@ -209,11 +209,11 @@ struct AppCardView: View {
 
 #if DEBUG
 #Preview("Film") {
-    previewStack.appThemed(.film)
+    previewStack.appThemed(AppTheme.film)
 }
 
 #Preview("Bento") {
-    previewStack.appThemed(.bento)
+    previewStack.appThemed(AppTheme.bento)
 }
 
 private var previewStack: some View {

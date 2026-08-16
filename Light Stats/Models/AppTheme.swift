@@ -2,29 +2,25 @@
 //  AppTheme.swift
 //  Light Stats
 //
-//  User-selectable visual theme for the app UI (popover, settings, about, etc.).
-//  Pure model: no SwiftUI, no tokens — tokens live in Views/Theme.
+//  Product preset ID only. Composition lives in `ThemeDefinition`.
+//  Pure model: no SwiftUI, no tokens.
 //
 
 import Foundation
 
-/// App-wide visual theme. Cold-start default is `.noir` (Ink Night / 墨夜).
-/// On macOS 26+ this uses Liquid Glass vibrancy; on macOS 15 it is ordinary system chrome.
+/// User-facing visual preset. Cold-start default is `.noir` (Ink Night / 墨夜).
 /// `allCases` order is the picker display order: Default → Bento → Sun Gold → Ink Night.
 enum AppTheme: String, CaseIterable, Identifiable, Sendable {
-    /// System instrument readout (no card chrome). Display name: Default.
+    /// System instrument readout. Display name: Default.
     case glass
-    /// Original Light Stats look: Liquid Glass + rounded bento cards / metric grid.
+    /// Raised bento cards / metric grid.
     case bento
-    /// Sun Gold: warm grain mesh with coral and wine light fields.
+    /// Sun Gold.
     case film
-    /// Ink Night: ink-black grain mesh with cool charcoal light fields.
+    /// Ink Night.
     case noir
 
     var id: String { rawValue }
-
-    /// True when Overview / Cleanup should use the classic card grid chrome.
-    var usesBentoLayout: Bool { self == .bento }
 
     var titleKey: String {
         switch self {
@@ -35,11 +31,9 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Resolve from UserDefaults. Cold start and unknown keys → `.noir`.
-    /// Retired keys (`aurora`, `paper`) map to `.film` (their historical mesh look).
+    /// Resolve from UserDefaults. Missing or unknown keys → `.noir`.
     static func resolve(stored raw: String?) -> AppTheme {
         guard let raw else { return .noir }
-        if raw == "aurora" || raw == "paper" { return .film }
         return AppTheme(rawValue: raw) ?? .noir
     }
 }

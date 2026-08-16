@@ -135,7 +135,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(useFlatColors, for: .useFlatColors) }
     }
 
-    /// Visual theme for popover / settings / about. Cold-start default `.noir` (Ink Night / 墨夜).
+    /// Product theme preset. Cold-start default `.noir` (Ink Night / 墨夜).
     @Published var appTheme: AppTheme {
         didSet { save(appTheme.rawValue, for: .appTheme) }
     }
@@ -471,7 +471,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
         useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
-        // 主题：默认 noir（展示名「墨夜」）。aurora/paper 仍映射到 film（晒金）。
+        // 主题：默认 noir（展示名「墨夜」）。未知旧键回落到 noir。
         appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
         filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true
         let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.4

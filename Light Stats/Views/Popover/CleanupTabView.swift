@@ -17,7 +17,7 @@ struct CleanupTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             Group {
-                if theme.theme.usesBentoLayout {
+                if theme.usesBentoLayout {
                     BentoCard(title: "cleanup.memoryUsage".localized, svgIcon: .memory) {
                         memoryHeaderBody
                     }
@@ -31,12 +31,12 @@ struct CleanupTabView: View {
 
             runningAppsHeader
                 .padding(.horizontal, 16)
-                .padding(.top, theme.theme.usesBentoLayout ? 12 : 10)
-                .padding(.bottom, theme.theme.usesBentoLayout ? 8 : 6)
+                .padding(.top, theme.usesBentoLayout ? 12 : 10)
+                .padding(.bottom, theme.usesBentoLayout ? 8 : 6)
 
             if appManager.runningApps.isEmpty {
                 emptyStateView
-            } else if theme.theme.usesBentoLayout {
+            } else if theme.usesBentoLayout {
                 bentoAppList
             } else {
                 instrumentAppList
@@ -64,7 +64,7 @@ struct CleanupTabView: View {
         }
     }
 
-    private var usesBento: Bool { theme.theme.usesBentoLayout }
+    private var usesBento: Bool { theme.usesBentoLayout }
 
     private var runningAppsHeader: some View {
         HStack {
@@ -156,7 +156,7 @@ struct CleanupTabView: View {
                         .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
                 }
             }
-            .frame(height: theme.theme.usesBentoLayout ? 8 : 6)
+            .frame(height: theme.usesBentoLayout ? 8 : 6)
 
             if swapUsed > 0 {
                 HStack(spacing: 6) {

@@ -86,7 +86,7 @@ struct SettingsView: View {
         }
         .id(localization.currentLanguage)
         // Lock chrome to bento; do not pass `settings.appTheme`.
-        .appThemed(.bento)
+        .appThemed(AppTheme.bento)
         .focusable(false)
     }
 
@@ -253,7 +253,7 @@ struct SettingsGroup<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(theme.usesGlass ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
+                .fill(theme.usesVibrantSurfaces ? Color(nsColor: .controlBackgroundColor) : theme.surfaceFill)
                 .shadow(color: Color.black.opacity(theme.surfaceShadowOpacity * 0.7), radius: 1.5, y: 0.5)
         )
         .overlay(
@@ -353,7 +353,7 @@ struct SettingsGridItem: View {
     enum DemoLevel {
         case low, medium, high
 
-        /// Legacy helper — prefer `ThemeTokens` signal colors at call sites.
+        /// Legacy helper — prefer `UITokens` signal colors at call sites.
         var color: Color {
             switch self {
             case .low: return Color(red: 0.20, green: 0.72, blue: 0.38)
