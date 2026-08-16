@@ -15,6 +15,17 @@ import Combine
 @MainActor
 final class AppMemoryManager: ObservableObject {
 
+    /// 进行中的终止请求。AppDelegate 用它判断面板失焦时，焦点是否被「正在被关闭的目标应用」
+    /// 合法截走（例如弹确认框并置前）。这属于正常情况，与无理由失焦区分开。
+    struct ActiveTermination {
+        let appName: String
+        let bundleIdentifier: String?
+        let pid: pid_t
+        let forced: Bool
+    }
+
+    private(set) var activeTermination: ActiveTermination?
+
     @Published var runningApps: [AppGroup] = []
     @Published var totalMemoryUsed: UInt64 = 0
     @Published var totalMemory: UInt64 = 0
@@ -161,6 +172,9 @@ final class AppMemoryManager: ObservableObject {
 
     /// Terminate an app group
     func terminateApp(_ app: AppGroup) -> Bool {
+        activeTermination = Self.makeActiveTermination(app, forced: false)
+        defer { activeTermination = nil }
+        recordTerminationRequested(app, forced: false)
         let success = processService.terminateApp(app)
         recordTermination(app, forced: false, success: success)
         return success
@@ -168,6 +182,9 @@ final class AppMemoryManager: ObservableObject {
 
     /// Force terminate an app group
     func forceTerminateApp(_ app: AppGroup) -> Bool {
+        activeTermination = Self.makeActiveTermination(app, forced: true)
+        defer { activeTermination = nil }
+        recordTerminationRequested(app, forced: true)
         let success = processService.forceTerminateApp(app)
         recordTermination(app, forced: true, success: success)
         return success
@@ -175,25 +192,69 @@ final class AppMemoryManager: ObservableObject {
 
     /// Async terminate with reliable two-stage strategy
     func terminateAppAsync(_ app: AppGroup) async -> Bool {
+        let startedAt = Date()
+        activeTermination = Self.makeActiveTermination(app, forced: false)
+        defer { activeTermination = nil }
+        recordTerminationRequested(app, forced: false)
         let success = await processService.terminateAppAsync(app)
-        recordTermination(app, forced: false, success: success)
+        recordTermination(
+            app,
+            forced: false,
+            success: success,
+            durationMilliseconds: Int(Date().timeIntervalSince(startedAt) * 1_000)
+        )
         if success {
             await updateRunningApps()
         }
         return success
     }
 
-    private func recordTermination(_ app: AppGroup, forced: Bool, success: Bool) {
+    private static func makeActiveTermination(_ app: AppGroup, forced: Bool) -> ActiveTermination {
+        ActiveTermination(
+            appName: app.name,
+            bundleIdentifier: app.bundleIdentifier,
+            pid: app.id,
+            forced: forced
+        )
+    }
+
+    private func recordTerminationRequested(_ app: AppGroup, forced: Bool) {
+        DiagnosticLogService.record(
+            category: "process",
+            action: "terminationRequested",
+            fields: [
+                "name": app.name,
+                "pid": String(app.id),
+                "bundleIdentifier": app.bundleIdentifier ?? "none",
+                "processCount": String(app.processCount),
+                "forced": String(forced),
+                "frontmostBundleIdentifier": NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none",
+                "lightStatsActive": String(NSApp.isActive)
+            ]
+        )
+    }
+
+    private func recordTermination(
+        _ app: AppGroup,
+        forced: Bool,
+        success: Bool,
+        durationMilliseconds: Int? = nil
+    ) {
+        var fields = [
+            "name": app.name,
+            "pid": String(app.id),
+            "bundleIdentifier": app.bundleIdentifier ?? "none",
+            "forced": String(forced),
+            "success": String(success)
+        ]
+        if let durationMilliseconds {
+            fields["durationMilliseconds"] = String(durationMilliseconds)
+        }
         DiagnosticLogService.record(
             level: success ? .info : .error,
             category: "process",
             action: "terminationCompleted",
-            fields: [
-                "name": app.name,
-                "pid": String(app.id),
-                "forced": String(forced),
-                "success": String(success)
-            ]
+            fields: fields
         )
     }
 

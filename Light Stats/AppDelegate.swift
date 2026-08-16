@@ -9,53 +9,19 @@ import AppKit
 import SwiftUI
 import Combine
 
-/// 无标题栏的浮动面板默认 `canBecomeKey` 返回 false，导致 `makeKeyAndOrderFront`
-/// 无法设为 key window（控制台报 makeKeyWindow 警告），且配合 `hidesOnDeactivate`
-/// 会在激活时立刻被隐藏。重写这两个属性以允许面板成为 key/main window。
-final class KeyablePanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
+private enum PanelDismissReason: String {
+    case resignKey
+    case globalMouseDown
+    case statusItemToggle
+    case externalRequest
 
-    /// 面板失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时回调。
-    /// 复刻 NSPopover .transient 的自动关闭行为，参考 Maccy 的 FloatingPanel。
-    var onResignKey: (() -> Void)?
-
-    override func resignKey() {
-        super.resignKey()
-        onResignKey?()
-    }
-}
-
-/// Keeps mouse / scroll events inside the popover when SwiftUI has no painted
-/// descendant at a point. Real controls and scroll views keep normal hit targets.
-/// Unhandled `scrollWheel` is absorbed so a non-opaque panel does not forward
-/// wheel events through to the desktop (macOS 26). Does not paint or change colors.
-///
-/// Non-generic on purpose: a generic `NSHostingView<Content>` subclass trips a
-/// Xcode 26.x SIL `EarlyPerfInliner` crash in Release/WMO on the synthesised
-/// deinit (`HitRetainingHostingView.deinit`). Erasing through `AnyView` keeps
-/// the hit/scroll contract without the compiler bug.
-final class HitRetainingHostingView: NSHostingView<AnyView> {
-    required init(rootView: AnyView) {
-        super.init(rootView: rootView)
-    }
-
-    convenience init(rootView: some View) {
-        self.init(rootView: AnyView(rootView))
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        super.hitTest(point) ?? (bounds.contains(point) ? self : nil)
-    }
-
-    override func scrollWheel(with _: NSEvent) {
-        // Descendants that handle scrolling receive the event via hit-testing.
-        // Anything that lands here must not continue past this panel.
+    var isAutomatic: Bool {
+        switch self {
+        case .resignKey, .globalMouseDown:
+            return true
+        case .statusItemToggle, .externalRequest:
+            return false
+        }
     }
 }
 
@@ -72,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var panelAutoClosedAt: Date?
     // 面板打开时监听面板外的全局点击（含别的菜单栏图标），点外部即关闭
     private var globalClickMonitor: Any?
+    // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
+    private var lastGlobalMouseDownAt: Date?
     private var windowControlPermissionAlertShown = false
     private var terminationInProgress = false
     private var terminationReplySent = false
@@ -378,7 +346,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 复刻 NSPopover .transient 行为，无需再次点击图标手动隐藏。
         panel.onResignKey = { [weak self] in
             guard let self, self.panel?.isVisible == true else { return }
-            self.dismissPanel(autoClosed: true)
+            self.dismissPanel(reason: .resignKey)
         }
 
         self.panel = panel
@@ -471,10 +439,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // MARK: - Actions
 
     /// 统一关闭面板：隐藏、同步状态、停止采集、移除全局点击监听。
-    private func dismissPanel(autoClosed: Bool = false) {
-        recordPanelClosed(automatically: autoClosed)
+    private func dismissPanel(reason: PanelDismissReason) {
+        recordPanelClosed(reason: reason)
         panel?.orderOut(nil)
-        if autoClosed { panelAutoClosedAt = Date() }
+        if reason.isAutomatic { panelAutoClosedAt = Date() }
         monitor.setPopoverVisible(false)
         appMemoryManager.stopMonitoring()
         removeGlobalClickMonitor()
@@ -487,7 +455,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
-            self?.dismissPanel(autoClosed: true)
+            guard let self else { return }
+            self.lastGlobalMouseDownAt = Date()
+            self.dismissPanel(reason: .globalMouseDown)
         }
     }
 
@@ -538,7 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 #endif
 
         if panel.isVisible {
-            dismissPanel()
+            dismissPanel(reason: .statusItemToggle)
             return
         }
 
@@ -561,7 +531,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
 
         panel.setFrameOrigin(panelOrigin)
-        DiagnosticLogService.record(category: "popover", action: "opened")
+        DiagnosticLogService.record(
+            category: "popover",
+            action: "opened",
+            fields: panelDiagnosticFields()
+        )
         AIUsageMonitor.shared.refreshIfStale()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -697,7 +671,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
 extension AppDelegate {
     func closePanel() {
-        dismissPanel()
+        dismissPanel(reason: .externalRequest)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -753,11 +727,67 @@ private extension AppDelegate {
         )
     }
 
-    func recordPanelClosed(automatically: Bool) {
+    private func recordPanelClosed(reason: PanelDismissReason) {
+        var fields = panelDiagnosticFields()
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let frontmostBundleId = frontmost?.bundleIdentifier ?? "none"
+        let frontmostPid = frontmost?.processIdentifier ?? -1
+
+        fields["automatic"] = String(reason.isAutomatic)
+        fields["reason"] = reason.rawValue
+        fields["recentOutsideClick"] = String(isRecentOutsideClick())
+
+        if let termination = appMemoryManager.activeTermination {
+            fields["terminationInFlight"] = "true"
+            fields["terminationTarget"] = termination.appName
+            fields["terminationTargetBundleId"] = termination.bundleIdentifier ?? "none"
+            let matchesBundle = termination.bundleIdentifier != nil && termination.bundleIdentifier == frontmostBundleId
+            let matchesPid = termination.pid == frontmostPid
+            fields["frontmostMatchesTerminationTarget"] = String(matchesBundle || matchesPid)
+        } else {
+            fields["terminationInFlight"] = "false"
+        }
+
+        fields["classification"] = classifyPanelClose(reason: reason, fields: fields)
+
         DiagnosticLogService.record(
             category: "popover",
             action: "closed",
-            fields: ["automatic": String(automatically)]
+            fields: fields
         )
+    }
+
+    func panelDiagnosticFields() -> [String: String] {
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        return [
+            "frontmostApplication": frontmostApplication?.localizedName ?? "none",
+            "frontmostBundleIdentifier": frontmostApplication?.bundleIdentifier ?? "none",
+            "lightStatsActive": String(NSApp.isActive),
+            "panelKey": String(panel?.isKeyWindow == true),
+            "panelVisible": String(panel?.isVisible == true),
+            "keyWindowClass": NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none"
+        ]
+    }
+
+    private func isRecentOutsideClick() -> Bool {
+        guard let lastGlobalMouseDownAt else { return false }
+        return Date().timeIntervalSince(lastGlobalMouseDownAt) < 0.25
+    }
+
+    /// 面板关闭归类：区分「正常」（点外部 / 手动 / 目标应用弹框置前）与「异常」（无理由失焦）。
+    private func classifyPanelClose(reason: PanelDismissReason, fields: [String: String]) -> String {
+        switch reason {
+        case .globalMouseDown:
+            return "externalClick"
+        case .statusItemToggle, .externalRequest:
+            return "manual"
+        case .resignKey:
+            if fields["terminationInFlight"] == "true" {
+                return fields["frontmostMatchesTerminationTarget"] == "true"
+                    ? "expectedFocusGrab"
+                    : "unexpectedResign"
+            }
+            return fields["recentOutsideClick"] == "true" ? "externalClick" : "unexpectedResign"
+        }
     }
 }
