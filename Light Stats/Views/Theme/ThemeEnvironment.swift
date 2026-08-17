@@ -14,10 +14,19 @@ private struct ThemeKey: EnvironmentKey {
     static let defaultValue = UITokens.glass
 }
 
+private struct ThemeLayoutKey: EnvironmentKey {
+    static let defaultValue = ThemeLayout.instrument
+}
+
 extension EnvironmentValues {
     var theme: UITokens {
         get { self[ThemeKey.self] }
         set { self[ThemeKey.self] = newValue }
+    }
+
+    var themeLayout: ThemeLayout {
+        get { self[ThemeLayoutKey.self] }
+        set { self[ThemeLayoutKey.self] = newValue }
     }
 }
 
@@ -26,10 +35,11 @@ extension EnvironmentValues {
 extension View {
     /// Resolves `ThemeDefinition` for the product preset and injects UI tokens.
     func appThemed(_ theme: AppTheme) -> some View {
-        let tokens = ThemeDefinition.definition(for: theme).ui
+        let definition = ThemeDefinition.definition(for: theme)
         return self
-            .environment(\.theme, tokens)
-            .preferredColorScheme(tokens.preferredColorScheme)
-            .tint(tokens.accent)
+            .environment(\.theme, definition.ui)
+            .environment(\.themeLayout, definition.layout)
+            .preferredColorScheme(definition.ui.preferredColorScheme)
+            .tint(definition.ui.accent)
     }
 }
