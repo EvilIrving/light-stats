@@ -39,6 +39,32 @@ struct SunGoldLightField: View {
             )
 
             ZStack {
+                if configuration.sunDisk.isEnabled {
+                    let layer = configuration.sunDisk
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color(red: 1.0, green: 0.88, blue: 0.48).opacity(0.72),
+                                    configuration.highlight.opacity(0.72),
+                                    configuration.secondary.opacity(0.38),
+                                    Color.clear
+                                ],
+                                center: UnitPoint(x: 0.38, y: 0.36),
+                                startRadius: 0,
+                                endRadius: scale * 0.18
+                            )
+                        )
+                        .frame(width: scale * 0.30, height: scale * 0.30)
+                        .blur(radius: scale * layer.blurRadiusScale)
+                        .offset(
+                            x: width * 0.22 + (driftX + shiftX) * layer.motionScale,
+                            y: height * 0.16 + (driftY + shiftY) * layer.motionScale
+                        )
+                        .blendMode(.screen)
+                        .opacity(layer.opacity)
+                }
+
                 if configuration.primaryGlow.isEnabled {
                     let layer = configuration.primaryGlow
                     Ellipse()

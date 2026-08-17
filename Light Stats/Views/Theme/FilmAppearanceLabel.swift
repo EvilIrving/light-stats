@@ -19,9 +19,7 @@ enum FilmAppearanceLabel {
     static func flow(_ value: Double) -> String {
         switch value {
         case ..<0.02: return "settings.theme.film.flow.paused".localized
-        case ..<0.25: return "settings.theme.film.flow.gentle".localized
-        case ..<0.5: return "settings.theme.film.flow.natural".localized
-        case ..<0.75: return "settings.theme.film.flow.smooth".localized
+        case ..<0.7: return "settings.theme.film.flow.natural".localized
         default: return "settings.theme.film.flow.lively".localized
         }
     }

@@ -21,6 +21,7 @@ struct SunGoldSceneConfiguration {
         let primary: Color
         let secondary: Color
         let highlight: Color
+        let sunDisk: LightFieldLayerConfiguration
         let primaryGlow: LightFieldLayerConfiguration
         let ambientGlow: LightFieldLayerConfiguration
         let primaryRibbon: LightFieldLayerConfiguration
@@ -36,7 +37,7 @@ struct SunGoldSceneConfiguration {
     let grain: GrainOverlayConfiguration
 
     static let defaults = SunGoldSceneConfiguration(
-        canvas: Color(red: 0.10, green: 0.06, blue: 0.05),
+        canvas: Color(red: 0.10, green: 0.018, blue: 0.004),
         flow: FlowAnimationConfiguration(
             framesPerSecond: 24,
             pauseThreshold: 0.02,
@@ -57,60 +58,66 @@ struct SunGoldSceneConfiguration {
             verticalSecondary: 0.028
         ),
         lightField: LightField(
-            meshBase: Color(red: 0.16, green: 0.08, blue: 0.07),
-            primary: Color(red: 0.42, green: 0.20, blue: 0.18),
-            secondary: Color(red: 0.78, green: 0.40, blue: 0.30),
-            highlight: Color(red: 0.90, green: 0.72, blue: 0.58),
+            meshBase: Color(red: 0.22, green: 0.035, blue: 0.008),
+            primary: Color(red: 0.54, green: 0.11, blue: 0.018),
+            secondary: Color(red: 0.94, green: 0.32, blue: 0.045),
+            highlight: Color(red: 1.0, green: 0.78, blue: 0.30),
+            sunDisk: LightFieldLayerConfiguration(
+                isEnabled: true,
+                blurRadiusScale: 0.035,
+                opacity: 0.48,
+                motionScale: 0.35
+            ),
             primaryGlow: LightFieldLayerConfiguration(
                 isEnabled: true,
-                blurRadiusScale: 0.18,
+                blurRadiusScale: 0.14,
                 opacity: 1,
                 motionScale: 1
             ),
             ambientGlow: LightFieldLayerConfiguration(
                 isEnabled: true,
-                blurRadiusScale: 0.18,
-                opacity: 0.6,
+                blurRadiusScale: 0.20,
+                opacity: 0.82,
                 motionScale: 1
             ),
             primaryRibbon: LightFieldLayerConfiguration(
                 isEnabled: true,
-                blurRadiusScale: 0.08,
+                blurRadiusScale: 0.07,
                 opacity: 1,
                 motionScale: 1
             ),
             secondaryRibbon: LightFieldLayerConfiguration(
                 isEnabled: true,
-                blurRadiusScale: 0.12,
-                opacity: 0.5,
+                blurRadiusScale: 0.10,
+                opacity: 0.72,
                 motionScale: 1
             ),
             highlightGlow: LightFieldLayerConfiguration(
                 isEnabled: true,
-                blurRadiusScale: 0.14,
-                opacity: 0.55,
+                blurRadiusScale: 0.11,
+                opacity: 0.80,
                 motionScale: 1
             )
         ),
         veil: ReadingVeilConfiguration(
-            centerColor: Color(red: 0.06, green: 0.03, blue: 0.02),
-            innerOpacity: 0.48,
-            middleOpacity: 0.24,
-            outerOpacity: 0.06,
+            centerColor: Color(red: 0.10, green: 0.015, blue: 0.002),
+            innerOpacity: 0.22,
+            middleOpacity: 0.10,
+            outerOpacity: 0.02,
             centerX: 0.5,
-            centerY: 0.48,
+            centerY: 0.44,
             horizontalFollow: 0.35,
             verticalFollow: 0.3,
             startRadiusScale: 0.06,
-            endRadiusScale: 0.75
+            endRadiusScale: 0.84
         ),
         grain: GrainOverlayConfiguration(
-            opacity: 0.42,
+            opacity: 0.26,
             scale: 1,
-            bodyOpacityRatio: 0.55,
-            warmth: 0.5,
-            warmthOpacityRatio: 0.14,
-            warmTint: Color(red: 0.92, green: 0.62, blue: 0.42)
+            bodyOpacityRatio: 0.35,
+            warmth: 0.9,
+            warmthOpacityRatio: 0.20,
+            warmTint: Color(red: 1.0, green: 0.58, blue: 0.20)
         )
     )
 }

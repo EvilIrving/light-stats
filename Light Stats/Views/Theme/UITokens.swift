@@ -15,6 +15,7 @@ import SwiftUI
 struct UITokens: Equatable {
     /// `nil` = follow system appearance.
     let preferredColorScheme: ColorScheme?
+    let chromeStyle: ThemeChromeStyle
 
     let usesVibrantSurfaces: Bool
 
@@ -65,35 +66,64 @@ struct UITokens: Equatable {
 
     // MARK: Preset paint (composed by ThemeDefinition)
 
-    /// Sun Gold / 晒金 — dark reading surface + high-contrast cream ink.
+    /// Neon — dark console surfaces with acid-lime, cyan, and hot-pink light.
     static let film = UITokens(
         preferredColorScheme: .dark,
+        chromeStyle: .neon,
         usesVibrantSurfaces: false,
-        surfaceFill: Color(red: 0.14, green: 0.09, blue: 0.07).opacity(0.88),
-        surfaceStroke: Color.white.opacity(0.14),
-        surfaceShadowOpacity: 0.30,
-        tabTrackFill: Color.white.opacity(0.10),
-        tabSelectedFill: Color(red: 0.22, green: 0.14, blue: 0.11).opacity(0.96),
-        rowHoverFill: Color.white.opacity(0.10),
-        wellFill: Color.white.opacity(0.12),
-        inkPrimary: Color(red: 1.0, green: 0.98, blue: 0.95),
-        inkMuted: Color(red: 0.96, green: 0.92, blue: 0.88),
-        inkSecondary: Color(red: 0.90, green: 0.84, blue: 0.78),
-        inkFaint: Color(red: 0.78, green: 0.70, blue: 0.62),
-        signalGood: Color(red: 0.82, green: 0.90, blue: 0.48),
-        signalWarn: Color(red: 1.0, green: 0.78, blue: 0.38),
-        signalBad: Color(red: 1.0, green: 0.48, blue: 0.40),
-        signalInfo: Color(red: 0.72, green: 0.88, blue: 0.92),
-        signalAccent: Color(red: 1.0, green: 0.62, blue: 0.38),
-        lineHairline: Color(red: 0.96, green: 0.82, blue: 0.68).opacity(0.22),
-        chartLine: Color(red: 0.90, green: 0.78, blue: 0.48),
-        dividerOpacity: 0.20,
-        accent: Color(red: 1.0, green: 0.68, blue: 0.48)
+        surfaceFill: .clear,
+        surfaceStroke: Color(red: 1.0, green: 0.72, blue: 0.28).opacity(0.18),
+        surfaceShadowOpacity: 0,
+        tabTrackFill: Color(red: 0.68, green: 0.20, blue: 0.035).opacity(0.24),
+        tabSelectedFill: Color(red: 1.0, green: 0.48, blue: 0.10).opacity(0.30),
+        rowHoverFill: Color(red: 0.30, green: 0.94, blue: 1.0).opacity(0.12),
+        wellFill: Color(red: 0.56, green: 0.14, blue: 0.02).opacity(0.30),
+        inkPrimary: Color(red: 1.0, green: 0.97, blue: 0.86),
+        inkMuted: Color(red: 1.0, green: 0.90, blue: 0.68),
+        inkSecondary: Color(red: 0.98, green: 0.76, blue: 0.42),
+        inkFaint: Color(red: 0.78, green: 0.56, blue: 0.34),
+        signalGood: Color(red: 0.78, green: 1.0, blue: 0.18),
+        signalWarn: Color(red: 1.0, green: 0.68, blue: 0.16),
+        signalBad: Color(red: 1.0, green: 0.16, blue: 0.42),
+        signalInfo: Color(red: 0.30, green: 0.92, blue: 1.0),
+        signalAccent: Color(red: 1.0, green: 0.28, blue: 0.48),
+        lineHairline: Color(red: 0.80, green: 1.0, blue: 0.22).opacity(0.34),
+        chartLine: Color(red: 0.78, green: 1.0, blue: 0.18),
+        dividerOpacity: 0.30,
+        accent: Color(red: 0.82, green: 1.0, blue: 0.20)
+    )
+
+    /// Night Bar / 夜色酒吧 — wine-black glass with red and emerald neon.
+    static let bar = UITokens(
+        preferredColorScheme: .dark,
+        chromeStyle: .nightBar,
+        usesVibrantSurfaces: false,
+        surfaceFill: Color(red: 0.045, green: 0.008, blue: 0.030).opacity(0.78),
+        surfaceStroke: Color(red: 1.0, green: 0.12, blue: 0.30).opacity(0.32),
+        surfaceShadowOpacity: 0.42,
+        tabTrackFill: Color.clear,
+        tabSelectedFill: Color.clear,
+        rowHoverFill: Color(red: 0.03, green: 0.90, blue: 0.40).opacity(0.14),
+        wellFill: Color(red: 0.018, green: 0.12, blue: 0.065).opacity(0.68),
+        inkPrimary: Color(red: 1.0, green: 0.96, blue: 0.92),
+        inkMuted: Color(red: 0.96, green: 0.86, blue: 0.84),
+        inkSecondary: Color(red: 0.84, green: 0.70, blue: 0.73),
+        inkFaint: Color(red: 0.66, green: 0.49, blue: 0.55),
+        signalGood: Color(red: 0.12, green: 1.0, blue: 0.48),
+        signalWarn: Color(red: 1.0, green: 0.62, blue: 0.16),
+        signalBad: Color(red: 1.0, green: 0.10, blue: 0.28),
+        signalInfo: Color(red: 0.16, green: 0.96, blue: 0.70),
+        signalAccent: Color(red: 1.0, green: 0.24, blue: 0.46),
+        lineHairline: Color(red: 1.0, green: 0.18, blue: 0.36).opacity(0.30),
+        chartLine: Color(red: 0.12, green: 1.0, blue: 0.48),
+        dividerOpacity: 0.28,
+        accent: Color(red: 1.0, green: 0.14, blue: 0.34)
     )
 
     /// Original bento-grid product look — raised cards + classic metric greens.
     static let bento = UITokens(
         preferredColorScheme: nil,
+        chromeStyle: .standard,
         usesVibrantSurfaces: true,
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.78),
         surfaceStroke: Color.primary.opacity(0.08),
@@ -120,6 +150,7 @@ struct UITokens: Equatable {
     /// System glass / vibrancy — instrument readout (no bento card chrome).
     static let glass = UITokens(
         preferredColorScheme: nil,
+        chromeStyle: .standard,
         usesVibrantSurfaces: true,
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.55),
         surfaceStroke: Color.primary.opacity(0.08),
@@ -146,6 +177,7 @@ struct UITokens: Equatable {
     /// Near-black reading surface — strong white ink.
     static let noir = UITokens(
         preferredColorScheme: .dark,
+        chromeStyle: .standard,
         usesVibrantSurfaces: false,
         surfaceFill: Color(red: 0.10, green: 0.10, blue: 0.12).opacity(0.90),
         surfaceStroke: Color.white.opacity(0.14),
@@ -172,6 +204,7 @@ struct UITokens: Equatable {
     /// Data Paper — neutral technical sheet with restrained engineering signals.
     static let dataPaper = UITokens(
         preferredColorScheme: .light,
+        chromeStyle: .standard,
         usesVibrantSurfaces: false,
         surfaceFill: Color(red: 0.985, green: 0.990, blue: 0.995).opacity(0.92),
         surfaceStroke: Color(red: 0.58, green: 0.63, blue: 0.69).opacity(0.52),
@@ -193,6 +226,36 @@ struct UITokens: Equatable {
         chartLine: Color(red: 0.031, green: 0.486, blue: 0.569),
         dividerOpacity: 0.38,
         accent: Color(red: 0.886, green: 0.231, blue: 0.231)
+    )
+
+    /// Ash Veil — monochrome photo with extreme vertical contrast
+    /// (top/bottom ~L228, center ~L37). Instrument text sits on the photo with
+    /// no card chrome, so ink must stay near-white for the light bands, and wells
+    /// / tab tracks need a dark wash so chips remain readable on pale zones.
+    static let ashVeil = UITokens(
+        preferredColorScheme: .dark,
+        chromeStyle: .standard,
+        usesVibrantSurfaces: false,
+        surfaceFill: Color(red: 0.04, green: 0.04, blue: 0.05).opacity(0.72),
+        surfaceStroke: Color.white.opacity(0.18),
+        surfaceShadowOpacity: 0.28,
+        tabTrackFill: Color.black.opacity(0.48),
+        tabSelectedFill: Color(red: 0.16, green: 0.16, blue: 0.18).opacity(0.94),
+        rowHoverFill: Color.black.opacity(0.30),
+        wellFill: Color.black.opacity(0.42),
+        inkPrimary: Color.white,
+        inkMuted: Color.white.opacity(0.94),
+        inkSecondary: Color.white.opacity(0.82),
+        inkFaint: Color.white.opacity(0.66),
+        signalGood: Color(red: 0.42, green: 0.96, blue: 0.70),
+        signalWarn: Color(red: 1.0, green: 0.86, blue: 0.40),
+        signalBad: Color(red: 1.0, green: 0.46, blue: 0.48),
+        signalInfo: Color(red: 0.56, green: 0.84, blue: 1.0),
+        signalAccent: Color(red: 0.90, green: 0.90, blue: 0.94),
+        lineHairline: Color.white.opacity(0.22),
+        chartLine: Color(red: 0.88, green: 0.90, blue: 0.96),
+        dividerOpacity: 0.24,
+        accent: Color(red: 0.92, green: 0.92, blue: 0.96)
     )
 
     // MARK: Metric ramp
