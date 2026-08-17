@@ -18,11 +18,12 @@ struct AppCardView: View {
     let onClose: () -> Void
 
     @Environment(\.theme) private var theme
+    @Environment(\.themeLayout) private var layout
     @State private var isHovered = false
     @State private var isExpanded = false
     @State private var cachedChildProcesses: [TopProcessInfo] = []
 
-    private var usesBento: Bool { theme.usesBentoLayout }
+    private var usesBento: Bool { layout.usesBentoLayout }
 
     private var iconSize: CGFloat { usesBento ? 28 : 22 }
     private var rowHSpacing: CGFloat { usesBento ? 12 : 10 }

@@ -2,7 +2,7 @@
 //  OverviewTabView.swift
 //  Light Stats
 //
-//  Two layouts, driven by resolved `UITokens.usesBentoLayout`:
+//  Two layouts, driven by resolved `ThemeLayout`:
 //  - Bento → classic raised cards + 2×2 metric tiles
 //  - Instrument → sections + hairlines
 //
@@ -13,13 +13,14 @@ struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
     @Environment(\.theme) var theme
+    @Environment(\.themeLayout) private var layout
     @ObservedObject var settings = SettingsManager.shared
 
     private let quickStatCardHeight: CGFloat = 62
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            if theme.usesBentoLayout {
+            if layout.usesBentoLayout {
                 bentoContent
             } else {
                 instrumentContent

@@ -9,31 +9,30 @@ extension GeneralDetail {
     @ViewBuilder
     var themeSectionContent: some View {
         let definition = ThemeDefinition.definition(for: settings.appTheme)
-        if definition.background.kind == .mesh {
-            meshThemeLayout(configuration: definition.background)
-        } else {
+        if definition.background == .systemGlass {
             themeConfigurationControls
+        } else {
+            themeWithPreviewLayout(sceneID: definition.background)
         }
     }
 
     @ViewBuilder
     var themeAppearanceControls: some View {
-        let definition = ThemeDefinition.definition(for: settings.appTheme)
         Group {
-            switch definition.background.appearanceSlot {
+            switch settings.themeAppearance(for: settings.appTheme) {
             case .film:
-                meshAppearanceControls(
+                backgroundAppearanceControls(
                     grainEnabled: $settings.filmGrainEnabled,
-                    dynamics: $settings.filmLightFlow,
+                    lightFlow: $settings.filmLightFlow,
                     presets: .film
                 )
             case .noir:
-                meshAppearanceControls(
+                backgroundAppearanceControls(
                     grainEnabled: $settings.noirGrainEnabled,
-                    dynamics: $settings.noirLightFlow,
+                    lightFlow: $settings.noirLightFlow,
                     presets: .noir
                 )
-            case nil:
+            case .none:
                 EmptyView()
             }
         }

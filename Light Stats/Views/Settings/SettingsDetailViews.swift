@@ -23,7 +23,7 @@ struct GeneralDetail: View {
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
-            // Theme first: picker, monochrome UI, then mesh preview, grain, and dynamics.
+            // Theme first: picker, monochrome UI, then dynamic preview and appearance controls.
             SettingsSection("settings.theme".localized) {
                 themeSectionContent
             }
@@ -75,9 +75,9 @@ struct GeneralDetail: View {
         }
     }
 
-    func meshAppearanceControls(
+    func backgroundAppearanceControls(
         grainEnabled: Binding<Bool>,
-        dynamics: Binding<Double>,
+        lightFlow: Binding<Double>,
         presets: ThemeAppearancePresetConfiguration
     ) -> some View {
         SettingsGroup {
@@ -91,12 +91,12 @@ struct GeneralDetail: View {
             SettingsRow("settings.theme.film.lightFlow".localized) {
                 SettingsSegmentedPicker(
                     selection: FilmAppearanceLabel.discreteBinding(
-                        dynamics,
-                        options: presets.dynamicsValues
+                        lightFlow,
+                        options: presets.lightFlowValues
                     ),
                     segmentMinWidth: 44
                 ) {
-                    ForEach(presets.dynamicsValues, id: \.self) { option in
+                    ForEach(presets.lightFlowValues, id: \.self) { option in
                         SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
                     }
                 }
@@ -125,37 +125,34 @@ struct GeneralDetail: View {
         }
     }
 
-    func meshThemeLayout(configuration: BackgroundConfiguration) -> some View {
+    func themeWithPreviewLayout(sceneID: BackgroundSceneID) -> some View {
         HStack(alignment: .top, spacing: 12) {
             themeConfigurationControls
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .layoutPriority(1)
-            meshLivePreview(configuration: configuration)
+            backgroundLivePreview(sceneID: sceneID)
                 .frame(width: 260, alignment: .top)
         }
     }
 
-    private func meshLivePreview(configuration: BackgroundConfiguration) -> some View {
+    private func backgroundLivePreview(sceneID: BackgroundSceneID) -> some View {
         let sourceSize = PopoverContentView.canvasSize
         let previewScale: CGFloat = 1.2
         let previewHeight: CGFloat = 320 * previewScale
         let previewWidth = previewHeight * sourceSize.width / sourceSize.height
         let previewCornerRadius: CGFloat = 10 * previewScale
-        return ThemeBackgroundView(
-            configuration: configuration,
-            appearance: settings.themeAppearance(for: configuration),
+        return BackgroundHost(
+            sceneID: sceneID,
+            appearance: settings.themeAppearance(for: settings.appTheme),
             cornerRadius: previewCornerRadius
         )
             .frame(width: previewWidth, height: previewHeight)
-            .clipShape(RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous))
-            .allowsHitTesting(false)
             .overlay(
                 RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
             .frame(maxWidth: .infinity, alignment: .center)
-            .id(configuration.meshRenderer)
+            .allowsHitTesting(false)
             .accessibilityLabel(settings.appTheme.titleKey.localized)
     }
 

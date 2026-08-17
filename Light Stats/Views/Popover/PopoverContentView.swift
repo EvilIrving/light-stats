@@ -90,14 +90,14 @@ struct PopoverContentView: View {
             .contentShape(Rectangle())
         }
         .ignoresSafeArea(.container, edges: .top)
-        // Mesh art and grain live entirely inside ThemeBackgroundView.
+        // Background pixels live entirely inside the selected scene.
         .background(
-            ThemeBackgroundView(
-                configuration: definition.background,
-                appearance: settings.themeAppearance(for: definition.background),
+            BackgroundHost(
+                sceneID: definition.background,
+                appearance: settings.themeAppearance(for: settings.appTheme),
                 cornerRadius: 12
             )
-                .ignoresSafeArea()
+            .ignoresSafeArea()
         )
         .frame(width: Self.canvasSize.width, height: Self.canvasSize.height)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
