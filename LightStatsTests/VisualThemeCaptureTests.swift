@@ -5,22 +5,42 @@ import XCTest
 
 @MainActor
 final class VisualThemeCaptureTests: XCTestCase {
-    func testCaptureDynamicThemesForVisualReview() throws {
+    func testCaptureThemesForVisualReview() throws {
         let settings = SettingsManager.shared
         let originalTheme = settings.appTheme
         let originalLanguage = settings.appLanguage
+        let originalFilmGrainEnabled = settings.filmGrainEnabled
+        let originalFilmLightFlow = settings.filmLightFlow
+        let originalNoirGrainEnabled = settings.noirGrainEnabled
+        let originalNoirLightFlow = settings.noirLightFlow
+        let originalUseFlatColors = settings.useFlatColors
         defer {
             settings.appTheme = originalTheme
             settings.appLanguage = originalLanguage
+            settings.filmGrainEnabled = originalFilmGrainEnabled
+            settings.filmLightFlow = originalFilmLightFlow
+            settings.noirGrainEnabled = originalNoirGrainEnabled
+            settings.noirLightFlow = originalNoirLightFlow
+            settings.useFlatColors = originalUseFlatColors
+            LocalizationManager.shared.setLanguage(originalLanguage)
+            SystemMonitor.shared.setPopoverVisible(false)
         }
 
         settings.appLanguage = .en
+        settings.filmGrainEnabled = true
+        settings.filmLightFlow = 0
+        settings.noirGrainEnabled = true
+        settings.noirLightFlow = 0
+        settings.useFlatColors = false
         LocalizationManager.shared.setLanguage(.en)
         SystemMonitor.shared.setPopoverVisible(true)
         RunLoop.current.run(until: Date().addingTimeInterval(1.2))
 
+        try capture(.glass, filename: "system-glass-panel.png")
+        try capture(.bento, filename: "bento-panel.png")
         try capture(.film, filename: "sun-gold-panel.png")
         try capture(.noir, filename: "ink-night-panel.png")
+        try capture(.dataPaper, filename: "data-paper-panel.png")
     }
 
     private func capture(_ theme: AppTheme, filename: String) throws {
@@ -38,6 +58,7 @@ final class VisualThemeCaptureTests: XCTestCase {
         )
         window.contentView = hostingView
         window.orderFront(nil)
+        defer { window.orderOut(nil) }
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         window.layoutIfNeeded()
         hostingView.layoutSubtreeIfNeeded()

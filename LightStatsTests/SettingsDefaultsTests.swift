@@ -100,12 +100,20 @@ final class SettingsDefaultsTests: XCTestCase {
     func testAppThemeDefaultsToNoir() {
         // Cold start is Ink Night (raw `.noir`); picker order remains unchanged.
         XCTAssertEqual(freshSettings().appTheme, .noir)
-        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir])
+        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir, .dataPaper])
     }
 
     func testStoredGlassThemeRemainsGlass() {
         cleanDefaults.set("glass", forKey: "settings.appTheme")
         XCTAssertEqual(freshSettings().appTheme, .glass)
+    }
+
+    func testStoredHiddenThemeFallsBackToNoir() {
+        // Data Paper is temporarily hidden (isVisible = false); a stored
+        // selection must not keep a hidden theme applied.
+        cleanDefaults.set("dataPaper", forKey: "settings.appTheme")
+        XCTAssertEqual(freshSettings().appTheme, .noir)
+        XCTAssertFalse(AppTheme.dataPaper.isVisible)
     }
 
     func testUnknownStoredThemeFallsBackToNoir() {
@@ -123,6 +131,26 @@ final class SettingsDefaultsTests: XCTestCase {
         let settings = freshSettings()
         XCTAssertTrue(settings.noirGrainEnabled)
         XCTAssertEqual(settings.noirLightFlow, 0.4, accuracy: 0.0001)
+    }
+
+    func testThemeAppearanceResolverUsesProductSettings() {
+        cleanDefaults.set(false, forKey: "settings.filmGrainEnabled")
+        cleanDefaults.set(0.65, forKey: "settings.filmLightFlow")
+        cleanDefaults.set(true, forKey: "settings.noirGrainEnabled")
+        cleanDefaults.set(0.2, forKey: "settings.noirLightFlow")
+        let settings = freshSettings()
+
+        XCTAssertEqual(settings.themeAppearance(for: .glass), .none)
+        XCTAssertEqual(settings.themeAppearance(for: .bento), .none)
+        XCTAssertEqual(settings.themeAppearance(for: .dataPaper), .none)
+        XCTAssertEqual(
+            settings.themeAppearance(for: .film),
+            .film(FilmThemeAppearanceConfiguration(grainEnabled: false, lightFlow: 0.65))
+        )
+        XCTAssertEqual(
+            settings.themeAppearance(for: .noir),
+            .noir(NoirThemeAppearanceConfiguration(grainEnabled: true, lightFlow: 0.2))
+        )
     }
 
     // MARK: - Persisted overrides are honored (DI sanity check)
