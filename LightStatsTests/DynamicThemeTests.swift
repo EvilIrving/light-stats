@@ -9,7 +9,7 @@ import XCTest
 
 @MainActor
 final class DynamicThemeTests: XCTestCase {
-    func testThemeDefinitionFixesFiveProductPresets() {
+    func testThemeDefinitionFixesProductPresets() {
         let glass = ThemeDefinition.definition(for: .glass)
         XCTAssertEqual(glass.layout, .instrument)
         XCTAssertEqual(glass.background, .systemGlass)
@@ -23,7 +23,15 @@ final class DynamicThemeTests: XCTestCase {
         let film = ThemeDefinition.definition(for: .film)
         XCTAssertEqual(film.layout, .instrument)
         XCTAssertEqual(film.background, .sunGold)
+        XCTAssertEqual(film.ui.chromeStyle, .neon)
         XCTAssertFalse(film.ui.usesVibrantSurfaces)
+
+        let bar = ThemeDefinition.definition(for: .bar)
+        XCTAssertEqual(bar.layout, .instrument)
+        XCTAssertEqual(bar.background, .bar)
+        XCTAssertEqual(bar.ui.preferredColorScheme, .dark)
+        XCTAssertEqual(bar.ui.chromeStyle, .nightBar)
+        XCTAssertFalse(bar.ui.usesVibrantSurfaces)
 
         let noir = ThemeDefinition.definition(for: .noir)
         XCTAssertEqual(noir.layout, .instrument)
@@ -34,6 +42,12 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertEqual(dataPaper.background, .technicalPaper)
         XCTAssertEqual(dataPaper.ui.preferredColorScheme, .light)
         XCTAssertFalse(dataPaper.ui.usesVibrantSurfaces)
+
+        let ashVeil = ThemeDefinition.definition(for: .ashVeil)
+        XCTAssertEqual(ashVeil.layout, .instrument)
+        XCTAssertEqual(ashVeil.background, .ashVeil)
+        XCTAssertEqual(ashVeil.ui.preferredColorScheme, .dark)
+        XCTAssertFalse(ashVeil.ui.usesVibrantSurfaces)
     }
 
     func testAppearanceMapsToSceneInputsAndSceneConfiguration() {
@@ -44,6 +58,14 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertGreaterThan(SunGoldSceneConfiguration.defaults.grain.opacity, 0)
         XCTAssertGreaterThan(SunGoldSceneConfiguration.defaults.grain.scale, 0)
         XCTAssertTrue(SunGoldSceneConfiguration.defaults.lightField.primaryRibbon.isEnabled)
+
+        let barAppearance = BarThemeAppearanceConfiguration(grainEnabled: false, lightFlow: 0.8)
+        let bar = BarSceneInput(barAppearance)
+        XCTAssertFalse(bar.grainEnabled)
+        XCTAssertEqual(bar.lightFlow, 0.8)
+        XCTAssertGreaterThan(BarSceneConfiguration.defaults.grain.opacity, 0)
+        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.redTube.isEnabled)
+        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.greenTube.isEnabled)
 
         let noirAppearance = NoirThemeAppearanceConfiguration(grainEnabled: true, lightFlow: 0.2)
         let inkNight = InkNightSceneInput(noirAppearance)
@@ -79,6 +101,26 @@ final class DynamicThemeTests: XCTestCase {
             anchor
         )
         XCTAssertEqual(
+            BarScene.phase(
+                anchor: anchor,
+                anchorDate: start,
+                at: later,
+                lightFlow: 0,
+                configuration: BarSceneConfiguration.defaults.flow
+            ),
+            anchor
+        )
+        XCTAssertGreaterThan(
+            BarScene.phase(
+                anchor: anchor,
+                anchorDate: start,
+                at: later,
+                lightFlow: 1,
+                configuration: BarSceneConfiguration.defaults.flow
+            ),
+            anchor
+        )
+        XCTAssertEqual(
             InkNightScene.phase(
                 anchor: anchor,
                 anchorDate: start,
@@ -100,16 +142,33 @@ final class DynamicThemeTests: XCTestCase {
         )
     }
 
-    func testSunGoldAndInkNightUseDarkAppearance() {
+    func testCustomChromeThemesKeepSharedInstrumentLayout() {
+        XCTAssertEqual(ThemeDefinition.definition(for: .film).layout, .instrument)
+        XCTAssertEqual(ThemeDefinition.definition(for: .bar).layout, .instrument)
+        XCTAssertTrue(ThemeDefinition.definition(for: .bento).layout.usesBentoLayout)
+        XCTAssertFalse(ThemeDefinition.definition(for: .film).layout.usesBentoLayout)
+        XCTAssertFalse(ThemeDefinition.definition(for: .bar).layout.usesBentoLayout)
+    }
+
+    func testDynamicAndPhotoThemesUseDarkAppearance() {
         XCTAssertEqual(UITokens.film.preferredColorScheme, .dark)
+        XCTAssertEqual(UITokens.bar.preferredColorScheme, .dark)
         XCTAssertEqual(UITokens.noir.preferredColorScheme, .dark)
+        XCTAssertEqual(UITokens.ashVeil.preferredColorScheme, .dark)
     }
 
     func testPersistedThemeIdentifiersRemainStable() {
         XCTAssertEqual(AppTheme.film.rawValue, "film")
+        XCTAssertEqual(AppTheme.bar.rawValue, "bar")
         XCTAssertEqual(AppTheme.noir.rawValue, "noir")
         XCTAssertEqual(AppTheme.dataPaper.rawValue, "dataPaper")
-        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir, .dataPaper])
+        XCTAssertEqual(AppTheme.ashVeil.rawValue, "ashVeil")
+        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .bar, .noir, .dataPaper, .ashVeil])
+        XCTAssertTrue(AppTheme.ashVeil.isVisible)
+        XCTAssertEqual(
+            AppTheme.visibleCases,
+            [.glass, .bento, .film, .bar, .noir, .ashVeil]
+        )
     }
 
     func testUnknownStoredThemeFallsBackToNoir() {

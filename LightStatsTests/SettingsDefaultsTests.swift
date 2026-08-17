@@ -100,7 +100,7 @@ final class SettingsDefaultsTests: XCTestCase {
     func testAppThemeDefaultsToNoir() {
         // Cold start is Ink Night (raw `.noir`); picker order remains unchanged.
         XCTAssertEqual(freshSettings().appTheme, .noir)
-        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .noir, .dataPaper])
+        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .bar, .noir, .dataPaper, .ashVeil])
     }
 
     func testStoredGlassThemeRemainsGlass() {
@@ -127,6 +127,12 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.filmLightFlow, 0.4, accuracy: 0.0001)
     }
 
+    func testBarAppearanceDefaults() {
+        let settings = freshSettings()
+        XCTAssertTrue(settings.barGrainEnabled)
+        XCTAssertEqual(settings.barLightFlow, 0.4, accuracy: 0.0001)
+    }
+
     func testNoirAppearanceDefaults() {
         let settings = freshSettings()
         XCTAssertTrue(settings.noirGrainEnabled)
@@ -136,6 +142,8 @@ final class SettingsDefaultsTests: XCTestCase {
     func testThemeAppearanceResolverUsesProductSettings() {
         cleanDefaults.set(false, forKey: "settings.filmGrainEnabled")
         cleanDefaults.set(0.65, forKey: "settings.filmLightFlow")
+        cleanDefaults.set(false, forKey: "settings.barGrainEnabled")
+        cleanDefaults.set(0.8, forKey: "settings.barLightFlow")
         cleanDefaults.set(true, forKey: "settings.noirGrainEnabled")
         cleanDefaults.set(0.2, forKey: "settings.noirLightFlow")
         let settings = freshSettings()
@@ -143,9 +151,14 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.themeAppearance(for: .glass), .none)
         XCTAssertEqual(settings.themeAppearance(for: .bento), .none)
         XCTAssertEqual(settings.themeAppearance(for: .dataPaper), .none)
+        XCTAssertEqual(settings.themeAppearance(for: .ashVeil), .none)
         XCTAssertEqual(
             settings.themeAppearance(for: .film),
             .film(FilmThemeAppearanceConfiguration(grainEnabled: false, lightFlow: 0.65))
+        )
+        XCTAssertEqual(
+            settings.themeAppearance(for: .bar),
+            .bar(BarThemeAppearanceConfiguration(grainEnabled: false, lightFlow: 0.8))
         )
         XCTAssertEqual(
             settings.themeAppearance(for: .noir),

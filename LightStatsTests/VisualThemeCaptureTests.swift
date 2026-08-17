@@ -11,6 +11,8 @@ final class VisualThemeCaptureTests: XCTestCase {
         let originalLanguage = settings.appLanguage
         let originalFilmGrainEnabled = settings.filmGrainEnabled
         let originalFilmLightFlow = settings.filmLightFlow
+        let originalBarGrainEnabled = settings.barGrainEnabled
+        let originalBarLightFlow = settings.barLightFlow
         let originalNoirGrainEnabled = settings.noirGrainEnabled
         let originalNoirLightFlow = settings.noirLightFlow
         let originalUseFlatColors = settings.useFlatColors
@@ -19,6 +21,8 @@ final class VisualThemeCaptureTests: XCTestCase {
             settings.appLanguage = originalLanguage
             settings.filmGrainEnabled = originalFilmGrainEnabled
             settings.filmLightFlow = originalFilmLightFlow
+            settings.barGrainEnabled = originalBarGrainEnabled
+            settings.barLightFlow = originalBarLightFlow
             settings.noirGrainEnabled = originalNoirGrainEnabled
             settings.noirLightFlow = originalNoirLightFlow
             settings.useFlatColors = originalUseFlatColors
@@ -29,6 +33,8 @@ final class VisualThemeCaptureTests: XCTestCase {
         settings.appLanguage = .en
         settings.filmGrainEnabled = true
         settings.filmLightFlow = 0
+        settings.barGrainEnabled = true
+        settings.barLightFlow = 0
         settings.noirGrainEnabled = true
         settings.noirLightFlow = 0
         settings.useFlatColors = false
@@ -38,14 +44,21 @@ final class VisualThemeCaptureTests: XCTestCase {
 
         try capture(.glass, filename: "system-glass-panel.png")
         try capture(.bento, filename: "bento-panel.png")
-        try capture(.film, filename: "sun-gold-panel.png")
+        try capture(.film, filename: "neon-panel.png")
+        try capture(.bar, filename: "night-bar-panel.png")
+        try capture(.bar, initialTab: 1, filename: "night-bar-cleanup-panel.png")
         try capture(.noir, filename: "ink-night-panel.png")
         try capture(.dataPaper, filename: "data-paper-panel.png")
+        try capture(.ashVeil, filename: "ash-veil-panel.png")
     }
 
-    private func capture(_ theme: AppTheme, filename: String) throws {
+    private func capture(
+        _ theme: AppTheme,
+        initialTab: Int = 0,
+        filename: String
+    ) throws {
         SettingsManager.shared.appTheme = theme
-        let content = PopoverContentView()
+        let content = PopoverContentView(initialTab: initialTab)
             .environmentObject(SystemMonitor.shared)
             .environmentObject(AIUsageMonitor.shared)
         let hostingView = NSHostingView(rootView: content)
