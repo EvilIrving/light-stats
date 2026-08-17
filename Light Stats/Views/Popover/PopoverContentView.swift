@@ -16,6 +16,10 @@ struct PopoverContentView: View {
     @Environment(\.openSettings) private var openSettingsAction
     @State private var hoveredIcon: String?
 
+    init(initialTab: Int = 0) {
+        _selectedTab = State(initialValue: initialTab)
+    }
+
     /// Resolved at this root from settings — `@Environment(\.theme)` only reaches children
     /// after `.appThemed`, so the root itself must not depend on it.
     private var definition: ThemeDefinition { ThemeDefinition.definition(for: settings.appTheme) }
@@ -27,21 +31,43 @@ struct PopoverContentView: View {
             HStack(spacing: 0) {
                 HStack(spacing: 2) {
                     TabButton(title: "tab.overview".localized, isSelected: selectedTab == 0, namespace: animation) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(tabSelectionAnimation) {
                             selectedTab = 0
                         }
                     }
 
                     TabButton(title: "tab.cleanup".localized, isSelected: selectedTab == 1, namespace: animation) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(tabSelectionAnimation) {
                             selectedTab = 1
                         }
                     }
                 }
                 .padding(3)
                 .background(
-                    Capsule()
-                        .fill(theme.tabTrackFill)
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                        style: .continuous
+                    )
+                    .fill(theme.tabTrackFill)
+                    .overlay {
+                        if theme.chromeStyle.usesNightBarTreatment {
+                            RoundedRectangle(
+                                cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                                style: .continuous
+                            )
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        theme.signalAccent.opacity(0.36),
+                                        theme.signalGood.opacity(0.22)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 0.6
+                            )
+                        }
+                    }
                 )
 
                 Spacer()
@@ -122,6 +148,16 @@ struct PopoverContentView: View {
     }
 
     // MARK: - Tooltip (root-level overlay, positioned from measured icon anchors)
+
+    private var tabSelectionAnimation: Animation {
+        if theme.chromeStyle.usesNeonTreatment {
+            return .easeOut(duration: 0.16)
+        }
+        if theme.chromeStyle.usesNightBarTreatment {
+            return .spring(response: 0.28, dampingFraction: 0.88)
+        }
+        return .spring(response: 0.35, dampingFraction: 0.8)
+    }
 
     /// tooltip 与图标底边的垂直间距——唯一可调常量，水平/垂直定位均由 anchor 实测。
     private var tooltipGap: CGFloat { 16 }

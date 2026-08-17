@@ -21,6 +21,10 @@ struct Sparkline: View {
 
     let series: [SparklineSeries]
     var lineWidth: CGFloat = 1.5
+
+    private var effectiveLineWidth: CGFloat {
+        theme.chromeStyle.usesIlluminatedTreatment ? theme.chromeStyle.sparklineWidth : lineWidth
+    }
     /// 仅单序列时在折线下方填充淡渐变；多序列时关闭以免叠色杂乱。
     private var showsFill: Bool { series.count == 1 }
 
@@ -55,8 +59,27 @@ struct Sparkline: View {
                     endPoint: .bottom
                 ))
         }
+        if theme.chromeStyle.usesIlluminatedTreatment {
+            linePath(pts)
+                .stroke(
+                    stroke.opacity(theme.chromeStyle.usesNightBarTreatment ? 0.58 : 0.72),
+                    style: StrokeStyle(
+                        lineWidth: effectiveLineWidth + (theme.chromeStyle.usesNightBarTreatment ? 3 : 2),
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+                .blur(radius: theme.chromeStyle.usesNightBarTreatment ? 3.5 : 2.5)
+        }
         linePath(pts)
-            .stroke(stroke, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            .stroke(
+                stroke,
+                style: StrokeStyle(
+                    lineWidth: effectiveLineWidth,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
     }
 
     /// 全部序列合并后的取值范围；恒定序列退化为围绕该值的 ±1 区间避免除零。
@@ -70,7 +93,7 @@ struct Sparkline: View {
     private func points(_ values: [Double], in size: CGSize, bounds: ClosedRange<Double>) -> [CGPoint] {
         guard values.count > 1 else { return [] }
         let span = bounds.upperBound - bounds.lowerBound
-        let inset = lineWidth
+        let inset = effectiveLineWidth
         let usableHeight = max(size.height - inset * 2, 1)
         let stepX = size.width / CGFloat(values.count - 1)
         return values.enumerated().map { idx, value in

@@ -18,23 +18,31 @@ private struct WindowRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(window.label)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(theme.chromeStyle.compactLabelFont)
                 .foregroundStyle(theme.inkMuted)
                 .frame(width: 22, alignment: .leading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(theme.wellFill)
-                    Capsule()
-                        .fill(useFlatColors ? theme.inkPrimary.opacity(0.4) : colorForRemaining(remainingPercent))
-                        .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+                    )
+                    .fill(theme.wellFill)
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+                    )
+                    .fill(useFlatColors ? theme.inkPrimary.opacity(0.4) : colorForRemaining(remainingPercent))
+                    .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
                 }
             }
             .frame(height: 5)
 
             Text(String(format: "%.0f%%", remainingPercent))
-                .font(.system(size: 11, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+                .font(
+                    useFlatColors
+                        ? .system(size: 11, weight: .regular, design: .monospaced)
+                        : theme.chromeStyle.compactValueFont
+                )
                 .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForRemaining(remainingPercent))
                 .frame(width: 36, alignment: .trailing)
 
@@ -93,7 +101,7 @@ struct AIProviderCompactRow: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 11, height: 11)
                 Text(provider.displayName)
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(theme.chromeStyle.compactLabelFont)
                     .foregroundStyle(theme.inkSecondary)
                 Spacer()
             }

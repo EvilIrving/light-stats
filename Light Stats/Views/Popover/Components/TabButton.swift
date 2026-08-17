@@ -16,23 +16,60 @@ struct TabButton: View {
     let action: () -> Void
 
     var body: some View {
+        let style = theme.chromeStyle
         Text(title)
-            .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+            .font(style.tabFont(isSelected: isSelected))
+            .tracking(style.usesNeonTreatment ? 0.65 : style.usesNightBarTreatment ? 0.18 : 0)
+            .textCase(style.usesNeonTreatment ? .uppercase : nil)
             .foregroundStyle(isSelected ? theme.inkPrimary : theme.inkSecondary)
+            .shadow(
+                color: isSelected && style.usesIlluminatedTreatment
+                    ? theme.accent.opacity(style.usesNightBarTreatment ? 0.56 : 0.72)
+                    : .clear,
+                radius: style.textGlowRadius
+            )
             .animation(nil, value: isSelected)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 6)
+            .padding(.horizontal, style.tabHorizontalPadding)
+            .padding(.vertical, style.tabVerticalPadding)
             .background(
                 ZStack {
                     if isSelected {
-                        Capsule()
+                        RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous)
                             .fill(theme.tabSelectedFill)
-                            .shadow(color: Color.black.opacity(theme.cardShadowOpacity + 0.02), radius: 2, y: 1)
+                            .overlay(alignment: .bottom) {
+                                if style.usesNightBarTreatment {
+                                    Capsule()
+                                        .fill(LinearGradient(
+                                            colors: [theme.signalAccent, theme.signalGood],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ))
+                                        .frame(height: 2)
+                                        .padding(.horizontal, 12)
+                                        .shadow(color: theme.signalAccent.opacity(0.70), radius: 3)
+                                }
+                            }
+                            .overlay {
+                                if style.usesNightBarTreatment {
+                                    RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [
+                                                    theme.signalAccent.opacity(0.62),
+                                                    theme.signalGood.opacity(0.32)
+                                                ],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            ),
+                                            lineWidth: style.surfaceStrokeWidth
+                                        )
+                                }
+                            }
                             .matchedGeometryEffect(id: "ACTIVE_TAB", in: namespace)
                     }
                 }
             )
-            .contentShape(Capsule())
+            .contentShape(RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous))
             .onTapGesture {
                 action()
             }

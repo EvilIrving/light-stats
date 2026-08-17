@@ -43,7 +43,7 @@ extension OverviewTabView {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .font(theme.chromeStyle.compactValueFont)
         .foregroundStyle(theme.inkMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -55,7 +55,7 @@ extension OverviewTabView {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .font(theme.chromeStyle.compactValueFont)
         .foregroundStyle(theme.inkMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -68,17 +68,25 @@ extension OverviewTabView {
                     ForEach(sortedCores, id: \.index) { core in
                         VStack(spacing: 4) {
                             Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                .font(theme.chromeStyle.compactLabelFont)
                                 .foregroundStyle(theme.inkFaint)
 
                             ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 2)
+                                RoundedRectangle(cornerRadius: theme.chromeStyle.coreCornerRadius)
                                     .fill(theme.wellFill)
                                     .frame(width: 10, height: 28)
 
-                                RoundedRectangle(cornerRadius: 2)
+                                RoundedRectangle(cornerRadius: theme.chromeStyle.coreCornerRadius)
                                     .fill(colorForUsage(core.usage))
                                     .frame(width: 10, height: CGFloat(28.0 * (core.usage / 100.0)))
+                                    .shadow(
+                                        color: theme.chromeStyle.usesIlluminatedTreatment
+                                            ? colorForUsage(core.usage).opacity(
+                                                theme.chromeStyle.usesNightBarTreatment ? 0.75 : 0.65
+                                            )
+                                            : .clear,
+                                        radius: theme.chromeStyle.signalGlowRadius
+                                    )
                             }
                         }
                     }
@@ -91,9 +99,21 @@ extension OverviewTabView {
     func metricPercent(_ usage: Double) -> some View {
         HStack(alignment: .lastTextBaseline, spacing: 2) {
             Text(String(format: "%.0f", usage))
-                .font(.system(size: 16, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                .font(
+                    useFlatColors
+                        ? .system(size: 16, weight: .regular, design: .monospaced)
+                        : theme.chromeStyle.metricValueFont
+                )
+                .shadow(
+                    color: theme.chromeStyle.usesIlluminatedTreatment
+                        ? colorForUsage(usage).opacity(
+                            theme.chromeStyle.usesNightBarTreatment ? 0.70 : 0.62
+                        )
+                        : .clear,
+                    radius: theme.chromeStyle.signalGlowRadius
+                )
             Text("%")
-                .font(.system(size: 11, weight: .medium))
+                .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(theme.inkMuted)
         }
         .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(usage))

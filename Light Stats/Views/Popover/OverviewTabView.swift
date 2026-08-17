@@ -313,7 +313,7 @@ struct OverviewTabView: View {
                     valueColor: gradeColor(monitor.health.grade)
                 )
                 healthSummary
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(theme.chromeStyle.bodyFont)
                     .foregroundStyle(theme.inkMuted)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -340,7 +340,11 @@ struct OverviewTabView: View {
                 }
                 MetricRow(label: "overview.load".localized, icon: "speedometer", trend: loadTrend) {
                     Text(monitor.loadAverage.displayString)
-                        .font(.system(size: 13, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
+                        .font(
+                            useFlatColors
+                                ? .system(size: 13, weight: .regular, design: .monospaced)
+                                : theme.chromeStyle.metricValueFont
+                        )
                         .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(loadUsagePercent))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -348,7 +352,11 @@ struct OverviewTabView: View {
                 MetricRow(label: "MEM", svgIcon: .memory, trend: memoryTrend) {
                     HStack(alignment: .lastTextBaseline, spacing: 2) {
                         Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
-                            .font(.system(size: 16, weight: useFlatColors ? .regular : .bold, design: .rounded))
+                            .font(
+                                useFlatColors
+                                    ? .system(size: 16, weight: .regular, design: .monospaced)
+                                    : theme.chromeStyle.metricValueFont
+                            )
                         Text("/")
                             .font(.system(size: 11))
                             .foregroundStyle(theme.inkMuted)
@@ -632,7 +640,7 @@ private struct ProcessRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(process.name)
-                .font(.system(size: 11, design: .monospaced))
+                .font(theme.chromeStyle.bodyFont)
                 .foregroundStyle(theme.inkPrimary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -640,15 +648,23 @@ private struct ProcessRow: View {
             HStack(spacing: 2) {
                 ForEach(0..<5, id: \.self) { index in
                     let threshold = Double(index + 1) * 20
-                    Rectangle()
-                        .fill(process.cpuPercent >= threshold - 10 ? color : theme.wellFill)
-                        .frame(width: 7, height: 9)
-                        .cornerRadius(1)
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2 : 1
+                    )
+                    .fill(process.cpuPercent >= threshold - 10 ? color : theme.wellFill)
+                    .frame(width: 7, height: 9)
+                    .shadow(
+                        color: theme.chromeStyle.usesNightBarTreatment
+                            && process.cpuPercent >= threshold - 10
+                            ? color.opacity(0.55)
+                            : .clear,
+                        radius: 1.5
+                    )
                 }
             }
 
             Text(process.cpuDisplayString)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(color)
                 .frame(width: 48, alignment: .trailing)
         }

@@ -107,12 +107,9 @@ struct GeneralDetail: View {
     var themeConfigurationControls: some View {
         VStack(alignment: .leading, spacing: 10) {
             SettingsGroup {
-                HStack {
-                    Spacer(minLength: 0)
-                    ThemePickerView(selection: $settings.appTheme)
-                }
-                .padding(.horizontal, 12)
-                .frame(minHeight: 40)
+                ThemePickerView(selection: $settings.appTheme)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
                 rowDivider()
                 SettingsRow(
                     "settings.flatColors.section".localized,
@@ -131,7 +128,10 @@ struct GeneralDetail: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .layoutPriority(1)
             backgroundLivePreview(sceneID: sceneID)
-                .frame(width: 260, alignment: .top)
+                // The rendered preview is ~177pt wide at this scale. Keep only a
+                // small breathing margin instead of reserving 260pt and squeezing
+                // the single-line theme picker.
+                .frame(width: 200, alignment: .top)
         }
     }
 

@@ -35,6 +35,7 @@ struct PanelSection<Content: View>: View {
     }
 
     var body: some View {
+        let style = theme.chromeStyle
         VStack(alignment: .leading, spacing: 8) {
             if title != nil || icon != nil || svgIcon != nil || assetIcon != nil {
                 HStack(spacing: 5) {
@@ -45,22 +46,35 @@ struct PanelSection<Content: View>: View {
                             .frame(width: 11, height: 11)
                     } else if let svgIcon {
                         SVGIcon(svgIcon, size: 11)
-                            .foregroundStyle(theme.inkFaint)
+                            .foregroundStyle(style.usesIlluminatedTreatment ? theme.accent : theme.inkFaint)
                     } else if let icon {
                         Image(systemName: icon)
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(theme.inkFaint)
+                            .foregroundStyle(style.usesIlluminatedTreatment ? theme.accent : theme.inkFaint)
                     }
                     if let title {
                         Text(title.uppercased())
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .tracking(0.9)
-                            .foregroundStyle(theme.inkFaint)
+                            .font(style.sectionTitleFont)
+                            .tracking(style.sectionTracking)
+                            .foregroundStyle(style.usesIlluminatedTreatment ? theme.accent : theme.inkFaint)
+                            .shadow(
+                                color: style.usesIlluminatedTreatment ? theme.accent.opacity(0.5) : .clear,
+                                radius: style.textGlowRadius
+                            )
                     }
                     Spacer(minLength: 0)
                 }
             }
             content
+        }
+        .background {
+            if style.usesNeonTreatment {
+                RoundedRectangle(cornerRadius: style.surfaceCornerRadius, style: .continuous)
+                    .fill(theme.surfaceFill)
+                    .padding(.horizontal, -8)
+                    .padding(.vertical, -5)
+                    .shadow(color: theme.accent.opacity(0.10), radius: 8)
+            }
         }
     }
 }
@@ -71,10 +85,39 @@ struct PanelDivider: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
-        Rectangle()
-            .fill(theme.lineHairline)
-            .frame(height: 1)
-            .padding(.vertical, 2)
+        Group {
+            if theme.chromeStyle.usesIlluminatedTreatment {
+                LinearGradient(
+                    colors: theme.chromeStyle.usesNightBarTreatment
+                        ? [
+                            Color.clear,
+                            theme.signalAccent.opacity(0.80),
+                            theme.signalBad.opacity(0.44),
+                            theme.signalGood.opacity(0.72),
+                            Color.clear
+                        ]
+                        : [
+                            Color.clear,
+                            theme.signalAccent.opacity(0.72),
+                            theme.accent,
+                            theme.signalInfo.opacity(0.72),
+                            Color.clear
+                        ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .shadow(
+                    color: theme.chromeStyle.usesNightBarTreatment
+                        ? theme.signalAccent.opacity(0.54)
+                        : theme.accent.opacity(0.55),
+                    radius: theme.chromeStyle.usesNightBarTreatment ? 3 : 2
+                )
+            } else {
+                Rectangle().fill(theme.lineHairline)
+            }
+        }
+        .frame(height: 1)
+        .padding(.vertical, 2)
     }
 }
 
@@ -105,20 +148,30 @@ struct MetricRow<Value: View>: View {
     }
 
     var body: some View {
+        let style = theme.chromeStyle
         HStack(spacing: 10) {
             HStack(spacing: 5) {
                 if let svgIcon {
                     SVGIcon(svgIcon, size: 12)
-                        .foregroundStyle(theme.inkSecondary)
+                        .foregroundStyle(style.usesIlluminatedTreatment ? theme.signalInfo : theme.inkSecondary)
+                        .shadow(
+                            color: style.usesIlluminatedTreatment ? theme.signalInfo.opacity(0.55) : .clear,
+                            radius: style.signalGlowRadius
+                        )
                         .frame(width: 14)
                 } else if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(theme.inkSecondary)
+                        .foregroundStyle(style.usesIlluminatedTreatment ? theme.signalInfo : theme.inkSecondary)
+                        .shadow(
+                            color: style.usesIlluminatedTreatment ? theme.signalInfo.opacity(0.55) : .clear,
+                            radius: style.signalGlowRadius
+                        )
                         .frame(width: 14)
                 }
-                Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text(style.usesIlluminatedTreatment ? label.uppercased() : label)
+                    .font(style.metricLabelFont)
+                    .tracking(style.usesNeonTreatment ? 0.45 : style.usesNightBarTreatment ? 0.25 : 0)
                     .foregroundStyle(theme.inkSecondary)
             }
             .frame(width: 72, alignment: .leading)
@@ -177,12 +230,13 @@ struct MetaRow: View {
                     .foregroundStyle(theme.inkFaint)
                     .frame(width: 12)
             }
-            Text(label)
-                .font(.system(size: 11, design: .monospaced))
+            Text(theme.chromeStyle.usesIlluminatedTreatment ? label.uppercased() : label)
+                .font(theme.chromeStyle.compactLabelFont)
+                .tracking(theme.chromeStyle.usesNeonTreatment ? 0.35 : 0)
                 .foregroundStyle(theme.inkSecondary)
             Spacer(minLength: 8)
             Text(value)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(valueColor ?? theme.inkPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -217,19 +271,29 @@ struct HeroReadout<Trailing: View>: View {
     }
 
     var body: some View {
+        let style = theme.chromeStyle
         HStack(alignment: .lastTextBaseline, spacing: 6) {
             Text(value)
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(style.heroValueFont)
                 .foregroundStyle(valueColor)
+                .shadow(
+                    color: style.usesIlluminatedTreatment ? valueColor.opacity(0.64) : .clear,
+                    radius: style.signalGlowRadius + 1
+                )
             if let unit {
                 Text(unit)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(style.heroUnitFont)
                     .foregroundStyle(theme.inkMuted)
             }
             if let caption {
-                Text(caption)
-                    .font(.system(size: 13, weight: .semibold))
+                Text(style.usesIlluminatedTreatment ? caption.uppercased() : caption)
+                    .font(style.heroCaptionFont)
+                    .tracking(style.usesNeonTreatment ? 0.55 : style.usesNightBarTreatment ? 0.25 : 0)
                     .foregroundStyle(valueColor)
+                    .shadow(
+                        color: style.usesIlluminatedTreatment ? valueColor.opacity(0.52) : .clear,
+                        radius: style.signalGlowRadius
+                    )
                     .padding(.leading, 2)
             }
             Spacer(minLength: 0)

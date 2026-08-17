@@ -74,19 +74,15 @@ struct CleanupTabView: View {
                     ? "cleanup.runningApps".localized
                     : "cleanup.runningApps".localized.uppercased()
             )
-            .font(.system(
-                size: usesBento ? 12 : 10,
-                weight: .semibold,
-                design: usesBento ? .default : .monospaced
-            ))
-            .tracking(usesBento ? 0 : 0.9)
+            .font(usesBento ? .system(size: 12, weight: .semibold) : theme.chromeStyle.sectionTitleFont)
+            .tracking(usesBento ? 0 : theme.chromeStyle.sectionTracking)
             .foregroundStyle(theme.inkFaint)
             Spacer()
             Text(String(
                 format: "cleanup.appCount".localized,
                 appManager.runningApps.filter(\.isTerminable).count
             ))
-            .font(.system(size: 11, design: .monospaced))
+            .font(theme.chromeStyle.compactValueFont)
             .foregroundStyle(theme.inkSecondary)
         }
     }
@@ -110,7 +106,7 @@ struct CleanupTabView: View {
         }
     }
 
-    /// Film / glass / noir: flat readout rows — no well chrome, no inter-row rules.
+    /// Instrument themes share row geometry; ThemeChromeStyle controls visual treatment.
     private var instrumentAppList: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
@@ -140,21 +136,33 @@ struct CleanupTabView: View {
         VStack(spacing: 10) {
             HStack(alignment: .lastTextBaseline) {
                 Text("\(ByteFormatter.format(appManager.totalMemoryUsed)) / \(ByteFormatter.format(appManager.totalMemory))")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(theme.chromeStyle.metricValueFont)
                     .foregroundStyle(theme.inkPrimary)
                 Spacer()
                 Text(String(format: "%.0f%%", memoryUsagePercent))
-                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .font(theme.chromeStyle.metricValueFont)
                     .foregroundStyle(memoryBarColor)
+                    .shadow(
+                        color: theme.chromeStyle.usesIlluminatedTreatment
+                            ? memoryBarColor.opacity(
+                                theme.chromeStyle.usesNightBarTreatment ? 0.72 : 0.65
+                            )
+                            : .clear,
+                        radius: theme.chromeStyle.signalGlowRadius
+                    )
             }
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(theme.wellFill)
-                    Capsule()
-                        .fill(memoryBarColor)
-                        .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 3 : 100
+                    )
+                    .fill(theme.wellFill)
+                    RoundedRectangle(
+                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 3 : 100
+                    )
+                    .fill(memoryBarColor)
+                    .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
                 }
             }
             .frame(height: layout.usesBentoLayout ? 8 : 6)

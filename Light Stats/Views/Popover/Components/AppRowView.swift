@@ -3,7 +3,7 @@
 //  Light Stats
 //
 //  Running-app row for Cleanup. Bento keeps card chips; instrument themes
-//  (film / glass / noir) use a soft readout list aligned with Overview MetricRow.
+//  share row geometry while ThemeChromeStyle controls their visual treatment.
 //
 
 import SwiftUI
@@ -51,7 +51,11 @@ struct AppCardView: View {
             expandCluster
 
             Text(app.displayName)
-                .font(.system(size: usesBento ? 13 : 12, weight: .medium))
+                .font(
+                    usesBento
+                        ? .system(size: 13, weight: .medium)
+                        : theme.chromeStyle.compactValueFont
+                )
                 .foregroundStyle(theme.inkPrimary)
                 .lineLimit(1)
                 .opacity(isTerminating ? 0.5 : 1.0)
@@ -59,7 +63,11 @@ struct AppCardView: View {
             Spacer(minLength: 8)
 
             Text(app.memoryFormatted)
-                .font(.system(size: usesBento ? 12 : 11, design: .monospaced))
+                .font(
+                    usesBento
+                        ? .system(size: 12, design: .monospaced)
+                        : theme.chromeStyle.compactValueFont
+                )
                 .foregroundStyle(theme.inkSecondary)
                 .opacity(isTerminating ? 0.5 : 1.0)
 
@@ -129,6 +137,46 @@ struct AppCardView: View {
         if usesBento {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isHovered ? theme.rowHoverFill : Color.clear)
+        } else if theme.chromeStyle.usesNightBarTreatment {
+            RoundedRectangle(
+                cornerRadius: theme.chromeStyle.surfaceCornerRadius,
+                style: .continuous
+            )
+            .fill(Color.clear)
+            .overlay(alignment: .leading) {
+                if isHovered {
+                    Capsule()
+                        .fill(LinearGradient(
+                            colors: [theme.signalAccent, theme.signalGood],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        .frame(width: 2)
+                        .padding(.vertical, 6)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(theme.lineHairline.opacity(isHovered ? 0.72 : 0.36))
+                    .frame(height: 0.5)
+                    .padding(.leading, 42)
+            }
+        } else if theme.chromeStyle.usesNeonTreatment {
+            RoundedRectangle(
+                cornerRadius: theme.chromeStyle.surfaceCornerRadius,
+                style: .continuous
+            )
+            .fill(isHovered ? theme.rowHoverFill : theme.surfaceFill.opacity(0.50))
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: theme.chromeStyle.surfaceCornerRadius,
+                    style: .continuous
+                )
+                .stroke(
+                    isHovered ? theme.signalInfo.opacity(0.48) : theme.surfaceStroke.opacity(0.24),
+                    lineWidth: theme.chromeStyle.surfaceStrokeWidth
+                )
+            )
         } else {
             // Soft instrument wash — continuous radius, inset so it never reads as a hard bar.
             RoundedRectangle(cornerRadius: 8, style: .continuous)

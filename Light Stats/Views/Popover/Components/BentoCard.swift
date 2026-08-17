@@ -68,14 +68,8 @@ struct BentoCard<Content: View, Accessory: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: fixedHeight)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: theme.chromeStyle.surfaceCornerRadius, style: .continuous)
                 .fill(theme.surfaceFill)
-        )
-        .compositingGroup()
-        .shadow(color: .black.opacity(theme.surfaceShadowOpacity), radius: 3, y: 1)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(theme.surfaceStroke, lineWidth: 0.5)
         )
     }
 }

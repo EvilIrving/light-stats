@@ -22,7 +22,11 @@ struct ChildProcessRowView: View {
             Color.clear.frame(width: indentation)
 
             Text(command)
-                .font(.system(size: compact ? 11 : 12, design: compact ? .monospaced : .default))
+                .font(
+                    compact
+                        ? theme.chromeStyle.compactValueFont
+                        : .system(size: 12)
+                )
                 .foregroundStyle(compact ? theme.inkFaint : theme.inkSecondary)
                 .lineLimit(1)
                 .help(command)
@@ -30,7 +34,11 @@ struct ChildProcessRowView: View {
             Spacer(minLength: 6)
 
             Text(memoryFormatted)
-                .font(.system(size: compact ? 10 : 11, design: .monospaced))
+                .font(
+                    compact
+                        ? theme.chromeStyle.compactLabelFont
+                        : .system(size: 11, design: .monospaced)
+                )
                 .foregroundStyle(theme.inkFaint)
         }
         .padding(.leading, compact ? 0 : 8)
