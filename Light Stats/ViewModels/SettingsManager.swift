@@ -156,6 +156,22 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
 
+    // MARK: - Bar Theme Appearance
+
+    @Published var barGrainEnabled: Bool {
+        didSet { save(barGrainEnabled, for: .barGrainEnabled) }
+    }
+    @Published var barLightFlow: Double {
+        didSet {
+            let safeValue = min(max(barLightFlow, 0), 1)
+            guard safeValue == barLightFlow else {
+                barLightFlow = safeValue
+                return
+            }
+            save(barLightFlow, for: .barLightFlow)
+        }
+    }
+
     // MARK: - Noir Theme Appearance
 
     @Published var noirGrainEnabled: Bool {
@@ -414,6 +430,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case appTheme = "settings.appTheme"
         case filmGrainEnabled = "settings.filmGrainEnabled"
         case filmLightFlow = "settings.filmLightFlow"
+        case barGrainEnabled = "settings.barGrainEnabled"
+        case barLightFlow = "settings.barLightFlow"
         case noirGrainEnabled = "settings.noirGrainEnabled"
         case noirLightFlow = "settings.noirLightFlow"
         case refreshRate = "settings.refreshRate"
@@ -476,6 +494,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true
         let storedFlow = defaults.object(forKey: Key.filmLightFlow.rawValue) as? Double ?? 0.4
         filmLightFlow = min(max(storedFlow, 0), 1)
+        barGrainEnabled = defaults.object(forKey: Key.barGrainEnabled.rawValue) as? Bool ?? true
+        let storedBarFlow = defaults.object(forKey: Key.barLightFlow.rawValue) as? Double ?? 0.4
+        barLightFlow = min(max(storedBarFlow, 0), 1)
         noirGrainEnabled = defaults.object(forKey: Key.noirGrainEnabled.rawValue) as? Bool ?? true
         let storedNoirFlow = defaults.object(forKey: Key.noirLightFlow.rawValue) as? Double ?? 0.4
         noirLightFlow = min(max(storedNoirFlow, 0), 1)

@@ -3,7 +3,7 @@
 //  Light Stats
 //
 //  Single composition table: AppTheme → UI + background + layout.
-//  Five product presets are fixed here. Business views consume the resolved
+//  Product presets are fixed here. Business views consume the resolved
 //  parts and must not switch on `AppTheme` identity.
 //
 
@@ -19,8 +19,10 @@ struct ThemeDefinition: Equatable {
         case .glass: return .glass
         case .bento: return .bento
         case .film: return .film
+        case .bar: return .bar
         case .noir: return .noir
         case .dataPaper: return .dataPaper
+        case .ashVeil: return .ashVeil
         }
     }
 
@@ -38,10 +40,17 @@ struct ThemeDefinition: Equatable {
         layout: .bento
     )
 
-    /// Sun Gold — film ink + warm light-field scene.
+    /// Neon — neon console chrome over the warm light-field scene.
     static let film = ThemeDefinition(
         ui: .film,
         background: .sunGold,
+        layout: .instrument
+    )
+
+    /// Night Bar — smoked-club chrome + red/green neon light field.
+    static let bar = ThemeDefinition(
+        ui: .bar,
+        background: .bar,
         layout: .instrument
     )
 
@@ -56,6 +65,13 @@ struct ThemeDefinition: Equatable {
     static let dataPaper = ThemeDefinition(
         ui: .dataPaper,
         background: .technicalPaper,
+        layout: .instrument
+    )
+
+    /// Ash Veil — soft charcoal UI over a monochrome photo scene.
+    static let ashVeil = ThemeDefinition(
+        ui: .ashVeil,
+        background: .ashVeil,
         layout: .instrument
     )
 }

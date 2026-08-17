@@ -24,14 +24,20 @@ struct BackgroundSceneRouter: View {
             )
         case let (.sunGold, .film(configuration)):
             SunGoldScene(input: SunGoldSceneInput(configuration))
+        case let (.bar, .bar(configuration)):
+            BarScene(input: BarSceneInput(configuration))
         case let (.inkNight, .noir(configuration)):
             InkNightScene(input: InkNightSceneInput(configuration))
         case (.sunGold, _):
             SunGoldScene(input: .defaults)
+        case (.bar, _):
+            BarScene(input: .defaults)
         case (.inkNight, _):
             InkNightScene(input: .defaults)
         case (.technicalPaper, _):
             TechnicalPaperScene()
+        case (.ashVeil, _):
+            AshVeilScene()
         }
     }
 }

@@ -26,6 +26,12 @@ extension GeneralDetail {
                     lightFlow: $settings.filmLightFlow,
                     presets: .film
                 )
+            case .bar:
+                backgroundAppearanceControls(
+                    grainEnabled: $settings.barGrainEnabled,
+                    lightFlow: $settings.barLightFlow,
+                    presets: .bar
+                )
             case .noir:
                 backgroundAppearanceControls(
                     grainEnabled: $settings.noirGrainEnabled,
