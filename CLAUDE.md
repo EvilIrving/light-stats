@@ -25,7 +25,7 @@ Light Stats/
 │   ├── ProcessStats.swift
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
-│   ├── AppTheme.swift               # Product preset ID (glass/bento/film/noir)
+│   ├── AppTheme.swift               # Product preset ID (glass/bento/film/noir/dataPaper)
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -86,7 +86,7 @@ Light Stats/
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
-│   ├── Theme/                           # ThemeDefinition, UITokens, BackgroundConfiguration, renderers
+│   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
 │   ├── CleaningMode/
@@ -218,6 +218,15 @@ Services directly — `Views → ViewModels → Services`.
 SwiftUI for panels and settings. AppKit (`NSViewRepresentable`, `NSHostingView`) for the
 menu bar status item. `CleaningModeOverlayController` is the only View-layer class that
 owns `NSWindow` instances (a bridge, not a ViewModel).
+
+`ThemeDefinition` is the only product composition table: each `AppTheme` fixes its UI tokens,
+`BackgroundSceneID`, and layout. `BackgroundHost` owns only sizing, clipping, window context,
+and disabled hit testing; `BackgroundSceneRouter` creates the selected Scene with a structural
+`@ViewBuilder` switch. System Glass, Sun Gold, Ink Night, and Data Paper own their rendering
+independently. Dynamic Scenes expose typed code-side configurations for flow, motion, grain,
+veil, and named light-field layers; Data Paper has its own static Canvas configuration and does
+not consume those effects. Shared tools are opt-in, not a common rendering pipeline.
+`ThemeLayout` is injected separately from `UITokens` and is the only runtime layout truth.
 
 ## Concurrency
 
