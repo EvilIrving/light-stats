@@ -117,7 +117,7 @@ final class SettingsDefaultsTests: XCTestCase {
     }
 
     func testUnknownStoredThemeFallsBackToNoir() {
-        cleanDefaults.set("aurora", forKey: "settings.appTheme")
+        cleanDefaults.set("mystery", forKey: "settings.appTheme")
         XCTAssertEqual(freshSettings().appTheme, .noir)
     }
 

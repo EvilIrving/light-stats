@@ -115,7 +115,5 @@ final class DynamicThemeTests: XCTestCase {
     func testUnknownStoredThemeFallsBackToNoir() {
         XCTAssertEqual(AppTheme.resolve(stored: nil), .noir)
         XCTAssertEqual(AppTheme.resolve(stored: "mystery"), .noir)
-        XCTAssertEqual(AppTheme.resolve(stored: "aurora"), .noir)
-        XCTAssertEqual(AppTheme.resolve(stored: "paper"), .noir)
     }
 }
