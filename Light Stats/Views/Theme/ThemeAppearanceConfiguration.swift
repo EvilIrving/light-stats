@@ -5,34 +5,27 @@
 
 import Foundation
 
-struct ThemeAppearanceConfiguration: Equatable, Sendable {
-    let grainEnabled: Bool
-    let dynamics: Double
-
-    /// Natural light dynamics (segment value 0.4) for both mesh backgrounds.
-    static let defaultDynamics: Double = 0.4
-
-    static let defaults = ThemeAppearanceConfiguration(
-        grainEnabled: true,
-        dynamics: defaultDynamics
-    )
+enum ThemeAppearanceConfiguration: Equatable, Sendable {
+    case none
+    case film(FilmThemeAppearanceConfiguration)
+    case noir(NoirThemeAppearanceConfiguration)
 }
 
 extension SettingsManager {
-    func themeAppearance(for background: BackgroundConfiguration) -> ThemeAppearanceConfiguration {
-        switch background.appearanceSlot {
+    func themeAppearance(for theme: AppTheme) -> ThemeAppearanceConfiguration {
+        switch theme {
+        case .glass, .bento, .dataPaper:
+            return .none
         case .film:
-            return ThemeAppearanceConfiguration(
+            return .film(FilmThemeAppearanceConfiguration(
                 grainEnabled: filmGrainEnabled,
-                dynamics: filmLightFlow
-            )
+                lightFlow: filmLightFlow
+            ))
         case .noir:
-            return ThemeAppearanceConfiguration(
+            return .noir(NoirThemeAppearanceConfiguration(
                 grainEnabled: noirGrainEnabled,
-                dynamics: noirLightFlow
-            )
-        case nil:
-            return .defaults
+                lightFlow: noirLightFlow
+            ))
         }
     }
 }
