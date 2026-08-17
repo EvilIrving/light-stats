@@ -56,6 +56,7 @@ playground.xcworkspace
 .qwen/
 .claude/
 .cursor/
+.agents/
 .codex/
 .pi/
 .grok/
