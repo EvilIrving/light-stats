@@ -16,6 +16,7 @@
 "settings.theme.bento" = "Bento 网格";
 "settings.theme.glass" = "默认";
 "settings.theme.noir" = "墨夜";
+"settings.theme.dataPaper" = "数据纸";
 "settings.theme.film.grain" = "胶片颗粒";
 "settings.theme.film.grain.hint" = "关闭后保留光影，表面更干净";
 "settings.theme.film.lightFlow" = "光影动态";

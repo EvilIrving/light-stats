@@ -6,7 +6,7 @@
 //  never hard-code theme-specific colors in chrome, and never switch on
 //  `AppTheme` to pick paint.
 //
-//  Backdrop paint lives in `BackgroundConfiguration`.
+//  Background paint is routed by `BackgroundSceneID` through `BackgroundHost`.
 //
 
 import SwiftUI
@@ -16,7 +16,6 @@ struct UITokens: Equatable {
     /// `nil` = follow system appearance.
     let preferredColorScheme: ColorScheme?
 
-    let usesBentoLayout: Bool
     let usesVibrantSurfaces: Bool
 
     // MARK: Surfaces (list rows / wells — not floating cards)
@@ -69,7 +68,6 @@ struct UITokens: Equatable {
     /// Sun Gold / 晒金 — dark reading surface + high-contrast cream ink.
     static let film = UITokens(
         preferredColorScheme: .dark,
-        usesBentoLayout: false,
         usesVibrantSurfaces: false,
         surfaceFill: Color(red: 0.14, green: 0.09, blue: 0.07).opacity(0.88),
         surfaceStroke: Color.white.opacity(0.14),
@@ -96,7 +94,6 @@ struct UITokens: Equatable {
     /// Original bento-grid product look — raised cards + classic metric greens.
     static let bento = UITokens(
         preferredColorScheme: nil,
-        usesBentoLayout: true,
         usesVibrantSurfaces: true,
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.78),
         surfaceStroke: Color.primary.opacity(0.08),
@@ -123,7 +120,6 @@ struct UITokens: Equatable {
     /// System glass / vibrancy — instrument readout (no bento card chrome).
     static let glass = UITokens(
         preferredColorScheme: nil,
-        usesBentoLayout: false,
         usesVibrantSurfaces: true,
         surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.55),
         surfaceStroke: Color.primary.opacity(0.08),
@@ -150,7 +146,6 @@ struct UITokens: Equatable {
     /// Near-black reading surface — strong white ink.
     static let noir = UITokens(
         preferredColorScheme: .dark,
-        usesBentoLayout: false,
         usesVibrantSurfaces: false,
         surfaceFill: Color(red: 0.10, green: 0.10, blue: 0.12).opacity(0.90),
         surfaceStroke: Color.white.opacity(0.14),
@@ -172,6 +167,32 @@ struct UITokens: Equatable {
         chartLine: Color(red: 0.50, green: 0.82, blue: 1.0),
         dividerOpacity: 0.18,
         accent: Color(red: 0.72, green: 0.78, blue: 1.0)
+    )
+
+    /// Data Paper — neutral technical sheet with restrained engineering signals.
+    static let dataPaper = UITokens(
+        preferredColorScheme: .light,
+        usesVibrantSurfaces: false,
+        surfaceFill: Color(red: 0.985, green: 0.990, blue: 0.995).opacity(0.92),
+        surfaceStroke: Color(red: 0.58, green: 0.63, blue: 0.69).opacity(0.52),
+        surfaceShadowOpacity: 0.02,
+        tabTrackFill: Color.white.opacity(0.72),
+        tabSelectedFill: Color.white.opacity(0.98),
+        rowHoverFill: Color(red: 0.08, green: 0.14, blue: 0.20).opacity(0.06),
+        wellFill: Color(red: 0.16, green: 0.22, blue: 0.28).opacity(0.10),
+        inkPrimary: Color(red: 0.067, green: 0.078, blue: 0.094),
+        inkMuted: Color(red: 0.18, green: 0.21, blue: 0.25),
+        inkSecondary: Color(red: 0.30, green: 0.34, blue: 0.38),
+        inkFaint: Color(red: 0.46, green: 0.51, blue: 0.56),
+        signalGood: Color(red: 0.086, green: 0.514, blue: 0.357),
+        signalWarn: Color(red: 0.663, green: 0.408, blue: 0.0),
+        signalBad: Color(red: 0.80, green: 0.188, blue: 0.251),
+        signalInfo: Color(red: 0.031, green: 0.486, blue: 0.569),
+        signalAccent: Color(red: 0.886, green: 0.231, blue: 0.231),
+        lineHairline: Color(red: 0.42, green: 0.47, blue: 0.53).opacity(0.38),
+        chartLine: Color(red: 0.031, green: 0.486, blue: 0.569),
+        dividerOpacity: 0.38,
+        accent: Color(red: 0.886, green: 0.231, blue: 0.231)
     )
 
     // MARK: Metric ramp

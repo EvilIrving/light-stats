@@ -16,6 +16,7 @@
 "settings.theme.bento" = "Bento 그리드";
 "settings.theme.glass" = "기본";
 "settings.theme.noir" = "잉크 나이트";
+"settings.theme.dataPaper" = "데이터 페이퍼";
 "settings.theme.film.grain" = "필름 그레인";
 "settings.theme.film.grain.hint" = "끄면 빛은 유지, 더 깔끔한 표면";
 "settings.theme.film.lightFlow" = "빛 움직임";

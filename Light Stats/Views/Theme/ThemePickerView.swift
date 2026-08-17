@@ -12,10 +12,11 @@ struct ThemePickerView: View {
     @Binding var selection: AppTheme
 
     var body: some View {
-        // Order = AppTheme.allCases: Default → Bento → Sun Gold → Ink Night.
+        // Order = AppTheme.visibleCases: Default → Bento → Sun Gold → Ink Night.
+        // Data Paper is temporarily hidden (isVisible = false) — not deleted.
         // Slightly wider segments than language (4 labels, some multi-word).
         SettingsSegmentedPicker(selection: $selection, segmentMinWidth: 56) {
-            ForEach(AppTheme.allCases) { theme in
+            ForEach(AppTheme.visibleCases) { theme in
                 SettingsSegmentLabel(title: theme.titleKey.localized).tag(theme)
             }
         }
