@@ -18,7 +18,7 @@
 # 【在 CI 里怎么跑】（已接入 .github/workflows/release.yml 的 Generate Changelog 步骤）
 #   推送 v* tag 触发 Release 时自动执行，无需手动操作。等价于：
 #       TAG=v1.2.3 ./script/gen-changelog.sh > CHANGELOG.md
-#   生成的 CHANGELOG.md 会作为 GitHub Release 正文，并回写到 main 分支。
+#   生成的 CHANGELOG.md 只作为 workflow artifact 与 GitHub Release 正文，不回写仓库。
 #
 # 【本地怎么手动预览】
 #   # 预览某个已存在 tag 的 changelog（走降级分类，不调 API）：

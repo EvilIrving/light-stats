@@ -222,10 +222,11 @@ owns `NSWindow` instances (a bridge, not a ViewModel).
 `ThemeDefinition` is the only product composition table: each `AppTheme` fixes its UI tokens,
 `BackgroundSceneID`, and layout. `BackgroundHost` owns only sizing, clipping, window context,
 and disabled hit testing; `BackgroundSceneRouter` creates the selected Scene with a structural
-`@ViewBuilder` switch. System Glass, Sun Gold, Ink Night, and Data Paper own their rendering
-independently. Dynamic Scenes expose typed code-side configurations for flow, motion, grain,
-veil, and named light-field layers; Data Paper has its own static Canvas configuration and does
-not consume those effects. Shared tools are opt-in, not a common rendering pipeline.
+`@ViewBuilder` switch. System Glass, Sun Gold, Ink Night, Data Paper, and Ash Veil own their
+rendering independently. Dynamic Scenes expose typed code-side configurations for flow, motion,
+grain, veil, and named light-field layers; Data Paper has its own static Canvas configuration
+and does not consume those effects; Ash Veil is a static photo Scene with no grain/blur/veil.
+Shared tools are opt-in, not a common rendering pipeline.
 `ThemeLayout` is injected separately from `UITokens` and is the only runtime layout truth.
 
 ## Concurrency
@@ -448,9 +449,14 @@ not a stale-version bug.
 
 | Workflow | Trigger | Action |
 |----------|---------|--------|
-| `build.yml` | Every push/PR | Lint + test + build |
-| `deploy.yml` | Main branch | Build + upload DMG artifact |
-| `release.yml` | `v*` tags | Sign + notarise + GitHub Release |
+| `quality.yml` | Reusable (`workflow_call`) | Parallel SwiftLint, localization, and XCTest gates |
+| `build.yml` | Main push / PR / manual | Reuse quality gates, then package an unsigned DMG artifact |
+| `deploy.yml` | Docs change on main / manual | Build and deploy GitHub Pages independently of app CI |
+| `release.yml` | `v*` tags | Validate SemVer/main ancestry, reuse quality gates, sign + notarise + verify, then publish |
+
+Release ordering is mandatory: `prepare + quality` → `notarize` → `publish`. Release notes may run
+in parallel with quality/notarization, but the final GitHub Release depends on both. Apple signing
+secrets are scoped to the `notarize` job; `contents: write` is scoped to `publish` only.
 
 ### Tests
 

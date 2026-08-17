@@ -226,7 +226,7 @@ swiftlint lint --strict
 ./validate_localization.sh
 ```
 
-GitHub Actions runs SwiftLint, localization validation, release build, artifact upload, signing/notarization on tags, and GitHub Release creation.
+GitHub Actions runs SwiftLint, localization validation, and XCTest as parallel quality gates. Pull requests and `main` package an unsigned DMG only after those checks pass. Release tags rerun the same gates before signing and notarization; only the verified notarized artifact can be published. GitHub Pages remains an independent docs-only workflow.
 
 ### Tests
 
@@ -274,7 +274,7 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 - `Light Stats/Resources/`: localized strings, window-control icons, metric SVG outlines
 - `FinderMenu/` and `FinderMenuExtension/`: shared Finder actions and FinderSync integration
 - `LightStatsTests/`: XCTest suites (health score, defaults, AI parsers, PTY, diagnostics, SemVer, Finder templates)
-- `.github/workflows/`: build, deploy, and release automation
+- `.github/workflows/`: reusable quality gates plus build, Pages deploy, and signed release automation
 
 ---
 

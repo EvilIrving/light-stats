@@ -11,17 +11,30 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and Test
-    runs-on: macos-latest
+  quality:
+    name: Quality gate
+    uses: ./.github/workflows/quality.yml
 
+  package:
+    name: Unsigned release package
+    needs: quality
+    runs-on: macos-latest
+    timeout-minutes: 30
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup Xcode
+      - name: Select Xcode 26
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '26'
@@ -29,36 +42,24 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
-      - name: Lint
-        run: |
-          brew install swiftlint
-          swiftlint lint --strict --reporter github-actions-logging
+      - name: Build unsigned DMG
+        env:
+          SKIP_SIGNING: '1'
+        run: ./build.sh
 
-      - name: Localization check
-        run: |
-          chmod +x validate_localization.sh
-          ./validate_localization.sh
-
-      - name: Test
-        run: |
-          xcodebuild test \
-            -project "Light Stats.xcodeproj" \
-            -scheme "Light Stats" \
-            -destination 'platform=macOS' \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM=""
-
-      - name: Build App
-        run: |
-          chmod +x build.sh
-          ./build.sh
-
-      - name: Upload Build Artifact
+      - name: Upload xcodebuild log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Light-Stats-build
+          name: xcodebuild-log-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload unsigned package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Light-Stats-unsigned-${{ github.sha }}
           path: build/output/*.dmg
+          if-no-files-found: error
           retention-days: 7

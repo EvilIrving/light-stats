@@ -28,8 +28,12 @@ DMG_BACKGROUND="packaging/dmg-background.png"
 DMG_RW_FILE="$BUILD_DIR/${APP_NAME}-${VERSION}-rw.dmg"
 ENTITLEMENTS="Light Stats/LightStats.entitlements"
 FINDER_EXTENSION_ENTITLEMENTS="FinderMenuExtension/FinderMenuExtension.entitlements"
+SKIP_SIGNING="${SKIP_SIGNING:-0}"
 NOTARIZATION_ENABLED=0
-if [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER_ID:-}" ] && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
+if [ "$SKIP_SIGNING" != "1" ] \
+    && [ -n "${APPLE_API_KEY_ID:-}" ] \
+    && [ -n "${APPLE_API_ISSUER_ID:-}" ] \
+    && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
     NOTARIZATION_ENABLED=1
 fi
 APP_PATH="$OUTPUT_DIR/$APP_NAME.app"
@@ -56,9 +60,15 @@ verify_signed_runtime() {
     fi
 }
 
-# 从 keychain 提取 Developer ID 证书身份（CI 已在上一步导入，本机则直接读取登录 keychain）
-DEVELOPER_ID="${DEVELOPER_ID:-$(security find-identity -v -p codesigning 2>/dev/null | grep -o 'Developer ID Application: [^"]*' | head -1 || true)}"
-[ -n "${DEVELOPER_ID:-}" ] && echo "🔐 $DEVELOPER_ID"
+# 从 keychain 提取 Developer ID 证书身份（CI 已在上一步导入，本机则直接读取登录 keychain）。
+# 普通 CI 显式设置 SKIP_SIGNING=1，确保 runner 即使意外存在证书也只生成未签名产物。
+if [ "$SKIP_SIGNING" = "1" ]; then
+    DEVELOPER_ID=""
+    echo "🔓 已显式禁用签名与公证"
+else
+    DEVELOPER_ID="${DEVELOPER_ID:-$(security find-identity -v -p codesigning 2>/dev/null | grep -o 'Developer ID Application: [^"]*' | head -1 || true)}"
+    [ -n "${DEVELOPER_ID:-}" ] && echo "🔐 $DEVELOPER_ID"
+fi
 
 if [ "$NOTARIZATION_ENABLED" -eq 1 ] && [ -z "${DEVELOPER_ID:-}" ]; then
     echo "❌ 公证需要 Developer ID Application 证书，但当前 keychain 中未找到可用签名身份。"
