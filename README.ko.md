@@ -20,9 +20,9 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 테마별 개요:
 
-| Default | Neon | Night Bar | Ink Night |
+| Default | Orange Sea | Night Bar | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default 테마" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Neon 테마" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night 테마" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default 테마" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Orange Sea 테마" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night 테마" /> |
 
 ---
 
@@ -61,10 +61,10 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 
 - 제품 표면(팝오버, 정보, Toast, 업데이트, 권한 안내)용 네 가지 테마:
   - **Default**: 카드 프레임 없는 시스템 계기판 스타일(macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
-  - **Neon**: 따뜻한 금빛 배경과 네온 조명
+  - **Orange Sea**: 따뜻한 금빛 배경과 네온 조명
   - **Night Bar**: 어두운 바 분위기 위에 붉은색과 녹색 네온 조명
   - **Ink Night**(새 설치 기본값): 먹빛 배경과 차가운 차콜 표면
-- Neon, Night Bar, Ink Night에서는 필름 그레인을 켜거나 끄고 빛 움직임을 정지, 잔잔함, 자연스러움, 부드러움, 활발함의 5단계로 조절할 수 있습니다
+- Orange Sea, Night Bar, Ink Night에서는 필름 그레인을 켜거나 끄고 빛 움직임을 정지, 잔잔함, 자연스러움, 부드러움, 활발함의 5단계로 조절할 수 있습니다
 - 설정 창은 시스템 흰색을 유지하고 표시 테마를 따르지 않아 차분한 도구 패널로 남습니다
 
 ### 메모리 정리
@@ -174,7 +174,7 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ## 설정
 
-- 시각 테마(Default / Neon / Night Bar / Ink Night)와 Neon, Night Bar, Ink Night의 필름 그레인 및 빛 움직임
+- 시각 테마(Default / Orange Sea / Night Bar / Ink Night)와 Orange Sea, Night Bar, Ink Night의 필름 그레인 및 빛 움직임
 - 메뉴 막대 항목 표시 여부
 - 새로 고침 속도: 낮음 (5s), 중간 (2s), 높음 (1s)
 - 온도 단위: 섭씨 또는 화씨
@@ -208,7 +208,7 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ```bash
 # 최신 Debug app을 빌드하고 실행
-./debug-run.sh
+./script/debug-run.sh
 
 # 수동 Debug 빌드
 xcodebuild -project "Light Stats.xcodeproj" \
@@ -217,14 +217,14 @@ xcodebuild -project "Light Stats.xcodeproj" \
   -derivedDataPath build/DerivedData build
 
 # Release DMG
-./build.sh
+./script/build.sh
 ```
 
 ### 품질 확인
 
 ```bash
 swiftlint lint --strict
-./validate_localization.sh
+./script/validate_localization.sh
 ```
 
 GitHub Actions는 SwiftLint, 현지화 검증, Release 빌드, 산출물 업로드, 태그 서명/공증, GitHub Release 생성을 실행합니다.

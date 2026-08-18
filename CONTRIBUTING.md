@@ -28,7 +28,7 @@ xcodebuild -project "Light Stats.xcodeproj" -scheme "Light Stats" \
 open "build/DerivedData/Build/Products/Debug/Light Stats.app"
 
 # Release DMG
-./build.sh
+./script/build.sh
 ```
 
 The app runs as a menu bar agent (`LSUIElement = YES`). After building, force-quit any running instance first: `pkill -9 -f "Light Stats"`.
@@ -60,7 +60,7 @@ CI runs `swiftlint lint --strict` — every warning is a hard error.
 ### Localization
 
 ```bash
-./validate_localization.sh
+./script/validate_localization.sh
 ```
 
 When adding a user-facing string:

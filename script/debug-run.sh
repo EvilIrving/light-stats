@@ -7,7 +7,7 @@ APP_NAME="Light Stats"
 DERIVED="build/DerivedData"
 APP_PATH="$DERIVED/Build/Products/Debug/$APP_NAME.app"
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # 退出正在运行的实例，避免打开旧构建
 echo "🛑 退出旧实例..."

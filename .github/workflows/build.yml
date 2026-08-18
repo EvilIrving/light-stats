@@ -45,7 +45,7 @@ jobs:
       - name: Build unsigned DMG
         env:
           SKIP_SIGNING: '1'
-        run: ./build.sh
+        run: ./script/build.sh
 
       - name: Upload xcodebuild log
         if: always()

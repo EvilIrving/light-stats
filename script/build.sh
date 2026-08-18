@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# 脚本统一放在 script/ 下，切回仓库根目录再跑，相对路径不变。
+cd "$(dirname "$0")/.."
+
 PROJECT="Light Stats.xcodeproj"
 SCHEME="Light Stats"
 APP_NAME="Light Stats"
@@ -24,7 +27,7 @@ BUILD_DIR="build"
 OUTPUT_DIR="$BUILD_DIR/output"
 DMG_DIR="$BUILD_DIR/dmg_temp"
 DMG_FILE="$OUTPUT_DIR/${APP_NAME}-${VERSION}.dmg"
-DMG_BACKGROUND="packaging/dmg-background.png"
+DMG_BACKGROUND="design/dmg-background.png"
 DMG_RW_FILE="$BUILD_DIR/${APP_NAME}-${VERSION}-rw.dmg"
 ENTITLEMENTS="Light Stats/LightStats.entitlements"
 FINDER_EXTENSION_ENTITLEMENTS="FinderMenuExtension/FinderMenuExtension.entitlements"

@@ -5,6 +5,9 @@
 
 set -e
 
+# 脚本统一放在 script/ 下，切回仓库根目录再跑。
+cd "$(dirname "$0")/.."
+
 RESOURCES="Light Stats/Resources"
 EN="$RESOURCES/en.lproj/Localizable.strings"
 ZH="$RESOURCES/zh-Hans.lproj/Localizable.strings"
@@ -77,7 +80,7 @@ if [ "$FAIL" -eq 0 ]; then
     echo "  ✅ All $EN_COUNT keys present in en, zh-Hans, ja, ko"
 else
     echo ""
-    echo "Run: ./validate_localization.sh"
+    echo "Run: ./script/validate_localization.sh"
     echo "Fix: add missing keys to all four .lproj/Localizable.strings files"
     exit 1
 fi

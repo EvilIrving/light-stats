@@ -23,9 +23,9 @@ Ink Night, the clean-install default, shown in Overview and Memory:
 
 Themes (Overview):
 
-| Default | Neon | Night Bar | Ink Night |
+| Default | Orange Sea | Night Bar | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Neon theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Orange Sea theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
 
 ---
 
@@ -64,10 +64,10 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
   - **Default**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
-  - **Neon**: warm grain and brass instrument ink over an amber and coral light field
+  - **Orange Sea**: warm grain and brass instrument ink over an amber and coral light field
   - **Night Bar**: red and green neon over a dark cocktail-bar atmosphere
   - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
-- Neon, Night Bar, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
+- Orange Sea, Night Bar, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
 - The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
@@ -177,7 +177,7 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ## Settings
 
-- Visual theme (Default, Neon, Night Bar, Ink Night), with film grain and light dynamics for the three dynamic themes
+- Visual theme (Default, Orange Sea, Night Bar, Ink Night), with film grain and light dynamics for the three dynamic themes
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit
@@ -210,7 +210,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ```bash
 # Debug build and launch the fresh app bundle
-./debug-run.sh
+./script/debug-run.sh
 
 # Manual Debug build
 xcodebuild -project "Light Stats.xcodeproj" \
@@ -219,14 +219,14 @@ xcodebuild -project "Light Stats.xcodeproj" \
   -derivedDataPath build/DerivedData build
 
 # Release DMG
-./build.sh
+./script/build.sh
 ```
 
 ### Quality Checks
 
 ```bash
 swiftlint lint --strict
-./validate_localization.sh
+./script/validate_localization.sh
 ```
 
 GitHub Actions runs SwiftLint, localization validation, and XCTest as parallel quality gates. Pull requests and `main` package an unsigned DMG only after those checks pass. Release tags rerun the same gates before signing and notarization; only the verified notarized artifact can be published. GitHub Pages remains an independent docs-only workflow.

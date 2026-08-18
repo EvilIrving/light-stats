@@ -20,9 +20,9 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 テーマ（概要）:
 
-| デフォルト | ネオン | ナイトバー | インクナイト |
+| デフォルト | みかんの海 | ナイトバー | インクナイト |
 |------------|--------|------------|--------------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="デフォルト" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="ネオン" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="ナイトバー" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="インクナイト" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="デフォルト" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="みかんの海" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="ナイトバー" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="インクナイト" /> |
 
 ---
 
@@ -61,10 +61,10 @@ Light Stats は Mac のライブな負荷シグナルをメニューバーに常
 
 - 製品面(ポップオーバー、About、Toast、更新、権限案内)向けに 4 テーマ:
   - **デフォルト**:システムの計器表示(カード枠なし。macOS 26+ は Liquid Glass、macOS 15 は通常のシステム表面)
-  - **ネオン**:暖かな金色のグレインとネオン調の光
+  - **みかんの海**:暖かな金色のグレインとネオン調の光
   - **ナイトバー**:暗いカクテルバーを思わせる背景に赤と緑のネオン
   - **インクナイト**(コールドスタート既定):墨黒のグレインと冷たいチャコール表面
-- ネオン / ナイトバー / インクナイトにはテーマごとの外観調整があり、フィルムグレインのオンオフと、光の動き 5 段階(静止・穏やか・自然・滑らか・活発)を設定可能
+- みかんの海 / ナイトバー / インクナイトにはテーマごとの外観調整があり、フィルムグレインのオンオフと、光の動き 5 段階(静止・穏やか・自然・滑らか・活発)を設定可能
 - 設定ウィンドウはシステム白のまま表示テーマに追従せず、落ち着いたツールパネルとして保つ
 
 ### メモリクリーンアップ
@@ -174,7 +174,7 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 
 ## 設定
 
-- 視覚テーマ(デフォルト / ネオン / ナイトバー / インクナイト)と、ネオン / ナイトバー / インクナイトごとのフィルムグレイン・光の動き
+- 視覚テーマ(デフォルト / みかんの海 / ナイトバー / インクナイト)と、みかんの海 / ナイトバー / インクナイトごとのフィルムグレイン・光の動き
 - メニューバー項目の表示切り替え
 - 更新頻度：低 (5s)、中 (2s)、高 (1s)
 - 温度単位：摂氏または華氏
@@ -207,7 +207,7 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 
 ```bash
 # 最新の Debug app をビルドして起動
-./debug-run.sh
+./script/debug-run.sh
 
 # 手動 Debug ビルド
 xcodebuild -project "Light Stats.xcodeproj" \
@@ -216,14 +216,14 @@ xcodebuild -project "Light Stats.xcodeproj" \
   -derivedDataPath build/DerivedData build
 
 # Release DMG
-./build.sh
+./script/build.sh
 ```
 
 ### 品質チェック
 
 ```bash
 swiftlint lint --strict
-./validate_localization.sh
+./script/validate_localization.sh
 ```
 
 GitHub Actions は SwiftLint、ローカライズ検証、Release ビルド、成果物アップロード、タグでの署名／公証、GitHub Release 作成を実行します。
