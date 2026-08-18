@@ -1,9 +1,27 @@
-# Background Scene 架构迁移执行方案
+# Background Scene 架构迁移执行方案（历史归档）
 
-> 状态：已实现并扩展 Data Paper，待人工视觉复核  
-> 编写时间：2026-08-16 CST  
-> 适用仓库：`swift-light-stats`  
-> 目标读者：接手实现的后续 agent
+> **文档状态：已归档并被当前实现取代，不是可执行方案。**
+> 原方案编写时间：2026-08-16 CST
+> 当前状态核对日期：2026-08-18
+> 适用仓库：`swift-light-stats`
+
+本文件保留 2026-08-16 的迁移方案，仅用于设计历史、决策追溯和理解架构演进。
+下方旧正文中的阶段、命令、输出路径、不变量、验收矩阵和“第一个动作”均不得作为
+当前实施指令。需要验证现状时，应以当前源码、测试和仓库级文档为准。
+
+## 当前状态（2026-08-18）
+
+- 当前用户可见主题为 `glass / film / bar / noir`，界面名称依次为
+  Default、Neon、Night Bar、Ink Night。
+- `dataPaper` 仍存在但对用户隐藏。Bento 与 Ash Veil 已删除，不再是产品主题、布局
+  或验收目标。
+- 当前 Router / Scene 集合包括 `systemGlass`、`sunGold`、`bar`、`inkNight` 和
+  `technicalPaper`。
+- 所有当前主题使用统一的 instrument layout，不再保留 Bento 专属布局分支。
+- `VisualThemeCaptureTests` 已覆盖当前四个用户可见主题。主题截图必须通过当前测试
+  生成并采用测试实际报告的输出，不得依赖本文件旧正文列出的文件名、数量或路径。
+
+## 以下为历史迁移方案（仅供设计追溯）
 
 ## 结论
 
@@ -42,7 +60,11 @@ Grain、Veil 以及具名 Light Field Layer 的启用、blur、opacity、motion 
 
 ## 对原方案的必要修正
 
-### 1. 当前截图测试尚未“锁定四个主题”
+### 1. 当前截图测试尚未“锁定四个主题”（历史状态，已失效）
+
+> 本节记录 2026-08-16 制定方案时的截图状态。当前
+> `VisualThemeCaptureTests` 已捕获 Default、Neon、Night Bar、Ink Night；必须使用
+> 当前测试生成的输出，以下旧文件名不得再作为截图清单。
 
 `LightStatsTests/VisualThemeCaptureTests.swift` 当前只导出：
 
@@ -109,7 +131,7 @@ struct InkNightSceneInput: Equatable, Sendable {
 
 首轮视觉等价迁移必须复制实际运行路径中的 `0.42`，不能根据看似权威但已失真的配置字段改成 `0.32`。迁移完成后删除这项误导配置和对应旧测试，改测 Scene 输入到 Grain overlay 的真实行为。
 
-## 已确认的当前实现
+## 已确认的当前实现（2026-08-16 历史快照）
 
 以下事实已经从当前 `main`（HEAD `d4a3b26`）核实：
 
@@ -127,7 +149,11 @@ struct InkNightSceneInput: Equatable, Sendable {
 - 项目与测试目录使用 Xcode synchronized folder group；正常新增 Swift 文件不需要手改 `project.pbxproj`。
 - 工作树在制定本方案时已有与本任务无关的改动：`docs/status-bar-fan-core-animation-validation.md` 被修改，`design/` 未跟踪。实现者必须保留，不得回滚、覆盖或顺手提交。
 
-## 不变量与成功标准
+## 不变量与成功标准（历史，非操作性）
+
+> 本节是旧迁移的完成条件，现已被当前实现取代，不得用于指导新修改或验收。
+> 其中 `bento`、Bento layout、Glass/Bento 四主题映射以及相关截图要求均已废止。
+> 当前主题、Scene、统一 instrument layout 与截图要求以本文顶部“当前状态”为准。
 
 迁移完成后必须同时满足：
 
@@ -289,7 +315,7 @@ func themeAppearance(for theme: AppTheme) -> ThemeAppearanceConfiguration
 
 当前每个 `ThemeBackgroundView` 实例拥有自己的 `@State phaseAnchorDate/phaseAnchor`，设置预览和 Popover 因而是独立时钟。迁移后保持这一点；不要建立全局共享时间线。切换产品主题时 Popover 根 `.id(language/theme)` 会重建完整层级，当前 phase 也会重置，首轮迁移不改变该行为。
 
-## 分阶段实施
+## 分阶段实施（历史计划，不执行）
 
 ### 阶段 0：建立可复现基线
 
@@ -386,7 +412,7 @@ rg -n "BackgroundConfiguration|ThemeBackgroundView|FluidMeshBackground|Backgroun
 5. 实机检查四主题、两类设置预览、动态开/关/五档速度、grain 开/关、Popover 空白区点击和滚轮隔离。
 6. 检查 macOS 26 Glass 与旧系统 fallback（可用当前可用系统验证，无法覆盖的系统必须在结果中说明）。
 
-## 测试与验证命令
+## 测试与验证命令（历史命令，不作为当前截图流程）
 
 先用窄测试确认架构和默认值，再跑全量：
 
@@ -407,7 +433,7 @@ xcodebuild test -project "Light Stats.xcodeproj" \
 
 按照仓库规则，UI 架构迁移完成后必须运行 `./debug-run.sh`，并实际打开 Popover 与 Settings 检查。
 
-人工验收矩阵：
+历史人工验收矩阵（已被当前四个可见主题取代）：
 
 | 产品主题 | Scene | 必查项 |
 |---|---|---|
@@ -425,7 +451,7 @@ xcodebuild test -project "Light Stats.xcodeproj" \
 - 关闭 grain 后光场与 veil 不受影响；开启后颗粒保持锐利，不被 light field blur。
 - 快速切换 Film/Noir 不出现旧 raster 缓存残留。
 
-## 禁止事项
+## 禁止事项（历史迁移约束）
 
 - 不回滚 `AppTheme` 产品 ID 收敛或 `ThemeDefinition(ui + background + layout)`。
 - 不新增用户可见的背景选择器或 UI/background 自由组合。
@@ -458,6 +484,10 @@ xcodebuild test -project "Light Stats.xcodeproj" \
 - Apple `layerEffect`: https://developer.apple.com/documentation/swiftui/view/layereffect(_:maxsampleoffset:isenabled:)
 - Apple `distortionEffect`: https://developer.apple.com/documentation/swiftui/view/distortioneffect(_:maxsampleoffset:isenabled:)
 
-## 接手后的第一个动作
+## 接手后的第一个动作（已废止，不执行）
+
+> 以下内容是旧方案原文，仅为保留设计历史。迁移已经完成，legacy adapter 路径和
+> Bento 时代基线不再是当前工作的起点。当前截图验证应直接运行现有
+> `VisualThemeCaptureTests`，覆盖 Default、Neon、Night Bar、Ink Night。
 
 不要直接删除旧实现。先读取本文件列出的当前源文件，检查工作树仍有哪些用户改动，然后执行“阶段 0”：把视觉捕获扩展到四主题、固定动态 phase、生成同环境迁移前基线。只有基线可重复后，才通过 legacy adapter 建立 Host/Router 生产边界，并按 Ink Night、Sun Gold 的顺序逐个迁移。

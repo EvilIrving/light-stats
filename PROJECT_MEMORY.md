@@ -1,5 +1,47 @@
 # Project Memory
 
+## ScrollDirectionService 的 IOHID 改写机制与坑 · 2026-08-18 17:10 CST · agent
+
+`ScrollDirectionService`（滚动方向反转 / 关加速度 / 触控板反转）是重建成本最高的服务之一：正确性依赖一堆无法从代码表面看出的私 API 行为，之前的踩坑记录散在代码注释里，这里收敛成结论。
+
+**机制**：我们用 session 级 tap（`.cgSessionEventTap` + `.headInsertEventTap`）。开启 Natural Scrolling 后，滚动方向的「权威来源」是事件底层的 IOHIDEvent 浮点值，不是 CGEvent 的 delta 字段——只改 CGEvent 会被系统从 IOHID 重新派生覆盖、方向翻不动。所以反转必须 `CGEventCopyIOHIDEvent` 取出底层 IOHIDEvent，改写其 ScrollX/ScrollY 浮点，同时同步改写 CGEvent 三个 delta 字段。
+
+**三个已验证的坑（不要回退）**：
+1. **IOHID ABI**：64 位 Mac 上 IOHIDFloat 是 Double，`IOHIDEventGet/SetFloatValue` 必须按 Double 声明；按 Float 声明会读到错位垃圾值，方向静默失效。
+2. **读-写顺序**：写任何字段前必须一次性读完所有原始 delta。设置 DeltaAxis 会让系统按固定倍率（约 8×）重算 PointDelta/FixedPt，边读边写会读到重算值、把方向二次翻回原样。
+3. **IOHID 二次拷贝**：改完 CGEvent 字段后必须「重新」`CGEventCopyIOHIDEvent` 再写 IOHID——改 CGEvent 会重建底层 IOHIDEvent，沿用旧拷贝会落在脱钩对象上失效。
+
+**关加速度的语义（对照开源定案）**：只归一化垂直 `DeltaAxis1`（行步进），`point/fixed/IOHID` 只做方向翻转、不归一化。之前试过把 `scrollLines/|line|` 套到所有字段，会把原始像素量一起缩放、手感发虚——这是 Scroll Reverser `discreteAdjust` 分支刻意避免的。`scrollLines` 独立于 `stepMultiplier`（不再叠乘），`stepMultiplier` 也不作用于连续设备（触控板/Magic Mouse 只做方向反转）。
+
+**参考来源与边界**：反转照 Scroll Reverser `MouseTap.m`（同为 session tap），关加速度语义照 UnnaturalScrollWheels `ScrollInterceptor.swift`（HID 级 tap + `signum*scrollLines`）。注意 Scroll Reverser 源码里水平 IOHID 写入误用了垂直乘数 `vmul` 而非 `hmul`，这是它的 bug，不要抄——我们已用正确的 `hmul`。设备分类只用 `isContinuous`（与 UnnaturalScrollWheels 默认一致）；Scroll Reverser 用 gesture tap 数手指区分触控板 vs 连续鼠标的方案被否决（生命周期/权限/兼容风险大，且我们的设置把触控板/Magic Mouse 当同一组）。
+
+**已补的健壮性**：tap 被系统禁用或睡眠唤醒后会自动恢复（`didWakeNotification` 立即 + 1 秒延迟重试；port 失效则在同线程重建 tap）。
+
+**仍待真机验证**（无头环境测不了手感）：慢/快滚产生的 ±1/±2/±3/±5 归一化手感、触控板惯性阶段方向连续性、睡眠唤醒恢复、Logitech Options 等第三方驱动可能错误标记 continuous 的边界。
+
+Popover 的视觉主角必须是健康分数、实时指标、状态和趋势；tab track、selected state、工具栏按钮、well 与 hover wash 只是辅助导航和交互反馈。它们不得成为 panel 最深、最亮、饱和度最高或对比最强的区域，否则会倒置信息层级并抢走 instrument data 的注意力。
+
+选中态应依靠克制的字重变化、很轻的洗色或细指示线表达，不使用高对比实心舱、大面积深色轨道或高饱和渐变。这个原则适用于所有主题，不只 Sun Gold / Neon。允许 tab track 不等于允许它成为视觉板块；评审时必须把控件放回完整 panel 中比较注意力，而不能只看控件局部是否“好看”。
+
+## 禁止内容暗板 / 阅读卡片 · 2026-08-18 15:35 CST · Grok
+
+产品硬约束：任何主题都不得给 instrument 读数盖一层填色卡片、烟玻璃或「阅读板」来解决对比度。字直接坐在场景上。这条不只针对 Neon。
+
+起因：Neon 配色改成暖金后，金字叠在 SunGold 高光上看不见，曾用 `surfaceFill` 深琥珀半透明板垫在 `PanelSection` 后面。用户明确否决，并要求写成全主题约束。Bento 卡片已删除，禁止以「阅读面」名义加回来。
+
+允许：tab track、well（进度槽）、hover 浅洗。不允许：section / row / popover 本体的填色圆角底板。Neon 的 `surfaceFill` 必须保持 `.clear`。对比度只能靠墨水相对场景，不能靠加一层板。
+
+Neon 后续补充：不要荧光。禁止高饱和高亮金 / 柠 / 青 / 粉，禁止文字和 sparkline 辉光。色板是哑光黄铜、赭石、铁锈，不是灯管。夜色酒吧可以保留灯管辉光，Neon 不行。
+
+## 主题阵容收缩：Ash Veil 与 Bento 已删除 · 2026-08-18 · agent
+
+产品决定删除 `ashVeil`（灰纱）与 `bento`（Bento 网格）两个主题，只剩 4 个可见预设：`glass`（默认）/ `film`（霓虹）/ `bar`（夜色酒吧）/ `noir`（墨夜），另有隐藏的 `dataPaper`。
+
+- `bento` 的删除范围包括：`AppTheme.bento` case、`ThemeDefinition.bento`、`UITokens.bento`、`ThemeLayout.bento` 与 `usesBentoLayout` 布局分叉（现已不存在，全产品只有 instrument 布局）、`BentoCard` / `QuickStatCard` 组件、Overview / Cleanup 的 bento 分支、`docs/screenshots/bento/`。
+- 设置窗的 `appThemed` 锁从 `.bento` 换成 `.glass`（同为 vibrant + 系统控件底，视觉等效）。
+- 迁移行为：已存储的 `"ashVeil"` / `"bento"` 偏好经 `AppTheme.resolve` 回落到 `.noir`，有回归测试覆盖。
+- 后续若再加主题，改 `ThemeDefinition` 组合表即可，业务视图（Overview / Cleanup / 行组件）已无布局分叉。
+
 ## 官方模型价格估算基准（pi） · 2026-08-17 13:38 CST · agent
 
 为 pi 的 `~/.pi/agent/models.json` 配置成本估算时，采用官方上游公开价格作为参考，单位均为 USD / 1M tokens。当前配置使用的是 `https://api.shu.cool/v1` 中转，因此这些数字只用于 pi 的本地成本估算，不代表中转服务的实际扣费；中转价格需要另行确认。

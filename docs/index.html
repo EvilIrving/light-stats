@@ -15,8 +15,10 @@
   <meta property="og:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
   <meta property="og:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows in the menu bar. Native, no telemetry, zero outbound requests by default.">
   <meta property="og:url" content="https://evilirving.github.io/light-stats/">
-  <meta property="og:image" content="https://evilirving.github.io/light-stats/screenshots/default/popover-overview.jpeg">
-  <meta property="og:image:alt" content="Light Stats overview panel in the Default theme: live health score, CPU, GPU, memory, battery, network, and AI usage.">
+  <meta property="og:image" content="https://evilirving.github.io/light-stats/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Light Stats, a native macOS menu bar pressure monitor, shown with the Ink Night panel.">
   <meta property="og:video" content="https://evilirving.github.io/light-stats/light-stats-readme.mp4">
   <meta property="og:video:type" content="video/mp4">
 
@@ -24,13 +26,12 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
   <meta name="twitter:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
-  <meta name="twitter:image" content="https://evilirving.github.io/light-stats/screenshots/default/popover-overview.jpeg">
+  <meta name="twitter:image" content="https://evilirving.github.io/light-stats/social-preview.png">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='100%25' stop-color='%235AC8FA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Crect x='140' y='226' width='60' height='120' rx='10' fill='white' opacity='.9'/%3E%3Crect x='226' y='166' width='60' height='180' rx='10' fill='white' opacity='.9'/%3E%3Crect x='312' y='196' width='60' height='150' rx='10' fill='white' opacity='.9'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <style>
     :root {
       --bg: oklch(98.5% 0.004 255);
@@ -49,7 +50,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    [v-cloak] { display: none; }
+    [data-panel][hidden] { display: none; }
 
     html { -webkit-text-size-adjust: 100%; }
     body {
@@ -209,8 +210,6 @@
     .updated { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); margin-top: 2rem; }
 
     /* reveal */
-    .fade-enter-active, .fade-leave-active { transition: opacity 0.12s ease-out; }
-    .fade-enter-from, .fade-leave-to { opacity: 0; }
     .reveal { opacity: 0; transform: translateY(10px); animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
     .reveal.d1 { animation-delay: 0.06s; }
     .reveal.d2 { animation-delay: 0.14s; }
@@ -234,19 +233,56 @@
         "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. No telemetry and zero outbound requests by default.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://github.com/EvilIrving/light-stats/releases",
-        "softwareVersion": "1.8.0",
+        "softwareVersion": "1.9.0",
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "screenshot": "https://evilirving.github.io/light-stats/screenshots/default/popover-overview.jpeg",
+        "screenshot": "https://evilirving.github.io/light-stats/screenshots/ink-night/popover-overview.jpeg",
         "author": { "@type": "Person", "name": "EvilIrving", "url": "https://github.com/EvilIrving" },
         "sameAs": "https://github.com/EvilIrving/light-stats"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Light Stats free and open source?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Light Stats is free and open source under the MIT License."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Light Stats send system metrics anywhere?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. System metrics and process lists stay on the Mac. Exit-node lookup, AI usage requests, usage-window warmup, and automatic update checks are opt-in or user-initiated."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which macOS versions does Light Stats support?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Light Stats supports macOS 14 or later, with Apple Silicon as the primary target."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What visual themes are available?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Light Stats includes Default, Neon, Night Bar, and Ink Night. Ink Night is selected on a clean install. Settings stays a system-white tool panel."
+            }
+          }
+        ]
       },
       {
         "@type": "VideoObject",
         "name": "Light Stats demo",
         "description": "A walkthrough of the Light Stats menu bar item, the detail panel, memory cleanup, and settings on macOS.",
-        "thumbnailUrl": "https://evilirving.github.io/light-stats/screenshots/default/popover-overview.jpeg",
+        "thumbnailUrl": "https://evilirving.github.io/light-stats/social-preview.png",
         "contentUrl": "https://evilirving.github.io/light-stats/light-stats-readme.mp4",
         "uploadDate": "2026-06-21"
       }
@@ -255,7 +291,7 @@
   </script>
 </head>
 <body>
-<div id="app" v-cloak>
+<div id="app">
   <div class="wrap">
 
     <header class="masthead">
@@ -278,15 +314,16 @@
       <div class="live-dot"><span></span>LIVE</div>
     </header>
 
-    <nav class="tabs">
-      <button v-for="tab in tabs" :key="tab.id" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">{{ tab.label }}</button>
+    <nav class="tabs" aria-label="Site sections">
+      <button type="button" data-tab="landing">Overview</button>
+      <button type="button" data-tab="privacy">Privacy</button>
+      <button type="button" data-tab="support">Support</button>
     </nav>
 
-    <transition name="fade" mode="out-in">
-      <main :key="activeTab">
+    <main>
 
         <!-- ══════════ OVERVIEW ══════════ -->
-        <section v-if="activeTab === 'landing'">
+        <section data-panel="landing">
           <div class="hero">
             <div>
               <div class="eyebrow reveal">Free · Open source · macOS 14+</div>
@@ -313,20 +350,20 @@
             </div>
           </div>
 
-          <!-- Screenshot pair (Default theme) -->
+          <!-- Screenshot pair (clean-install theme) -->
           <div class="shots">
             <div class="shots-head">
               <h2>The panel</h2>
-              <span class="eyebrow count">Default · Overview · Memory</span>
+              <span class="eyebrow count">Ink Night · Overview · Memory</span>
             </div>
             <div class="shots-grid">
               <figure>
-                <img src="screenshots/default/popover-overview.jpeg" alt="Light Stats overview panel in the Default theme: health score, CPU, GPU, memory, battery, AI usage, network, processes, and per-core bars.">
-                <figcaption>Overview · Default</figcaption>
+                <img src="screenshots/ink-night/popover-overview.jpeg" width="720" height="1560" alt="Light Stats overview panel in the Ink Night theme, showing health, compute, system, network, process, and core readings.">
+                <figcaption>Overview · Ink Night</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/default/popover-cleanup.jpeg" alt="Light Stats Memory tab in the Default theme: apps listed by memory footprint with quit actions.">
-                <figcaption>Memory · Default</figcaption>
+                <img src="screenshots/ink-night/popover-cleanup.jpeg" width="720" height="1560" alt="Light Stats Memory tab in the Ink Night theme, showing a privacy-safe sample app list sorted by memory footprint.">
+                <figcaption>Memory · Ink Night</figcaption>
               </figure>
             </div>
           </div>
@@ -335,23 +372,23 @@
           <div class="shots">
             <div class="shots-head">
               <h2>Themes</h2>
-              <span class="eyebrow count">Default · Bento · Sun Gold · Ink Night</span>
+              <span class="eyebrow count">Default · Neon · Night Bar · Ink Night</span>
             </div>
             <div class="themes-grid">
               <figure>
-                <img src="screenshots/default/popover-overview.jpeg" alt="Default theme overview">
+                <img src="screenshots/default/popover-overview.jpeg" width="720" height="1560" loading="lazy" alt="Light Stats Default theme overview">
                 <figcaption>Default</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/bento/popover-overview.jpeg" alt="Bento Grid theme overview">
-                <figcaption>Bento Grid</figcaption>
+                <img src="screenshots/neon/popover-overview.jpeg" width="720" height="1560" loading="lazy" alt="Light Stats Neon theme overview">
+                <figcaption>Neon</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/sun-gold/popover-overview.jpeg" alt="Sun Gold theme overview">
-                <figcaption>Sun Gold</figcaption>
+                <img src="screenshots/night-bar/popover-overview.jpeg" width="720" height="1560" loading="lazy" alt="Light Stats Night Bar theme overview">
+                <figcaption>Night Bar</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/ink-night/popover-overview.jpeg" alt="Ink Night theme overview">
+                <img src="screenshots/ink-night/popover-overview.jpeg" width="720" height="1560" loading="lazy" alt="Light Stats Ink Night theme overview">
                 <figcaption>Ink Night</figcaption>
               </figure>
             </div>
@@ -431,7 +468,7 @@
                 <span class="tag">Differentiator</span>
                 <h3>Network truth, not just speed</h3>
                 <p>Throughput is the easy part. Light Stats also detects whether you are behind a proxy and, when you opt in, which exit node you are actually leaving through, with its geo-location and AS number.</p>
-                <p>Exit lookup is off by default, and the first time you enable it the app explains exactly what it sends. See the <a href="#" @click.prevent="activeTab = 'privacy'">privacy policy</a> for every optional network behavior.</p>
+                <p>Exit lookup is off by default, and the first time you enable it the app explains exactly what it sends. See the <a href="#privacy">privacy policy</a> for every optional network behavior.</p>
               </div>
             </div>
 
@@ -463,14 +500,14 @@
               <div class="idx">06 / Appearance</div>
               <div>
                 <h3>Four looks for the instrument, not the settings sheet</h3>
-                <p><strong>Default</strong> is the cold-start readout (system materials: Liquid Glass on macOS 26+, ordinary chrome on macOS 15). <strong>Bento Grid</strong> keeps the classic card layout. <strong>Sun Gold</strong> and <strong>Ink Night</strong> are optional mesh surfaces with grain and light-dynamics controls. Settings stays a plain white tool panel so configuration never competes with the dial.</p>
+                <p><strong>Ink Night</strong> is selected on a clean install. <strong>Default</strong> uses system materials, <strong>Neon</strong> uses warm brass over amber and coral light, <strong>Night Bar</strong> uses red and green neon, and <strong>Ink Night</strong> uses cool charcoal grain. The three dynamic themes provide grain and light-dynamics controls. Settings stays a plain white tool panel.</p>
               </div>
             </div>
           </div>
         </section>
 
         <!-- ══════════ PRIVACY ══════════ -->
-        <section v-if="activeTab === 'privacy'" class="prose col">
+        <section data-panel="privacy" class="prose col" hidden>
           <p>Light Stats is local by default. It has no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. Optional features contact only the service needed to perform the action described below.</p>
 
           <div class="callout">
@@ -516,11 +553,11 @@
           <h2>Changes</h2>
           <p>Any change to this policy will appear here and in the app's release notes. Data handling will never change silently.</p>
 
-          <p class="updated">Last updated: July 12, 2026</p>
+          <p class="updated">Last updated: August 18, 2026</p>
         </section>
 
         <!-- ══════════ SUPPORT ══════════ -->
-        <section v-if="activeTab === 'support'" class="prose col">
+        <section data-panel="support" class="prose col" hidden>
           <p>Light Stats is an open source project. Here is how to get help, report issues, or contribute.</p>
 
           <div class="support-block">
@@ -538,12 +575,24 @@
               <h3>Frequently asked</h3>
               <dl class="faq">
                 <div>
+                  <dt>Is Light Stats free and open source?</dt>
+                  <dd>Yes. Light Stats is free and open source under the MIT License.</dd>
+                </div>
+                <div>
+                  <dt>Which macOS versions does Light Stats support?</dt>
+                  <dd>Light Stats supports macOS 14 or later, with Apple Silicon as the primary target.</dd>
+                </div>
+                <div>
+                  <dt>Does Light Stats send system metrics anywhere?</dt>
+                  <dd>No. System metrics and process lists stay on the Mac. Exit-node lookup, AI usage requests, usage-window warmup, and automatic update checks are opt-in or user-initiated.</dd>
+                </div>
+                <div>
                   <dt>How do I change what shows in the menu bar?</dt>
                   <dd>Click the ellipsis (…) in the panel to open Settings, then toggle items under Status Bar Items. You can also choose which dimensions feed the health score.</dd>
                 </div>
                 <div>
                   <dt>What are the visual themes?</dt>
-                  <dd>Settings → General → Theme. Default is the cold-start instrument look; Bento Grid uses cards; Sun Gold and Ink Night are optional mesh surfaces. The Settings window itself stays white and does not follow the panel theme.</dd>
+                  <dd>Settings → General → Theme. Choose Default, Neon, Night Bar, or Ink Night. Ink Night is selected on a clean install. The Settings window stays white and does not follow the panel theme.</dd>
                 </div>
                 <div>
                   <dt>Does exit-node detection cost me privacy?</dt>
@@ -566,8 +615,7 @@
           </div>
         </section>
 
-      </main>
-    </transition>
+    </main>
 
     <footer>
       <p>Not affiliated with Apple Inc. Apple, macOS, and Mac are trademarks of Apple Inc.</p>
@@ -578,32 +626,31 @@
 </div>
 
 <script>
-  const { createApp } = Vue
   const validTabs = ['landing', 'privacy', 'support']
-  createApp({
-    data() {
-      const hash = window.location.hash.replace('#', '')
-      return {
-        activeTab: validTabs.includes(hash) ? hash : 'landing',
-        tabs: [
-          { id: 'landing', label: 'Overview' },
-          { id: 'privacy', label: 'Privacy' },
-          { id: 'support', label: 'Support' },
-        ],
-      }
-    },
-    watch: {
-      activeTab(val) {
-        if (window.location.hash !== '#' + val) history.replaceState(null, '', '#' + val)
-      },
-    },
-    mounted() {
-      window.addEventListener('hashchange', () => {
-        const hash = window.location.hash.replace('#', '')
-        if (validTabs.includes(hash)) this.activeTab = hash
-      })
-    },
-  }).mount('#app')
+  const buttons = document.querySelectorAll('[data-tab]')
+  const panels = document.querySelectorAll('[data-panel]')
+
+  function showTab(tab) {
+    const activeTab = validTabs.includes(tab) ? tab : 'landing'
+    buttons.forEach((button) => {
+      const isActive = button.dataset.tab === activeTab
+      button.classList.toggle('active', isActive)
+      button.setAttribute('aria-selected', String(isActive))
+    })
+    panels.forEach((panel) => {
+      panel.hidden = panel.dataset.panel !== activeTab
+    })
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const tab = button.dataset.tab
+      history.replaceState(null, '', `#${tab}`)
+      showTab(tab)
+    })
+  })
+  window.addEventListener('hashchange', () => showTab(window.location.hash.slice(1)))
+  showTab(window.location.hash.slice(1))
 </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Light Stats
 
-Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 네이티브 macOS 메뉴 막대 상태 계기입니다. 0-100 건강도와 실시간 신호를 표시하고, 필요할 때 AI CLI 사용량, 네트워크 출구, Finder 작업, 창 배치, 디스플레이 잠자기 방지를 추가할 수 있습니다. 팝오버는 네 가지 시각 테마(기본은 Default)를 지원하며, 설정 창은 시스템 흰색 도구 패널을 유지합니다.
+Light Stats는 "지금 내 Mac이 부하를 받고 있는지"를 보여주는 네이티브 macOS 메뉴 막대 상태 계기입니다. 0-100 건강도와 실시간 신호를 표시하고, 필요할 때 AI CLI 사용량, 네트워크 출구, Finder 작업, 창 배치, 디스플레이 잠자기 방지를 추가할 수 있습니다. 팝오버는 네 가지 시각 테마를 지원하며, 새로 설치하면 Ink Night가 적용됩니다. 설정 창은 시스템 흰색 도구 패널을 유지합니다.
 
 [English](README.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **한국어**
 
@@ -12,17 +12,17 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## 스크린샷
 
-콜드 스타트 Default 테마 — 개요와 메모리:
+새로 설치하면 적용되는 Ink Night 테마: 개요와 메모리
 
 | 개요 | 메모리 |
 |------|--------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="320" alt="개요 — Default" /> | <img src="docs/screenshots/default/popover-cleanup.jpeg" width="320" alt="메모리 — Default" /> |
+| <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="320" alt="Ink Night 테마 개요" /> | <img src="docs/screenshots/ink-night/popover-cleanup.jpeg" width="320" alt="Ink Night 테마 메모리" /> |
 
-테마 (개요):
+테마별 개요:
 
-| Default | Bento Grid | Sun Gold | Ink Night |
-|---------|------------|----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="200" alt="Default" /> | <img src="docs/screenshots/bento/popover-overview.jpeg" width="200" alt="Bento" /> | <img src="docs/screenshots/sun-gold/popover-overview.jpeg" width="200" alt="Sun Gold" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="200" alt="Ink Night" /> |
+| Default | Neon | Night Bar | Ink Night |
+|---------|------|-----------|-----------|
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default 테마" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Neon 테마" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night 테마" /> |
 
 ---
 
@@ -60,11 +60,11 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 ### 외관
 
 - 제품 표면(팝오버, 정보, Toast, 업데이트, 권한 안내)용 네 가지 테마:
-  - **Default**(콜드 스타트 기본): 시스템 계기판 읽기(카드 프레임 없음. macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
-  - **Bento Grid**: 기존 카드 그리드 + 시스템 머티리얼
-  - **Sun Gold**: 따뜻한 금빛 그레인 메시
-  - **Ink Night**: 먹빛 그레인 메시와 차콜 표면
-- Sun Gold / Ink Night는 공통 외관 조절: 그레인 on/off, 빛 움직임 5단계(정지, 완만, 자연, 부드러움, 활발)
+  - **Default**: 카드 프레임 없는 시스템 계기판 스타일(macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
+  - **Neon**: 따뜻한 금빛 배경과 네온 조명
+  - **Night Bar**: 어두운 바 분위기 위에 붉은색과 녹색 네온 조명
+  - **Ink Night**(새 설치 기본값): 먹빛 배경과 차가운 차콜 표면
+- Neon, Night Bar, Ink Night에서는 필름 그레인을 켜거나 끄고 빛 움직임을 정지, 잔잔함, 자연스러움, 부드러움, 활발함의 5단계로 조절할 수 있습니다
 - 설정 창은 시스템 흰색을 유지하고 표시 테마를 따르지 않아 차분한 도구 패널로 남습니다
 
 ### 메모리 정리
@@ -73,7 +73,7 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 - 메모리 사용량 기준으로 정렬된 앱 목록
 - 일반 종료 및 확인 후 강제 종료
 - 하위 프로세스 세부 정보 펼치기
-- 레이아웃은 활성 테마를 따름(Bento는 카드, 나머지는 instrument 행)
+- 레이아웃은 instrument 판독 형식: 섹션·헤어라인·고밀도 행
 
 ### Finder 메뉴
 
@@ -89,16 +89,19 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 
 - 단일 **"창 관리" 스위치**(기본 꺼짐)로 메뉴 막대 창 제어 아이콘, 전역 스냅 단축키, 제목 표시줄 제스처를 한 번에 함께 켭니다. 별도의 하위 토글은 없습니다
 - 디자이너가 제공한 아이콘이 포함된 메뉴 막대 창 제어 메뉴
-- 왼쪽, 오른쪽, 위쪽, 아래쪽 절반 배치에만 단축키를 두어 자주 쓰는 작업을 우선
+- 왼쪽, 오른쪽, 위쪽, 아래쪽 절반 배치 단축키로 자주 쓰는 작업을 빠르게 실행
+- `Control+Option+Return`으로 최대화하고 `Control+Option+C`로 창을 가운데에 배치
 - 모서리, 1/3 배치, 디스플레이 이동, 최대화, 가운데 배치, 복원, 최소화를 메뉴에서 실행
 - 제목 표시줄 트랙패드 제스처로 빠르게 스냅하고, 미리보기와 햅틱 피드백 제공
 - 스위치를 끄면 아이콘을 즉시 제거하고 모든 창 제어 이벤트 tap을 중지합니다. 손쉬운 사용 권한은 스위치를 켤 때만 요청됩니다
 
 ### 스크롤 방향 제어
 
-- 수직 및 수평 스크롤 방향 반전
-- 스크롤 감도를 조정하는 단계 배율
-- 관련 기능이 켜져 있을 때만 이벤트 tap 실행
+- 마우스의 세로 및 가로 스크롤 방향을 각각 독립적으로 반전
+- 선택적으로 트랙패드와 Magic Mouse까지 반전 대상에 포함
+- 휠 가속을 끄고 스크롤 한 번에 이동할 줄 수를 1~10줄로 고정
+- 스크롤 감도를 세밀하게 조정하는 단계 배율
+- 반전이나 휠 가속 비활성화를 켰을 때만 이벤트 tap을 실행하며 손쉬운 사용 권한 필요
 
 ### 청소 모드
 
@@ -109,8 +112,8 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 
 ### 잠자기 방지 및 로그인 시 실행
 
-- 손쉬운 사용 권한 없이 디스플레이 잠자기 방지
-- 끄거나 Light Stats를 종료하면 즉시 중지
+- 팝오버 도구 막대의 빠른 토글로 디스플레이 잠자기 방지
+- 손쉬운 사용 권한 없이 동작하며, 끄거나 Light Stats를 종료하면 즉시 중지
 - macOS 네이티브 로그인 항목 서비스로 로그인 시 실행 설정
 
 ### 업데이트
@@ -171,21 +174,22 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ## 설정
 
-- 시각 테마(Default / Bento / Sun Gold / Ink Night)와 Sun Gold/Ink Night 그레인·빛 움직임
+- 시각 테마(Default / Neon / Night Bar / Ink Night)와 Neon, Night Bar, Ink Night의 필름 그레인 및 빛 움직임
 - 메뉴 막대 항목 표시 여부
 - 새로 고침 속도: 낮음 (5s), 중간 (2s), 높음 (1s)
 - 온도 단위: 섭씨 또는 화씨
-- 로그인 시 실행, 자동 업데이트 확인, Stable/Beta 채널, 디스플레이 잠자기 방지
+- 로그인 시 실행, 자동 업데이트 확인, Stable/Beta 채널
+- 디스플레이 잠자기 방지는 설정 행이 아니라 팝오버 도구 막대의 빠른 토글로 제어
 - 진단 로그 수준(끔 / 오류 / 전체)과 로그 폴더 열기
 - 출구 노드 감지 및 공급자 선택
 - Claude Code, Codex, Gemini AI 모니터링과 Claude/Codex 개별 창 유지 스위치
-- 수직 스크롤 반전, 수평 스크롤 반전, 단계 배율
+- 세로 및 가로 스크롤 방향의 독립 반전, 트랙패드/Magic Mouse 포함 여부, 휠 가속 비활성화와 1~10줄 고정, 단계 배율
 - 창 관리(메뉴 막대 아이콘, 스냅 단축키, 제목 표시줄 제스처를 묶는 단일 토글)
 - Finder 메뉴, 터미널 선택, cmux 작업, 즐겨찾기 디렉터리, 앱, 파일 템플릿
 - 건강도 점수 항목 토글
 - 언어: 简体中文, English, 日本語, 한국어, 시스템 언어
 
-설정은 "일반", "모니터링", "추가 도구"로 나뉘며 사이드바 상태 점으로 현재 켜진 선택형 기능을 확인할 수 있습니다. 창은 시스템 흰색 고정 캔버스이며, 표시 테마는 팝오버 등 제품 표면에만 적용됩니다.
+설정 사이드바는 **일반**, **모니터링**, **입력 장치**, **윈도우 관리**, **AI 사용량**, **우클릭 메뉴**의 여섯 화면으로 바로 이동합니다. 사이드바에는 기능 상태 점을 표시하지 않습니다. 창은 시스템 흰색 고정 캔버스이며, 표시 테마는 팝오버 등 제품 표면에만 적용됩니다.
 
 ---
 

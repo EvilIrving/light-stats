@@ -1,11 +1,11 @@
 # Growth Context
 
-*Last updated: 2026-07-12*
+*Last updated: 2026-08-18*
 
 ## Product
 - **Name:** Light Stats
 - **One-liner:** Native macOS menu bar instrument for live system pressure, with optional developer tools and four visual themes.
-- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, scroll reversal, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Default, Bento Grid, Sun Gold, Ink Night); Settings stays a system-white tool panel. Local privacy-aware diagnostic logging is optional. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
+- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, mouse and trackpad scroll controls, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Default, Neon, Night Bar, Ink Night), with Ink Night selected on a clean install; Settings stays a system-white tool panel. Local privacy-aware diagnostic logging is optional. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
 - **Category:** macOS menu bar system and developer-workflow monitor
 
 ## Platform & distribution
@@ -28,8 +28,8 @@
 3. **Developer context in one instrument:** Displays Claude Code, Codex, and Gemini subscription usage, and adds an opt-in Finder menu for terminal, type-aware file templates, copy, move, and open-with workflows.
 4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, zero third-party runtime dependencies (including template-tinted SVG icons in-bundle).
 5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel are all disabled by default, so a clean install makes no outbound request. Diagnostic logs (default Full, switchable to Errors or Off) stay local with redaction and are never uploaded.
-6. **Opt-in Mac utilities:** Window placement, scroll reversal, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
-7. **Selectable instrument chrome:** Four themes (Default, Bento, Sun Gold, Ink Night) on product surfaces; Sun Gold/Ink Night mesh grain and light-dynamics controls; Settings decoupled as a white tool panel.
+6. **Opt-in Mac utilities:** Window placement, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
+7. **Selectable instrument chrome:** Four themes (Default, Neon, Night Bar, Ink Night) on product surfaces; the three dynamic themes provide grain and light-dynamics controls; Settings remains a white tool panel.
 
 ## Competitors / alternatives
 - Do not use public competitor comparisons in launch copy, README copy, listings, or social posts.
@@ -46,11 +46,11 @@
 ## Proof points (REAL only)
 - Public GitHub repository.
 - MIT License file exists in the repository.
-- Latest stable GitHub release observed: v1.8.0.
-- Latest tagged prerelease observed: v1.9.0-beta.7 (Beta channel, diagnostic log levels, settings 3-tab layout, Finder UX).
-- Unreleased on main after beta.7 (as of 2026-07-12): multi-theme system (Default / Bento / Sun Gold / Ink Night; raw keys glass/bento/film/noir), Reicon Outline SVG metric icons, themed permission panel, Sun Gold/Ink Night appearance controls. Documented in README; not yet a GitHub Release tag.
+- Latest stable GitHub release observed on 2026-08-18: v1.9.0.
+- Latest tagged prerelease observed on 2026-08-18: v1.9.1-beta.2.
+- Unreleased working-tree changes observed on 2026-08-18: visible theme lineup is Default / Neon / Night Bar / Ink Night (raw keys glass/film/bar/noir), Ink Night remains the clean-install default, Bento and Ash Veil are removed, the popover uses one instrument layout, Settings has six direct destinations, Keep Awake moved to the popover toolbar, input controls add optional trackpad/Magic Mouse reversal and fixed-line wheel scrolling, and maximize/center gain global shortcuts.
 - GitHub Actions build and release workflows exist.
-- Screenshots under `docs/screenshots/{default,bento,sun-gold,ink-night}/` (overview + cleanup each, JPEG). Root `popover-*.jpeg` mirrors Default for stable links.
+- Screenshots under `docs/screenshots/{default,neon,night-bar,ink-night}/` (overview + cleanup each, JPEG). Root `docs/screenshots/popover-*.jpeg` mirrors Default for stable links.
 - No adoption, testimonial, or benchmark claim is approved for marketing copy; any public count must be rechecked immediately before use.
 
 ## Links

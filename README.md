@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, and display keep-awake. The popover can wear one of four visual themes (Default by default), while Settings stays a plain system-white tool panel.
+Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, and display keep-awake. The popover can wear one of four visual themes, with Ink Night selected on a clean install, while Settings stays a plain system-white tool panel.
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -15,17 +15,17 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## Screenshots
 
-Default theme (cold-start) — Overview and Memory:
+Ink Night, the clean-install default, shown in Overview and Memory:
 
 | Overview | Memory |
 |----------|--------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="320" alt="Overview panel — Default theme" /> | <img src="docs/screenshots/default/popover-cleanup.jpeg" width="320" alt="Memory cleanup — Default theme" /> |
+| <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="docs/screenshots/ink-night/popover-cleanup.jpeg" width="320" alt="Memory cleanup in the Ink Night theme" /> |
 
 Themes (Overview):
 
-| Default | Bento Grid | Sun Gold | Ink Night |
-|---------|------------|----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="200" alt="Default theme" /> | <img src="docs/screenshots/bento/popover-overview.jpeg" width="200" alt="Bento Grid theme" /> | <img src="docs/screenshots/sun-gold/popover-overview.jpeg" width="200" alt="Sun Gold theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="200" alt="Ink Night theme" /> |
+| Default | Neon | Night Bar | Ink Night |
+|---------|------|-----------|-----------|
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Neon theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
 
 ---
 
@@ -63,11 +63,11 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 ### Appearance
 
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
-  - **Default** (cold-start default): system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
-  - **Bento Grid**: original card grid plus system materials
-  - **Sun Gold**: warm sun-gold grain mesh with coral and wine light fields
-  - **Ink Night**: ink-black grain mesh with cool charcoal surfaces
-- Sun Gold and Ink Night share mesh appearance controls: film grain on/off, and light dynamics as five semantic steps (Still, Gentle, Natural, Smooth, Lively)
+  - **Default**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
+  - **Neon**: warm grain and brass instrument ink over an amber and coral light field
+  - **Night Bar**: red and green neon over a dark cocktail-bar atmosphere
+  - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
+- Neon, Night Bar, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
 - The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
@@ -76,7 +76,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - App list sorted by memory usage
 - Normal quit and force quit with confirmation
 - Expandable child process details
-- Layout follows the active theme (card grid under Bento, instrument rows under Default / Sun Gold / Ink Night)
+- Layout is the instrument readout: sections, hairlines, and dense rows
 
 ### Finder Menu
 
@@ -93,15 +93,18 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - A single **Window Management** switch (off by default) turns everything on together: the menu bar window-control icon, the global snap shortcuts, and the titlebar gestures — there are no separate sub-toggles
 - Menu bar window-control menu with designer-provided action icons
 - Left, right, top, and bottom half shortcuts for high-frequency window placement
+- `Control + Option + Return` maximizes the current window; `Control + Option + C` centers it
 - Additional menu actions for corners, thirds, display movement, maximize, center, restore, and minimize
 - Titlebar trackpad gestures for quick snapping with preview overlay and haptic feedback
 - Turning the switch off removes the icon and stops all window-control event taps immediately; Accessibility permission is requested only when you turn it on
 
 ### Scroll Direction Control
 
-- Optional vertical and horizontal scroll-direction reversal
-- Step multiplier for fine-tuning scroll feel
-- Uses an event tap only when a scroll feature is enabled
+- Independent vertical and horizontal scroll-direction reversal
+- Traditional mouse wheels are affected by default; trackpads and Magic Mouse can be included explicitly
+- Optional mouse-wheel acceleration disablement with a fixed 1 to 10 lines per wheel step
+- Step multiplier for fine-tuning reversed wheel movement
+- Uses an Accessibility event tap only when reversal or acceleration control is enabled, and rebuilds the tap after wake when needed
 
 ### Cleaning Mode
 
@@ -112,8 +115,8 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 
 ### Keep Awake and Launch at Login
 
-- Optional display-sleep prevention with no Accessibility permission
-- Stops immediately when disabled or when Light Stats exits
+- Popover-toolbar quick toggle for display-sleep prevention, with no Accessibility permission
+- Stops immediately when toggled off or when Light Stats exits
 - Optional launch at login through the native macOS login-item service
 
 ### Auto-Update
@@ -174,21 +177,21 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ## Settings
 
-- Visual theme (Default, Bento Grid, Sun Gold, Ink Night)
+- Visual theme (Default, Neon, Night Bar, Ink Night), with film grain and light dynamics for the three dynamic themes
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit
-- Launch at login, automatic update checks, Stable/Beta update channel, and display keep-awake
+- Launch at login, automatic update checks, and Stable/Beta update channel; Keep Awake is a popover-toolbar quick toggle
 - Diagnostic log level (Off / Errors / Full) and open-log-folder control
 - Exit-node detection and provider selection
 - AI monitoring for Claude Code, Codex, and Gemini, plus separate Claude/Codex warmup switches
-- Scroll reversal, horizontal reversal, and step multiplier
+- Vertical and horizontal reversal, optional trackpad and Magic Mouse inclusion, wheel-acceleration control, fixed line count, and step multiplier
 - Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures)
 - Finder menu, terminal selection, cmux actions, favorite directories, apps, and file templates
 - Health score dimension toggles
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
-Settings are grouped into **General**, **Monitoring**, and **Extra Tools** so it is obvious which capabilities are optional and currently active. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.
+The Settings sidebar links directly to **General**, **Monitoring**, **Input Devices**, **Window Management**, **AI Usage**, and **Right-Click Menu**. It is navigation-only and does not show runtime status dots. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.
 
 ---
 

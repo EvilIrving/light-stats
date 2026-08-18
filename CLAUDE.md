@@ -25,7 +25,7 @@ Light Stats/
 │   ├── ProcessStats.swift
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
-│   ├── AppTheme.swift               # Product preset ID (glass/bento/film/noir/dataPaper)
+│   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -75,11 +75,9 @@ Light Stats/
 │   │   ├── CleanupTabView.swift
 │   │   ├── DebugSnapshot.swift
 │   │   └── Components/
-│   │       ├── BentoCard.swift
 │   │       ├── AppRowView.swift
 │   │       ├── ChildProcessRowView.swift
 │   │       ├── AIUsageCard.swift
-│   │       ├── QuickStatCard.swift
 │   │       ├── Sparkline.swift             # SwiftUI trend mini-chart
 │   │       ├── SpinningFanIcon.swift       # CADisplayLink fan animation
 │   │       ├── TabButton.swift
@@ -222,10 +220,10 @@ owns `NSWindow` instances (a bridge, not a ViewModel).
 `ThemeDefinition` is the only product composition table: each `AppTheme` fixes its UI tokens,
 `BackgroundSceneID`, and layout. `BackgroundHost` owns only sizing, clipping, window context,
 and disabled hit testing; `BackgroundSceneRouter` creates the selected Scene with a structural
-`@ViewBuilder` switch. System Glass, Sun Gold, Ink Night, Data Paper, and Ash Veil own their
+`@ViewBuilder` switch. System Glass, Sun Gold, Ink Night, and Data Paper own their
 rendering independently. Dynamic Scenes expose typed code-side configurations for flow, motion,
 grain, veil, and named light-field layers; Data Paper has its own static Canvas configuration
-and does not consume those effects; Ash Veil is a static photo Scene with no grain/blur/veil.
+and does not consume those effects.
 Shared tools are opt-in, not a common rendering pipeline.
 `ThemeLayout` is injected separately from `UITokens` and is the only runtime layout truth.
 
@@ -368,6 +366,15 @@ from the About view.
 - **No `let _ = someOptional`** — use `!= nil`.
 - **One type per file.** Tightly coupled private helpers excepted.
 - **File structure:** imports → type declaration → properties → init → methods → extensions.
+- **No content plates.** Instrument chrome sits on the scene. Do not wrap sections, rows,
+  or the popover body in a filled card / smoked glass / reading plate to fix contrast —
+  any `AppTheme`, not just Neon. Contrast is ink vs the scene. Tab tracks, wells, and
+  hover washes are not section cards. Neon `surfaceFill` stays `.clear`.
+- **Content owns the visual hierarchy.** Health, live metrics, status, and trends must read
+  before navigation chrome. Tab tracks, selected states, toolbar controls, wells, and hover
+  washes must never become the panel's darkest, brightest, most saturated, or highest-contrast
+  region. Express selection with restrained type weight, a light wash, or a fine indicator —
+  never a dominant filled control that competes with instrument data.
 
 ### Lint thresholds
 
@@ -410,12 +417,25 @@ VStack { ... }.focusable(false)        // Popover root
 
 ## Localization
 
-Four languages: en, zh-Hans, ja, ko.
+Four languages: en, zh-Hans, ja, ko. zh-Hans is the source language; en/ja/ko are translations.
 
 User-facing strings: `String(localized:)` or `NSLocalizedString`. Adding a key means
 updating all four `Resources/<lang>.lproj/Localizable.strings`. Coverage check:
 `./validate_localization.sh`. `LocalizationManager` broadcasts language changes so
 views reload.
+
+### Translation principles
+
+- **Match the source's conciseness.** A short Chinese term stays a short term in every
+  language. Never expand a term into a sentence or long phrase — e.g. 「右键菜单」is
+  `Right-Click Menu` / `右クリックメニュー` / `우클릭 메뉴`, not "Finder Right-Click Menu".
+- **No over-translation.** Don't add qualifiers or explanation the Chinese source doesn't
+  carry (e.g. no "(Mouse Only)" suffix on a label). Clarification goes in a separate
+  `*.hint` / description string, never inside the label itself.
+- **Native-speaker phrasing in every language.** en, ja, ko, and zh-Hans must each read
+  as if written by a native speaker — idiomatic and natural, never translationese. Follow
+  each language's own convention (e.g. 「退出软件」→ "Quit Light Stats"), not a literal
+  word-for-word gloss of the Chinese source.
 
 ## Build
 
@@ -517,6 +537,8 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
 - Not an Activity Monitor replacement — status indicator, not full diagnostic. Top-N processes only.
 - No per-process network breakdown — aggregate per-interface only.
 - No custom chart rendering — SwiftUI shapes + AppKit views; no Core Graphics / Metal.
+- No content cards behind instrument readouts — the scene is the surface. Do not
+  reintroduce Bento-style plates as “reading boards”.
 - No plugin system — every metric is a built-in Service.
 - No background daemon — runs as a normal menu bar app; no XPC, no LaunchAgents.
 - No remote telemetry — the app phones home only for user-initiated update checks and opt-in exit-node detection.
