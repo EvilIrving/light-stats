@@ -161,10 +161,6 @@
 "aiUsage.credentialsMissing" = "인증 정보 없음 — 먼저 %@ CLI로 로그인하세요";
 "aiUsage.fetchFailed" = "사용량을 가져오지 못했습니다";
 
-// MARK: - Flat Colors
-"settings.flatColors.section" = "흑백 UI";
-"settings.flatColors.hint" = "건강 점수를 제외한 모든 지표 텍스트를 일반 색상으로 표시하고, 수치에 따른 동적 색상 변경을 끕니다.";
-
 // MARK: - Accessibility
 "settings.accessibility.section" = "색상 표시";
 "settings.colorIndicator" = "색상 표시기";

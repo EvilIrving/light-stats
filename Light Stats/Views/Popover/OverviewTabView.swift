@@ -92,23 +92,15 @@ struct OverviewTabView: View {
                 }
                 MetricRow(label: "overview.load".localized, icon: "speedometer", trend: loadTrend) {
                     Text(monitor.loadAverage.displayString)
-                        .font(
-                            useFlatColors
-                                ? .system(size: 13, weight: .regular, design: .monospaced)
-                                : theme.chromeStyle.metricValueFont
-                        )
-                        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(loadUsagePercent))
+                        .font(theme.chromeStyle.metricValueFont)
+                        .foregroundStyle(colorForUsage(loadUsagePercent))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }
                 MetricRow(label: "MEM", svgIcon: .memory, trend: memoryTrend) {
                     HStack(alignment: .lastTextBaseline, spacing: 2) {
                         Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
-                            .font(
-                                useFlatColors
-                                    ? .system(size: 16, weight: .regular, design: .monospaced)
-                                    : theme.chromeStyle.metricValueFont
-                            )
+                            .font(theme.chromeStyle.metricValueFont)
                         Text("/")
                             .font(.system(size: 11))
                             .foregroundStyle(theme.inkMuted)
@@ -116,7 +108,7 @@ struct OverviewTabView: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(theme.inkMuted)
                     }
-                    .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(monitor.memoryUsage))
+                    .foregroundStyle(colorForUsage(monitor.memoryUsage))
                 }
             }
         }
@@ -249,8 +241,7 @@ struct OverviewTabView: View {
                     ForEach(aiProviders, id: \.0.rawValue) { provider, state in
                         AIProviderCompactRow(
                             provider: provider,
-                            state: state,
-                            useFlatColors: useFlatColors
+                            state: state
                         )
                     }
                 }
@@ -317,7 +308,7 @@ struct OverviewTabView: View {
             } else {
                 VStack(spacing: 6) {
                     ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
-                        ProcessRow(process: process, useFlatColors: useFlatColors)
+                        ProcessRow(process: process)
                     }
                 }
             }
@@ -375,10 +366,8 @@ private struct ProcessRow: View {
     @Environment(\.theme) private var theme
 
     let process: TopProcess
-    let useFlatColors: Bool
 
     var color: Color {
-        guard !useFlatColors else { return theme.inkPrimary }
         if process.cpuPercent < 30 {
             return theme.signalGood
         } else if process.cpuPercent < 70 {

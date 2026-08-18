@@ -101,11 +101,7 @@ extension OverviewTabView {
     func metricPercent(_ usage: Double) -> some View {
         HStack(alignment: .lastTextBaseline, spacing: 2) {
             Text(String(format: "%.0f", usage))
-                .font(
-                    useFlatColors
-                        ? .system(size: 16, weight: .regular, design: .monospaced)
-                        : theme.chromeStyle.metricValueFont
-                )
+                .font(theme.chromeStyle.metricValueFont)
                 .shadow(
                     color: theme.chromeStyle.usesIlluminatedTreatment
                         ? colorForUsage(usage).opacity(
@@ -118,10 +114,8 @@ extension OverviewTabView {
                 .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(theme.inkMuted)
         }
-        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(usage))
+        .foregroundStyle(colorForUsage(usage))
     }
-
-    var useFlatColors: Bool { settings.useFlatColors }
 
     var loadUsagePercent: Double {
         let coreCount = monitor.coreTopology.totalCores > 0
@@ -131,24 +125,23 @@ extension OverviewTabView {
     }
 
     var cpuTrend: SparklineSeries {
-        SparklineSeries(values: monitor.trends.cpu, color: colorForUsage(monitor.cpuUsage))
+        SparklineSeries(values: monitor.trends.cpu, color: theme.chartLine)
     }
 
     var gpuTrend: SparklineSeries {
-        SparklineSeries(values: monitor.trends.gpu, color: colorForUsage(monitor.gpuUsage ?? 0))
+        SparklineSeries(values: monitor.trends.gpu, color: theme.chartLine)
     }
 
     var memoryTrend: SparklineSeries {
-        SparklineSeries(values: monitor.trends.memory, color: colorForUsage(monitor.memoryUsage))
+        SparklineSeries(values: monitor.trends.memory, color: theme.chartLine)
     }
 
     var loadTrend: SparklineSeries {
-        SparklineSeries(values: monitor.trends.load, color: colorForUsage(loadUsagePercent))
+        SparklineSeries(values: monitor.trends.load, color: theme.chartLine)
     }
 
     func colorForUsage(_ usage: Double) -> Color {
-        guard !useFlatColors else { return theme.inkPrimary }
-        return theme.colorForUsage(usage)
+        theme.colorForUsage(usage)
     }
 
     func gradeText(_ grade: HealthScore.Grade) -> String {
@@ -235,7 +228,6 @@ extension OverviewTabView {
     }
 
     func batteryColor(_ battery: BatteryInfo) -> Color {
-        guard !useFlatColors else { return theme.inkPrimary }
         if battery.state == .charging || battery.state == .charged { return theme.signalGood }
         if battery.percent < 20 { return theme.signalBad }
         if battery.percent < 40 { return theme.signalWarn }

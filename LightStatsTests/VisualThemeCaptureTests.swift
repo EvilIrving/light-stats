@@ -15,7 +15,16 @@ final class VisualThemeCaptureTests: XCTestCase {
         let originalBarLightFlow = settings.barLightFlow
         let originalNoirGrainEnabled = settings.noirGrainEnabled
         let originalNoirLightFlow = settings.noirLightFlow
-        let originalUseFlatColors = settings.useFlatColors
+        let originalExitNodeDetectionEnabled = settings.exitNodeDetectionEnabled
+        let originalClaudeEnabled = settings.aiMonitorClaudeEnabled
+        let originalCodexEnabled = settings.aiMonitorCodexEnabled
+        let originalGeminiEnabled = settings.aiMonitorGeminiEnabled
+        let appMemoryManager = AppMemoryManager.shared
+        let originalRunningApps = appMemoryManager.runningApps
+        let originalTotalMemoryUsed = appMemoryManager.totalMemoryUsed
+        let originalTotalMemory = appMemoryManager.totalMemory
+        let originalAppCount = appMemoryManager.appCount
+        let originalMemoryPressure = appMemoryManager.memoryPressure
         defer {
             settings.appTheme = originalTheme
             settings.appLanguage = originalLanguage
@@ -25,7 +34,15 @@ final class VisualThemeCaptureTests: XCTestCase {
             settings.barLightFlow = originalBarLightFlow
             settings.noirGrainEnabled = originalNoirGrainEnabled
             settings.noirLightFlow = originalNoirLightFlow
-            settings.useFlatColors = originalUseFlatColors
+            settings.exitNodeDetectionEnabled = originalExitNodeDetectionEnabled
+            settings.aiMonitorClaudeEnabled = originalClaudeEnabled
+            settings.aiMonitorCodexEnabled = originalCodexEnabled
+            settings.aiMonitorGeminiEnabled = originalGeminiEnabled
+            appMemoryManager.runningApps = originalRunningApps
+            appMemoryManager.totalMemoryUsed = originalTotalMemoryUsed
+            appMemoryManager.totalMemory = originalTotalMemory
+            appMemoryManager.appCount = originalAppCount
+            appMemoryManager.memoryPressure = originalMemoryPressure
             LocalizationManager.shared.setLanguage(originalLanguage)
             SystemMonitor.shared.setPopoverVisible(false)
         }

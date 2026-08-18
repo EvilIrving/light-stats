@@ -13,7 +13,6 @@ private struct WindowRow: View {
     @Environment(\.theme) private var theme
 
     let window: UsageWindow
-    let useFlatColors: Bool
 
     var body: some View {
         HStack(spacing: 8) {
@@ -31,19 +30,15 @@ private struct WindowRow: View {
                     RoundedRectangle(
                         cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
                     )
-                    .fill(useFlatColors ? theme.inkPrimary.opacity(0.4) : colorForRemaining(remainingPercent))
+                    .fill(colorForRemaining(remainingPercent))
                     .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
                 }
             }
             .frame(height: 5)
 
             Text(String(format: "%.0f%%", remainingPercent))
-                .font(
-                    useFlatColors
-                        ? .system(size: 11, weight: .regular, design: .monospaced)
-                        : theme.chromeStyle.compactValueFont
-                )
-                .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForRemaining(remainingPercent))
+                .font(theme.chromeStyle.compactValueFont)
+                .foregroundStyle(colorForRemaining(remainingPercent))
                 .frame(width: 36, alignment: .trailing)
 
             Text(resetText)
@@ -91,7 +86,6 @@ struct AIProviderCompactRow: View {
 
     let provider: AIProvider
     let state: ProviderFetchState
-    let useFlatColors: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -115,7 +109,7 @@ struct AIProviderCompactRow: View {
             case .loaded(let snapshot):
                 VStack(spacing: 6) {
                     ForEach(snapshot.windows, id: \.label) { window in
-                        WindowRow(window: window, useFlatColors: useFlatColors)
+                        WindowRow(window: window)
                     }
                 }
 

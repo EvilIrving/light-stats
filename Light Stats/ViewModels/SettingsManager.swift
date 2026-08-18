@@ -45,7 +45,6 @@ protocol SettingsManaging: ObservableObject {
     var healthIncludeGPU: Bool { get set }
     var healthIncludePower: Bool { get set }
     var useColorIndicator: Bool { get set }
-    var useFlatColors: Bool { get set }
     var appTheme: AppTheme { get set }
     var refreshRate: SettingsManager.RefreshRate { get set }
     var temperatureUnit: SettingsManager.TemperatureUnit { get set }
@@ -129,10 +128,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     /// 监控列表用颜色圆点指示等级（默认开）；关闭后回退到「低/中/高」文字。
     @Published var useColorIndicator: Bool {
         didSet { save(useColorIndicator, for: .useColorIndicator) }
-    }
-    /// 平缓色调：开启后除健康分外所有文本使用普通黑色，不再根据数值动态变色。
-    @Published var useFlatColors: Bool {
-        didSet { save(useFlatColors, for: .useFlatColors) }
     }
 
     /// Product theme preset. Cold-start default `.noir` (Ink Night / 墨夜).
@@ -438,7 +433,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case healthIncludeGPU = "settings.healthIncludeGPU"
         case healthIncludePower = "settings.healthIncludePower"
         case useColorIndicator = "settings.useColorIndicator"
-        case useFlatColors = "settings.useFlatColors"
         case appTheme = "settings.appTheme"
         case filmGrainEnabled = "settings.filmGrainEnabled"
         case filmLightFlow = "settings.filmLightFlow"
@@ -503,7 +497,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
         // 颜色指示器：默认开启（关闭则回退到文字等级）。
         useColorIndicator = defaults.object(forKey: Key.useColorIndicator.rawValue) as? Bool ?? true
-        useFlatColors = defaults.object(forKey: Key.useFlatColors.rawValue) as? Bool ?? false
         // 主题：默认 noir（展示名「墨夜」）。未知旧键回落到 noir。
         appTheme = AppTheme.resolve(stored: defaults.string(forKey: Key.appTheme.rawValue))
         filmGrainEnabled = defaults.object(forKey: Key.filmGrainEnabled.rawValue) as? Bool ?? true

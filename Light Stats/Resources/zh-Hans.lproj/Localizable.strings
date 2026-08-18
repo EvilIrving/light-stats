@@ -161,10 +161,6 @@
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";
 
-// MARK: - Flat Colors
-"settings.flatColors.section" = "黑白界面";
-"settings.flatColors.hint" = "除健康分外，所有指标文字使用普通颜色，不再根据数值动态变色。";
-
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";
 "settings.colorIndicator" = "颜色指示器";
