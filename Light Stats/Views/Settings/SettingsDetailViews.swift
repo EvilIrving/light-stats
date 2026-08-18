@@ -314,14 +314,34 @@ struct ScrollDetail: View {
                     SettingsToggle(isOn: $settings.scrollReverseHorizontalEnabled)
                 }
                 rowDivider()
+                SettingsRow("settings.scrollIncludeTrackpad".localized) {
+                    SettingsToggle(isOn: $settings.scrollIncludeTrackpad)
+                        .disabled(!hasReversal).opacity(hasReversal ? 1 : 0.45)
+                }
+                rowDivider()
+                SettingsRow("settings.scrollDisableAcceleration".localized) {
+                    SettingsToggle(isOn: $settings.scrollDisableAcceleration)
+                }
+                rowDivider()
+                SettingsRow("settings.scrollLines".localized) {
+                    Stepper("\(settings.scrollLines)", value: $settings.scrollLines, in: 1...10)
+                        .controlSize(.small).focusable(false)
+                        .disabled(!settings.scrollDisableAcceleration)
+                        .opacity(settings.scrollDisableAcceleration ? 1 : 0.45)
+                }
+                rowDivider()
                 stepRow
             }
         }
     }
 
-    /// 步长倍率滑块。两个反转都关闭时禁用并淡化，提示当前不生效。
+    private var hasReversal: Bool {
+        settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
+    }
+
+    /// 步长倍率只在方向反转开启时生效；固定行数不会与该倍率叠乘。
     private var stepRow: some View {
-        let active = settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled
+        let active = hasReversal
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("settings.scrollStep".localized)

@@ -62,6 +62,12 @@ final class SettingsDefaultsTests: XCTestCase {
         let s = freshSettings()
         XCTAssertFalse(s.scrollReverseEnabled)
         XCTAssertFalse(s.scrollReverseHorizontalEnabled)
+        XCTAssertFalse(s.scrollDisableAcceleration)
+        XCTAssertFalse(s.scrollIncludeTrackpad)
+    }
+
+    func testScrollLinesDefault() {
+        XCTAssertEqual(freshSettings().scrollLines, 3)
     }
 
     func testWindowManagementDefaultsOff() {

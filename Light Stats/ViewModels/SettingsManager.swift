@@ -285,6 +285,18 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var scrollStepMultiplier: Double {
         didSet { save(scrollStepMultiplier, for: .scrollStepMultiplier) }
     }
+    /// 关闭鼠标滚轮加速度：开启后每次滚轮事件滚动固定 `scrollLines` 行，滚动量不再随转速放大。
+    @Published var scrollDisableAcceleration: Bool {
+        didSet { save(scrollDisableAcceleration, for: .scrollDisableAcceleration) }
+    }
+    /// 加速度关闭时每次滚轮事件滚动的行数（1–10，默认 3）。
+    @Published var scrollLines: Int {
+        didSet { save(scrollLines, for: .scrollLines) }
+    }
+    /// 触控板 / Magic Mouse 是否也参与方向反转（默认 false：仅传统鼠标滚轮）。
+    @Published var scrollIncludeTrackpad: Bool {
+        didSet { save(scrollIncludeTrackpad, for: .scrollIncludeTrackpad) }
+    }
     /// Finder 右键菜单总开关：默认关闭（opt-in）。开 → 宿主注册 CFMessagePort、扩展出菜单；
     /// 关 → 端口注销、扩展不出菜单。值镜像写入 App Group 容器供沙盒扩展读取。
     @Published var finderMenuEnabled: Bool {
@@ -453,6 +465,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case finderMenuEnabled = "settings.finderMenuEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
+        case scrollDisableAcceleration = "settings.scrollDisableAcceleration"
+        case scrollLines = "settings.scrollLines"
+        case scrollIncludeTrackpad = "settings.scrollIncludeTrackpad"
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
         case diagnosticLogLevel = "settings.diagnosticLogLevel"
     }
@@ -543,6 +558,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         // 步长倍率：默认 1×；夹取到 0.25–3× 防御历史/异常值。
         let storedMultiplier = defaults.object(forKey: Key.scrollStepMultiplier.rawValue) as? Double ?? 1.0
         scrollStepMultiplier = min(max(storedMultiplier, 0.25), 3.0)
+        scrollDisableAcceleration = defaults.object(forKey: Key.scrollDisableAcceleration.rawValue) as? Bool ?? false
+        let storedScrollLines = defaults.object(forKey: Key.scrollLines.rawValue) as? Int ?? 3
+        scrollLines = min(max(storedScrollLines, 1), 10)
+        scrollIncludeTrackpad = defaults.object(forKey: Key.scrollIncludeTrackpad.rawValue) as? Bool ?? false
         // 保持唤醒：默认关闭（opt-in）。
         keepAwakeEnabled = defaults.object(forKey: Key.keepAwakeEnabled.rawValue) as? Bool ?? false
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""

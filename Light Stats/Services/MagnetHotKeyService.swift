@@ -42,8 +42,9 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
             register(hotKey)
         }
 
-        if registrations.isEmpty {
-            removeHandler()
+        guard registrations.count == Self.defaultHotKeys.count else {
+            logger.error("Failed to register the complete window shortcut set")
+            stop()
             return false
         }
         logger.info("Magnet hotkeys started with \(self.registrations.count) registrations")
@@ -144,6 +145,8 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
         WindowSnapHotKey(keyCode: UInt32(kVK_LeftArrow), modifiers: baseModifiers, action: .leftHalf),
         WindowSnapHotKey(keyCode: UInt32(kVK_RightArrow), modifiers: baseModifiers, action: .rightHalf),
         WindowSnapHotKey(keyCode: UInt32(kVK_UpArrow), modifiers: baseModifiers, action: .topHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_DownArrow), modifiers: baseModifiers, action: .bottomHalf)
+        WindowSnapHotKey(keyCode: UInt32(kVK_DownArrow), modifiers: baseModifiers, action: .bottomHalf),
+        WindowSnapHotKey(keyCode: UInt32(kVK_Return), modifiers: baseModifiers, action: .maximize),
+        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_C), modifiers: baseModifiers, action: .center)
     ]
 }

@@ -85,19 +85,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
         _ = CleaningModeOverlayController.shared
 
-        // 滚动处理：垂直反转 / 水平反转 / 步长倍率任一变更都重新同步服务。
-        let scrollPublishers: [AnyPublisher<Void, Never>] = [
-            settings.$scrollReverseEnabled.map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollReverseHorizontalEnabled.map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollStepMultiplier.map { _ in () }.eraseToAnyPublisher()
-        ]
-        for publisher in scrollPublishers {
-            publisher
-                .dropFirst()
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] in self?.syncScrollService() }
-                .store(in: &cancellables)
-        }
+        // 滚动处理：垂直反转 / 水平反转 / 步长倍率 / 加速度 / 触控板 任一变更都重新同步服务。
+        Publishers.MergeMany([
+            settings.$scrollReverseEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollReverseHorizontalEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollStepMultiplier.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollDisableAcceleration.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollLines.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollIncludeTrackpad.dropFirst().map { _ in () }.eraseToAnyPublisher()
+        ])
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.syncScrollService() }
+            .store(in: &cancellables)
 
         // 窗口管理总开关：单一开关同时驱动菜单栏图标、快捷键、标题栏手势的起停。
         settings.$windowManagementEnabled
@@ -273,8 +272,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             to: menu
         )
         menu.addItem(.separator())
-        addWindowMenuItem("window.action.maximize".localized, action: .maximize, to: menu)
-        addWindowMenuItem("window.action.center".localized, action: .center, to: menu)
+        addWindowMenuItem("window.action.maximize".localized, action: .maximize, key: "\r", to: menu)
+        addWindowMenuItem("window.action.center".localized, action: .center, key: "c", to: menu)
         addWindowMenuItem("window.action.restore".localized, action: .restore, to: menu)
         return menu
     }
@@ -592,7 +591,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc private func handleAppDidBecomeActive() {
-        if settings.scrollReverseEnabled || settings.scrollReverseHorizontalEnabled, !scrollService.isRunning {
+        if currentScrollConfig().isActive, !scrollService.isRunning {
             scrollService.updateConfig(currentScrollConfig())
             _ = scrollService.start()
         }
@@ -607,7 +606,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         ScrollConfig(
             reverseVertical: settings.scrollReverseEnabled,
             reverseHorizontal: settings.scrollReverseHorizontalEnabled,
-            stepMultiplier: settings.scrollStepMultiplier
+            stepMultiplier: settings.scrollStepMultiplier,
+            disableAcceleration: settings.scrollDisableAcceleration,
+            scrollLines: settings.scrollLines,
+            includeTrackpad: settings.scrollIncludeTrackpad
         )
     }
 
@@ -627,7 +629,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func startMagnetHotKeysOrPrompt() {
         guard !magnetHotKeyService.isRunning else { return }
         if magnetHotKeyService.start() { return }
-        presentWindowControlPermissionAlert()
+        if !windowSnappingService.checkPermission(promptIfNeeded: false) {
+            presentWindowControlPermissionAlert()
+        }
     }
 
     private func startTitlebarGesturesOrPrompt() {
@@ -636,12 +640,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         presentWindowControlPermissionAlert()
     }
 
-    /// 同步滚动服务：热更新配置；按「垂直∨水平反转」决定 tap 起停。步长倍率依附
-    /// 反转开关 —— 仅在 tap 运行时生效，单独调整倍率不会启动 tap。
+    /// 同步滚动服务：热更新配置；按「垂直∨水平反转∨关闭加速度」决定 tap 起停。步长倍率
+    /// 与触控板开关依附于这些主开关 —— 仅在 tap 运行时生效，单独调整不会启动 tap。
     private func syncScrollService() {
         let config = currentScrollConfig()
         scrollService.updateConfig(config)
-        if config.reverseVertical || config.reverseHorizontal {
+        if config.isActive {
             startScrollServiceOrPrompt()
         } else {
             scrollService.stop()
