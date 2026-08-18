@@ -295,4 +295,3 @@
 "window.action.center" = "Center";
 "window.action.restore" = "Restore";
 "settings.keepAwake" = "Keep Awake";
-"settings.keepAwake.description" = "Keeps the screen on while enabled. Turns off when you quit.";

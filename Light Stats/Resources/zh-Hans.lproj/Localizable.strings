@@ -297,4 +297,3 @@
 "window.action.center" = "居中";
 "window.action.restore" = "还原";
 "settings.keepAwake" = "保持唤醒";
-"settings.keepAwake.description" = "开启期间屏幕保持常亮，关闭或退出后恢复。";

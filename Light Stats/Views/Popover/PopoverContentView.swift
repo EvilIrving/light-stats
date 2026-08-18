@@ -85,6 +85,16 @@ struct PopoverContentView: View {
                         key: "snapshot"
                     ) { DebugSnapshot.dumpPanel() }
 #endif
+                    // 保持唤醒：点按开/关，图标以 accent 色高亮表示已开启。
+                    toolbarIcon(
+                        systemName: "cup.and.saucer.fill",
+                        key: "keepAwake",
+                        iconSize: 15,
+                        isActive: settings.keepAwakeEnabled
+                    ) {
+                        settings.keepAwakeEnabled.toggle()
+                    }
+
                     // 擦屏模式锁内置键盘，仅对带内置键盘的便携机型（MacBook）有意义；
                     // Mac mini / Studio / iMac 等台式机无内置键盘，隐藏入口。
                     if DeviceCapabilities.isPortable {
@@ -189,6 +199,7 @@ struct PopoverContentView: View {
     private func tooltipText(for key: String) -> String? {
         switch key {
         case "snapshot": return "导出截图"
+        case "keepAwake": return "settings.keepAwake".localized
         case "cleaning": return "cleaning.action.start".localized
         case "settings": return "popover.action.settings".localized
         default: return nil
@@ -210,6 +221,7 @@ struct PopoverContentView: View {
         key: String,
         iconSize: CGFloat = 16,
         weight: Font.Weight = .regular,
+        isActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Group {
@@ -224,7 +236,11 @@ struct PopoverContentView: View {
                     .frame(width: iconSize, height: iconSize)
             }
         }
-        .foregroundStyle(hoveredIcon == key ? theme.inkSecondary : theme.inkFaint)
+        .foregroundStyle(
+            isActive
+                ? theme.accent
+                : (hoveredIcon == key ? theme.inkSecondary : theme.inkFaint)
+        )
         .frame(width: 24, height: 24)
         .contentShape(Rectangle())
         .anchorPreference(key: ToolbarIconBoundsKey.self, value: .bounds) { [key: $0] }

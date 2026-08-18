@@ -47,13 +47,6 @@ struct GeneralDetail: View {
                         SettingsToggle(isOn: $settings.launchAtLogin)
                     }
                     rowDivider()
-                    SettingsRow(
-                        "settings.keepAwake".localized,
-                        subtitle: "settings.keepAwake.description".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.keepAwakeEnabled)
-                    }
-                    rowDivider()
                     SettingsRow("settings.language".localized) {
                         SettingsSegmentedPicker(selection: $settings.appLanguage, segmentMinWidth: 40) {
                             ForEach(AppLanguage.allCases) { lang in
