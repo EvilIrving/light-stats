@@ -274,7 +274,6 @@
 "findermenu.toast.delayedFailure" = "Light Stats wasn't running when you clicked \"%@\". It just launched — try again.";
 "settings.section.general" = "General";
 "settings.section.monitoring" = "Monitoring";
-"settings.section.extras" = "Extra Tools";
 "settings.windowControl.permissionTitle" = "Accessibility Access Needed";
 "settings.windowControl.permissionMessage" = "Window controls need Accessibility permission to move and resize other app windows. Enable it in System Settings to use snap shortcuts and titlebar swipe snapping.";
 "window.action.left" = "Left";

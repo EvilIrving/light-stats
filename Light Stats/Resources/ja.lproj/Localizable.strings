@@ -276,7 +276,6 @@
 "findermenu.toast.delayedFailure" = "「%@」をクリックした時点で Light Stats は起動していませんでした。起動したので、もう一度お試しください。";
 "settings.section.general" = "一般";
 "settings.section.monitoring" = "モニタリング";
-"settings.section.extras" = "追加ツール";
 "settings.windowControl.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.windowControl.permissionMessage" = "ウィンドウ操作には、他のアプリのウィンドウを移動・サイズ変更するためのアクセシビリティ権限が必要です。システム設定で許可してください。";
 "window.action.left" = "左";

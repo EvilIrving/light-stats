@@ -7,16 +7,6 @@ import SwiftUI
 
 extension GeneralDetail {
     @ViewBuilder
-    var themeSectionContent: some View {
-        let definition = ThemeDefinition.definition(for: settings.appTheme)
-        if definition.background == .systemGlass {
-            themeConfigurationControls
-        } else {
-            themeWithPreviewLayout(sceneID: definition.background)
-        }
-    }
-
-    @ViewBuilder
     var themeAppearanceControls: some View {
         Group {
             switch settings.themeAppearance(for: settings.appTheme) {

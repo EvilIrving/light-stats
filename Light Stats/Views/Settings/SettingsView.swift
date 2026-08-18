@@ -16,7 +16,7 @@ import SwiftUI
 
 /// 设置分类。侧栏只负责导航，不承载功能运行状态。
 enum SettingsCategory: String, CaseIterable, Identifiable {
-    case general, monitoring, extras
+    case general, monitoring, inputDevices, windowManagement, aiUsage, finderMenu
 
     var id: String { rawValue }
 
@@ -24,7 +24,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "settings.general"
         case .monitoring: return "settings.section.monitoring"
-        case .extras: return "settings.section.extras"
+        case .inputDevices: return "settings.inputDevices"
+        case .windowManagement: return "settings.windowManagement"
+        case .aiUsage: return "settings.aiUsage"
+        case .finderMenu: return "settings.finderMenu"
         }
     }
 
@@ -32,7 +35,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .monitoring: return "waveform.path.ecg"
-        case .extras: return "switch.2"
+        case .inputDevices: return "computermouse"
+        case .windowManagement: return "rectangle.split.2x1"
+        case .aiUsage: return "sparkles"
+        case .finderMenu: return "folder"
         }
     }
 }
@@ -85,8 +91,8 @@ struct SettingsView: View {
             Text("settings.exitNode.privacyMessage".localized)
         }
         .id(localization.currentLanguage)
-        // Lock chrome to bento; do not pass `settings.appTheme`.
-        .appThemed(AppTheme.bento)
+        // Lock chrome to glass tokens; do not pass `settings.appTheme`.
+        .appThemed(AppTheme.glass)
         .focusable(false)
     }
 
@@ -150,13 +156,19 @@ struct SettingsView: View {
                 openDiagnosticLogs: settings.openDiagnosticLogs
             )
         case .monitoring:
-            MonitoringDetail(settings: settings, onValidate: validateMinimumItems)
-        case .extras:
-            ExtrasDetail(
+            MonitoringDetail(
                 settings: settings,
                 showPrivacyAlert: $showExitPrivacyAlert,
-                openSettings: openLoginItemsAndExtensionsSettings
+                onValidate: validateMinimumItems
             )
+        case .inputDevices:
+            ScrollDetail(settings: settings)
+        case .windowManagement:
+            WindowManagementDetail(settings: settings)
+        case .aiUsage:
+            AIUsageDetail(settings: settings)
+        case .finderMenu:
+            FinderMenuDetail(settings: settings, openSettings: openLoginItemsAndExtensionsSettings)
         }
     }
 
@@ -180,7 +192,7 @@ struct SettingsView: View {
 
 // MARK: - Detail scaffold
 
-/// 详情面板骨架：标题（可带右侧开关等附件）+ 内容，统一内边距。取代旧的 BentoCard，
+/// 详情面板骨架：标题（可带右侧开关等附件）+ 内容，统一内边距。
 /// 用留白与发丝分隔线表达层级，而非嵌套卡片。
 struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
     @Environment(\.theme) private var theme

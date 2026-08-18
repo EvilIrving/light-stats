@@ -1,12 +1,3 @@
-//
-//  SettingsDetailViews.swift
-//  Light Stats
-//
-//  设置面板各分类的详情视图。每个 detail 复用既有控件（SettingsToggle / SettingsGridItem /
-//  HealthDimButton / Picker / Slider），用 SettingsDetailScaffold + SettingsGroup 取代
-//  SettingsGroup + 发丝分隔线表达层级。与 SettingsView.swift 拆分以控制单文件长度。
-//
-
 import SwiftUI
 
 /// 组内行间分隔线，左侧内缩对齐标签。
@@ -23,9 +14,32 @@ struct GeneralDetail: View {
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
-            // Theme first: picker, monochrome UI, then dynamic preview and appearance controls.
+            if themeBackground == .systemGlass {
+                sectionsColumn
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    sectionsColumn
+                        .layoutPriority(1)
+                    backgroundLivePreview(sceneID: themeBackground)
+                        // 预览实际渲染宽度约 177pt（按比例），保留小呼吸边距而非占满 260pt。
+                        // 下移对齐卡片顶边（跳过「主题」标题行），内容靠左。
+                        .padding(.top, 24)
+                        .frame(width: 200, alignment: .top)
+                }
+            }
+        }
+    }
+
+    /// 当前主题的背景 ID：systemGlass 无可预览背景，其余主题在右侧显示实时预览。
+    private var themeBackground: BackgroundSceneID {
+        ThemeDefinition.definition(for: settings.appTheme).background
+    }
+
+    /// 左侧配置列：主题 → 应用 → 软件更新，与右侧背景预览并排，填满预览高度、避免光影动态下方留白。
+    private var sectionsColumn: some View {
+        VStack(alignment: .leading, spacing: 22) {
             SettingsSection("settings.theme".localized) {
-                themeSectionContent
+                themeConfigurationControls
             }
             SettingsSection("settings.general.app".localized) {
                 SettingsGroup {
@@ -73,65 +87,45 @@ struct GeneralDetail: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
+    @ViewBuilder
     func backgroundAppearanceControls(
         grainEnabled: Binding<Bool>,
         lightFlow: Binding<Double>,
         presets: ThemeAppearancePresetConfiguration
     ) -> some View {
-        SettingsGroup {
-            SettingsRow(
-                "settings.theme.film.grain".localized,
-                subtitle: "settings.theme.film.grain.hint".localized
+        // 行级片段（不含 SettingsGroup 包裹），由 themeConfigurationControls 合并进同一张卡片。
+        rowDivider()
+        SettingsRow(
+            "settings.theme.film.grain".localized,
+            subtitle: "settings.theme.film.grain.hint".localized
+        ) {
+            SettingsToggle(isOn: grainEnabled)
+        }
+        rowDivider()
+        SettingsRow("settings.theme.film.lightFlow".localized) {
+            SettingsSegmentedPicker(
+                selection: FilmAppearanceLabel.discreteBinding(
+                    lightFlow,
+                    options: presets.lightFlowValues
+                ),
+                segmentMinWidth: 44
             ) {
-                SettingsToggle(isOn: grainEnabled)
-            }
-            rowDivider()
-            SettingsRow("settings.theme.film.lightFlow".localized) {
-                SettingsSegmentedPicker(
-                    selection: FilmAppearanceLabel.discreteBinding(
-                        lightFlow,
-                        options: presets.lightFlowValues
-                    ),
-                    segmentMinWidth: 44
-                ) {
-                    ForEach(presets.lightFlowValues, id: \.self) { option in
-                        SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
-                    }
+                ForEach(presets.lightFlowValues, id: \.self) { option in
+                    SettingsSegmentLabel(title: FilmAppearanceLabel.flow(option)).tag(option)
                 }
             }
         }
     }
 
     var themeConfigurationControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SettingsGroup {
-                ThemePickerView(selection: $settings.appTheme)
-                    .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
-                rowDivider()
-                SettingsRow(
-                    "settings.flatColors.section".localized,
-                    subtitle: "settings.flatColors.hint".localized
-                ) {
-                    SettingsToggle(isOn: $settings.useFlatColors)
-                }
-            }
+        SettingsGroup {
+            ThemePickerView(selection: $settings.appTheme)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
             themeAppearanceControls
-        }
-    }
-
-    func themeWithPreviewLayout(sceneID: BackgroundSceneID) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            themeConfigurationControls
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .layoutPriority(1)
-            backgroundLivePreview(sceneID: sceneID)
-                // The rendered preview is ~177pt wide at this scale. Keep only a
-                // small breathing margin instead of reserving 260pt and squeezing
-                // the single-line theme picker.
-                .frame(width: 200, alignment: .top)
         }
     }
 
@@ -151,7 +145,7 @@ struct GeneralDetail: View {
                 RoundedRectangle(cornerRadius: previewCornerRadius, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
-            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .allowsHitTesting(false)
             .accessibilityLabel(settings.appTheme.titleKey.localized)
     }
@@ -203,6 +197,7 @@ struct GeneralDetail: View {
 
 struct MonitoringDetail: View {
     @ObservedObject var settings: SettingsManager
+    @Binding var showPrivacyAlert: Bool
     let onValidate: () -> Void
 
     private let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
@@ -265,6 +260,7 @@ struct MonitoringDetail: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            NetworkDetail(settings: settings, showPrivacyAlert: $showPrivacyAlert)
         }
     }
 
@@ -280,31 +276,13 @@ struct MonitoringDetail: View {
     }
 }
 
-// MARK: - Extras
-
-struct ExtrasDetail: View {
-    @ObservedObject var settings: SettingsManager
-    @Binding var showPrivacyAlert: Bool
-    let openSettings: () -> Void
-
-    var body: some View {
-        SettingsDetailScaffold("settings.section.extras".localized) {
-            ScrollDetail(settings: settings)
-            WindowManagementDetail(settings: settings)
-            AIUsageDetail(settings: settings)
-            NetworkDetail(settings: settings, showPrivacyAlert: $showPrivacyAlert)
-            FinderMenuDetail(settings: settings, openSettings: openSettings)
-        }
-    }
-}
-
 // MARK: - Scroll
 
 struct ScrollDetail: View {
     @ObservedObject var settings: SettingsManager
 
     var body: some View {
-        SettingsSection("settings.inputDevices".localized) {
+        SettingsDetailScaffold("settings.inputDevices".localized) {
             SettingsGroup {
                 SettingsRow("settings.scrollReverse".localized) {
                     SettingsToggle(isOn: $settings.scrollReverseEnabled)
@@ -366,7 +344,7 @@ struct WindowManagementDetail: View {
     @ObservedObject var settings: SettingsManager
 
     var body: some View {
-        SettingsSection("settings.windowManagement".localized) {
+        SettingsDetailScaffold("settings.windowManagement".localized) {
             SettingsGroup {
                 SettingsRow(
                     "settings.windowManagement".localized,
@@ -389,7 +367,7 @@ struct AIUsageDetail: View {
     }
 
     var body: some View {
-        SettingsSection("settings.aiUsage".localized) {
+        SettingsDetailScaffold("settings.aiUsage".localized) {
             SettingsGroup {
                 SettingsRow("aiUsage.claude".localized) {
                     SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
@@ -478,7 +456,7 @@ struct FinderMenuDetail: View {
     @State private var expandedCategories: Set<FinderMenuPresets.TemplateCategory> = []
 
     var body: some View {
-        SettingsSection("settings.finderMenu".localized) {
+        SettingsDetailScaffold("settings.finderMenu".localized) {
             SettingsGroup {
                 SettingsRow(
                     "settings.finderMenu".localized,

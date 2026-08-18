@@ -276,7 +276,6 @@
 "findermenu.toast.delayedFailure" = "\"%@\"을(를) 클릭했을 때 Light Stats가 실행 중이 아니었습니다. 지금 시작되었으니 다시 시도해 주세요.";
 "settings.section.general" = "일반";
 "settings.section.monitoring" = "모니터링";
-"settings.section.extras" = "추가 도구";
 "settings.windowControl.permissionTitle" = "손쉬운 사용 권한 필요";
 "settings.windowControl.permissionMessage" = "윈도우 제어 기능은 다른 앱의 윈도우를 이동하고 크기를 조절하기 위해 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용해 주세요.";
 "window.action.left" = "왼쪽";
