@@ -39,24 +39,26 @@ extension OverviewTabView {
     func systemIconValue(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
+                .foregroundStyle(theme.metricIcon)
             Text(text)
+                .foregroundStyle(theme.inkMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .font(theme.chromeStyle.compactValueFont)
-        .foregroundStyle(theme.inkMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func systemSVGIconValue(svgIcon: AppSVGIcon, text: String) -> some View {
         HStack(spacing: 4) {
             SVGIcon(svgIcon, size: 11)
+                .foregroundStyle(theme.metricIcon)
             Text(text)
+                .foregroundStyle(theme.inkMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .font(theme.chromeStyle.compactValueFont)
-        .foregroundStyle(theme.inkMuted)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -164,7 +166,7 @@ extension OverviewTabView {
         case .excellent: return theme.signalGood
         case .good: return theme.signalGood.opacity(0.85)
         case .fair: return theme.signalWarn
-        case .poor: return theme.signalAccent
+        case .poor: return theme.signalBad.opacity(0.82)
         case .critical: return theme.signalBad
         }
     }

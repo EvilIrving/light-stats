@@ -35,6 +35,8 @@ struct UITokens: Equatable {
     let inkMuted: Color
     let inkSecondary: Color
     let inkFaint: Color
+    /// Neutral glyph color for metric icons; separate from semantic status colors.
+    let metricIcon: Color
 
     // MARK: Signals (metric text, bars, health)
 
@@ -53,8 +55,10 @@ struct UITokens: Equatable {
 
     /// Hairline rules between sections.
     let lineHairline: Color
-    /// Default stroke for sparklines when a series doesn’t supply its own tint.
+    /// Default stroke for single-series sparklines.
     let chartLine: Color
+    /// Contrasting stroke for the second series in comparative charts.
+    let chartSecondary: Color
     let dividerOpacity: Double
     let accent: Color
 
@@ -66,31 +70,34 @@ struct UITokens: Equatable {
 
     // MARK: Preset paint (composed by ThemeDefinition)
 
-    /// Neon — dark console surfaces with acid-lime, cyan, and hot-pink light.
+    /// Neon — luminous instrument ink over the full Sun Gold light field.
+    /// No content plate and no glow: contrast comes from bright ink against the scene.
     static let film = UITokens(
         preferredColorScheme: .dark,
         chromeStyle: .neon,
         usesVibrantSurfaces: false,
         surfaceFill: .clear,
-        surfaceStroke: Color(red: 1.0, green: 0.72, blue: 0.28).opacity(0.18),
+        surfaceStroke: Color(red: 0.85, green: 0.75, blue: 0.58).opacity(0.36),
         surfaceShadowOpacity: 0,
-        tabTrackFill: Color(red: 0.68, green: 0.20, blue: 0.035).opacity(0.24),
-        tabSelectedFill: Color(red: 1.0, green: 0.48, blue: 0.10).opacity(0.30),
-        rowHoverFill: Color(red: 0.30, green: 0.94, blue: 1.0).opacity(0.12),
-        wellFill: Color(red: 0.56, green: 0.14, blue: 0.02).opacity(0.30),
-        inkPrimary: Color(red: 1.0, green: 0.97, blue: 0.86),
-        inkMuted: Color(red: 1.0, green: 0.90, blue: 0.68),
-        inkSecondary: Color(red: 0.98, green: 0.76, blue: 0.42),
-        inkFaint: Color(red: 0.78, green: 0.56, blue: 0.34),
-        signalGood: Color(red: 0.78, green: 1.0, blue: 0.18),
-        signalWarn: Color(red: 1.0, green: 0.68, blue: 0.16),
-        signalBad: Color(red: 1.0, green: 0.16, blue: 0.42),
-        signalInfo: Color(red: 0.30, green: 0.92, blue: 1.0),
-        signalAccent: Color(red: 1.0, green: 0.28, blue: 0.48),
-        lineHairline: Color(red: 0.80, green: 1.0, blue: 0.22).opacity(0.34),
-        chartLine: Color(red: 0.78, green: 1.0, blue: 0.18),
-        dividerOpacity: 0.30,
-        accent: Color(red: 0.82, green: 1.0, blue: 0.20)
+        tabTrackFill: Color(red: 0.16, green: 0.045, blue: 0.008).opacity(0.20),
+        tabSelectedFill: Color(red: 1.0, green: 0.82, blue: 0.58).opacity(0.09),
+        rowHoverFill: Color(red: 1.0, green: 0.77, blue: 0.54).opacity(0.12),
+        wellFill: Color(red: 0.12, green: 0.025, blue: 0.004).opacity(0.58),
+        inkPrimary: Color(red: 1.0, green: 0.973, blue: 0.918),
+        inkMuted: Color(red: 0.945, green: 0.890, blue: 0.812),
+        inkSecondary: Color(red: 0.867, green: 0.784, blue: 0.678),
+        inkFaint: Color(red: 0.773, green: 0.686, blue: 0.573),
+        metricIcon: Color(red: 0.663, green: 0.847, blue: 0.871),
+        signalGood: Color(red: 0.718, green: 0.906, blue: 0.690),
+        signalWarn: Color(red: 1.0, green: 0.835, blue: 0.416),
+        signalBad: Color(red: 1.0, green: 0.569, blue: 0.533),
+        signalInfo: Color(red: 0.522, green: 0.902, blue: 0.949),
+        signalAccent: Color(red: 1.0, green: 0.773, blue: 0.541),
+        lineHairline: Color(red: 0.847, green: 0.745, blue: 0.580).opacity(0.30),
+        chartLine: Color(red: 0.522, green: 0.902, blue: 0.949),
+        chartSecondary: Color(red: 0.780, green: 0.725, blue: 1.0),
+        dividerOpacity: 0.22,
+        accent: Color(red: 1.0, green: 0.878, blue: 0.627)
     )
 
     /// Night Bar / 夜色酒吧 — wine-black glass with red and emerald neon.
@@ -109,6 +116,7 @@ struct UITokens: Equatable {
         inkMuted: Color(red: 0.96, green: 0.86, blue: 0.84),
         inkSecondary: Color(red: 0.84, green: 0.70, blue: 0.73),
         inkFaint: Color(red: 0.66, green: 0.49, blue: 0.55),
+        metricIcon: Color(red: 0.16, green: 0.96, blue: 0.70),
         signalGood: Color(red: 0.12, green: 1.0, blue: 0.48),
         signalWarn: Color(red: 1.0, green: 0.62, blue: 0.16),
         signalBad: Color(red: 1.0, green: 0.10, blue: 0.28),
@@ -137,6 +145,7 @@ struct UITokens: Equatable {
         inkMuted: Color.primary.opacity(0.9),
         inkSecondary: Color.secondary,
         inkFaint: Color(nsColor: .tertiaryLabelColor),
+        metricIcon: Color.secondary,
         signalGood: Color(red: 0.20, green: 0.72, blue: 0.38),
         signalWarn: Color(red: 0.92, green: 0.72, blue: 0.12),
         signalBad: Color(red: 0.90, green: 0.28, blue: 0.24),
@@ -144,6 +153,7 @@ struct UITokens: Equatable {
         signalAccent: Color(red: 0.95, green: 0.52, blue: 0.18),
         lineHairline: Color.primary.opacity(0.10),
         chartLine: Color(red: 0.20, green: 0.72, blue: 0.38),
+        chartSecondary: Color(red: 0.12, green: 0.62, blue: 0.78),
         dividerOpacity: 0.08,
         accent: Color.accentColor
     )
@@ -164,6 +174,7 @@ struct UITokens: Equatable {
         inkMuted: Color.white.opacity(0.92),
         inkSecondary: Color.white.opacity(0.78),
         inkFaint: Color.white.opacity(0.58),
+        metricIcon: Color.white.opacity(0.78),
         signalGood: Color(red: 0.38, green: 0.96, blue: 0.72),
         signalWarn: Color(red: 1.0, green: 0.86, blue: 0.42),
         signalBad: Color(red: 1.0, green: 0.42, blue: 0.48),
@@ -171,6 +182,7 @@ struct UITokens: Equatable {
         signalAccent: Color(red: 0.78, green: 0.62, blue: 1.0),
         lineHairline: Color.white.opacity(0.16),
         chartLine: Color(red: 0.50, green: 0.82, blue: 1.0),
+        chartSecondary: Color(red: 0.78, green: 0.62, blue: 1.0),
         dividerOpacity: 0.18,
         accent: Color(red: 0.72, green: 0.78, blue: 1.0)
     )
@@ -191,6 +203,7 @@ struct UITokens: Equatable {
         inkMuted: Color(red: 0.18, green: 0.21, blue: 0.25),
         inkSecondary: Color(red: 0.30, green: 0.34, blue: 0.38),
         inkFaint: Color(red: 0.46, green: 0.51, blue: 0.56),
+        metricIcon: Color(red: 0.30, green: 0.34, blue: 0.38),
         signalGood: Color(red: 0.086, green: 0.514, blue: 0.357),
         signalWarn: Color(red: 0.663, green: 0.408, blue: 0.0),
         signalBad: Color(red: 0.80, green: 0.188, blue: 0.251),

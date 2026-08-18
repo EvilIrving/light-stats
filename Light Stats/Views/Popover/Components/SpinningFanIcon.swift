@@ -42,7 +42,7 @@ struct SpinningFanIcon: View {
 
     private var fanImage: some View {
         Image(systemName: "fanblades.fill")
-            .foregroundStyle(theme.inkSecondary)
+            .foregroundStyle(theme.metricIcon)
     }
 
     /// 当前角速度（度/秒）：RPM 线性映射并封顶。

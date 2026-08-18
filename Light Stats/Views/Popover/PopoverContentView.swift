@@ -50,7 +50,13 @@ struct PopoverContentView: View {
                     )
                     .fill(theme.tabTrackFill)
                     .overlay {
-                        if theme.chromeStyle.usesNightBarTreatment {
+                        if theme.chromeStyle.usesNeonTreatment {
+                            RoundedRectangle(
+                                cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                                style: .continuous
+                            )
+                            .stroke(theme.surfaceStroke.opacity(0.42), lineWidth: 0.5)
+                        } else if theme.chromeStyle.usesNightBarTreatment {
                             RoundedRectangle(
                                 cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
                                 style: .continuous

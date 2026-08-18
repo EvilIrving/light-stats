@@ -100,16 +100,16 @@ struct SunGoldSceneConfiguration {
             )
         ),
         veil: ReadingVeilConfiguration(
-            centerColor: Color(red: 0.10, green: 0.015, blue: 0.002),
-            innerOpacity: 0.22,
-            middleOpacity: 0.10,
-            outerOpacity: 0.02,
+            centerColor: Color(red: 0.065, green: 0.009, blue: 0.001),
+            innerOpacity: 0.30,
+            middleOpacity: 0.20,
+            outerOpacity: 0.08,
             centerX: 0.5,
             centerY: 0.44,
-            horizontalFollow: 0.35,
-            verticalFollow: 0.3,
+            horizontalFollow: 0.28,
+            verticalFollow: 0.24,
             startRadiusScale: 0.06,
-            endRadiusScale: 0.84
+            endRadiusScale: 0.92
         ),
         grain: GrainOverlayConfiguration(
             opacity: 0.26,

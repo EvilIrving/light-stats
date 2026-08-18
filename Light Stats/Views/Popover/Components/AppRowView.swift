@@ -152,17 +152,7 @@ struct AppCardView: View {
                 cornerRadius: theme.chromeStyle.surfaceCornerRadius,
                 style: .continuous
             )
-            .fill(isHovered ? theme.rowHoverFill : theme.surfaceFill.opacity(0.50))
-            .overlay(
-                RoundedRectangle(
-                    cornerRadius: theme.chromeStyle.surfaceCornerRadius,
-                    style: .continuous
-                )
-                .stroke(
-                    isHovered ? theme.signalInfo.opacity(0.48) : theme.surfaceStroke.opacity(0.24),
-                    lineWidth: theme.chromeStyle.surfaceStrokeWidth
-                )
-            )
+            .fill(isHovered ? theme.rowHoverFill : Color.clear)
         } else {
             // Soft instrument wash — continuous radius, inset so it never reads as a hard bar.
             RoundedRectangle(cornerRadius: 8, style: .continuous)

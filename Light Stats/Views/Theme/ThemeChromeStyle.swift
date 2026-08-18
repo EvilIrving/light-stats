@@ -166,16 +166,14 @@ enum ThemeChromeStyle: Equatable, Sendable {
 
     var textGlowRadius: CGFloat {
         switch self {
-        case .standard: return 0
-        case .neon: return 4
+        case .standard, .neon: return 0
         case .nightBar: return 3
         }
     }
 
     var signalGlowRadius: CGFloat {
         switch self {
-        case .standard: return 0
-        case .neon: return 3
+        case .standard, .neon: return 0
         case .nightBar: return 4
         }
     }

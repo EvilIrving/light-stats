@@ -2,8 +2,8 @@
 //  PanelChrome.swift
 //  Light Stats
 //
-//  Instrument / spec-sheet layout primitives. Replaces the old bento-card grid:
-//  continuous vertical readout, mono eyebrows, hairline rules — no floating cards.
+//  Instrument / spec-sheet layout primitives: continuous vertical readout,
+//  mono eyebrows, hairline rules — no floating cards.
 //
 
 import SwiftUI
@@ -67,15 +67,6 @@ struct PanelSection<Content: View>: View {
             }
             content
         }
-        .background {
-            if style.usesNeonTreatment {
-                RoundedRectangle(cornerRadius: style.surfaceCornerRadius, style: .continuous)
-                    .fill(theme.surfaceFill)
-                    .padding(.horizontal, -8)
-                    .padding(.vertical, -5)
-                    .shadow(color: theme.accent.opacity(0.10), radius: 8)
-            }
-        }
     }
 }
 
@@ -86,32 +77,19 @@ struct PanelDivider: View {
 
     var body: some View {
         Group {
-            if theme.chromeStyle.usesIlluminatedTreatment {
+            if theme.chromeStyle.usesNightBarTreatment {
                 LinearGradient(
-                    colors: theme.chromeStyle.usesNightBarTreatment
-                        ? [
-                            Color.clear,
-                            theme.signalAccent.opacity(0.80),
-                            theme.signalBad.opacity(0.44),
-                            theme.signalGood.opacity(0.72),
-                            Color.clear
-                        ]
-                        : [
-                            Color.clear,
-                            theme.signalAccent.opacity(0.72),
-                            theme.accent,
-                            theme.signalInfo.opacity(0.72),
-                            Color.clear
-                        ],
+                    colors: [
+                        Color.clear,
+                        theme.signalAccent.opacity(0.80),
+                        theme.signalBad.opacity(0.44),
+                        theme.signalGood.opacity(0.72),
+                        Color.clear
+                    ],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .shadow(
-                    color: theme.chromeStyle.usesNightBarTreatment
-                        ? theme.signalAccent.opacity(0.54)
-                        : theme.accent.opacity(0.55),
-                    radius: theme.chromeStyle.usesNightBarTreatment ? 3 : 2
-                )
+                .shadow(color: theme.signalAccent.opacity(0.54), radius: 3)
             } else {
                 Rectangle().fill(theme.lineHairline)
             }
@@ -153,18 +131,18 @@ struct MetricRow<Value: View>: View {
             HStack(spacing: 5) {
                 if let svgIcon {
                     SVGIcon(svgIcon, size: 12)
-                        .foregroundStyle(style.usesIlluminatedTreatment ? theme.signalInfo : theme.inkSecondary)
+                        .foregroundStyle(metricIconColor)
                         .shadow(
-                            color: style.usesIlluminatedTreatment ? theme.signalInfo.opacity(0.55) : .clear,
+                            color: style.usesNightBarTreatment ? theme.signalInfo.opacity(0.55) : .clear,
                             radius: style.signalGlowRadius
                         )
                         .frame(width: 14)
                 } else if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(style.usesIlluminatedTreatment ? theme.signalInfo : theme.inkSecondary)
+                        .foregroundStyle(metricIconColor)
                         .shadow(
-                            color: style.usesIlluminatedTreatment ? theme.signalInfo.opacity(0.55) : .clear,
+                            color: style.usesNightBarTreatment ? theme.signalInfo.opacity(0.55) : .clear,
                             radius: style.signalGlowRadius
                         )
                         .frame(width: 14)
@@ -189,6 +167,10 @@ struct MetricRow<Value: View>: View {
                 .frame(minWidth: 56, alignment: .trailing)
         }
         .frame(minHeight: 26)
+    }
+
+    private var metricIconColor: Color {
+        theme.metricIcon
     }
 }
 
@@ -277,8 +259,8 @@ struct HeroReadout<Trailing: View>: View {
                 .font(style.heroValueFont)
                 .foregroundStyle(valueColor)
                 .shadow(
-                    color: style.usesIlluminatedTreatment ? valueColor.opacity(0.64) : .clear,
-                    radius: style.signalGlowRadius + 1
+                    color: style.usesNightBarTreatment ? valueColor.opacity(0.64) : .clear,
+                    radius: style.usesNightBarTreatment ? style.signalGlowRadius + 1 : 0
                 )
             if let unit {
                 Text(unit)

@@ -59,17 +59,17 @@ struct Sparkline: View {
                     endPoint: .bottom
                 ))
         }
-        if theme.chromeStyle.usesIlluminatedTreatment {
+        if theme.chromeStyle.usesNightBarTreatment {
             linePath(pts)
                 .stroke(
-                    stroke.opacity(theme.chromeStyle.usesNightBarTreatment ? 0.58 : 0.72),
+                    stroke.opacity(0.58),
                     style: StrokeStyle(
-                        lineWidth: effectiveLineWidth + (theme.chromeStyle.usesNightBarTreatment ? 3 : 2),
+                        lineWidth: effectiveLineWidth + 3,
                         lineCap: .round,
                         lineJoin: .round
                     )
                 )
-                .blur(radius: theme.chromeStyle.usesNightBarTreatment ? 3.5 : 2.5)
+                .blur(radius: 3.5)
         }
         linePath(pts)
             .stroke(

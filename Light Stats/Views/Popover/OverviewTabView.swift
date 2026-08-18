@@ -202,10 +202,11 @@ struct OverviewTabView: View {
                 bottom: {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.down")
+                            .foregroundStyle(theme.metricIcon)
                         Text(formatMBs(monitor.diskIO.readMBs))
+                            .foregroundStyle(theme.inkMuted)
                     }
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(theme.inkMuted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 }
@@ -220,10 +221,11 @@ struct OverviewTabView: View {
                 bottom: {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.up")
+                            .foregroundStyle(theme.metricIcon)
                         Text(formatMBs(monitor.diskIO.writeMBs))
+                            .foregroundStyle(theme.inkMuted)
                     }
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(theme.inkMuted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 }
@@ -267,20 +269,20 @@ struct OverviewTabView: View {
                         Image(systemName: "arrow.up")
                         Text(ByteFormatter.formatSpeed(monitor.networkUpload))
                     }
-                    .foregroundStyle(theme.signalAccent)
+                    .foregroundStyle(theme.chartSecondary)
                     Spacer()
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.down")
                         Text(ByteFormatter.formatSpeed(monitor.networkDownload))
                     }
-                    .foregroundStyle(theme.signalInfo)
+                    .foregroundStyle(theme.chartLine)
                 }
                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
 
                 if monitor.trends.networkUp.count > 1 {
                     Sparkline(series: [
-                        SparklineSeries(values: monitor.trends.networkDown, color: theme.signalInfo),
-                        SparklineSeries(values: monitor.trends.networkUp, color: theme.signalAccent)
+                        SparklineSeries(values: monitor.trends.networkDown, color: theme.chartLine),
+                        SparklineSeries(values: monitor.trends.networkUp, color: theme.chartSecondary)
                     ])
                     .frame(height: 22)
                     .opacity(0.7)

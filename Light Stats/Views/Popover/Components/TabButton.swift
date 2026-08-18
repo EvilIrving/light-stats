@@ -37,7 +37,13 @@ struct TabButton: View {
                         RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous)
                             .fill(theme.tabSelectedFill)
                             .overlay(alignment: .bottom) {
-                                if style.usesNightBarTreatment {
+                                if style.usesNeonTreatment {
+                                    Capsule()
+                                        .fill(theme.accent.opacity(0.62))
+                                        .frame(height: 1)
+                                        .padding(.horizontal, 16)
+                                        .padding(.bottom, 1)
+                                } else if style.usesNightBarTreatment {
                                     Capsule()
                                         .fill(LinearGradient(
                                             colors: [theme.signalAccent, theme.signalGood],
@@ -50,7 +56,13 @@ struct TabButton: View {
                                 }
                             }
                             .overlay {
-                                if style.usesNightBarTreatment {
+                                if style.usesNeonTreatment {
+                                    RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous)
+                                        .stroke(
+                                            theme.surfaceStroke.opacity(0.48),
+                                            lineWidth: style.surfaceStrokeWidth
+                                        )
+                                } else if style.usesNightBarTreatment {
                                     RoundedRectangle(cornerRadius: style.tabCornerRadius, style: .continuous)
                                         .stroke(
                                             LinearGradient(
