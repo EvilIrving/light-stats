@@ -15,11 +15,6 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertEqual(glass.background, .systemGlass)
         XCTAssertTrue(glass.ui.usesVibrantSurfaces)
 
-        let bento = ThemeDefinition.definition(for: .bento)
-        XCTAssertEqual(bento.layout, .bento)
-        XCTAssertEqual(bento.background, .systemGlass)
-        XCTAssertTrue(bento.ui.usesVibrantSurfaces)
-
         let film = ThemeDefinition.definition(for: .film)
         XCTAssertEqual(film.layout, .instrument)
         XCTAssertEqual(film.background, .sunGold)
@@ -42,12 +37,6 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertEqual(dataPaper.background, .technicalPaper)
         XCTAssertEqual(dataPaper.ui.preferredColorScheme, .light)
         XCTAssertFalse(dataPaper.ui.usesVibrantSurfaces)
-
-        let ashVeil = ThemeDefinition.definition(for: .ashVeil)
-        XCTAssertEqual(ashVeil.layout, .instrument)
-        XCTAssertEqual(ashVeil.background, .ashVeil)
-        XCTAssertEqual(ashVeil.ui.preferredColorScheme, .dark)
-        XCTAssertFalse(ashVeil.ui.usesVibrantSurfaces)
     }
 
     func testAppearanceMapsToSceneInputsAndSceneConfiguration() {
@@ -145,16 +134,39 @@ final class DynamicThemeTests: XCTestCase {
     func testCustomChromeThemesKeepSharedInstrumentLayout() {
         XCTAssertEqual(ThemeDefinition.definition(for: .film).layout, .instrument)
         XCTAssertEqual(ThemeDefinition.definition(for: .bar).layout, .instrument)
-        XCTAssertTrue(ThemeDefinition.definition(for: .bento).layout.usesBentoLayout)
-        XCTAssertFalse(ThemeDefinition.definition(for: .film).layout.usesBentoLayout)
-        XCTAssertFalse(ThemeDefinition.definition(for: .bar).layout.usesBentoLayout)
     }
 
     func testDynamicAndPhotoThemesUseDarkAppearance() {
         XCTAssertEqual(UITokens.film.preferredColorScheme, .dark)
         XCTAssertEqual(UITokens.bar.preferredColorScheme, .dark)
         XCTAssertEqual(UITokens.noir.preferredColorScheme, .dark)
-        XCTAssertEqual(UITokens.ashVeil.preferredColorScheme, .dark)
+    }
+
+    func testNeonTokensStayDistinctFromNightBar() {
+        let neon = UITokens.film
+        let bar = UITokens.bar
+        XCTAssertNotEqual(neon.accent, bar.accent)
+        XCTAssertNotEqual(neon.signalGood, bar.signalGood)
+        XCTAssertNotEqual(neon.signalInfo, bar.signalInfo)
+        XCTAssertNotEqual(neon.signalAccent, bar.signalAccent)
+        XCTAssertNotEqual(neon.signalBad, bar.signalBad)
+        XCTAssertNotEqual(neon.signalWarn, bar.signalWarn)
+        XCTAssertNotEqual(neon.rowHoverFill, bar.rowHoverFill)
+    }
+
+    func testNeonHasNoContentPlate() {
+        XCTAssertEqual(UITokens.film.surfaceFill, .clear)
+        XCTAssertEqual(UITokens.film.surfaceShadowOpacity, 0)
+    }
+
+    func testNeonSeparatesInkIconsChartsAndStatusPaint() {
+        let neon = UITokens.film
+        XCTAssertNotEqual(neon.metricIcon, neon.inkSecondary)
+        XCTAssertNotEqual(neon.chartLine, neon.metricIcon)
+        XCTAssertNotEqual(neon.chartSecondary, neon.chartLine)
+        XCTAssertNotEqual(neon.signalGood, neon.chartLine)
+        XCTAssertNotEqual(neon.signalWarn, neon.signalAccent)
+        XCTAssertNotEqual(neon.signalBad, neon.signalAccent)
     }
 
     func testPersistedThemeIdentifiersRemainStable() {
@@ -162,17 +174,19 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertEqual(AppTheme.bar.rawValue, "bar")
         XCTAssertEqual(AppTheme.noir.rawValue, "noir")
         XCTAssertEqual(AppTheme.dataPaper.rawValue, "dataPaper")
-        XCTAssertEqual(AppTheme.ashVeil.rawValue, "ashVeil")
-        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .bar, .noir, .dataPaper, .ashVeil])
-        XCTAssertTrue(AppTheme.ashVeil.isVisible)
+        XCTAssertEqual(AppTheme.allCases, [.glass, .film, .bar, .noir, .dataPaper])
         XCTAssertEqual(
             AppTheme.visibleCases,
-            [.glass, .bento, .film, .bar, .noir, .ashVeil]
+            [.glass, .film, .bar, .noir]
         )
     }
 
     func testUnknownStoredThemeFallsBackToNoir() {
         XCTAssertEqual(AppTheme.resolve(stored: nil), .noir)
         XCTAssertEqual(AppTheme.resolve(stored: "mystery"), .noir)
+        // A stored Ash Veil selection (theme removed) also resolves to `.noir`.
+        XCTAssertEqual(AppTheme.resolve(stored: "ashVeil"), .noir)
+        // A stored Bento Grid selection (theme removed) also resolves to `.noir`.
+        XCTAssertEqual(AppTheme.resolve(stored: "bento"), .noir)
     }
 }

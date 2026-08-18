@@ -36,8 +36,6 @@ struct BackgroundSceneRouter: View {
             InkNightScene(input: .defaults)
         case (.technicalPaper, _):
             TechnicalPaperScene()
-        case (.ashVeil, _):
-            AshVeilScene()
         }
     }
 }

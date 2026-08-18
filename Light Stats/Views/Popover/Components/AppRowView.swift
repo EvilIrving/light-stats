@@ -2,8 +2,8 @@
 //  AppRowView.swift
 //  Light Stats
 //
-//  Running-app row for Cleanup. Bento keeps card chips; instrument themes
-//  share row geometry while ThemeChromeStyle controls their visual treatment.
+//  Running-app row for Cleanup. Instrument row geometry shared by all themes;
+//  ThemeChromeStyle controls the visual treatment.
 //
 
 import SwiftUI
@@ -18,16 +18,13 @@ struct AppCardView: View {
     let onClose: () -> Void
 
     @Environment(\.theme) private var theme
-    @Environment(\.themeLayout) private var layout
     @State private var isHovered = false
     @State private var isExpanded = false
     @State private var cachedChildProcesses: [TopProcessInfo] = []
 
-    private var usesBento: Bool { layout.usesBentoLayout }
-
-    private var iconSize: CGFloat { usesBento ? 28 : 22 }
-    private var rowHSpacing: CGFloat { usesBento ? 12 : 10 }
-    private var clusterSpacing: CGFloat { usesBento ? 6 : 5 }
+    private var iconSize: CGFloat { 22 }
+    private var rowHSpacing: CGFloat { 10 }
+    private var clusterSpacing: CGFloat { 5 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -51,11 +48,7 @@ struct AppCardView: View {
             expandCluster
 
             Text(app.displayName)
-                .font(
-                    usesBento
-                        ? .system(size: 13, weight: .medium)
-                        : theme.chromeStyle.compactValueFont
-                )
+                .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(theme.inkPrimary)
                 .lineLimit(1)
                 .opacity(isTerminating ? 0.5 : 1.0)
@@ -63,20 +56,16 @@ struct AppCardView: View {
             Spacer(minLength: 8)
 
             Text(app.memoryFormatted)
-                .font(
-                    usesBento
-                        ? .system(size: 12, design: .monospaced)
-                        : theme.chromeStyle.compactValueFont
-                )
+                .font(theme.chromeStyle.compactValueFont)
                 .foregroundStyle(theme.inkSecondary)
                 .opacity(isTerminating ? 0.5 : 1.0)
 
             trailingControl
         }
-        .padding(.horizontal, usesBento ? 8 : 6)
-        .padding(.vertical, usesBento ? 9 : 6)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 6)
         .background(rowHoverBackground)
-        .contentShape(RoundedRectangle(cornerRadius: usesBento ? 6 : 8, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -103,7 +92,7 @@ struct AppCardView: View {
                 .frame(width: iconSize, height: iconSize)
                 .opacity(isTerminating ? 0.5 : 1.0)
         }
-        .padding(.vertical, usesBento ? 6 : 2)
+        .padding(.vertical, 2)
         .contentShape(Rectangle())
         .onTapGesture {
             guard !childProcesses.isEmpty else { return }
@@ -120,13 +109,13 @@ struct AppCardView: View {
         } else if app.isTerminable {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: usesBento ? 16 : 14))
+                    .font(.system(size: 14))
                     .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
-                    .padding(usesBento ? 4 : 2)
+                    .padding(2)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(minWidth: usesBento ? 24 : 20, minHeight: usesBento ? 24 : 20)
+            .frame(minWidth: 20, minHeight: 20)
             .allowsHitTesting(true)
             .help("关闭应用")
         }
@@ -134,10 +123,7 @@ struct AppCardView: View {
 
     @ViewBuilder
     private var rowHoverBackground: some View {
-        if usesBento {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isHovered ? theme.rowHoverFill : Color.clear)
-        } else if theme.chromeStyle.usesNightBarTreatment {
+        if theme.chromeStyle.usesNightBarTreatment {
             RoundedRectangle(
                 cornerRadius: theme.chromeStyle.surfaceCornerRadius,
                 style: .continuous
@@ -195,54 +181,35 @@ struct AppCardView: View {
 
     @ViewBuilder
     private var childProcessList: some View {
-        if usesBento {
+        HStack(alignment: .top, spacing: 0) {
+            // Rail under the icon cluster — film instrument tree cue.
+            Rectangle()
+                .fill(theme.lineHairline)
+                .frame(width: 1)
+                .padding(.leading, Self.expandColumnWidth + clusterSpacing + iconSize / 2)
+                .padding(.vertical, 2)
+
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(childProcesses, id: \.pid) { process in
                     ChildProcessRowView(
                         command: process.command,
                         memoryBytes: process.memoryBytes,
-                        indentation: 12
+                        indentation: 8,
+                        compact: true
                     )
                     if process.pid != childProcesses.last?.pid {
-                        Divider()
-                            .padding(.leading, 48)
-                            .opacity(0.5)
+                        Rectangle()
+                            .fill(theme.lineHairline.opacity(0.7))
+                            .frame(height: 1)
+                            .padding(.leading, 8)
                     }
                 }
             }
-            .padding(.top, 4)
-            .padding(.bottom, 8)
-        } else {
-            HStack(alignment: .top, spacing: 0) {
-                // Rail under the icon cluster — film instrument tree cue.
-                Rectangle()
-                    .fill(theme.lineHairline)
-                    .frame(width: 1)
-                    .padding(.leading, Self.expandColumnWidth + clusterSpacing + iconSize / 2)
-                    .padding(.vertical, 2)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(childProcesses, id: \.pid) { process in
-                        ChildProcessRowView(
-                            command: process.command,
-                            memoryBytes: process.memoryBytes,
-                            indentation: 8,
-                            compact: true
-                        )
-                        if process.pid != childProcesses.last?.pid {
-                            Rectangle()
-                                .fill(theme.lineHairline.opacity(0.7))
-                                .frame(height: 1)
-                                .padding(.leading, 8)
-                        }
-                    }
-                }
-                .padding(.leading, 6)
-            }
-            .padding(.top, 2)
-            .padding(.bottom, 6)
-            .padding(.trailing, 6)
+            .padding(.leading, 6)
         }
+        .padding(.top, 2)
+        .padding(.bottom, 6)
+        .padding(.trailing, 6)
     }
 
     // MARK: - Helpers
@@ -259,10 +226,6 @@ struct AppCardView: View {
 #if DEBUG
 #Preview("Film") {
     previewStack.appThemed(AppTheme.film)
-}
-
-#Preview("Bento") {
-    previewStack.appThemed(AppTheme.bento)
 }
 
 private var previewStack: some View {

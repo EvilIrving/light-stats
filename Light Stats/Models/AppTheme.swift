@@ -10,13 +10,11 @@ import Foundation
 
 /// User-facing visual preset. Cold-start default is `.noir` (Ink Night / 墨夜).
 /// `visibleCases` order is the picker display order:
-/// Default → Bento → Neon → Night Bar → Ink Night → Ash Veil.
+/// Default → Neon → Night Bar → Ink Night.
 /// Data Paper is temporarily hidden (`isVisible == false`), not deleted.
 enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     /// System instrument readout. Display name: Default.
     case glass
-    /// Raised bento cards / metric grid.
-    case bento
     /// Neon.
     case film
     /// Night Bar — red and green neon over a dark cocktail-bar atmosphere.
@@ -25,20 +23,16 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     case noir
     /// Data Paper.
     case dataPaper
-    /// Ash Veil — monochrome photo background, soft charcoal UI.
-    case ashVeil
 
     var id: String { rawValue }
 
     var titleKey: String {
         switch self {
         case .glass: return "settings.theme.glass"
-        case .bento: return "settings.theme.bento"
         case .film: return "settings.theme.film"
         case .bar: return "settings.theme.bar"
         case .noir: return "settings.theme.noir"
         case .dataPaper: return "settings.theme.dataPaper"
-        case .ashVeil: return "settings.theme.ashVeil"
         }
     }
 

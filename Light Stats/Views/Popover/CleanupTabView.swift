@@ -2,14 +2,13 @@
 //  CleanupTabView.swift
 //  Light Stats
 //
-//  Memory readout + running-app list. Instrument layout, no bento cards.
+//  Memory readout + running-app list. Instrument layout.
 //
 
 import SwiftUI
 
 struct CleanupTabView: View {
     @Environment(\.theme) private var theme
-    @Environment(\.themeLayout) private var layout
     @StateObject private var appManager = AppMemoryManager.shared
     @State private var showForceTerminateAlert = false
     @State private var appToTerminate: RunningApp?
@@ -17,28 +16,18 @@ struct CleanupTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Group {
-                if layout.usesBentoLayout {
-                    BentoCard(title: "cleanup.memoryUsage".localized, svgIcon: .memory) {
-                        memoryHeaderBody
-                    }
-                } else {
-                    memoryHeader
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-            .padding(.bottom, 10)
+            memoryHeader
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 10)
 
             runningAppsHeader
                 .padding(.horizontal, 16)
-                .padding(.top, layout.usesBentoLayout ? 12 : 10)
-                .padding(.bottom, layout.usesBentoLayout ? 8 : 6)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
 
             if appManager.runningApps.isEmpty {
                 emptyStateView
-            } else if layout.usesBentoLayout {
-                bentoAppList
             } else {
                 instrumentAppList
             }
@@ -65,18 +54,14 @@ struct CleanupTabView: View {
         }
     }
 
-    private var usesBento: Bool { layout.usesBentoLayout }
-
     private var runningAppsHeader: some View {
         HStack {
-            Text(
-                usesBento
-                    ? "cleanup.runningApps".localized
-                    : "cleanup.runningApps".localized.uppercased()
+            Text("cleanup.runningApps".localized.uppercased())
+            .font(theme.chromeStyle.sectionTitleFont)
+            .tracking(theme.chromeStyle.sectionTracking)
+            .foregroundStyle(
+                theme.chromeStyle.usesIlluminatedTreatment ? theme.accent : theme.inkFaint
             )
-            .font(usesBento ? .system(size: 12, weight: .semibold) : theme.chromeStyle.sectionTitleFont)
-            .tracking(usesBento ? 0 : theme.chromeStyle.sectionTracking)
-            .foregroundStyle(theme.inkFaint)
             Spacer()
             Text(String(
                 format: "cleanup.appCount".localized,
@@ -84,25 +69,6 @@ struct CleanupTabView: View {
             ))
             .font(theme.chromeStyle.compactValueFont)
             .foregroundStyle(theme.inkSecondary)
-        }
-    }
-
-    /// Classic card-gap list for Bento Grid.
-    private var bentoAppList: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 8) {
-                ForEach(appManager.runningApps) { app in
-                    AppCardView(
-                        app: app,
-                        isTerminating: terminatingApps.contains(app.id),
-                        appManager: appManager
-                    ) {
-                        terminateApp(app)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
         }
     }
 
@@ -126,7 +92,6 @@ struct CleanupTabView: View {
     }
 
     private var memoryHeader: some View {
-        // Instrument themes: title only (Bento keeps icon on BentoCard).
         PanelSection(title: "cleanup.memoryUsage".localized) {
             memoryHeaderBody
         }
@@ -165,7 +130,7 @@ struct CleanupTabView: View {
                     .frame(width: geometry.size.width * CGFloat(min(memoryUsagePercent / 100.0, 1.0)))
                 }
             }
-            .frame(height: layout.usesBentoLayout ? 8 : 6)
+            .frame(height: 6)
 
             if swapUsed > 0 {
                 HStack(spacing: 6) {

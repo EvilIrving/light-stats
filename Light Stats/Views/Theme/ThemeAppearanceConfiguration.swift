@@ -15,7 +15,7 @@ enum ThemeAppearanceConfiguration: Equatable, Sendable {
 extension SettingsManager {
     func themeAppearance(for theme: AppTheme) -> ThemeAppearanceConfiguration {
         switch theme {
-        case .glass, .bento, .dataPaper, .ashVeil:
+        case .glass, .dataPaper:
             return .none
         case .film:
             return .film(FilmThemeAppearanceConfiguration(

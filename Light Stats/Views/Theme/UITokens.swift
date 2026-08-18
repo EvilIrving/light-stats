@@ -116,38 +116,12 @@ struct UITokens: Equatable {
         signalAccent: Color(red: 1.0, green: 0.24, blue: 0.46),
         lineHairline: Color(red: 1.0, green: 0.18, blue: 0.36).opacity(0.30),
         chartLine: Color(red: 0.12, green: 1.0, blue: 0.48),
+        chartSecondary: Color(red: 1.0, green: 0.24, blue: 0.46),
         dividerOpacity: 0.28,
         accent: Color(red: 1.0, green: 0.14, blue: 0.34)
     )
 
-    /// Original bento-grid product look — raised cards + classic metric greens.
-    static let bento = UITokens(
-        preferredColorScheme: nil,
-        chromeStyle: .standard,
-        usesVibrantSurfaces: true,
-        surfaceFill: Color(nsColor: .controlBackgroundColor).opacity(0.78),
-        surfaceStroke: Color.primary.opacity(0.08),
-        surfaceShadowOpacity: 0.06,
-        tabTrackFill: Color.primary.opacity(0.03),
-        tabSelectedFill: Color(nsColor: .controlBackgroundColor),
-        rowHoverFill: Color.primary.opacity(0.06),
-        wellFill: Color.primary.opacity(0.05),
-        inkPrimary: Color.primary,
-        inkMuted: Color.primary.opacity(0.9),
-        inkSecondary: Color.secondary,
-        inkFaint: Color(nsColor: .tertiaryLabelColor),
-        signalGood: .green,
-        signalWarn: .yellow,
-        signalBad: .red,
-        signalInfo: .cyan,
-        signalAccent: .orange,
-        lineHairline: Color.primary.opacity(0.08),
-        chartLine: .green,
-        dividerOpacity: 0.08,
-        accent: Color.accentColor
-    )
-
-    /// System glass / vibrancy — instrument readout (no bento card chrome).
+    /// System glass / vibrancy — instrument readout.
     static let glass = UITokens(
         preferredColorScheme: nil,
         chromeStyle: .standard,
@@ -224,38 +198,9 @@ struct UITokens: Equatable {
         signalAccent: Color(red: 0.886, green: 0.231, blue: 0.231),
         lineHairline: Color(red: 0.42, green: 0.47, blue: 0.53).opacity(0.38),
         chartLine: Color(red: 0.031, green: 0.486, blue: 0.569),
+        chartSecondary: Color(red: 0.886, green: 0.231, blue: 0.231),
         dividerOpacity: 0.38,
         accent: Color(red: 0.886, green: 0.231, blue: 0.231)
-    )
-
-    /// Ash Veil — monochrome photo with extreme vertical contrast
-    /// (top/bottom ~L228, center ~L37). Instrument text sits on the photo with
-    /// no card chrome, so ink must stay near-white for the light bands, and wells
-    /// / tab tracks need a dark wash so chips remain readable on pale zones.
-    static let ashVeil = UITokens(
-        preferredColorScheme: .dark,
-        chromeStyle: .standard,
-        usesVibrantSurfaces: false,
-        surfaceFill: Color(red: 0.04, green: 0.04, blue: 0.05).opacity(0.72),
-        surfaceStroke: Color.white.opacity(0.18),
-        surfaceShadowOpacity: 0.28,
-        tabTrackFill: Color.black.opacity(0.48),
-        tabSelectedFill: Color(red: 0.16, green: 0.16, blue: 0.18).opacity(0.94),
-        rowHoverFill: Color.black.opacity(0.30),
-        wellFill: Color.black.opacity(0.42),
-        inkPrimary: Color.white,
-        inkMuted: Color.white.opacity(0.94),
-        inkSecondary: Color.white.opacity(0.82),
-        inkFaint: Color.white.opacity(0.66),
-        signalGood: Color(red: 0.42, green: 0.96, blue: 0.70),
-        signalWarn: Color(red: 1.0, green: 0.86, blue: 0.40),
-        signalBad: Color(red: 1.0, green: 0.46, blue: 0.48),
-        signalInfo: Color(red: 0.56, green: 0.84, blue: 1.0),
-        signalAccent: Color(red: 0.90, green: 0.90, blue: 0.94),
-        lineHairline: Color.white.opacity(0.22),
-        chartLine: Color(red: 0.88, green: 0.90, blue: 0.96),
-        dividerOpacity: 0.24,
-        accent: Color(red: 0.92, green: 0.92, blue: 0.96)
     )
 
     // MARK: Metric ramp

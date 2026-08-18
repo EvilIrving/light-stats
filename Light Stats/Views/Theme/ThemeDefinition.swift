@@ -17,12 +17,10 @@ struct ThemeDefinition: Equatable {
     static func definition(for theme: AppTheme) -> ThemeDefinition {
         switch theme {
         case .glass: return .glass
-        case .bento: return .bento
         case .film: return .film
         case .bar: return .bar
         case .noir: return .noir
         case .dataPaper: return .dataPaper
-        case .ashVeil: return .ashVeil
         }
     }
 
@@ -33,14 +31,7 @@ struct ThemeDefinition: Equatable {
         layout: .instrument
     )
 
-    /// Bento — card grid + system glass.
-    static let bento = ThemeDefinition(
-        ui: .bento,
-        background: .systemGlass,
-        layout: .bento
-    )
-
-    /// Neon — neon console chrome over the warm light-field scene.
+    /// Neon — warm brass chrome over the Sun Gold field.
     static let film = ThemeDefinition(
         ui: .film,
         background: .sunGold,
@@ -65,13 +56,6 @@ struct ThemeDefinition: Equatable {
     static let dataPaper = ThemeDefinition(
         ui: .dataPaper,
         background: .technicalPaper,
-        layout: .instrument
-    )
-
-    /// Ash Veil — soft charcoal UI over a monochrome photo scene.
-    static let ashVeil = ThemeDefinition(
-        ui: .ashVeil,
-        background: .ashVeil,
         layout: .instrument
     )
 }

@@ -14,11 +14,9 @@
 "settings.theme" = "Theme";
 "settings.theme.film" = "Neon";
 "settings.theme.bar" = "Night Bar";
-"settings.theme.bento" = "Bento Grid";
 "settings.theme.glass" = "Default";
 "settings.theme.noir" = "Ink Night";
 "settings.theme.dataPaper" = "Data Paper";
-"settings.theme.ashVeil" = "Ash Veil";
 "settings.theme.film.grain" = "Film grain";
 "settings.theme.film.grain.hint" = "Off keeps light shapes, cleaner surface";
 "settings.theme.film.lightFlow" = "Light dynamics";

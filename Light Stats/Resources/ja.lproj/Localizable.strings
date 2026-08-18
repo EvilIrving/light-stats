@@ -14,11 +14,9 @@
 "settings.theme" = "テーマ";
 "settings.theme.film" = "ネオン";
 "settings.theme.bar" = "ナイトバー";
-"settings.theme.bento" = "Bento グリッド";
 "settings.theme.glass" = "デフォルト";
 "settings.theme.noir" = "インクナイト";
 "settings.theme.dataPaper" = "データペーパー";
-"settings.theme.ashVeil" = "アッシュベール";
 "settings.theme.film.grain" = "フィルムグレイン";
 "settings.theme.film.grain.hint" = "オフでも光は残る、よりクリーンな面";
 "settings.theme.film.lightFlow" = "光の動き";

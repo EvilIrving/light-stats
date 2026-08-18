@@ -106,7 +106,7 @@ final class SettingsDefaultsTests: XCTestCase {
     func testAppThemeDefaultsToNoir() {
         // Cold start is Ink Night (raw `.noir`); picker order remains unchanged.
         XCTAssertEqual(freshSettings().appTheme, .noir)
-        XCTAssertEqual(AppTheme.allCases, [.glass, .bento, .film, .bar, .noir, .dataPaper, .ashVeil])
+        XCTAssertEqual(AppTheme.allCases, [.glass, .film, .bar, .noir, .dataPaper])
     }
 
     func testStoredGlassThemeRemainsGlass() {
@@ -155,9 +155,7 @@ final class SettingsDefaultsTests: XCTestCase {
         let settings = freshSettings()
 
         XCTAssertEqual(settings.themeAppearance(for: .glass), .none)
-        XCTAssertEqual(settings.themeAppearance(for: .bento), .none)
         XCTAssertEqual(settings.themeAppearance(for: .dataPaper), .none)
-        XCTAssertEqual(settings.themeAppearance(for: .ashVeil), .none)
         XCTAssertEqual(
             settings.themeAppearance(for: .film),
             .film(FilmThemeAppearanceConfiguration(grainEnabled: false, lightFlow: 0.65))

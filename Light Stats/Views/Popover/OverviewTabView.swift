@@ -2,9 +2,7 @@
 //  OverviewTabView.swift
 //  Light Stats
 //
-//  Two layouts, driven by resolved `ThemeLayout`:
-//  - Bento → classic raised cards + 2×2 metric tiles
-//  - Instrument → sections + hairlines
+//  Instrument layout: sections + hairlines, driven by `ThemeLayout`.
 //
 
 import SwiftUI
@@ -13,18 +11,11 @@ struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
     @Environment(\.theme) var theme
-    @Environment(\.themeLayout) private var layout
     @ObservedObject var settings = SettingsManager.shared
-
-    private let quickStatCardHeight: CGFloat = 62
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            if layout.usesBentoLayout {
-                bentoContent
-            } else {
-                instrumentContent
-            }
+            instrumentContent
         }
         // Claim the full tab bounds for hit testing so transparent gaps between
         // instrument rows still route wheel events to this ScrollView (not through
@@ -62,248 +53,9 @@ struct OverviewTabView: View {
         .padding(.bottom, 18)
     }
 
-    // MARK: - Bento Grid layout (original)
-
-    private var bentoContent: some View {
-        VStack(spacing: 12) {
-            BentoCard(title: "health.title".localized, icon: "stethoscope", padding: 10) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HeroReadout(
-                        value: "\(monitor.health.score)",
-                        unit: "/ 100",
-                        caption: gradeText(monitor.health.grade),
-                        valueColor: gradeColor(monitor.health.grade)
-                    )
-                    healthSummary
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(theme.inkMuted)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 10),
-                GridItem(.flexible(), spacing: 10)
-            ], spacing: 8) {
-                QuickStatCard(title: "CPU", svgIcon: .cpu, height: quickStatCardHeight, trend: cpuTrend) {
-                    metricPercent(monitor.cpuUsage)
-                }
-                QuickStatCard(title: "GPU", svgIcon: .gpu, height: quickStatCardHeight, trend: gpuTrend) {
-                    if let gpu = monitor.gpuUsage {
-                        metricPercent(gpu)
-                    } else {
-                        Text("—")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                }
-                QuickStatCard(title: "MEM", svgIcon: .memory, height: quickStatCardHeight, trend: memoryTrend) {
-                    HStack(alignment: .lastTextBaseline, spacing: 2) {
-                        Text(String(format: "%.1f", Double(monitor.memoryUsed) / 1024 / 1024 / 1024))
-                            .font(.system(size: 20, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                        Text("/")
-                            .font(.system(size: 12))
-                            .foregroundStyle(theme.inkMuted)
-                        Text(String(format: "%.0fGB", Double(monitor.memoryTotal) / 1024 / 1024 / 1024))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                    .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(monitor.memoryUsage))
-                }
-                QuickStatCard(
-                    title: "overview.load".localized,
-                    icon: "speedometer",
-                    height: quickStatCardHeight,
-                    trend: loadTrend
-                ) {
-                    Text(monitor.loadAverage.displayString)
-                        .font(.system(size: 14, weight: useFlatColors ? .regular : .semibold, design: .monospaced))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundStyle(useFlatColors ? theme.inkPrimary : colorForUsage(loadUsagePercent))
-                }
-            }
-
-            if monitor.battery.state != .noBattery {
-                BentoCard(title: "battery.title".localized, icon: batteryIcon(monitor.battery)) {
-                    bentoBatteryInner
-                }
-            }
-
-            BentoCard(padding: 10) {
-                systemMetricsGrid
-            }
-
-            bentoAICard
-            bentoNetworkCard
-            bentoProcessesCard
-            bentoCoresCard
-            actionRows
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
-        .padding(.bottom, 16)
-    }
-
-    @ViewBuilder
-    private var bentoAICard: some View {
-        let aiProviders: [(AIProvider, ProviderFetchState)] = [
-            settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
-            settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
-            settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
-        ].compactMap { $0 }
-
-        if !aiProviders.isEmpty {
-            BentoCard {
-                VStack(spacing: 10) {
-                    ForEach(aiProviders, id: \.0.rawValue) { provider, state in
-                        AIProviderCompactRow(
-                            provider: provider,
-                            state: state,
-                            useFlatColors: useFlatColors
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private var bentoNetworkCard: some View {
-        BentoCard(title: "overview.network".localized, svgIcon: .network) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up")
-                        Text(ByteFormatter.formatSpeed(monitor.networkUpload))
-                    }
-                    .foregroundStyle(theme.signalAccent)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.down")
-                        Text(ByteFormatter.formatSpeed(monitor.networkDownload))
-                    }
-                    .foregroundStyle(theme.signalInfo)
-                }
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-
-                if monitor.trends.networkUp.count > 1 {
-                    Sparkline(series: [
-                        SparklineSeries(values: monitor.trends.networkDown, color: theme.signalInfo),
-                        SparklineSeries(values: monitor.trends.networkUp, color: theme.signalAccent)
-                    ])
-                    .frame(height: 24)
-                }
-
-                Divider()
-
-                MetaRow(
-                    svgIcon: .proxy,
-                    label: "network.proxy.title".localized,
-                    value: proxyText(monitor.proxyConfig),
-                    valueColor: monitor.proxyConfig.isEnabled ? theme.inkPrimary : theme.inkSecondary
-                )
-
-                if settings.exitNodeDetectionEnabled {
-                    MetaRow(
-                        icon: "globe",
-                        label: "network.exit.title".localized,
-                        value: exitDisplayText
-                    )
-                }
-            }
-        }
-    }
-
-    private var bentoProcessesCard: some View {
-        BentoCard(title: "overview.processes".localized, svgIcon: .processes) {
-            if monitor.topCPUProcesses.isEmpty {
-                Text("overview.loading".localized)
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.inkMuted)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(Array(monitor.topCPUProcesses.prefix(3))) { process in
-                        ProcessRow(process: process, useFlatColors: useFlatColors)
-                    }
-                }
-            }
-        }
-    }
-
-    private var bentoCoresCard: some View {
-        BentoCard(title: "overview.coreUsage".localized, icon: "circle.grid.3x3") {
-            let sortedCores = getSortedCores()
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(sortedCores, id: \.index) { core in
-                        VStack(spacing: 4) {
-                            Text("\(core.type == .performance ? "P" : "E")\(core.displayIndex)")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(theme.inkMuted)
-
-                            ZStack(alignment: .bottom) {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(theme.wellFill)
-                                    .frame(width: 12, height: 30)
-
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(colorForUsage(core.usage))
-                                    .frame(width: 12, height: CGFloat(30.0 * (core.usage / 100.0)))
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-        }
-    }
-
-    private var bentoBatteryInner: some View {
-        let battery = monitor.battery
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .lastTextBaseline, spacing: 4) {
-                Text(String(format: "%.0f", battery.percent))
-                    .font(.system(size: 24, weight: useFlatColors ? .regular : .bold, design: .rounded))
-                    .foregroundStyle(batteryColor(battery))
-                Text("%")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(theme.inkMuted)
-                Text(batteryStateText(battery))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(theme.inkMuted)
-                    .padding(.leading, 4)
-                Spacer()
-                if let time = batteryTimeText(battery) {
-                    Text(time)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(theme.inkMuted)
-                }
-            }
-            Divider()
-            HStack {
-                SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
-                Spacer()
-                SubStat(label: "battery.health".localized, value: battery.healthPercent.map { "\($0)%" })
-                Spacer()
-                SubStat(
-                    label: "battery.power".localized,
-                    value: battery.powerWatts.map { String(format: "%.1fW", $0) }
-                )
-                Spacer()
-                SubStat(
-                    label: "battery.temp".localized,
-                    value: battery.temperature.map { settings.temperatureUnit.format($0) }
-                )
-            }
-        }
-    }
-
     // MARK: - Health
 
     private var healthSection: some View {
-        // Instrument themes (film / glass / noir): title only — no section glyph.
-        // Bento keeps card icons on BentoCard.
         PanelSection(title: "health.title".localized) {
             VStack(alignment: .leading, spacing: 6) {
                 HeroReadout(
@@ -411,14 +163,12 @@ struct OverviewTabView: View {
     // MARK: - Thermal / disk strip
 
     /// Three equal columns (temp | fan | disk) with I/O row aligned under them —
-    /// same vertical grid discipline as Bento cards.
     private var thermalStrip: some View {
         PanelSection(title: "overview.system".localized) {
             systemMetricsGrid
         }
     }
 
-    /// Shared by instrument + bento system blocks.
     /// Three equal columns, each a VStack (sensor on top, I/O line below).
     /// Leading-aligned so the first column sits flush with the section title (no leading gap).
     private var systemMetricsGrid: some View {
@@ -510,7 +260,6 @@ struct OverviewTabView: View {
     // MARK: - Network
 
     private var networkSection: some View {
-        // Instrument layout: section titles are text-only; Bento keeps card icons.
         PanelSection(title: "overview.network".localized) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {

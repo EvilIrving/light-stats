@@ -11,5 +11,4 @@ enum BackgroundSceneID: String, Equatable, Sendable {
     case bar
     case inkNight
     case technicalPaper
-    case ashVeil
 }
