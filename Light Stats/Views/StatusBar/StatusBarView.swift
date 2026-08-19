@@ -19,7 +19,6 @@ final class StatusBarView: NSView {
         static let networkItemWidth: CGFloat = 56  // NET (e.g., "↑0.0 KB/s" / "↓0.0 KB/s")
         // FAN: spinning icon, no number/label → fixed width regardless of RPM (no jitter).
         static let fanItemWidth: CGFloat = 22
-        static let fanIconSize: CGFloat = 14
         static let batteryItemWidth: CGFloat = 34  // BAT (e.g., "⚡100%")
         // HLT: 3-digit "100" ≈ 21.8pt @ valueFont; +~2.6pt padding/side (matches DISK).
         static let healthItemWidth: CGFloat = 27
@@ -35,12 +34,6 @@ final class StatusBarView: NSView {
         // Network unit (KB/s…) draws lighter than the number, matching other stats.
         static let networkUnitFont = NSFont.systemFont(ofSize: 10, weight: .regular)
         static let unitAlpha: CGFloat = 0.7
-    }
-
-    /// Fan-spin animation tuning, mirrored from `SpinningFanIcon` in OverviewTabView.
-    private enum Fan {
-        static let maxRevPerSecond: Double = 3.0   // 视觉封顶：最快每秒 3 圈
-        static let rpmAtMaxSpeed: Double = 5000    // 达到该转速即封顶
     }
 
     // MARK: - Data
@@ -74,10 +67,8 @@ final class StatusBarView: NSView {
 
     // MARK: - Fan animation state
 
+    private let fanLayer = FanAnimationLayer()
     private var fanRPM: Int?
-    private var fanAngle: CGFloat = 0
-    private var fanLink: CADisplayLink?
-    private var lastFanTimestamp: CFTimeInterval = 0
 
     // MARK: - Render target
 
@@ -91,20 +82,17 @@ final class StatusBarView: NSView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        configureFanLayer()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        configureFanLayer()
     }
 
-    deinit {
-        fanLink?.invalidate()
-    }
-
-    /// This view is a transparent host: it no longer draws on screen (it renders a template
-    /// image into `button.image`) and stays in the button's hierarchy only so its
-    /// `displayLink` (fan spin) has a window/display to sync to. Returning nil ensures it never
-    /// intercepts clicks meant for the status-item button — all events pass through.
+    /// This view is a transparent host: it renders the static template image into
+    /// `button.image` and hosts the independently animated fan layer. Returning nil ensures it
+    /// never intercepts clicks meant for the status-item button — all events pass through.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     // MARK: - Public Methods
@@ -195,7 +183,7 @@ final class StatusBarView: NSView {
             ))
         }
 
-        // Fan（图标按转速旋转，无数字/标签 → 固定宽度，不抖动）
+        // Fan（独立 Core Animation 图层旋转，无数字/标签 → 固定宽度，不抖动）
         if settings.showFan {
             displayItems.append(DisplayItem(
                 value: "",
@@ -208,7 +196,6 @@ final class StatusBarView: NSView {
         } else {
             fanRPM = nil
         }
-        updateFanAnimation()
 
         // Battery（充电/已充满前缀闪电；无电池显示横杠）
         if settings.showBattery {
@@ -230,12 +217,34 @@ final class StatusBarView: NSView {
         }
 
         renderAndApply()
+        syncFanLayer()
     }
 
     /// Connects the view to its status-item button and renders an initial image.
     func attach(to button: NSButton) {
         hostButton = button
         renderAndApply()
+        syncFanLayer()
+    }
+
+    override func layout() {
+        super.layout()
+        syncFanLayerFrame()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        syncFanLayer()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        syncFanLayer()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        syncFanLayerTint()
     }
 
     static func calculateWidth(settings: any SettingsManaging) -> CGFloat {
@@ -331,7 +340,8 @@ final class StatusBarView: NSView {
             if item.isLogo {
                 drawLogo(in: itemRect)
             } else if item.isFan {
-                drawFan(in: itemRect)
+                // The fan occupies a transparent slot here. Its contents are rendered by the
+                // independently animated `fanLayer` below the static template image.
             } else if item.isNetwork {
                 drawNetwork(item, in: itemRect, textColor: textColor)
             } else {
@@ -402,21 +412,6 @@ final class StatusBarView: NSView {
         return result
     }
 
-    /// Draws the fan as a `fanblades.fill` glyph rotated to the current animation angle.
-    /// Spin speed tracks RPM (see `Fan`); RPM 0 / unknown → static glyph.
-    private func drawFan(in itemRect: NSRect) {
-        guard let image = NSImage(systemSymbolName: "fanblades.fill", accessibilityDescription: "Fan") else { return }
-        image.isTemplate = true
-        let size = Layout.fanIconSize
-        NSGraphicsContext.saveGraphicsState()
-        let transform = NSAffineTransform()
-        transform.translateX(by: itemRect.midX, yBy: itemRect.midY)
-        transform.rotate(byDegrees: -fanAngle) // 负角度 → 顺时针
-        transform.concat()
-        image.draw(in: NSRect(x: -size / 2, y: -size / 2, width: size, height: size))
-        NSGraphicsContext.restoreGraphicsState()
-    }
-
     /// Draws a value+label stat. The numeric part is emphasised (semibold, full colour);
     /// the trailing unit (%, RPM, GB…) is de-emphasised (regular weight, dimmer).
     private func drawStat(_ item: DisplayItem, in itemRect: NSRect, textColor: NSColor) {
@@ -447,42 +442,69 @@ final class StatusBarView: NSView {
         item.label.draw(at: labelPoint, withAttributes: labelAttrs)
     }
 
-    // MARK: - Fan animation
+    // MARK: - Fan layer
 
-    /// Starts/pauses the per-frame spin link: run only when the fan is shown and RPM > 0.
-    private func updateFanAnimation() {
-        guard (fanRPM ?? 0) > 0 else {
-            fanLink?.isPaused = true
+    func stopFanAnimation() {
+        fanLayer.stop()
+    }
+
+    private func configureFanLayer() {
+        wantsLayer = true
+        layer?.addSublayer(fanLayer)
+        fanLayer.isHidden = true
+    }
+
+    private func syncFanLayer() {
+        syncFanLayerFrame()
+        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        fanLayer.update(
+            rpm: fanRPM,
+            visible: fanFrame != nil,
+            contentsScale: scale,
+            tintColor: resolvedFanTintColor()
+        )
+    }
+
+    private func syncFanLayerFrame() {
+        guard let fanFrame else {
+            fanLayer.isHidden = true
             return
         }
-        ensureFanLink().isPaused = false
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fanLayer.frame = fanFrame
+        fanLayer.setNeedsLayout()
+        fanLayer.layoutIfNeeded()
+        CATransaction.commit()
     }
 
-    private func ensureFanLink() -> CADisplayLink {
-        if let fanLink { return fanLink }
-        let link = displayLink(target: self, selector: #selector(stepFan(_:)))
-        link.add(to: .main, forMode: .common)
-        lastFanTimestamp = 0
-        fanLink = link
-        return link
+    private func syncFanLayerTint() {
+        fanLayer.updateTint(resolvedFanTintColor())
     }
 
-    /// Accumulates rotation each frame, skipping abnormal gaps (display sleep/resume) to avoid jumps.
-    @objc private func stepFan(_ link: CADisplayLink) {
-        let now = link.timestamp
-        defer { lastFanTimestamp = now }
-        guard lastFanTimestamp > 0 else { return }
-        let dt = now - lastFanTimestamp
-        guard dt > 0, dt < 1 else { return }
-        fanAngle = (fanAngle + Self.fanDegreesPerSecond(fanRPM) * dt).truncatingRemainder(dividingBy: 360)
-        renderAndApply()
+    private var fanFrame: NSRect? {
+        var xOffset: CGFloat = 0
+        for (index, item) in displayItems.enumerated() {
+            let itemRect = NSRect(x: xOffset, y: 0, width: item.width, height: bounds.height)
+            if item.isFan {
+                return itemRect
+            }
+            xOffset += item.width
+            if index < displayItems.count - 1 {
+                xOffset += Layout.separatorWidth
+            }
+        }
+        return nil
     }
 
-    /// 当前角速度（度/秒）：RPM 线性映射并封顶。
-    private static func fanDegreesPerSecond(_ rpm: Int?) -> CGFloat {
-        guard let rpm, rpm > 0 else { return 0 }
-        let revPerSec = min(Double(rpm) / Fan.rpmAtMaxSpeed, 1.0) * Fan.maxRevPerSecond
-        return CGFloat(revPerSec * 360.0)
+    private func resolvedFanTintColor() -> NSColor {
+        let appearance = hostButton?.effectiveAppearance ?? effectiveAppearance
+        var color = NSColor.black
+        appearance.performAsCurrentDrawingAppearance {
+            let tint = hostButton?.contentTintColor ?? NSColor.labelColor
+            color = tint.usingColorSpace(.deviceRGB) ?? .black
+        }
+        return color
     }
 
     /// Splits a value like "2501 RPM" / "38%" / "⚡100%" into (number, unit).

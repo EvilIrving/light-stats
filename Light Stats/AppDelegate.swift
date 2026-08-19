@@ -209,8 +209,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             // Create custom status bar view
             let view = StatusBarView(frame: NSRect(x: 0, y: 0, width: initialWidth, height: 22))
             statusBarView = view
-            // Kept in the button's view hierarchy so its CADisplayLink (fan spin) fires; it no
-            // longer draws on screen — it renders a template image into button.image instead.
+            // Keep the transparent host in the button's hierarchy so the fan's Core Animation
+            // layer shares the status-item window and continues to use the original button hit area.
             button.addSubview(view)
             view.frame = button.bounds
             view.autoresizingMask = [.width, .height]
@@ -696,6 +696,7 @@ extension AppDelegate {
     }
 
     private func stopRuntimeServices() {
+        statusBarView?.stopFanAnimation()
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
         AIUsageMonitor.shared.stop()
