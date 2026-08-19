@@ -75,13 +75,13 @@ struct InkNightSceneConfiguration {
                 motionScale: 1
             ),
             primaryBeam: LightFieldLayerConfiguration(
-                isEnabled: true,
+                isEnabled: false,
                 blurRadiusScale: 0.1,
                 opacity: 1,
                 motionScale: 1
             ),
             secondaryBeam: LightFieldLayerConfiguration(
-                isEnabled: true,
+                isEnabled: false,
                 blurRadiusScale: 0.14,
                 opacity: 0.35,
                 motionScale: 1

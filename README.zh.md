@@ -6,7 +6,7 @@
 
 **原生 macOS 菜单栏状态仪表,看的是「你的 Mac 此刻卡不卡」,并把开发工作流上下文放在手边。**
 
-0-100 健康分常驻菜单栏,一眼看压力;点开弹窗查看 CPU、GPU、内存压力、磁盘与 I/O、网络、电池、温度、风扇、进程和 AI CLI 用量,还可按需启用 Finder、窗口与保持唤醒工具。弹窗支持「默认」「橘子海」「夜色酒吧」「墨夜」四种视觉主题,干净安装默认使用「墨夜」;设置窗保持系统白底工具面板。
+0-100 健康分常驻菜单栏,一眼看压力;点开弹窗查看 CPU、GPU、内存压力、磁盘与 I/O、网络、电池、温度、风扇、进程和 AI CLI 用量,还可按需启用 Finder、窗口与保持唤醒工具。弹窗支持「默认」「黄金时刻」「琥珀」「墨夜」四种视觉主题,干净安装默认使用「墨夜」;设置窗保持系统白底工具面板。
 
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
@@ -37,7 +37,7 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 - **AI CLI 用量也在里面。** 常用 Claude Code、Codex 或 Gemini 的话,开启后概览面板会显示订阅用量,凭据只用来查各家自己的接口。
 - **原生写的,没有第三方依赖。** SwiftUI 加 AppKit,直接调 Mach、IOKit、SMC、Network,没有任何运行时依赖。
 - **开发工作流上下文集中在一处。** AI 用量、代理和出口节点与系统压力并列显示;可选 Finder 菜单支持终端、文件模板、复制、移动和打开方式等高频操作。
-- **多主题读数面板。** 可选「默认」「橘子海」「夜色酒吧」「墨夜」;橘子海、夜色酒吧与墨夜均可调颗粒与光影动态。设置窗固定白底,不跟随展示主题。
+- **多主题读数面板。** 可选「默认」「黄金时刻」「琥珀」「墨夜」;黄金时刻、琥珀与墨夜均可调颗粒与光影动态。设置窗固定白底,不跟随展示主题。
 - **默认零外联。** 没有遥测;出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认都关闭。诊断日志只写本机。
 - **监控是核心,附加工具按需启用。** Finder 菜单、清洁模式、窗口管理、滚动方向反转和保持唤醒都默认关闭。只用监控时,菜单栏只有读数:不多一个图标、不弹辅助功能授权、不创建 event tap、不发任何网络请求。
 
@@ -77,9 +77,9 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 四主题概览：
 
-| 默认 | 橘子海 | 夜色酒吧 | 墨夜 |
+| 默认 | 黄金时刻 | 琥珀 | 墨夜 |
 |------|------|----------|------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="默认主题" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="橘子海主题" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="夜色酒吧主题" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="墨夜主题" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="默认主题" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="黄金时刻主题" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="琥珀主题" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="墨夜主题" /> |
 
 ---
 
@@ -110,10 +110,10 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 - 产品表面(弹窗、关于、Toast、更新窗、辅助功能引导)可选四种主题:
   - **默认**:系统 instrument 读数(无卡片框；macOS 26+ 为 Liquid Glass，macOS 15 为普通系统表面)
-  - **橘子海**:动态光场主题
-  - **夜色酒吧**:动态光场主题
+  - **黄金时刻**:动态光场主题
+  - **琥珀**:动态光场主题
   - **墨夜**(干净安装默认):墨色动态光场与深炭灰表面
-- 橘子海、夜色酒吧与墨夜均支持颗粒开关和光影动态五档(静止 / 舒缓 / 自然 / 流畅 / 活跃)
+- 黄金时刻、琥珀与墨夜均支持颗粒开关和光影动态五档(静止 / 舒缓 / 自然 / 流畅 / 活跃)
 - 设置窗固定系统白底,不跟随展示主题,配置界面保持工具面板气质
 
 ### 内存清理
@@ -263,7 +263,7 @@ xcodebuild -project "Light Stats.xcodeproj" \
 
 ## 设置
 
-- 视觉主题(默认 / 橘子海 / 夜色酒吧 / 墨夜),以及橘子海、夜色酒吧与墨夜的颗粒、光影动态
+- 视觉主题(默认 / 黄金时刻 / 琥珀 / 墨夜),以及黄金时刻、琥珀与墨夜的颗粒、光影动态
 - 菜单栏项目显示开关
 - 刷新频率:低 (5s)、中 (2s)、高 (1s)
 - 温度单位:摄氏度或华氏度

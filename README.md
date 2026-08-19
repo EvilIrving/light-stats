@@ -23,9 +23,9 @@ Ink Night, the clean-install default, shown in Overview and Memory:
 
 Themes (Overview):
 
-| Default | Orange Sea | Night Bar | Ink Night |
+| Default | Golden Hour | Amber | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Orange Sea theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Night Bar theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
+| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Golden Hour theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Amber theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
 
 ---
 
@@ -64,10 +64,10 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
   - **Default**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
-  - **Orange Sea**: warm grain and brass instrument ink over an amber and coral light field
-  - **Night Bar**: espresso-black cocktail bar with warm amber light and a cool teal neon accent
+  - **Golden Hour**: warm grain and brass instrument ink over an amber and coral light field
+  - **Amber**: espresso-black cocktail bar with warm amber light and a cool teal neon accent
   - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
-- Orange Sea, Night Bar, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
+- Golden Hour, Amber, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
 - The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
@@ -177,7 +177,7 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ## Settings
 
-- Visual theme (Default, Orange Sea, Night Bar, Ink Night), with film grain and light dynamics for the three dynamic themes
+- Visual theme (Default, Golden Hour, Amber, Ink Night), with film grain and light dynamics for the three dynamic themes
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit

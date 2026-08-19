@@ -70,7 +70,7 @@ struct UITokens: Equatable {
 
     // MARK: Preset paint (composed by ThemeDefinition)
 
-    /// Neon — luminous instrument ink over the full Sun Gold light field.
+    /// Golden Hour — luminous instrument ink over the full Sun Gold light field.
     /// No content plate and no glow: contrast comes from bright ink against the scene.
     static let film = UITokens(
         preferredColorScheme: .dark,
@@ -100,7 +100,7 @@ struct UITokens: Equatable {
         accent: Color(red: 1.0, green: 0.878, blue: 0.627)
     )
 
-    /// Night Bar / 夜色酒吧 — espresso-black cocktail bar lit by warm amber
+    /// Amber / 琥珀 — espresso-black cocktail bar lit by warm amber
     /// bar light with a single cool teal neon accent. Red survives only as
     /// the semantic “critical” status color, never as decor.
     static let bar = UITokens(

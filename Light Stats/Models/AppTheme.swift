@@ -10,14 +10,14 @@ import Foundation
 
 /// User-facing visual preset. Cold-start default is `.noir` (Ink Night / 墨夜).
 /// `visibleCases` order is the picker display order:
-/// Default → Orange Sea → Night Bar → Ink Night.
+/// Default → Golden Hour → Amber → Ink Night.
 /// Data Paper is temporarily hidden (`isVisible == false`), not deleted.
 enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     /// System instrument readout. Display name: Default.
     case glass
-    /// Orange Sea — warm brass chrome over the Sun Gold field.
+    /// Golden Hour — warm brass chrome over the Sun Gold field.
     case film
-    /// Night Bar — espresso-black cocktail bar with warm amber light and
+    /// Amber — espresso-black cocktail bar with warm amber light and
     /// a single cool teal neon accent.
     case bar
     /// Ink Night.

@@ -31,14 +31,14 @@ struct ThemeDefinition: Equatable {
         layout: .instrument
     )
 
-    /// Neon — warm brass chrome over the Sun Gold field.
+    /// Golden Hour — warm brass chrome over the Sun Gold field.
     static let film = ThemeDefinition(
         ui: .film,
         background: .sunGold,
         layout: .instrument
     )
 
-    /// Night Bar — espresso-black cocktail bar with warm amber light and
+    /// Amber — espresso-black cocktail bar with warm amber light and
     /// a single cool teal neon accent.
     static let bar = ThemeDefinition(
         ui: .bar,

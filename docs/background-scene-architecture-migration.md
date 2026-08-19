@@ -13,7 +13,7 @@
 |---------|---------|-----------|-----------|------|
 | `glass` | Default | `.glass` | `.systemGlass` | `.instrument` |
 | `film` | Neon | `.film` | `.sunGold` | `.instrument` |
-| `bar` | Night Bar | `.bar` | `.bar` | `.instrument` |
+| `bar` | Amber | `.bar` | `.bar` | `.instrument` |
 | `noir` | Ink Night | `.noir` | `.inkNight` | `.instrument` |
 | `dataPaper`（隐藏） | Data Paper | `.dataPaper` | `.technicalPaper` | `.instrument` |
 

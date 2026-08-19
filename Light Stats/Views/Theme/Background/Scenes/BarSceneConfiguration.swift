@@ -77,13 +77,13 @@ struct BarSceneConfiguration {
                 motionScale: 1
             ),
             warmTube: LightFieldLayerConfiguration(
-                isEnabled: true,
+                isEnabled: false,
                 blurRadiusScale: 0.045,
                 opacity: 0.80,
                 motionScale: 0.72
             ),
             coolTube: LightFieldLayerConfiguration(
-                isEnabled: true,
+                isEnabled: false,
                 blurRadiusScale: 0.055,
                 opacity: 0.64,
                 motionScale: 0.78

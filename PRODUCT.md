@@ -10,7 +10,7 @@ macOS power users and developers. They keep a terminal open, run local AI coding
 
 ## Product Purpose
 
-Light Stats is a native macOS menu bar instrument. It reads CPU, GPU, memory pressure, disk, disk I/O, network throughput, proxy state and exit node, battery, temperature, fan, processes, and AI-agent usage (Claude Code, Codex, Gemini CLI), then folds the live pressure signals into a single 0–100 health score. A compact menu bar widget shows the essentials; a click opens a detailed panel with short-term trends and process context. Product surfaces (popover, About, toast, update, permission prompts) can wear Default, Orange Sea, Night Bar, or Ink Night; Ink Night is selected on a clean install, and Settings stays a system-white tool panel.
+Light Stats is a native macOS menu bar instrument. It reads CPU, GPU, memory pressure, disk, disk I/O, network throughput, proxy state and exit node, battery, temperature, fan, processes, and AI-agent usage (Claude Code, Codex, Gemini CLI), then folds the live pressure signals into a single 0–100 health score. A compact menu bar widget shows the essentials; a click opens a detailed panel with short-term trends and process context. Product surfaces (popover, About, toast, update, permission prompts) can wear Default, Golden Hour, Amber, or Ink Night; Ink Night is selected on a clean install, and Settings stays a system-white tool panel.
 
 Monitoring is the core, and it stays read-only. Around it Light Stats has optional developer and system tools: AI usage, proxy exit-node lookup, Finder right-click actions and file templates, window snapping, mouse and trackpad scroll controls, display keep-awake, and a keyboard cleaning lock. Every network request and persistent system interaction ships off. A user who only wants the readout sees no extra icon, receives no Accessibility prompt, runs no event tap, and makes no outbound request. Restraint here is not "fewer features"; it is "nothing you didn't ask for runs."
 
@@ -22,11 +22,11 @@ This web page is its external presence: a landing page that shows the real instr
 - **One honest health number.** The score reflects responsiveness pressure, not capacity. A Mac with 30 GB used stays green if it isn't actually struggling.
 - **Developer context in the menu bar.** Subscription windows for Claude Code, Codex, and Gemini sit beside proxy and exit-node context; Finder actions open terminals, create files from type-aware templates, and route selected files without leaving Finder.
 - **Opt-in by construction.** Monitoring is read-only and always on; capabilities that touch the system or network are off until enabled and stop when disabled. Automatic update checks, Beta channel, AI provider requests, usage-window warmup, exit-node lookup, Finder actions, event taps, and keep-awake assertions do not run on a clean install.
-- **Instrument chrome you can choose.** Default system readout, warm Orange Sea, amber-and-teal Night Bar, or cool Ink Night; configuration UI stays plain white so it never competes with the dial.
+- **Instrument chrome you can choose.** Default system readout, warm Golden Hour, lamp-lit Amber, or cool Ink Night; configuration UI stays plain white so it never competes with the dial.
 
 ## Brand Personality
 
-A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Ink Night is the clean-install look. Default uses system materials, Orange Sea uses warm brass over amber and coral light, Night Bar uses warm amber bar light with a teal neon accent, and Ink Night uses cool charcoal grain.
+A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Ink Night is the clean-install look. Default uses system materials, Golden Hour uses warm brass over amber and coral light, Amber uses warm bar lamplight with a teal neon accent, and Ink Night uses cool charcoal grain.
 
 ## Anti-references
 
