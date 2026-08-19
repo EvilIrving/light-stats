@@ -45,6 +45,62 @@ private struct SystemSnapshot {
     let selfMonitoringSessionID: String?
 }
 
+/// 一个持久化时间桶。常规指标取桶内平均值，网络取峰值，避免漏掉短突发流量。
+private struct MetricTrendAccumulator {
+    let startedAt: Date
+    private var lastSample: MetricTrendSample
+    private var weightedDuration: TimeInterval = 0
+    private var cpuWeightedTotal: Double = 0
+    private var memoryWeightedTotal: Double = 0
+    private var gpuWeightedTotal: Double = 0
+    private var loadWeightedTotal: Double = 0
+    private var networkUpPeak: Double
+    private var networkDownPeak: Double
+
+    init(sample: MetricTrendSample) {
+        startedAt = sample.timestamp
+        lastSample = sample
+        networkUpPeak = sample.networkUp
+        networkDownPeak = sample.networkDown
+    }
+
+    mutating func add(_ sample: MetricTrendSample) {
+        let duration = sample.timestamp.timeIntervalSince(lastSample.timestamp)
+        if duration > 0 {
+            cpuWeightedTotal += (lastSample.cpu + sample.cpu) * 0.5 * duration
+            memoryWeightedTotal += (lastSample.memory + sample.memory) * 0.5 * duration
+            gpuWeightedTotal += (lastSample.gpu + sample.gpu) * 0.5 * duration
+            loadWeightedTotal += (lastSample.load + sample.load) * 0.5 * duration
+            weightedDuration += duration
+        }
+        lastSample = sample
+        networkUpPeak = max(networkUpPeak, sample.networkUp)
+        networkDownPeak = max(networkDownPeak, sample.networkDown)
+    }
+
+    func aggregatedSample(endingAt requestedEnd: Date? = nil) -> MetricTrendSample {
+        let bucketEnd = startedAt.addingTimeInterval(MetricTrendStore.sampleInterval)
+        let requestedEnd = requestedEnd ?? lastSample.timestamp
+        let end = min(max(requestedEnd, lastSample.timestamp), bucketEnd)
+        let trailingDuration = end.timeIntervalSince(lastSample.timestamp)
+        let totalDuration = weightedDuration + trailingDuration
+        let cpuTotal = cpuWeightedTotal + lastSample.cpu * trailingDuration
+        let memoryTotal = memoryWeightedTotal + lastSample.memory * trailingDuration
+        let gpuTotal = gpuWeightedTotal + lastSample.gpu * trailingDuration
+        let loadTotal = loadWeightedTotal + lastSample.load * trailingDuration
+
+        return MetricTrendSample(
+            timestamp: startedAt,
+            cpu: totalDuration > 0 ? cpuTotal / totalDuration : lastSample.cpu,
+            memory: totalDuration > 0 ? memoryTotal / totalDuration : lastSample.memory,
+            gpu: totalDuration > 0 ? gpuTotal / totalDuration : lastSample.gpu,
+            load: totalDuration > 0 ? loadTotal / totalDuration : lastSample.load,
+            networkUp: networkUpPeak,
+            networkDown: networkDownPeak
+        )
+    }
+}
+
 private actor MonitorSampler {
     private var cpuInfo: CPUInfo?
     private var networkInfo: NetworkInfo?
@@ -232,16 +288,17 @@ final class SystemMonitor: ObservableObject {
 
     private var timer: Timer?
     private let sampler = MonitorSampler()
+    private let trendStore = MetricTrendStore()
     private var updateTask: Task<Void, Never>?
+    private var trendRestoreTask: Task<Void, Never>?
+    private var updateGeneration: UInt = 0
     private var pendingUpdate = false
 
-    // 趋势历史：环形缓冲在 ViewModel 内私有保存，每轮采样 push 后汇成只读的 `trends` 快照。
-    private var cpuHistory = MetricHistory()
-    private var memoryHistory = MetricHistory()
-    private var gpuHistory = MetricHistory()
-    private var loadHistory = MetricHistory()
-    private var netUpHistory = MetricHistory()
-    private var netDownHistory = MetricHistory()
+    // 趋势历史：时间戳随绘图值一起保留，唤醒后可立即裁掉三小时外的陈旧数据。
+    private var trendSamples: [MetricTrendSample] = []
+    private var trendAccumulator: MetricTrendAccumulator?
+    private var lastTrendWriteAt: Date?
+    private var hasRestoredTrendHistory = false
 
     /// 弹窗是否可见：进程榜只在弹窗内展示，关闭时不采集。
     private var popoverVisible = false
@@ -261,7 +318,11 @@ final class SystemMonitor: ObservableObject {
     func startMonitoring(interval: TimeInterval = 2.0) {
         stopMonitoring()
 
-        requestUpdate()
+        if hasRestoredTrendHistory {
+            requestUpdate()
+        } else {
+            restoreTrendHistory()
+        }
 
         // Periodic updates
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
@@ -275,8 +336,11 @@ final class SystemMonitor: ObservableObject {
     func stopMonitoring() {
         timer?.invalidate()
         timer = nil
+        updateGeneration &+= 1
         updateTask?.cancel()
         updateTask = nil
+        trendRestoreTask?.cancel()
+        trendRestoreTask = nil
         pendingUpdate = false
     }
 
@@ -296,7 +360,9 @@ final class SystemMonitor: ObservableObject {
     private func requestUpdate() {
         pendingUpdate = true
 
+        guard hasRestoredTrendHistory else { return }
         guard updateTask == nil else { return }
+        let generation = updateGeneration
         updateTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
@@ -320,14 +386,15 @@ final class SystemMonitor: ObservableObject {
                     selfMonitoringSessionID: PerformanceRecordingManager.shared.sessionIDForCapture(at: now)
                 )
                 guard !Task.isCancelled else { break }
-                self.applySnapshot(snapshot)
+                await self.applySnapshot(snapshot)
             }
 
+            guard self.updateGeneration == generation else { return }
             self.updateTask = nil
         }
     }
 
-    private func applySnapshot(_ snapshot: SystemSnapshot) {
+    private func applySnapshot(_ snapshot: SystemSnapshot) async {
         objectWillChange.send()
         cpuUsage = snapshot.cpuUsage
         cpuUserUsage = snapshot.cpuUserUsage
@@ -357,7 +424,7 @@ final class SystemMonitor: ObservableObject {
         primaryIP = snapshot.primaryIP
         exitNode = snapshot.exitNode
         route = snapshot.route
-        pushTrends(snapshot)
+        await pushTrends(snapshot, at: Date())
         recordDiagnosticSnapshot(snapshot)
         recordSelfMonitoringSnapshot(snapshot)
     }
@@ -444,21 +511,114 @@ final class SystemMonitor: ObservableObject {
         DiagnosticLogService.recordPerformanceSample(fields: fields)
     }
 
-    /// 把本轮采样点追加进各环形缓冲，再汇成只读的 `trends` 快照供 sparkline 读取。
-    private func pushTrends(_ snapshot: SystemSnapshot) {
-        cpuHistory.push(snapshot.cpuUsage)
-        memoryHistory.push(snapshot.memoryUsage)
-        gpuHistory.push(snapshot.gpuUsage ?? 0)
-        loadHistory.push(loadUsagePercent(snapshot))
-        netUpHistory.push(snapshot.networkUpload)
-        netDownHistory.push(snapshot.networkDownload)
+    private func restoreTrendHistory() {
+        trendRestoreTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let samples = await trendStore.load()
+            guard !Task.isCancelled else { return }
+            applyRestoredTrends(samples)
+            hasRestoredTrendHistory = true
+            trendRestoreTask = nil
+            requestUpdate()
+        }
+    }
+
+    private func applyRestoredTrends(_ samples: [MetricTrendSample]) {
+        trendSamples = samples
+        trendAccumulator = nil
+        lastTrendWriteAt = nil
+        publishTrends()
+    }
+
+    /// 45 秒桶内持续聚合；桶结束时落盘，运行中的最后一点同步显示当前聚合结果。
+    private func pushTrends(_ snapshot: SystemSnapshot, at date: Date) async {
+        let sample = MetricTrendSample(
+            timestamp: date,
+            cpu: snapshot.cpuUsage,
+            memory: snapshot.memoryUsage,
+            gpu: snapshot.gpuUsage ?? 0,
+            load: loadUsagePercent(snapshot),
+            networkUp: snapshot.networkUpload,
+            networkDown: snapshot.networkDownload
+        )
+        pruneTrendSamples(referenceDate: date)
+
+        guard var accumulator = trendAccumulator else {
+            startTrendBucket(with: sample)
+            publishTrends()
+            lastTrendWriteAt = date
+            await trendStore.save(sample, referenceDate: date)
+            return
+        }
+
+        if date.timeIntervalSince(accumulator.startedAt) >= MetricTrendStore.sampleInterval {
+            let bucketEnd = accumulator.startedAt.addingTimeInterval(MetricTrendStore.sampleInterval)
+            let completedSample = accumulator.aggregatedSample(endingAt: bucketEnd)
+            let cutoff = date.addingTimeInterval(-MetricTrendStore.retention)
+            let retainsCompletedSample = completedSample.timestamp >= cutoff
+            if retainsCompletedSample {
+                updateLiveTrendPoint(completedSample)
+            }
+            startTrendBucket(with: sample)
+            publishTrends()
+            if retainsCompletedSample {
+                await trendStore.save(completedSample, referenceDate: date)
+            }
+            lastTrendWriteAt = date
+            await trendStore.save(sample, referenceDate: date)
+        } else {
+            accumulator.add(sample)
+            trendAccumulator = accumulator
+            let aggregatedSample = accumulator.aggregatedSample()
+            updateLiveTrendPoint(aggregatedSample)
+            publishTrends()
+            guard shouldWriteCurrentTrendBucket(at: date) else { return }
+            lastTrendWriteAt = date
+            await trendStore.save(aggregatedSample, referenceDate: date)
+        }
+    }
+
+    private func shouldWriteCurrentTrendBucket(at date: Date) -> Bool {
+        lastTrendWriteAt.map {
+            date.timeIntervalSince($0) >= MetricTrendStore.provisionalWriteInterval
+        } ?? true
+    }
+
+    private func startTrendBucket(with sample: MetricTrendSample) {
+        trendAccumulator = MetricTrendAccumulator(sample: sample)
+        trendSamples.append(sample)
+        trimTrendSampleCount()
+    }
+
+    private func updateLiveTrendPoint(_ sample: MetricTrendSample) {
+        if trendSamples.count < 2 {
+            trendSamples.append(sample)
+        } else {
+            trendSamples[trendSamples.count - 1] = sample
+        }
+        trimTrendSampleCount()
+    }
+
+    private func pruneTrendSamples(referenceDate: Date) {
+        let cutoff = referenceDate.addingTimeInterval(-MetricTrendStore.retention)
+        trendSamples.removeAll { $0.timestamp < cutoff || $0.timestamp > referenceDate }
+        trimTrendSampleCount()
+    }
+
+    private func trimTrendSampleCount() {
+        let excess = trendSamples.count - MetricTrendStore.maximumSampleCount
+        guard excess > 0 else { return }
+        trendSamples.removeFirst(excess)
+    }
+
+    private func publishTrends() {
         trends = MetricTrends(
-            cpu: cpuHistory.values,
-            memory: memoryHistory.values,
-            gpu: gpuHistory.values,
-            load: loadHistory.values,
-            networkUp: netUpHistory.values,
-            networkDown: netDownHistory.values
+            cpu: trendSamples.map(\.cpu),
+            memory: trendSamples.map(\.memory),
+            gpu: trendSamples.map(\.gpu),
+            load: trendSamples.map(\.load),
+            networkUp: trendSamples.map(\.networkUp),
+            networkDown: trendSamples.map(\.networkDown)
         )
     }
 

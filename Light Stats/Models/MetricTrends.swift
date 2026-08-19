@@ -8,7 +8,7 @@
 import Foundation
 
 /// 各指标最近一段时间的取值序列快照，供弹窗里的 sparkline 折线读取。
-/// 纯数据：从旧到新排列，长度由 `SystemMonitor` 的环形缓冲决定。
+/// 纯数据：从旧到新排列，长度由 `SystemMonitor` 的绘图缓存决定。
 struct MetricTrends: Sendable {
     var cpu: [Double] = []
     var memory: [Double] = []
