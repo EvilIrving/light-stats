@@ -10,10 +10,10 @@ import Foundation
 
 /// User-facing visual preset. Cold-start default is `.noir` (Ink Night / 墨夜).
 /// `visibleCases` order is the picker display order:
-/// Default → Golden Hour → Amber → Ink Night.
+/// Classic → Golden Hour → Amber → Ink Night.
 /// Data Paper is temporarily hidden (`isVisible == false`), not deleted.
 enum AppTheme: String, CaseIterable, Identifiable, Sendable {
-    /// System instrument readout. Display name: Default.
+    /// System instrument readout. Display name: Classic.
     case glass
     /// Golden Hour — warm brass chrome over the Sun Gold field.
     case film

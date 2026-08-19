@@ -13,7 +13,7 @@ struct ThemePickerView: View {
     @Binding var selection: AppTheme
 
     var body: some View {
-        // Order = AppTheme.visibleCases: Default → Golden Hour → Amber → Ink Night.
+        // Order = AppTheme.visibleCases: Classic → Golden Hour → Amber → Ink Night.
         // Data Paper is temporarily hidden (isVisible = false) — not deleted.
         HStack(spacing: 1) {
             ForEach(AppTheme.visibleCases) { theme in

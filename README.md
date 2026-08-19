@@ -19,13 +19,13 @@ Ink Night, the clean-install default, shown in Overview and Memory:
 
 | Overview | Memory |
 |----------|--------|
-| <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="docs/screenshots/ink-night/popover-cleanup.jpeg" width="320" alt="Memory cleanup in the Ink Night theme" /> |
+| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="Memory cleanup in the Ink Night theme" /> |
 
 Themes (Overview):
 
-| Default | Golden Hour | Amber | Ink Night |
+| Classic | Golden Hour | Amber | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default theme" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Golden Hour theme" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Amber theme" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night theme" /> |
+| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="Classic theme" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour theme" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="Amber theme" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night theme" /> |
 
 ---
 
@@ -63,7 +63,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 ### Appearance
 
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
-  - **Default**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
+  - **Classic**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
   - **Golden Hour**: warm grain and brass instrument ink over an amber and coral light field
   - **Amber**: espresso-black cocktail bar with warm amber light and a cool teal neon accent
   - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
@@ -177,7 +177,7 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 
 ## Settings
 
-- Visual theme (Default, Golden Hour, Amber, Ink Night), with film grain and light dynamics for the three dynamic themes
+- Visual theme (Classic, Golden Hour, Amber, Ink Night), with film grain and light dynamics for the three dynamic themes
 - Menu bar item visibility
 - Refresh rate: Low (5s), Medium (2s), High (1s)
 - Temperature unit: Celsius or Fahrenheit

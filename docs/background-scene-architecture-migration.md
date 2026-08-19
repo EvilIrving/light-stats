@@ -11,8 +11,8 @@
 
 | 产品主题 | 界面名称 | UI tokens | 背景 Scene | 布局 |
 |---------|---------|-----------|-----------|------|
-| `glass` | Default | `.glass` | `.systemGlass` | `.instrument` |
-| `film` | Neon | `.film` | `.sunGold` | `.instrument` |
+| `glass` | Classic | `.glass` | `.systemGlass` | `.instrument` |
+| `film` | Golden Hour | `.film` | `.sunGold` | `.instrument` |
 | `bar` | Amber | `.bar` | `.bar` | `.instrument` |
 | `noir` | Ink Night | `.noir` | `.inkNight` | `.instrument` |
 | `dataPaper`（隐藏） | Data Paper | `.dataPaper` | `.technicalPaper` | `.instrument` |

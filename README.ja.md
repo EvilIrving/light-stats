@@ -16,13 +16,13 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 | 概要 | クリーンアップ |
 |------|----------------|
-| <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="320" alt="概要パネル（インクナイト）" /> | <img src="docs/screenshots/ink-night/popover-cleanup.jpeg" width="320" alt="クリーンアップ（インクナイト）" /> |
+| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="概要パネル（インクナイト）" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="クリーンアップ（インクナイト）" /> |
 
 テーマ（概要）:
 
-| デフォルト | ゴールデンアワー | アンバー | インクナイト |
+| クラシック | ゴールデンアワー | アンバー | インクナイト |
 |------------|--------|------------|--------------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="デフォルト" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="ゴールデンアワー" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="アンバー" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="インクナイト" /> |
+| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="クラシック" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="ゴールデンアワー" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="アンバー" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="インクナイト" /> |
 
 ---
 
@@ -60,7 +60,7 @@ Light Stats は Mac のライブな負荷シグナルをメニューバーに常
 ### 外観
 
 - 製品面(ポップオーバー、About、Toast、更新、権限案内)向けに 4 テーマ:
-  - **デフォルト**:システムの計器表示(カード枠なし。macOS 26+ は Liquid Glass、macOS 15 は通常のシステム表面)
+  - **クラシック**:システムの計器表示(カード枠なし。macOS 26+ は Liquid Glass、macOS 15 は通常のシステム表面)
   - **ゴールデンアワー**:暖かな金色のグレインとネオン調の光
   - **アンバー**:暗いカクテルバーを思わせる背景に赤と緑のネオン
   - **インクナイト**(コールドスタート既定):墨黒のグレインと冷たいチャコール表面
@@ -174,7 +174,7 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 
 ## 設定
 
-- 視覚テーマ(デフォルト / ゴールデンアワー / アンバー / インクナイト)と、ゴールデンアワー / アンバー / インクナイトごとのフィルムグレイン・光の動き
+- 視覚テーマ(クラシック / ゴールデンアワー / アンバー / インクナイト)と、ゴールデンアワー / アンバー / インクナイトごとのフィルムグレイン・光の動き
 - メニューバー項目の表示切り替え
 - 更新頻度：低 (5s)、中 (2s)、高 (1s)
 - 温度単位：摂氏または華氏

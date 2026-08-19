@@ -16,13 +16,13 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 | 개요 | 메모리 |
 |------|--------|
-| <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="320" alt="Ink Night 테마 개요" /> | <img src="docs/screenshots/ink-night/popover-cleanup.jpeg" width="320" alt="Ink Night 테마 메모리" /> |
+| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="Ink Night 테마 개요" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="Ink Night 테마 메모리" /> |
 
 테마별 개요:
 
-| Default | Golden Hour | Amber | Ink Night |
+| Classic | Golden Hour | Amber | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/default/popover-overview.jpeg" width="160" alt="Default 테마" /> | <img src="docs/screenshots/neon/popover-overview.jpeg" width="160" alt="Golden Hour 테마" /> | <img src="docs/screenshots/night-bar/popover-overview.jpeg" width="160" alt="Amber 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.jpeg" width="160" alt="Ink Night 테마" /> |
+| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="Classic 테마" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour 테마" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="Amber 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night 테마" /> |
 
 ---
 
@@ -60,7 +60,7 @@ Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시�
 ### 외관
 
 - 제품 표면(팝오버, 정보, Toast, 업데이트, 권한 안내)용 네 가지 테마:
-  - **Default**: 카드 프레임 없는 시스템 계기판 스타일(macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
+  - **Classic**: 카드 프레임 없는 시스템 계기판 스타일(macOS 26+는 Liquid Glass, macOS 15는 일반 시스템 표면)
   - **Golden Hour**: 따뜻한 금빛 배경과 네온 조명
   - **Amber**: 어두운 바 분위기 위에 붉은색과 녹색 네온 조명
   - **Ink Night**(새 설치 기본값): 먹빛 배경과 차가운 차콜 표면
@@ -174,7 +174,7 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ## 설정
 
-- 시각 테마(Default / Golden Hour / Amber / Ink Night)와 Golden Hour, Amber, Ink Night의 필름 그레인 및 빛 움직임
+- 시각 테마(Classic / Golden Hour / Amber / Ink Night)와 Golden Hour, Amber, Ink Night의 필름 그레인 및 빛 움직임
 - 메뉴 막대 항목 표시 여부
 - 새로 고침 속도: 낮음 (5s), 중간 (2s), 높음 (1s)
 - 온도 단위: 섭씨 또는 화씨

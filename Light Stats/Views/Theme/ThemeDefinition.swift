@@ -24,7 +24,7 @@ struct ThemeDefinition: Equatable {
         }
     }
 
-    /// Default — instrument chrome + system glass.
+    /// Classic — instrument chrome + system glass.
     static let glass = ThemeDefinition(
         ui: .glass,
         background: .systemGlass,
