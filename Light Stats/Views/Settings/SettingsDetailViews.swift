@@ -72,6 +72,8 @@ struct GeneralDetail: View {
                                 .controlSize(.regular)
                         }
                     }
+                    rowDivider()
+                    PerformanceRecordingSettingsRow()
                 }
             }
             SettingsSection("settings.update.section".localized) {

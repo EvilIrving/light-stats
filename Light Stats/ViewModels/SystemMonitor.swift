@@ -41,6 +41,8 @@ private struct SystemSnapshot {
     let primaryIP: String?
     let exitNode: ExitNode?
     let route: NetworkRoute
+    let selfMonitoring: SelfMonitoringSample?
+    let selfMonitoringSessionID: String?
 }
 
 private actor MonitorSampler {
@@ -50,6 +52,7 @@ private actor MonitorSampler {
     private let powerService = PowerService()
     private let diskIOService = DiskIOService()
     private let pageRateService = PageRateService()
+    private lazy var selfMonitoringService = SelfMonitoringService()
     private var previousHealth: HealthScore?
 
     private func getCPUInfo() async -> CPUInfo {
@@ -76,7 +79,8 @@ private actor MonitorSampler {
                  exitDetectionEnabled: Bool,
                  exitProvider: ExitNodeProvider,
                  exitCacheTTL: TimeInterval,
-                 healthToggles: HealthScoreService.DimensionToggles) async -> SystemSnapshot {
+                 healthToggles: HealthScoreService.DimensionToggles,
+                 selfMonitoringSessionID: String?) async -> SystemSnapshot {
         let cpuInfo = await getCPUInfo()
         let networkInfo = await getNetworkInfo()
 
@@ -132,6 +136,11 @@ private actor MonitorSampler {
         )
         let health = HealthScoreService.smooth(current: rawHealth, previous: previousHealth)
         previousHealth = health
+        let selfMonitoring: SelfMonitoringSample? = if let selfMonitoringSessionID {
+            await selfMonitoringService.sample(sessionID: selfMonitoringSessionID)
+        } else {
+            nil
+        }
 
         return SystemSnapshot(
             cpuUsage: cpuUsage.total,
@@ -162,7 +171,9 @@ private actor MonitorSampler {
             proxyConfig: proxyConfig,
             primaryIP: primaryIP,
             exitNode: exitNode,
-            route: route
+            route: route,
+            selfMonitoring: selfMonitoring,
+            selfMonitoringSessionID: selfMonitoringSessionID
         )
     }
 }
@@ -305,7 +316,8 @@ final class SystemMonitor: ObservableObject {
                     exitDetectionEnabled: settings.exitNodeDetectionEnabled,
                     exitProvider: settings.exitNodeProvider,
                     exitCacheTTL: AppConfig.exitNodeCacheTTL,
-                    healthToggles: settings.healthDimensionToggles
+                    healthToggles: settings.healthDimensionToggles,
+                    selfMonitoringSessionID: PerformanceRecordingManager.shared.sessionIDForCapture(at: now)
                 )
                 guard !Task.isCancelled else { break }
                 self.applySnapshot(snapshot)
@@ -347,6 +359,7 @@ final class SystemMonitor: ObservableObject {
         route = snapshot.route
         pushTrends(snapshot)
         recordDiagnosticSnapshot(snapshot)
+        recordSelfMonitoringSnapshot(snapshot)
     }
 
     private func recordDiagnosticSnapshot(_ snapshot: SystemSnapshot) {
@@ -379,6 +392,56 @@ final class SystemMonitor: ObservableObject {
         fields["health.score"] = field(.integer(Int64(snapshot.health.score)))
         fields["health.breakdown"] = field(healthBreakdown)
         DiagnosticLogService.recordSample(category: "system", action: "collected", fields: fields)
+    }
+
+    private func recordSelfMonitoringSnapshot(_ snapshot: SystemSnapshot) {
+        guard let sample = snapshot.selfMonitoring,
+              let sessionID = snapshot.selfMonitoringSessionID else { return }
+        typealias Value = DiagnosticLogService.Value
+        typealias Field = DiagnosticLogService.Field
+        func field(_ value: Value) -> Field { .privateValue(value) }
+        func optionalDouble(_ value: Double?) -> Field { field(value.map(Value.double) ?? .null) }
+        func optionalInteger(_ value: Int?) -> Field {
+            field(value.map { .integer(Int64($0)) } ?? .null)
+        }
+
+        var fields: [String: Field] = [:]
+        fields["session.id"] = .privateValue(sessionID)
+        fields["app.cpu.percent"] = optionalDouble(sample.cpuPercent)
+        fields["app.cpu.userSeconds"] = field(.double(sample.cpuUserSeconds))
+        fields["app.cpu.systemSeconds"] = field(.double(sample.cpuSystemSeconds))
+        fields["app.memory.physicalFootprintBytes"] = field(.unsignedInteger(sample.physicalFootprintBytes))
+        fields["app.memory.peakPhysicalFootprintBytes"] = field(.unsignedInteger(sample.peakPhysicalFootprintBytes))
+        fields["app.memory.residentBytes"] = field(.unsignedInteger(sample.residentBytes))
+        fields["app.memory.wiredBytes"] = field(.unsignedInteger(sample.wiredBytes))
+        fields["app.threadCount"] = optionalInteger(sample.threadCount)
+        fields["app.wakeups.idle"] = field(.unsignedInteger(sample.idleWakeups))
+        fields["app.wakeups.interrupt"] = field(.unsignedInteger(sample.interruptWakeups))
+        fields["app.pageIns"] = field(.unsignedInteger(sample.pageIns))
+        fields["app.disk.readBytes"] = field(.unsignedInteger(sample.diskBytesRead))
+        fields["app.disk.writtenBytes"] = field(.unsignedInteger(sample.diskBytesWritten))
+        fields["system.cpu.totalPercent"] = field(.double(snapshot.cpuUsage))
+        fields["system.cpu.userPercent"] = field(.double(snapshot.cpuUserUsage))
+        fields["system.cpu.systemPercent"] = field(.double(snapshot.cpuSystemUsage))
+        fields["system.load.1m"] = field(.double(snapshot.loadAverage.load1))
+        fields["system.load.5m"] = field(.double(snapshot.loadAverage.load5))
+        fields["system.load.15m"] = field(.double(snapshot.loadAverage.load15))
+        fields["system.gpu.percent"] = optionalDouble(snapshot.gpuUsage)
+        fields["system.memory.usedBytes"] = field(.unsignedInteger(snapshot.memoryUsed))
+        fields["system.memory.totalBytes"] = field(.unsignedInteger(snapshot.memoryTotal))
+        fields["system.memory.usagePercent"] = field(.double(snapshot.memoryUsage))
+        fields["system.memory.pressure"] = field(.string(String(describing: snapshot.memoryPressure)))
+        fields["system.memory.swapUsedBytes"] = field(.unsignedInteger(snapshot.swapUsed))
+        fields["system.memory.swapActivityMBs"] = field(.double(snapshot.swapActivityMBs))
+        fields["system.disk.readMBs"] = field(.double(snapshot.diskIO.readMBs))
+        fields["system.disk.writeMBs"] = field(.double(snapshot.diskIO.writeMBs))
+        fields["system.network.uploadBytesPerSecond"] = field(.double(snapshot.networkUpload))
+        fields["system.network.downloadBytesPerSecond"] = field(.double(snapshot.networkDownload))
+        fields["system.temperature.cpuCelsius"] = optionalDouble(snapshot.cpuTemperature)
+        fields["system.temperature.thermalState"] = field(.string(snapshot.thermalState))
+        fields["system.fan.rpm"] = optionalInteger(snapshot.fanSpeed)
+        fields["system.health.score"] = field(.integer(Int64(snapshot.health.score)))
+        DiagnosticLogService.recordPerformanceSample(fields: fields)
     }
 
     /// 把本轮采样点追加进各环形缓冲，再汇成只读的 `trends` 快照供 sparkline 读取。

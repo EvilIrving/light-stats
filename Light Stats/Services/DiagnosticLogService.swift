@@ -204,6 +204,23 @@ actor DiagnosticLogService {
         Task { await shared.drain() }
     }
 
+    /// Records an event for an explicitly started performance session even when the
+    /// general app-journal preference is off. This path is inactive without user opt-in.
+    nonisolated static func recordPerformanceEvent(
+        action: String,
+        fields: [String: Field] = [:]
+    ) {
+        enqueuePerformanceRecord(action: action, fields: fields, kind: .important)
+    }
+
+    /// Records one already-throttled performance sample. Cadence is owned by
+    /// `PerformanceRecordingManager`, so the general journal policy does not re-throttle it.
+    nonisolated static func recordPerformanceSample(
+        fields: [String: Field]
+    ) {
+        enqueuePerformanceRecord(action: "sampled", fields: fields, kind: .sample)
+    }
+
     nonisolated static func recordPrivate(
         level: Level = .info,
         category: String,
@@ -359,6 +376,22 @@ actor DiagnosticLogService {
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    nonisolated private static func enqueuePerformanceRecord(
+        action: String,
+        fields: [String: Field],
+        kind: DiagnosticRecordBuffer.Kind
+    ) {
+        let record = Record(
+            timestamp: Date(),
+            level: .info,
+            category: "selfMonitoring",
+            action: action,
+            fields: sanitized(fields)
+        )
+        guard buffer.enqueue(record, kind: kind) else { return }
+        Task { await shared.drain() }
     }
 
     private struct DiagnosticFile {

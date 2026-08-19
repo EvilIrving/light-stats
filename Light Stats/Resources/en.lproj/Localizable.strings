@@ -176,6 +176,11 @@
 "settings.diagnosticLog.errorsOnly" = "Errors";
 "settings.diagnosticLog.full" = "Full";
 "settings.view" = "View";
+"settings.performanceRecording" = "Performance Recording";
+"settings.performanceRecording.hint" = "Records app CPU and memory plus system GPU metrics every minute, then stops after 48 hours.";
+"settings.performanceRecording.active" = "Recording. Stops automatically at %@.";
+"settings.performanceRecording.start" = "Start 48 Hours";
+"settings.performanceRecording.stop" = "Stop";
 "settings.launchAtLogin" = "Launch at Login";
 "settings.update.section" = "Software Update";
 "settings.update.autoCheck" = "Check automatically";

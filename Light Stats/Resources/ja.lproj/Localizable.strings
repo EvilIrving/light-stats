@@ -178,6 +178,11 @@
 "settings.diagnosticLog.errorsOnly" = "エラーのみ";
 "settings.diagnosticLog.full" = "すべて";
 "settings.view" = "表示";
+"settings.performanceRecording" = "パフォーマンス記録";
+"settings.performanceRecording.hint" = "アプリの CPU・メモリとシステム GPU などを毎分記録し、48 時間後に自動停止します。";
+"settings.performanceRecording.active" = "記録中。%@ に自動停止します。";
+"settings.performanceRecording.start" = "48 時間記録";
+"settings.performanceRecording.stop" = "停止";
 "settings.launchAtLogin" = "ログイン時に起動";
 "settings.update.section" = "ソフトウェアアップデート";
 "settings.update.autoCheck" = "自動的に確認";

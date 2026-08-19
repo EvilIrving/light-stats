@@ -178,6 +178,11 @@
 "settings.diagnosticLog.errorsOnly" = "오류만";
 "settings.diagnosticLog.full" = "전체";
 "settings.view" = "보기";
+"settings.performanceRecording" = "성능 기록";
+"settings.performanceRecording.hint" = "앱 CPU와 메모리, 시스템 GPU 등을 1분마다 기록하고 48시간 후 자동으로 중지합니다.";
+"settings.performanceRecording.active" = "기록 중이며 %@에 자동으로 중지됩니다.";
+"settings.performanceRecording.start" = "48시간 기록";
+"settings.performanceRecording.stop" = "중지";
 "settings.launchAtLogin" = "로그인 시 실행";
 "settings.update.section" = "소프트웨어 업데이트";
 "settings.update.autoCheck" = "자동으로 확인";
