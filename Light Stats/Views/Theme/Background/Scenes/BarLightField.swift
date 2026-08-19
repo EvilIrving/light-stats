@@ -28,12 +28,20 @@ struct BarLightField: View {
         )
     }
 
+    private var sweepDrift: CGPoint {
+        CGPoint(
+            x: sin(phase * 0.78 + 1.7) * width * 0.22,
+            y: cos(phase * 0.52 + 0.6) * height * 0.12
+        )
+    }
+
     var body: some View {
         ZStack {
             configuration.meshBase
             baseColorWash
             warmGlow
             coolGlow
+            lightSweep
             warmTube
             coolTube
             lampGlow
@@ -107,6 +115,36 @@ struct BarLightField: View {
                     y: -height * 0.08 + (coolDrift.y + shiftY) * layer.motionScale
                 )
                 .blendMode(.plusLighter)
+                .opacity(layer.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var lightSweep: some View {
+        if configuration.lightSweep.isEnabled {
+            let layer = configuration.lightSweep
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.clear,
+                            configuration.amber.opacity(0.24),
+                            configuration.amber.opacity(0.82),
+                            configuration.warm.opacity(0.34),
+                            Color.clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: width * 1.35, height: height * 0.11)
+                .blur(radius: scale * layer.blurRadiusScale)
+                .rotationEffect(.degrees(-8 + Double(sin(phase * 0.46)) * 5))
+                .offset(
+                    x: -width * 0.08 + (sweepDrift.x + shiftX) * layer.motionScale,
+                    y: height * 0.08 + (sweepDrift.y + shiftY) * layer.motionScale
+                )
+                .blendMode(.screen)
                 .opacity(layer.opacity)
         }
     }
@@ -197,8 +235,8 @@ struct BarLightField: View {
             }
             .blur(radius: scale * layer.blurRadiusScale)
             .offset(
-                x: width * 0.03 + shiftX * layer.motionScale,
-                y: -height * 0.39 + shiftY * layer.motionScale
+                x: width * 0.03,
+                y: -height * 0.39
             )
             .blendMode(.plusLighter)
             .opacity(layer.opacity)

@@ -25,6 +25,7 @@ struct BarSceneConfiguration {
         let amber: Color
         let warmGlow: LightFieldLayerConfiguration
         let coolGlow: LightFieldLayerConfiguration
+        let lightSweep: LightFieldLayerConfiguration
         let warmTube: LightFieldLayerConfiguration
         let coolTube: LightFieldLayerConfiguration
         let lampGlow: LightFieldLayerConfiguration
@@ -75,6 +76,12 @@ struct BarSceneConfiguration {
                 blurRadiusScale: 0.18,
                 opacity: 0.60,
                 motionScale: 1
+            ),
+            lightSweep: LightFieldLayerConfiguration(
+                isEnabled: true,
+                blurRadiusScale: 0.045,
+                opacity: 0.72,
+                motionScale: 0.82
             ),
             warmTube: LightFieldLayerConfiguration(
                 isEnabled: false,

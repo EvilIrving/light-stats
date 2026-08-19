@@ -97,10 +97,13 @@ struct BarScene: View {
         lightFlow: Double,
         configuration: FlowAnimationConfiguration
     ) -> CGFloat {
-        guard lightFlow >= configuration.pauseThreshold else { return anchor }
+        let flowStrength = activeFlowStrength(
+            lightFlow,
+            pauseThreshold: configuration.pauseThreshold
+        )
+        guard flowStrength > 0 else { return anchor }
         let elapsed = date.timeIntervalSince(anchorDate)
-        let smoothFlow = lightFlow * lightFlow * (3 - 2 * lightFlow)
-        let travel = CGFloat(elapsed * smoothFlow) * configuration.phaseTravelRate
+        let travel = CGFloat(elapsed) * flowStrength * configuration.phaseTravelRate
         let slowBand = sin((anchor + travel) * configuration.slowBandFrequency)
             - sin(anchor * configuration.slowBandFrequency)
         let detailBand = sin(
@@ -124,10 +127,10 @@ struct BarScene: View {
         height: CGFloat,
         configuration: BarSceneConfiguration.Motion
     ) -> CGPoint {
-        guard lightFlow >= pauseThreshold else { return .zero }
-        let smoothFlow = CGFloat(lightFlow * lightFlow * (3 - 2 * lightFlow))
+        let flowStrength = activeFlowStrength(lightFlow, pauseThreshold: pauseThreshold)
+        guard flowStrength > 0 else { return .zero }
         let amplitude = configuration.amplitudeBase
-            + smoothFlow * configuration.amplitudeSpan
+            + flowStrength * configuration.amplitudeSpan
         let positionX = sin(phase * 0.58 + configuration.phaseOffset)
             * configuration.horizontalPrimary
             + sin(phase * 1.21 + 1.4) * configuration.horizontalSecondary
@@ -135,5 +138,15 @@ struct BarScene: View {
             * configuration.verticalPrimary
             + sin(phase * 0.91 + 2.2) * configuration.verticalSecondary
         return CGPoint(x: width * amplitude * positionX, y: height * amplitude * positionY)
+    }
+
+    private static func activeFlowStrength(
+        _ lightFlow: Double,
+        pauseThreshold: Double
+    ) -> CGFloat {
+        guard lightFlow >= pauseThreshold else { return 0 }
+        let clampedFlow = min(max(lightFlow, 0), 1)
+        let smoothFlow = clampedFlow * clampedFlow * (3 - 2 * clampedFlow)
+        return CGFloat(0.28 + smoothFlow * 0.72)
     }
 }
