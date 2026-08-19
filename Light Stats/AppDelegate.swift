@@ -41,8 +41,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
     private var lastGlobalMouseDownAt: Date?
     private var windowControlPermissionAlertShown = false
-    private var terminationInProgress = false
-    private var terminationReplySent = false
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -675,20 +673,9 @@ extension AppDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !terminationInProgress else { return .terminateLater }
-        terminationInProgress = true
         DiagnosticLogService.record(category: "application", action: "willTerminate")
         stopRuntimeServices()
-
-        Task { @MainActor [weak self] in
-            await DiagnosticLogService.shared.close()
-            self?.replyToTerminationIfNeeded(sender)
-        }
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(2))
-            self?.replyToTerminationIfNeeded(sender)
-        }
-        return .terminateLater
+        return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -707,12 +694,6 @@ extension AppDelegate {
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
         SMCInfo.shutdown()
-    }
-
-    private func replyToTerminationIfNeeded(_ sender: NSApplication) {
-        guard !terminationReplySent else { return }
-        terminationReplySent = true
-        sender.reply(toApplicationShouldTerminate: true)
     }
 }
 
