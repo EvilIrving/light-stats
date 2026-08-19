@@ -90,6 +90,7 @@ struct PopoverContentView: View {
                         systemName: "cup.and.saucer.fill",
                         key: "keepAwake",
                         iconSize: 15,
+                        verticalOffset: -1,
                         isActive: settings.keepAwakeEnabled
                     ) {
                         settings.keepAwakeEnabled.toggle()
@@ -221,6 +222,7 @@ struct PopoverContentView: View {
         key: String,
         iconSize: CGFloat = 16,
         weight: Font.Weight = .regular,
+        verticalOffset: CGFloat = 0,
         isActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
@@ -228,12 +230,14 @@ struct PopoverContentView: View {
             if let systemName {
                 Image(systemName: systemName)
                     .font(.system(size: iconSize, weight: weight))
+                    .offset(y: verticalOffset)
             } else if let image {
                 Image(image)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .frame(width: iconSize, height: iconSize)
+                    .offset(y: verticalOffset)
             }
         }
         .foregroundStyle(
