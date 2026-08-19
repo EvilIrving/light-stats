@@ -38,7 +38,8 @@ struct ThemeDefinition: Equatable {
         layout: .instrument
     )
 
-    /// Night Bar — smoked-club chrome + red/green neon light field.
+    /// Night Bar — espresso-black cocktail bar with warm amber light and
+    /// a single cool teal neon accent.
     static let bar = ThemeDefinition(
         ui: .bar,
         background: .bar,

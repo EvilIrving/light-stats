@@ -100,33 +100,35 @@ struct UITokens: Equatable {
         accent: Color(red: 1.0, green: 0.878, blue: 0.627)
     )
 
-    /// Night Bar / 夜色酒吧 — wine-black glass with red and emerald neon.
+    /// Night Bar / 夜色酒吧 — espresso-black cocktail bar lit by warm amber
+    /// bar light with a single cool teal neon accent. Red survives only as
+    /// the semantic “critical” status color, never as decor.
     static let bar = UITokens(
         preferredColorScheme: .dark,
         chromeStyle: .nightBar,
         usesVibrantSurfaces: false,
-        surfaceFill: Color(red: 0.045, green: 0.008, blue: 0.030).opacity(0.78),
-        surfaceStroke: Color(red: 1.0, green: 0.12, blue: 0.30).opacity(0.32),
-        surfaceShadowOpacity: 0.42,
+        surfaceFill: Color(red: 0.052, green: 0.038, blue: 0.030).opacity(0.78),
+        surfaceStroke: Color(red: 1.0, green: 0.70, blue: 0.38).opacity(0.26),
+        surfaceShadowOpacity: 0.38,
         tabTrackFill: Color.clear,
         tabSelectedFill: Color.clear,
-        rowHoverFill: Color(red: 0.03, green: 0.90, blue: 0.40).opacity(0.14),
-        wellFill: Color(red: 0.018, green: 0.12, blue: 0.065).opacity(0.68),
-        inkPrimary: Color(red: 1.0, green: 0.96, blue: 0.92),
-        inkMuted: Color(red: 0.96, green: 0.86, blue: 0.84),
-        inkSecondary: Color(red: 0.84, green: 0.70, blue: 0.73),
-        inkFaint: Color(red: 0.66, green: 0.49, blue: 0.55),
-        metricIcon: Color(red: 0.16, green: 0.96, blue: 0.70),
-        signalGood: Color(red: 0.12, green: 1.0, blue: 0.48),
-        signalWarn: Color(red: 1.0, green: 0.62, blue: 0.16),
-        signalBad: Color(red: 1.0, green: 0.10, blue: 0.28),
-        signalInfo: Color(red: 0.16, green: 0.96, blue: 0.70),
-        signalAccent: Color(red: 1.0, green: 0.24, blue: 0.46),
-        lineHairline: Color(red: 1.0, green: 0.18, blue: 0.36).opacity(0.30),
-        chartLine: Color(red: 0.12, green: 1.0, blue: 0.48),
-        chartSecondary: Color(red: 1.0, green: 0.24, blue: 0.46),
-        dividerOpacity: 0.28,
-        accent: Color(red: 1.0, green: 0.14, blue: 0.34)
+        rowHoverFill: Color(red: 1.0, green: 0.66, blue: 0.30).opacity(0.12),
+        wellFill: Color(red: 0.012, green: 0.085, blue: 0.078).opacity(0.55),
+        inkPrimary: Color(red: 1.0, green: 0.968, blue: 0.928),
+        inkMuted: Color(red: 0.95, green: 0.89, blue: 0.83),
+        inkSecondary: Color(red: 0.82, green: 0.75, blue: 0.68),
+        inkFaint: Color(red: 0.62, green: 0.55, blue: 0.49),
+        metricIcon: Color(red: 1.0, green: 0.66, blue: 0.34),
+        signalGood: Color(red: 0.22, green: 0.86, blue: 0.78),
+        signalWarn: Color(red: 1.0, green: 0.74, blue: 0.30),
+        signalBad: Color(red: 1.0, green: 0.42, blue: 0.48),
+        signalInfo: Color(red: 0.44, green: 0.86, blue: 1.0),
+        signalAccent: Color(red: 1.0, green: 0.60, blue: 0.28),
+        lineHairline: Color(red: 1.0, green: 0.70, blue: 0.38).opacity(0.20),
+        chartLine: Color(red: 0.22, green: 0.86, blue: 0.78),
+        chartSecondary: Color(red: 1.0, green: 0.64, blue: 0.32),
+        dividerOpacity: 0.24,
+        accent: Color(red: 1.0, green: 0.72, blue: 0.36)
     )
 
     /// System glass / vibrancy — instrument readout.

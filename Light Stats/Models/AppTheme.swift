@@ -17,7 +17,8 @@ enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     case glass
     /// Orange Sea — warm brass chrome over the Sun Gold field.
     case film
-    /// Night Bar — red and green neon over a dark cocktail-bar atmosphere.
+    /// Night Bar — espresso-black cocktail bar with warm amber light and
+    /// a single cool teal neon accent.
     case bar
     /// Ink Night.
     case noir

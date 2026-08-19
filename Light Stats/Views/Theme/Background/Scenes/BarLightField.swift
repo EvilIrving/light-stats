@@ -14,14 +14,14 @@ struct BarLightField: View {
     let shiftX: CGFloat
     let shiftY: CGFloat
 
-    private var redDrift: CGPoint {
+    private var warmDrift: CGPoint {
         CGPoint(
             x: sin(phase * 0.82) * width * 0.055,
             y: cos(phase * 0.68) * height * 0.05
         )
     }
 
-    private var greenDrift: CGPoint {
+    private var coolDrift: CGPoint {
         CGPoint(
             x: cos(phase * 0.76 + 1.1) * width * 0.06,
             y: sin(phase * 0.88 + 0.4) * height * 0.055
@@ -32,10 +32,10 @@ struct BarLightField: View {
         ZStack {
             configuration.meshBase
             baseColorWash
-            redGlow
-            greenGlow
-            redTube
-            greenTube
+            warmGlow
+            coolGlow
+            warmTube
+            coolTube
             lampGlow
             counterReflection
             lowerShade
@@ -45,9 +45,9 @@ struct BarLightField: View {
     private var baseColorWash: some View {
         LinearGradient(
             colors: [
-                configuration.red.opacity(0.40),
+                configuration.warm.opacity(0.36),
                 configuration.meshBase,
-                configuration.green.opacity(0.28),
+                configuration.cool.opacity(0.22),
                 configuration.meshBase
             ],
             startPoint: UnitPoint(x: 0.0, y: 0.08),
@@ -56,15 +56,15 @@ struct BarLightField: View {
     }
 
     @ViewBuilder
-    private var redGlow: some View {
-        if configuration.redGlow.isEnabled {
-            let layer = configuration.redGlow
+    private var warmGlow: some View {
+        if configuration.warmGlow.isEnabled {
+            let layer = configuration.warmGlow
             Ellipse()
                 .fill(
                     RadialGradient(
                         colors: [
-                            configuration.red.opacity(0.86),
-                            configuration.red.opacity(0.34),
+                            configuration.warm.opacity(0.84),
+                            configuration.warm.opacity(0.32),
                             Color.clear
                         ],
                         center: UnitPoint(x: 0.38, y: 0.45),
@@ -75,8 +75,8 @@ struct BarLightField: View {
                 .frame(width: width * 1.15, height: height * 1.25)
                 .blur(radius: scale * layer.blurRadiusScale)
                 .offset(
-                    x: -width * 0.30 + (redDrift.x + shiftX) * layer.motionScale,
-                    y: height * 0.03 + (redDrift.y + shiftY) * layer.motionScale
+                    x: -width * 0.30 + (warmDrift.x + shiftX) * layer.motionScale,
+                    y: height * 0.03 + (warmDrift.y + shiftY) * layer.motionScale
                 )
                 .blendMode(.plusLighter)
                 .opacity(layer.opacity)
@@ -84,15 +84,15 @@ struct BarLightField: View {
     }
 
     @ViewBuilder
-    private var greenGlow: some View {
-        if configuration.greenGlow.isEnabled {
-            let layer = configuration.greenGlow
+    private var coolGlow: some View {
+        if configuration.coolGlow.isEnabled {
+            let layer = configuration.coolGlow
             Ellipse()
                 .fill(
                     RadialGradient(
                         colors: [
-                            configuration.green.opacity(0.78),
-                            configuration.green.opacity(0.28),
+                            configuration.cool.opacity(0.74),
+                            configuration.cool.opacity(0.26),
                             Color.clear
                         ],
                         center: UnitPoint(x: 0.62, y: 0.38),
@@ -103,8 +103,8 @@ struct BarLightField: View {
                 .frame(width: width * 1.10, height: height * 1.15)
                 .blur(radius: scale * layer.blurRadiusScale)
                 .offset(
-                    x: width * 0.31 + (greenDrift.x + shiftX) * layer.motionScale,
-                    y: -height * 0.08 + (greenDrift.y + shiftY) * layer.motionScale
+                    x: width * 0.31 + (coolDrift.x + shiftX) * layer.motionScale,
+                    y: -height * 0.08 + (coolDrift.y + shiftY) * layer.motionScale
                 )
                 .blendMode(.plusLighter)
                 .opacity(layer.opacity)
@@ -112,17 +112,17 @@ struct BarLightField: View {
     }
 
     @ViewBuilder
-    private var redTube: some View {
-        if configuration.redTube.isEnabled {
-            let layer = configuration.redTube
+    private var warmTube: some View {
+        if configuration.warmTube.isEnabled {
+            let layer = configuration.warmTube
             Capsule()
                 .fill(
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            configuration.red.opacity(0.96),
+                            configuration.warm.opacity(0.94),
                             Color.white.opacity(0.82),
-                            configuration.red.opacity(0.92),
+                            configuration.warm.opacity(0.90),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -133,8 +133,8 @@ struct BarLightField: View {
                 .blur(radius: scale * layer.blurRadiusScale)
                 .rotationEffect(.degrees(-17 + Double(sin(phase * 0.73)) * 4))
                 .offset(
-                    x: -width * 0.30 + (redDrift.x + shiftX) * layer.motionScale,
-                    y: -height * 0.02 + (redDrift.y + shiftY) * layer.motionScale
+                    x: -width * 0.30 + (warmDrift.x + shiftX) * layer.motionScale,
+                    y: -height * 0.02 + (warmDrift.y + shiftY) * layer.motionScale
                 )
                 .blendMode(.screen)
                 .opacity(layer.opacity)
@@ -142,17 +142,17 @@ struct BarLightField: View {
     }
 
     @ViewBuilder
-    private var greenTube: some View {
-        if configuration.greenTube.isEnabled {
-            let layer = configuration.greenTube
+    private var coolTube: some View {
+        if configuration.coolTube.isEnabled {
+            let layer = configuration.coolTube
             Capsule()
                 .fill(
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            configuration.green.opacity(0.92),
+                            configuration.cool.opacity(0.90),
                             Color.white.opacity(0.76),
-                            configuration.green.opacity(0.90),
+                            configuration.cool.opacity(0.88),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -163,8 +163,8 @@ struct BarLightField: View {
                 .blur(radius: scale * layer.blurRadiusScale)
                 .rotationEffect(.degrees(16 + Double(cos(phase * 0.81)) * 4))
                 .offset(
-                    x: width * 0.33 + (greenDrift.x + shiftX) * layer.motionScale,
-                    y: height * 0.02 + (greenDrift.y + shiftY) * layer.motionScale
+                    x: width * 0.33 + (coolDrift.x + shiftX) * layer.motionScale,
+                    y: height * 0.02 + (coolDrift.y + shiftY) * layer.motionScale
                 )
                 .blendMode(.screen)
                 .opacity(layer.opacity)
@@ -183,7 +183,7 @@ struct BarLightField: View {
                                 colors: [
                                     Color.white.opacity(0.92),
                                     configuration.amber.opacity(0.82),
-                                    configuration.red.opacity(0.18),
+                                    configuration.warm.opacity(0.18),
                                     Color.clear
                                 ],
                                 center: .center,
@@ -214,9 +214,9 @@ struct BarLightField: View {
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            configuration.red.opacity(0.70),
+                            configuration.warm.opacity(0.66),
                             configuration.amber.opacity(0.34),
-                            configuration.green.opacity(0.64),
+                            configuration.cool.opacity(0.58),
                             Color.clear
                         ],
                         startPoint: .leading,

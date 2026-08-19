@@ -65,7 +65,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Four visual themes for the product surfaces (popover, About, Toast, Update, permission prompts):
   - **Default**: system instrument readout without card chrome (Liquid Glass on macOS 26+, ordinary system chrome on macOS 15)
   - **Orange Sea**: warm grain and brass instrument ink over an amber and coral light field
-  - **Night Bar**: red and green neon over a dark cocktail-bar atmosphere
+  - **Night Bar**: espresso-black cocktail bar with warm amber light and a cool teal neon accent
   - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
 - Orange Sea, Night Bar, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
 - The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel

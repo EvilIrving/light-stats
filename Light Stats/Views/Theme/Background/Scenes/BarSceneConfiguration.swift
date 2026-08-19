@@ -18,13 +18,15 @@ struct BarSceneConfiguration {
 
     struct LightField {
         let meshBase: Color
-        let red: Color
-        let green: Color
+        /// Warm bar light (amber) — the dominant glow, like backlit shelves.
+        let warm: Color
+        /// Cool neon accent (teal) — a single neon sign against the warmth.
+        let cool: Color
         let amber: Color
-        let redGlow: LightFieldLayerConfiguration
-        let greenGlow: LightFieldLayerConfiguration
-        let redTube: LightFieldLayerConfiguration
-        let greenTube: LightFieldLayerConfiguration
+        let warmGlow: LightFieldLayerConfiguration
+        let coolGlow: LightFieldLayerConfiguration
+        let warmTube: LightFieldLayerConfiguration
+        let coolTube: LightFieldLayerConfiguration
         let lampGlow: LightFieldLayerConfiguration
         let counterReflection: LightFieldLayerConfiguration
     }
@@ -37,7 +39,7 @@ struct BarSceneConfiguration {
     let grain: GrainOverlayConfiguration
 
     static let defaults = BarSceneConfiguration(
-        canvas: Color(red: 0.018, green: 0.004, blue: 0.012),
+        canvas: Color(red: 0.016, green: 0.013, blue: 0.018),
         flow: FlowAnimationConfiguration(
             framesPerSecond: 24,
             pauseThreshold: 0.02,
@@ -58,32 +60,32 @@ struct BarSceneConfiguration {
             verticalSecondary: 0.03
         ),
         lightField: LightField(
-            meshBase: Color(red: 0.055, green: 0.008, blue: 0.03),
-            red: Color(red: 0.96, green: 0.025, blue: 0.16),
-            green: Color(red: 0.015, green: 0.86, blue: 0.38),
-            amber: Color(red: 1.0, green: 0.58, blue: 0.16),
-            redGlow: LightFieldLayerConfiguration(
+            meshBase: Color(red: 0.052, green: 0.038, blue: 0.028),
+            warm: Color(red: 1.0, green: 0.58, blue: 0.20),
+            cool: Color(red: 0.05, green: 0.76, blue: 0.70),
+            amber: Color(red: 1.0, green: 0.74, blue: 0.36),
+            warmGlow: LightFieldLayerConfiguration(
                 isEnabled: true,
                 blurRadiusScale: 0.17,
-                opacity: 0.92,
-                motionScale: 1
-            ),
-            greenGlow: LightFieldLayerConfiguration(
-                isEnabled: true,
-                blurRadiusScale: 0.18,
                 opacity: 0.88,
                 motionScale: 1
             ),
-            redTube: LightFieldLayerConfiguration(
+            coolGlow: LightFieldLayerConfiguration(
+                isEnabled: true,
+                blurRadiusScale: 0.18,
+                opacity: 0.60,
+                motionScale: 1
+            ),
+            warmTube: LightFieldLayerConfiguration(
                 isEnabled: true,
                 blurRadiusScale: 0.045,
-                opacity: 0.84,
+                opacity: 0.80,
                 motionScale: 0.72
             ),
-            greenTube: LightFieldLayerConfiguration(
+            coolTube: LightFieldLayerConfiguration(
                 isEnabled: true,
                 blurRadiusScale: 0.055,
-                opacity: 0.86,
+                opacity: 0.64,
                 motionScale: 0.78
             ),
             lampGlow: LightFieldLayerConfiguration(
@@ -95,12 +97,12 @@ struct BarSceneConfiguration {
             counterReflection: LightFieldLayerConfiguration(
                 isEnabled: true,
                 blurRadiusScale: 0.09,
-                opacity: 0.74,
+                opacity: 0.70,
                 motionScale: 0.52
             )
         ),
         veil: ReadingVeilConfiguration(
-            centerColor: Color(red: 0.012, green: 0.004, blue: 0.012),
+            centerColor: Color(red: 0.012, green: 0.008, blue: 0.012),
             innerOpacity: 0.62,
             middleOpacity: 0.34,
             outerOpacity: 0.08,
@@ -117,7 +119,7 @@ struct BarSceneConfiguration {
             bodyOpacityRatio: 0.45,
             warmth: 0.32,
             warmthOpacityRatio: 0.16,
-            warmTint: Color(red: 1.0, green: 0.42, blue: 0.16)
+            warmTint: Color(red: 1.0, green: 0.66, blue: 0.30)
         )
     )
 }

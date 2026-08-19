@@ -22,11 +22,11 @@ This web page is its external presence: a landing page that shows the real instr
 - **One honest health number.** The score reflects responsiveness pressure, not capacity. A Mac with 30 GB used stays green if it isn't actually struggling.
 - **Developer context in the menu bar.** Subscription windows for Claude Code, Codex, and Gemini sit beside proxy and exit-node context; Finder actions open terminals, create files from type-aware templates, and route selected files without leaving Finder.
 - **Opt-in by construction.** Monitoring is read-only and always on; capabilities that touch the system or network are off until enabled and stop when disabled. Automatic update checks, Beta channel, AI provider requests, usage-window warmup, exit-node lookup, Finder actions, event taps, and keep-awake assertions do not run on a clean install.
-- **Instrument chrome you can choose.** Default system readout, warm Orange Sea, red-and-green Night Bar, or cool Ink Night; configuration UI stays plain white so it never competes with the dial.
+- **Instrument chrome you can choose.** Default system readout, warm Orange Sea, amber-and-teal Night Bar, or cool Ink Night; configuration UI stays plain white so it never competes with the dial.
 
 ## Brand Personality
 
-A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Ink Night is the clean-install look. Default uses system materials, Orange Sea uses warm brass over amber and coral light, Night Bar uses red and green neon, and Ink Night uses cool charcoal grain.
+A precision instrument. Calm, mechanical, exact. Numbers are tabular and trustworthy; the page reads like a well-labeled readout, not a sales pitch. Apple-adjacent restraint without imitation. When it commits to a signal color, that color means something (live, healthy, measured). Ink Night is the clean-install look. Default uses system materials, Orange Sea uses warm brass over amber and coral light, Night Bar uses warm amber bar light with a teal neon accent, and Ink Night uses cool charcoal grain.
 
 ## Anti-references
 
