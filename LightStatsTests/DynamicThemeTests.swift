@@ -53,8 +53,10 @@ final class DynamicThemeTests: XCTestCase {
         XCTAssertFalse(bar.grainEnabled)
         XCTAssertEqual(bar.lightFlow, 0.8)
         XCTAssertGreaterThan(BarSceneConfiguration.defaults.grain.opacity, 0)
-        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.warmTube.isEnabled)
-        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.coolTube.isEnabled)
+        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.warmGlow.isEnabled)
+        XCTAssertTrue(BarSceneConfiguration.defaults.lightField.coolGlow.isEnabled)
+        XCTAssertFalse(BarSceneConfiguration.defaults.lightField.warmTube.isEnabled)
+        XCTAssertFalse(BarSceneConfiguration.defaults.lightField.coolTube.isEnabled)
 
         let noirAppearance = NoirThemeAppearanceConfiguration(grainEnabled: true, lightFlow: 0.2)
         let inkNight = InkNightSceneInput(noirAppearance)

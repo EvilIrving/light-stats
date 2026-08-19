@@ -576,17 +576,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// 弹出权限引导对话框；保持开关开启，待用户授权后前台激活时自动重试。
     private func startScrollServiceOrPrompt() {
         guard !scrollService.isRunning else { return }
-
-        if scrollService.start() {
-            return
-        }
+        if scrollService.start() { return }
 
         // 权限不足：先不带弹窗检测一次状态
         guard scrollService.checkPermission(promptIfNeeded: false) else {
             presentScrollPermissionAlert()
             return
         }
-
         // 权限已满足但 tap 创建仍失败（罕见：其他系统问题）→ 静默，开关保持 on
     }
 
