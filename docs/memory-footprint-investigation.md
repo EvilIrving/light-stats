@@ -1,6 +1,6 @@
 # Light Stats 内存占用调查与优化笔记
 
-> 状态：调查草案，尚未实施本文中的优化。
+> 状态：调查草案；状态栏风扇的 Core Animation 优化已先行实施，其余内存生命周期实验仍未实施。
 >
 > 目标：在不牺牲菜单栏监控能力和弹窗体验的前提下，评估并降低 Light Stats 的内存、CPU 与后台能耗。
 >
@@ -129,9 +129,11 @@ appMemoryManager.stopMonitoring()
 
 这些分配不会全部永久累积，因此常驻内存收益通常只有 0–3 MB；但主线程绘制、对象分配和能耗收益可能明显得多。
 
-### 已有独立方案
+### 已实施的独立方案
 
-详细重构方案已记录在：
+状态栏风扇已迁移到独立 Core Animation 图层：静态 template 图片保留透明 22pt 槽位，风扇 mask 只在首次/显示比例变化时栅格化，旋转和 RPM 变速由 Core Animation 合成；原有 `CADisplayLink`、`fanAngle` 和逐帧整图重绘已删除。纯 RPM 映射测试位于 `LightStatsTests/FanAnimationLayerTests.swift`。
+
+详细设计与剩余验收边界记录在：
 
 ```text
 docs/status-bar-fan-core-animation-validation.md

@@ -1,5 +1,21 @@
 # Project Memory
 
+## CALayer 复制初始化禁止重建子图层 · 2026-08-19 16:28 CST · agent
+
+状态栏风扇迁移到独立 Core Animation 图层后，曾在 `FanAnimationLayer.init(layer:)` 中调用普通初始化共用的 `configure()`。这会在 Core Animation 创建 presentation layer 时再次执行 `addSublayer(iconLayer)`，把 model layer 加入复制层，稳定触发 `CALayerInvalidTree: expecting model layer not copy` 并终止进程。只构造对象或检查 model layer 的测试发现不了这个问题；必须把图层放进真实的 layer-backed window、提交动画并访问 `presentation()` 才能覆盖该路径。
+
+以后所有带自定义子图层的 `CALayer` 子类都应区分两条初始化路径：`init()` / `init(coder:)` 可以搭建模型层树；`init(layer:)` 只能接受 `super.init(layer:)` 已复制的树、复制必要的自定义状态，并把属性重新绑定到已复制的子图层，禁止调用会新增子图层的公共 `configure()`。`FanAnimationLayer` 当前复制 `phase`、`currentSpeed`、mask scale，并复用复制后的 icon layer 与 mask；RPM 映射、动画时间模型、布局和着色架构保持不变。
+
+回归网位于 `LightStatsTests/FanAnimationLayerTests.swift` 的 presentation-layer 测试：使用 layer-backed `NSWindow` 启动 2500 RPM 动画，访问 `presentation()`，并确认 model/presentation 各只有一个子图层。修复后相关测试 4/4、完整 XCTest 117/117、SwiftLint strict 均通过，Debug 应用启动并持续存活。
+
+## 自动更新校验必须避免 Pipe 死锁 · 2026-08-19 13:59 CST · agent
+
+Beta2 点击检查并安装 Beta3 时，更新窗口曾永久停在“正在校验并安装”。已确认 v1.9.1-beta.3 的 DMG 本身没有安全问题：`codesign --verify --deep --strict` 通过，`spctl --assess --type execute` 返回 `accepted / source=Notarized Developer ID`，Team ID 为预期的 `QZZ878S3NS`。
+
+根因是 `Light Stats/Services/UpdateService.swift` 旧实现对 `Process` 使用 stdout/stderr `Pipe`，先读 stdout 再读 stderr。`hdiutil attach` 等系统命令输出较多时，某个管道可能写满，子进程阻塞等待，父进程也永久等待，因此 UI 无法从 installing 状态退出。以后不要把这类校验命令改回同步 `readDataToEndOfFile()` + `waitUntilExit()` 的 Pipe 模式。
+
+当前实现改为异步轮询子进程，stdout/stderr 写入临时文件，并为 hdiutil、codesign、spctl、ditto 增加超时；超时会终止进程、卸载 DMG、清理临时文件并进入错误态。相关验证：Debug build 成功，113 个 XCTest 全部通过，UpdateService SwiftLint 0 violations。重新发布 Beta 后仍需在真实的 Beta2 安装包上验证完整下载→校验→替换→重启链路。
+
 ## 应用图标配置生成（AppIcon.appiconset） · 2026-08-18 22:32 CST · agent
 
 （由 docs/开发记录.md 合并；其中的脚本路径已过时，以下是核对当前工程后的结论。）
