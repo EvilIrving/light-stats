@@ -182,6 +182,7 @@ jobs:
 
           APP="$MOUNT_POINT/Light Stats.app"
           test -d "$APP"
+          xcrun stapler validate "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
           spctl --assess --verbose=2 --type execute "$APP"
           codesign -dv --verbose=4 "$APP" 2>&1 | grep -q '^TeamIdentifier=QZZ878S3NS$'
@@ -198,8 +199,8 @@ jobs:
           name: release-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             build/xcodebuild.log
-            build/notarytool-submit.log
-            build/notarytool-log.json
+            build/notarytool-*-submit.log
+            build/notarytool-*-log.json
           if-no-files-found: ignore
           retention-days: 14
 

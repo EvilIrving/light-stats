@@ -42,6 +42,7 @@ fi
 APP_PATH="$OUTPUT_DIR/$APP_NAME.app"
 MAIN_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
 FINDER_EXTENSION_PATH="$APP_PATH/Contents/PlugIns/FinderMenuExtension.appex"
+APP_NOTARY_ARCHIVE="$BUILD_DIR/${APP_NAME}-${VERSION}.zip"
 
 verify_signed_runtime() {
     local target="$1"
@@ -59,6 +60,48 @@ verify_signed_runtime() {
 
     if ! echo "$details" | grep -q "^Timestamp="; then
         echo "❌ $label 缺少安全时间戳。"
+        exit 1
+    fi
+}
+
+notarize_file() {
+    local target="$1"
+    local label="$2"
+    local log_name="$3"
+    local submit_log="$BUILD_DIR/notarytool-${log_name}-submit.log"
+    local detail_log="$BUILD_DIR/notarytool-${log_name}-log.json"
+    local submission_id
+    local submission_result
+    local notary_status
+
+    echo "📤 公证 $label..."
+    set +e
+    xcrun notarytool submit "$target" \
+      --key-id "$APPLE_API_KEY_ID" \
+      --issuer "$APPLE_API_ISSUER_ID" \
+      --key "$API_KEY_FILE" \
+      --wait 2>&1 | tee "$submit_log"
+    notary_status=${PIPESTATUS[0]}
+    set -e
+
+    submission_id="$(sed -n 's/^[[:space:]]*id: //p' "$submit_log" | tail -1)"
+    submission_result="$(sed -n 's/^[[:space:]]*status: //p' "$submit_log" | tail -1)"
+
+    if [ "$notary_status" -ne 0 ] || [ "$submission_result" != "Accepted" ]; then
+        echo ""
+        echo "❌ $label 公证失败${submission_result:+: $submission_result}"
+        if [ -n "$submission_id" ]; then
+            echo "📄 获取公证详情: $submission_id"
+            xcrun notarytool log "$submission_id" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER_ID" \
+              --key "$API_KEY_FILE" \
+              "$detail_log" || true
+            [ -f "$detail_log" ] && cat "$detail_log"
+        else
+            cat "$submit_log"
+        fi
+        rm -f "$API_KEY_FILE" "$APP_NOTARY_ARCHIVE"
         exit 1
     fi
 }
@@ -138,6 +181,22 @@ elif [ "$NOTARIZATION_ENABLED" -eq 1 ]; then
     exit 1
 fi
 
+# 先单独公证并 stapled App，再把它装进 DMG。旧版更新器会直接对挂载后的
+# App 执行 Gatekeeper 校验；App 自带票据后，即使 Apple 公证服务不可达也能离线通过。
+if [ "$NOTARIZATION_ENABLED" -eq 1 ]; then
+    rm -f "$APP_NOTARY_ARCHIVE"
+    ditto -c -k --keepParent "$APP_PATH" "$APP_NOTARY_ARCHIVE"
+    API_KEY_FILE="$BUILD_DIR/api-key.p8"
+    echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$API_KEY_FILE"
+    chmod 600 "$API_KEY_FILE"
+    notarize_file "$APP_NOTARY_ARCHIVE" "App" "app"
+    rm -f "$API_KEY_FILE"
+    xcrun stapler staple "$APP_PATH"
+    xcrun stapler validate "$APP_PATH"
+    rm -f "$APP_NOTARY_ARCHIVE"
+    echo "✅ App 公证完成"
+fi
+
 # 创建 DMG
 echo "📀 创建 DMG..."
 rm -rf "$DMG_DIR"
@@ -203,48 +262,16 @@ if [ -n "${DEVELOPER_ID:-}" ]; then
 fi
 echo "✅ $DMG_FILE"
 
-# 公证
-if [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER_ID:-}" ] && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
-    echo "📤 公证..."
+# DMG 也单独公证并 stapled，供 Gatekeeper 首次打开镜像时离线验证。
+if [ "$NOTARIZATION_ENABLED" -eq 1 ]; then
     API_KEY_FILE="$BUILD_DIR/api-key.p8"
-    NOTARY_SUBMIT_LOG="$BUILD_DIR/notarytool-submit.log"
-    NOTARY_DETAIL_LOG="$BUILD_DIR/notarytool-log.json"
     echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$API_KEY_FILE"
     chmod 600 "$API_KEY_FILE"
-
-    set +e
-    xcrun notarytool submit "$DMG_FILE" \
-      --key-id "$APPLE_API_KEY_ID" \
-      --issuer "$APPLE_API_ISSUER_ID" \
-      --key "$API_KEY_FILE" \
-      --wait 2>&1 | tee "$NOTARY_SUBMIT_LOG"
-    NOTARY_STATUS=${PIPESTATUS[0]}
-    set -e
-
-    SUBMISSION_ID="$(sed -n 's/^[[:space:]]*id: //p' "$NOTARY_SUBMIT_LOG" | tail -1)"
-    SUBMISSION_RESULT="$(sed -n 's/^[[:space:]]*status: //p' "$NOTARY_SUBMIT_LOG" | tail -1)"
-
-    if [ "$NOTARY_STATUS" -ne 0 ] || [ "$SUBMISSION_RESULT" != "Accepted" ]; then
-        echo ""
-        echo "❌ 公证失败${SUBMISSION_RESULT:+: $SUBMISSION_RESULT}"
-        if [ -n "$SUBMISSION_ID" ]; then
-            echo "📄 获取公证详情: $SUBMISSION_ID"
-            xcrun notarytool log "$SUBMISSION_ID" \
-              --key-id "$APPLE_API_KEY_ID" \
-              --issuer "$APPLE_API_ISSUER_ID" \
-              --key "$API_KEY_FILE" \
-              "$NOTARY_DETAIL_LOG" || true
-            [ -f "$NOTARY_DETAIL_LOG" ] && cat "$NOTARY_DETAIL_LOG"
-        else
-            cat "$NOTARY_SUBMIT_LOG"
-        fi
-        rm -f "$API_KEY_FILE"
-        exit 1
-    fi
-
+    notarize_file "$DMG_FILE" "DMG" "dmg"
     rm -f "$API_KEY_FILE"
     xcrun stapler staple "$DMG_FILE"
-    echo "✅ 公证完成"
+    xcrun stapler validate "$DMG_FILE"
+    echo "✅ DMG 公证完成"
 fi
 
 echo ""
