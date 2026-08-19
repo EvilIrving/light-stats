@@ -12,6 +12,7 @@
 
 import Foundation
 import os
+import Darwin
 
 actor UpdateService {
 
@@ -118,42 +119,58 @@ actor UpdateService {
             .appendingPathComponent("LightStatsMount-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: mountPoint, withIntermediateDirectories: true)
 
-        let attach = run("/usr/bin/hdiutil", [
-            "attach", dmgURL.path, "-nobrowse", "-noautoopen", "-readonly",
+        let attach = await run("/usr/bin/hdiutil", [
+            "attach", dmgURL.path, "-nobrowse", "-noautoopen", "-readonly", "-quiet",
             "-mountpoint", mountPoint.path
         ])
-        guard attach.status == 0 else { throw UpdateError.mountFailed }
-        defer {
-            _ = run("/usr/bin/hdiutil", ["detach", mountPoint.path, "-force"])
+        guard attach.status == 0 else {
             try? FileManager.default.removeItem(at: dmgURL)
+            throw UpdateError.mountFailed
         }
 
-        guard let mountedApp = locateApp(in: mountPoint) else { throw UpdateError.appNotFound }
-        try verifySignature(of: mountedApp)
+        do {
+            guard let mountedApp = locateApp(in: mountPoint) else { throw UpdateError.appNotFound }
+            try await verifySignature(of: mountedApp)
 
-        let stagingDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("LightStatsStage-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: stagingDir, withIntermediateDirectories: true)
-        let staged = stagingDir.appendingPathComponent(mountedApp.lastPathComponent)
-        let copy = run("/usr/bin/ditto", [mountedApp.path, staged.path])
-        guard copy.status == 0 else { throw UpdateError.verificationFailed("ditto") }
-        return staged
+            let stagingDir = FileManager.default.temporaryDirectory
+                .appendingPathComponent("LightStatsStage-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+            let staged = stagingDir.appendingPathComponent(mountedApp.lastPathComponent)
+            let copy = await run("/usr/bin/ditto", [mountedApp.path, staged.path])
+            guard copy.status == 0 else { throw UpdateError.verificationFailed("ditto") }
+            await detach(mountPoint: mountPoint, dmgURL: dmgURL)
+            return staged
+        } catch {
+            await detach(mountPoint: mountPoint, dmgURL: dmgURL)
+            throw error
+        }
     }
 
     /// 三重校验：codesign 验签 + spctl 验公证（Gatekeeper）+ Team ID 必须匹配。
-    private func verifySignature(of app: URL) throws {
-        let verify = run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
-        guard verify.status == 0 else { throw UpdateError.verificationFailed("codesign") }
+    private func verifySignature(of app: URL) async throws {
+        let verify = await run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
+        guard verify.status == 0 else {
+            throw UpdateError.verificationFailed(verify.status == -2 ? "codesign-timeout" : "codesign")
+        }
 
-        let assess = run("/usr/sbin/spctl", ["--assess", "--type", "execute", "--verbose=2", app.path])
-        guard assess.status == 0 else { throw UpdateError.verificationFailed("notarization") }
+        let assess = await run("/usr/sbin/spctl", ["--assess", "--type", "execute", "--verbose=2", app.path])
+        guard assess.status == 0 else {
+            throw UpdateError.verificationFailed(assess.status == -2 ? "notarization-timeout" : "notarization")
+        }
 
-        let display = run("/usr/bin/codesign", ["--display", "--verbose=4", app.path])
+        let display = await run("/usr/bin/codesign", ["--display", "--verbose=4", app.path])
         let info = display.stderr + display.stdout
-        guard info.contains("TeamIdentifier=\(Self.expectedTeamID)") else {
+        guard display.status == 0,
+              info.contains("TeamIdentifier=\(Self.expectedTeamID)") else {
             throw UpdateError.verificationFailed("team-id")
         }
         logger.info("Update verified: signature + notarization + team id OK")
+    }
+
+    private func detach(mountPoint: URL, dmgURL: URL) async {
+        _ = await run("/usr/bin/hdiutil", ["detach", mountPoint.path, "-force", "-quiet"])
+        try? FileManager.default.removeItem(at: dmgURL)
+        try? FileManager.default.removeItem(at: mountPoint)
     }
 
     private func locateApp(in directory: URL) -> URL? {
@@ -198,25 +215,58 @@ actor UpdateService {
 
     // MARK: - 进程小工具
 
-    private func run(_ launchPath: String, _ arguments: [String]) -> (status: Int32, stdout: String, stderr: String) {
+    /// 执行系统校验命令时不能无限等待 Gatekeeper 或网络服务。
+    /// 输出写入临时文件，避免子进程输出填满 Pipe 后互相等待。
+    private func run(
+        _ launchPath: String,
+        _ arguments: [String],
+        timeout: Duration = .seconds(45)
+    ) async -> (status: Int32, stdout: String, stderr: String) {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: launchPath)
         task.arguments = arguments
-        let out = Pipe()
-        let err = Pipe()
-        task.standardOutput = out
-        task.standardError = err
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LightStatsUpdate-\(UUID().uuidString).out")
+        let errorURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LightStatsUpdate-\(UUID().uuidString).err")
+        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
+        FileManager.default.createFile(atPath: errorURL.path, contents: nil)
+
         do {
+            let output = try FileHandle(forWritingTo: outputURL)
+            let error = try FileHandle(forWritingTo: errorURL)
+            task.standardOutput = output
+            task.standardError = error
             try task.run()
-            let outData = out.fileHandleForReading.readDataToEndOfFile()
-            let errData = err.fileHandleForReading.readDataToEndOfFile()
+
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: timeout)
+            while task.isRunning && clock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            var timedOut = false
+            if task.isRunning {
+                timedOut = true
+                task.terminate()
+                let killDeadline = clock.now.advanced(by: .seconds(1))
+                while task.isRunning && clock.now < killDeadline {
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+                if task.isRunning { kill(task.processIdentifier, SIGKILL) }
+            }
             task.waitUntilExit()
-            return (
-                task.terminationStatus,
-                String(data: outData, encoding: .utf8) ?? "",
-                String(data: errData, encoding: .utf8) ?? ""
-            )
+            try? output.close()
+            try? error.close()
+
+            let stdout = (try? String(contentsOf: outputURL, encoding: .utf8)) ?? ""
+            let stderr = (try? String(contentsOf: errorURL, encoding: .utf8)) ?? ""
+            let status: Int32 = timedOut ? -2 : task.terminationStatus
+            try? FileManager.default.removeItem(at: outputURL)
+            try? FileManager.default.removeItem(at: errorURL)
+            return (status, stdout, timedOut ? "process timed out" : stderr)
         } catch {
+            try? FileManager.default.removeItem(at: outputURL)
+            try? FileManager.default.removeItem(at: errorURL)
             return (-1, "", "\(error)")
         }
     }
