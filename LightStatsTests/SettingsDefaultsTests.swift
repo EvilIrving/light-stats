@@ -74,6 +74,10 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().windowManagementEnabled)
     }
 
+    func testKeepAwakeDefaultsOff() {
+        XCTAssertFalse(freshSettings().keepAwakeEnabled)
+    }
+
     // MARK: - Monitoring core defaults (positive controls)
 
     func testCoreMonitoringDefaultsStayOn() {

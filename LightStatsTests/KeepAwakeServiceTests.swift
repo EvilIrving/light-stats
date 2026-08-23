@@ -9,14 +9,24 @@
 //  for the duration of the test (released in tearDown).
 //
 
+import CoreGraphics
+import IOKit.ps
 import XCTest
 @testable import Light_Stats
 
 @MainActor
 final class KeepAwakeServiceTests: XCTestCase {
 
+    override func setUp() {
+        super.setUp()
+        // Never spawn a WindowServer virtual display from XCTest.
+        KeepAwakeService.shared.usesClamshellDisplay = false
+        KeepAwakeService.shared.stop()
+    }
+
     override func tearDown() {
         KeepAwakeService.shared.stop()
+        KeepAwakeService.shared.usesClamshellDisplay = true
         super.tearDown()
     }
 
@@ -44,5 +54,43 @@ final class KeepAwakeServiceTests: XCTestCase {
         // Stop again is harmless.
         service.stop()
         XCTAssertFalse(service.isRunning)
+    }
+
+    func testClamshellDisplayOnlyWhenPortableOnACWithoutExternal() {
+        XCTAssertTrue(
+            KeepAwakeService.needsClamshellDisplay(
+                isPortable: true, onAC: true, hasForeignExternal: false
+            )
+        )
+        XCTAssertFalse(
+            KeepAwakeService.needsClamshellDisplay(
+                isPortable: true, onAC: false, hasForeignExternal: false
+            )
+        )
+        XCTAssertFalse(
+            KeepAwakeService.needsClamshellDisplay(
+                isPortable: true, onAC: true, hasForeignExternal: true
+            )
+        )
+        XCTAssertFalse(
+            KeepAwakeService.needsClamshellDisplay(
+                isPortable: false, onAC: true, hasForeignExternal: false
+            )
+        )
+    }
+
+    func testDisplaySyncSkipsBeginConfiguration() {
+        let begin = CGDisplayChangeSummaryFlags(rawValue: 1 << 0)
+        let add = CGDisplayChangeSummaryFlags(rawValue: 1 << 4)
+        XCTAssertFalse(KeepAwakeService.shouldSyncAfterDisplayChange(begin))
+        XCTAssertFalse(KeepAwakeService.shouldSyncAfterDisplayChange([begin, add]))
+        XCTAssertTrue(KeepAwakeService.shouldSyncAfterDisplayChange(add))
+        XCTAssertTrue(KeepAwakeService.shouldSyncAfterDisplayChange([]))
+    }
+
+    func testMissingPowerSourceIsNotTreatedAsAC() {
+        XCTAssertFalse(KeepAwakeService.isOnACPower(batteryPowerState: nil))
+        XCTAssertFalse(KeepAwakeService.isOnACPower(batteryPowerState: kIOPSBatteryPowerValue))
+        XCTAssertTrue(KeepAwakeService.isOnACPower(batteryPowerState: kIOPSACPowerValue))
     }
 }

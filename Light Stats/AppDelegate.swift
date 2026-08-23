@@ -113,7 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .sink { [weak self] _ in self?.syncFinderMenuService() }
             .store(in: &cancellables)
 
-        // 保持唤醒总开关：开 → 持有 IOPM 断言阻止息屏；关 → 释放。
+        // 保持唤醒总开关：开 → 空闲断言 + 插电合盖虚拟屏；关 → 全部释放。
         settings.$keepAwakeEnabled
             .dropFirst()
             .receive(on: DispatchQueue.main)
@@ -545,7 +545,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Keep Awake
 
-    /// 保持唤醒服务的起停：开 → 持有 IOPM 电源断言阻止显示器息屏；关 → 释放断言。
+    /// 保持唤醒服务的起停：开 → 空闲断言并在插电无外接屏时挂合盖虚拟屏；关 → 释放。
     private func syncKeepAwakeService() {
         if settings.keepAwakeEnabled {
             KeepAwakeService.shared.start()

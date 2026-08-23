@@ -300,7 +300,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             FinderMenuShared.setEnabled(finderMenuEnabled)
         }
     }
-    /// 保持唤醒（阻止息屏）：默认关闭（opt-in）。开 → 持有 IOPM 电源断言阻止显示器息屏；关 → 释放。
+    /// 保持唤醒：默认关闭（opt-in）。开 → 阻止空闲息屏；插电且无外接屏时挂虚拟屏以支持合盖。
     @Published var keepAwakeEnabled: Bool {
         didSet { save(keepAwakeEnabled, for: .keepAwakeEnabled) }
     }
