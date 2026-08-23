@@ -302,3 +302,11 @@
 "window.action.center" = "가운데";
 "window.action.restore" = "복원";
 "settings.keepAwake" = "화면 켜짐 유지";
+"display.section" = "디스플레이";
+"display.brightness" = "밝기";
+"display.unsupported" = "지원 안 함";
+"display.builtIn" = "내장 디스플레이";
+"display.external" = "외장 디스플레이";
+"settings.displayControl" = "디스플레이 밝기";
+"display.role.builtIn" = "내장";
+"display.role.external" = "외장";

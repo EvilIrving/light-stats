@@ -53,6 +53,7 @@ protocol SettingsManaging: ObservableObject {
     var autoCheckUpdates: Bool { get set }
     var includeBetaUpdates: Bool { get set }
     var windowManagementEnabled: Bool { get set }
+    var displayBrightnessControlEnabled: Bool { get set }
     var finderMenuEnabled: Bool { get set }
 }
 
@@ -272,6 +273,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var windowManagementEnabled: Bool {
         didSet { save(windowManagementEnabled, for: .windowManagementEnabled) }
     }
+    /// 显示器硬件亮度控制：默认关闭。开启后才枚举显示器、注册拓扑观察并访问 DDC 总线。
+    @Published var displayBrightnessControlEnabled: Bool {
+        didSet { save(displayBrightnessControlEnabled, for: .displayBrightnessControlEnabled) }
+    }
     /// 水平滚动方向翻转：与垂直独立，同样仅作用于传统鼠标滚轮。
     @Published var scrollReverseHorizontalEnabled: Bool {
         didSet { save(scrollReverseHorizontalEnabled, for: .scrollReverseHorizontalEnabled) }
@@ -456,6 +461,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
         case windowManagementEnabled = "settings.windowManagementEnabled"
+        case displayBrightnessControlEnabled = "settings.displayBrightnessControlEnabled"
         case finderMenuEnabled = "settings.finderMenuEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
         case scrollStepMultiplier = "settings.scrollStepMultiplier"
@@ -544,6 +550,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的 magnet/titlebar 子开关。
         windowManagementEnabled = defaults.object(forKey: Key.windowManagementEnabled.rawValue) as? Bool ?? false
+        // 显示器 DDC 硬件亮度：默认关闭（opt-in），冷启动不枚举、不探测、不访问 I²C。
+        displayBrightnessControlEnabled =
+            defaults.object(forKey: Key.displayBrightnessControlEnabled.rawValue) as? Bool ?? false
         // Finder 右键菜单：默认关闭（opt-in）。
         finderMenuEnabled = defaults.object(forKey: Key.finderMenuEnabled.rawValue) as? Bool ?? false
         scrollReverseHorizontalEnabled =

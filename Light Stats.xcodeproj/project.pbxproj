@@ -694,6 +694,18 @@
 		A4163D572EFBC3DC0013ED8C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreDisplay,
+					"-framework",
+					DisplayServices,
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -755,6 +767,18 @@
 		A4163D582EFBC3DC0013ED8C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreDisplay,
+					"-framework",
+					DisplayServices,
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;

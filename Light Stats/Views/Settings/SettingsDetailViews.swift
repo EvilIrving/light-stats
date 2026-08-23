@@ -231,6 +231,13 @@ struct MonitoringDetail: View {
                     }
                 }
             }
+            SettingsSection("display.section".localized) {
+                SettingsGroup {
+                    SettingsRow("settings.displayControl".localized) {
+                        SettingsToggle(isOn: $settings.displayBrightnessControlEnabled)
+                    }
+                }
+            }
             SettingsSection("settings.health".localized) {
                 VStack(alignment: .leading, spacing: 10) {
                     SettingsGroup {

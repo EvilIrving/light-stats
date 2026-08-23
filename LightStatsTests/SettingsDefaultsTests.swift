@@ -74,6 +74,10 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().windowManagementEnabled)
     }
 
+    func testDisplayBrightnessControlDefaultsOff() {
+        XCTAssertFalse(freshSettings().displayBrightnessControlEnabled)
+    }
+
     func testKeepAwakeDefaultsOff() {
         XCTAssertFalse(freshSettings().keepAwakeEnabled)
     }

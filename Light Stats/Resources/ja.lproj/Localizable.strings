@@ -302,3 +302,11 @@
 "window.action.center" = "中央";
 "window.action.restore" = "復元";
 "settings.keepAwake" = "スリープ防止";
+"display.section" = "ディスプレイ";
+"display.brightness" = "明るさ";
+"display.unsupported" = "非対応";
+"display.builtIn" = "内蔵ディスプレイ";
+"display.external" = "外部ディスプレイ";
+"settings.displayControl" = "ディスプレイの明るさ";
+"display.role.builtIn" = "内蔵";
+"display.role.external" = "外部";

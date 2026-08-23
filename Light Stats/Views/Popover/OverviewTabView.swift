@@ -10,6 +10,7 @@ import SwiftUI
 struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
+    @EnvironmentObject private var displayControlManager: DisplayControlManager
     @Environment(\.theme) var theme
     @ObservedObject var settings = SettingsManager.shared
 
@@ -40,6 +41,10 @@ struct OverviewTabView: View {
             thermalStrip
             PanelDivider().padding(.vertical, 10)
             aiSection
+            if settings.displayBrightnessControlEnabled, !displayControlManager.displays.isEmpty {
+                DisplayBrightnessSection()
+                PanelDivider().padding(.vertical, 10)
+            }
             networkSection
             PanelDivider().padding(.vertical, 10)
             processesSection

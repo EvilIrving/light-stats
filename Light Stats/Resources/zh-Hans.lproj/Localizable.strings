@@ -302,3 +302,11 @@
 "window.action.center" = "居中";
 "window.action.restore" = "还原";
 "settings.keepAwake" = "保持唤醒";
+"display.section" = "显示器";
+"display.brightness" = "亮度";
+"display.unsupported" = "不支持";
+"display.builtIn" = "内建显示器";
+"display.external" = "外接显示器";
+"settings.displayControl" = "显示器亮度";
+"display.role.builtIn" = "内建屏";
+"display.role.external" = "外接屏";

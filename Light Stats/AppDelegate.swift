@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
+    private let displayControlManager: DisplayControlManager
     private let appMemoryManager: AppMemoryManager
     private let scrollService: ScrollReversing
     private let windowSnappingService: WindowSnappingService
@@ -61,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     override init() {
         self.settings = SettingsManager.shared
         self.monitor = SystemMonitor.shared
+        self.displayControlManager = DisplayControlManager.shared
         self.appMemoryManager = AppMemoryManager.shared
         self.scrollService = ScrollDirectionService()
         let windowSnappingService = WindowSnappingService()
@@ -120,6 +122,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             .sink { [weak self] _ in self?.syncKeepAwakeService() }
             .store(in: &cancellables)
 
+        settings.$displayBrightnessControlEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                self?.displayControlManager.setEnabled(enabled)
+            }
+            .store(in: &cancellables)
+
         // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
         settings.$appLanguage
             .dropFirst()
@@ -132,6 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         syncWindowControlServices()
         syncFinderMenuService()
         syncKeepAwakeService()
+        displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
 
@@ -337,6 +348,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             rootView: PopoverContentView()
                 .environmentObject(monitor)
                 .environmentObject(AIUsageMonitor.shared)
+                .environmentObject(displayControlManager)
         )
 
         // 失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时自动关闭，
@@ -441,6 +453,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panel?.orderOut(nil)
         if reason.isAutomatic { panelAutoClosedAt = Date() }
         monitor.setPopoverVisible(false)
+        displayControlManager.setPanelVisible(false)
         appMemoryManager.stopMonitoring()
         removeGlobalClickMonitor()
     }
@@ -537,35 +550,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         monitor.setPopoverVisible(true)
+        displayControlManager.setPanelVisible(true)
         // 面板一打开即预热进程内存扫描，用户从 Overview 切到 Cleanup 时数据已就绪。
         // Cleanup 页的 onAppear/onDisappear 仍会幂等地接管 start/stop。
         appMemoryManager.startMonitoring()
         installGlobalClickMonitor()
-    }
-
-    // MARK: - Keep Awake
-
-    /// 保持唤醒服务的起停：开 → 空闲断言并在插电无外接屏时挂合盖虚拟屏；关 → 释放。
-    private func syncKeepAwakeService() {
-        if settings.keepAwakeEnabled {
-            KeepAwakeService.shared.start()
-        } else {
-            KeepAwakeService.shared.stop()
-        }
-    }
-
-    // MARK: - Finder Menu
-
-    /// Finder 右键菜单宿主服务的起停。总开关开 → 注册 CFMessagePort 接收扩展委派的动作；
-    /// 关 → 注销端口。扩展侧由 FinderMenuShared.isEnabled() 独立把关，两道门都默认关。
-    private func syncFinderMenuService() {
-        FinderMenuShared.setEnabled(settings.finderMenuEnabled)
-        if settings.finderMenuEnabled {
-            FinderMenuHostService.shared.publishLabels()
-            FinderMenuHostService.shared.start()
-        } else {
-            FinderMenuHostService.shared.stop()
-        }
     }
 
     // MARK: - Scroll Direction
@@ -590,6 +579,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             _ = scrollService.start()
         }
         syncWindowControlServices()
+        displayControlManager.applicationDidBecomeActive()
         if settings.finderMenuEnabled {
             syncFinderMenuService()
             FinderMenuConfigStore.shared.refreshExtensionStatus()
@@ -682,10 +672,29 @@ extension AppDelegate {
         stopRuntimeServices()
     }
 
+    private func syncKeepAwakeService() {
+        if settings.keepAwakeEnabled {
+            KeepAwakeService.shared.start()
+        } else {
+            KeepAwakeService.shared.stop()
+        }
+    }
+
+    private func syncFinderMenuService() {
+        FinderMenuShared.setEnabled(settings.finderMenuEnabled)
+        if settings.finderMenuEnabled {
+            FinderMenuHostService.shared.publishLabels()
+            FinderMenuHostService.shared.start()
+        } else {
+            FinderMenuHostService.shared.stop()
+        }
+    }
+
     private func stopRuntimeServices() {
         statusBarView?.stopFanAnimation()
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
+        displayControlManager.stop()
         AIUsageMonitor.shared.stop()
         UsageWarmupManager.shared.stopAll()
         scrollService.stop()

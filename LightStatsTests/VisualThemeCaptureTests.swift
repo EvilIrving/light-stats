@@ -16,6 +16,7 @@ final class VisualThemeCaptureTests: XCTestCase {
         let originalNoirGrainEnabled = settings.noirGrainEnabled
         let originalNoirLightFlow = settings.noirLightFlow
         let originalExitNodeDetectionEnabled = settings.exitNodeDetectionEnabled
+        let originalDisplayBrightnessControlEnabled = settings.displayBrightnessControlEnabled
         let originalClaudeEnabled = settings.aiMonitorClaudeEnabled
         let originalCodexEnabled = settings.aiMonitorCodexEnabled
         let originalGeminiEnabled = settings.aiMonitorGeminiEnabled
@@ -35,6 +36,7 @@ final class VisualThemeCaptureTests: XCTestCase {
             settings.noirGrainEnabled = originalNoirGrainEnabled
             settings.noirLightFlow = originalNoirLightFlow
             settings.exitNodeDetectionEnabled = originalExitNodeDetectionEnabled
+            settings.displayBrightnessControlEnabled = originalDisplayBrightnessControlEnabled
             settings.aiMonitorClaudeEnabled = originalClaudeEnabled
             settings.aiMonitorCodexEnabled = originalCodexEnabled
             settings.aiMonitorGeminiEnabled = originalGeminiEnabled
@@ -55,6 +57,7 @@ final class VisualThemeCaptureTests: XCTestCase {
         settings.noirGrainEnabled = true
         settings.noirLightFlow = 0
         settings.exitNodeDetectionEnabled = false
+        settings.displayBrightnessControlEnabled = false
         settings.aiMonitorClaudeEnabled = false
         settings.aiMonitorCodexEnabled = false
         settings.aiMonitorGeminiEnabled = false
@@ -118,6 +121,7 @@ final class VisualThemeCaptureTests: XCTestCase {
         let content = PopoverContentView(initialTab: initialTab)
             .environmentObject(SystemMonitor.shared)
             .environmentObject(AIUsageMonitor.shared)
+            .environmentObject(DisplayControlManager.shared)
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = CGRect(origin: .zero, size: PopoverContentView.canvasSize)
         let window = NSWindow(
