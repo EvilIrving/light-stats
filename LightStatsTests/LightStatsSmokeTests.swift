@@ -50,4 +50,12 @@ final class LightStatsSmokeTests: XCTestCase {
         XCTAssertEqual(ByteFormatter.formatDisk(1_500_000_000), "1.5 GB")
         XCTAssertEqual(ByteFormatter.formatDisk(81_090_000_000), "81.1 GB")
     }
+
+    func testLoadAveragePerCoreKeepsOneDecimal() {
+        let load = LoadAverage(load1: 3.14, load5: 2.8, load15: 2.5)
+        XCTAssertEqual(load.perCoreDisplayString(coreCount: 10), "0.3")
+        XCTAssertEqual(load.perCoreDisplayString(coreCount: 3), "1.0")
+        XCTAssertEqual(LoadAverage.zero.perCoreDisplayString(coreCount: 8), "0.0")
+        XCTAssertEqual(load.perCoreDisplayString(coreCount: 0), "3.1")
+    }
 }

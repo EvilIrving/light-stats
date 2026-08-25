@@ -42,12 +42,10 @@ struct LoadAverage {
         String(format: "%.1f / %.1f / %.1f", load1, load5, load15)
     }
 
-    /// 按健康分口径归一化的每核负载展示：load ÷ 核心数。
-    /// macOS 的系统 LoadAvg 会把阻塞在 I/O 上的线程计入，CPU 空闲时也常虚高；
-    /// 除以核心数后与 HealthScoreService 的判断一致，避免把 7.x 这类数字直接甩给用户。
+    /// 概览主读数：1 分钟每核负载，固定一位小数。
+    /// 5 / 15 分钟窗口不进主行；趋势由 sparkline 承担。
     func perCoreDisplayString(coreCount: Int) -> String {
-        let cores = coreCount > 0 ? Double(coreCount) : 1
-        return String(format: "%.2f / %.2f / %.2f", load1 / cores, load5 / cores, load15 / cores)
+        String(format: "%.1f", load1 / Double(max(coreCount, 1)))
     }
 
     static let zero = LoadAverage(load1: 0, load5: 0, load15: 0)

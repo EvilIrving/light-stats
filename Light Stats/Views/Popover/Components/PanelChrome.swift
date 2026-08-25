@@ -127,7 +127,7 @@ struct MetricRow<Value: View>: View {
 
     var body: some View {
         let style = theme.chromeStyle
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             HStack(spacing: 5) {
                 if let svgIcon {
                     SVGIcon(svgIcon, size: 12)
@@ -152,7 +152,7 @@ struct MetricRow<Value: View>: View {
                     .tracking(style.usesNeonTreatment ? 0.45 : style.usesNightBarTreatment ? 0.25 : 0)
                     .foregroundStyle(theme.inkSecondary)
             }
-            .frame(width: 72, alignment: .leading)
+            .frame(width: 56, alignment: .leading)
 
             if let trend, trend.values.count > 1 {
                 Sparkline(series: [trend])
@@ -164,7 +164,7 @@ struct MetricRow<Value: View>: View {
             }
 
             value
-                .frame(minWidth: 56, alignment: .trailing)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .frame(minHeight: 26)
     }

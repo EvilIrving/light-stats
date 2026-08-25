@@ -95,11 +95,12 @@ struct Sparkline: View {
         let span = bounds.upperBound - bounds.lowerBound
         let inset = effectiveLineWidth
         let usableHeight = max(size.height - inset * 2, 1)
-        let stepX = size.width / CGFloat(values.count - 1)
+        let usableWidth = max(size.width - inset * 2, 1)
+        let stepX = usableWidth / CGFloat(values.count - 1)
         return values.enumerated().map { idx, value in
             let norm = span > 0 ? (value - bounds.lowerBound) / span : 0.5
             let y = inset + (1 - CGFloat(norm)) * usableHeight
-            return CGPoint(x: CGFloat(idx) * stepX, y: y)
+            return CGPoint(x: inset + CGFloat(idx) * stepX, y: y)
         }
     }
 
