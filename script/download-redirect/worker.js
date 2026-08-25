@@ -1,10 +1,12 @@
 const FILE_RE = /^Light-Stats-\d[\w.+-]*\.dmg$/;
+const STABLE_PATHS = new Set(["/stable", "/Light-Stats.dmg"]);
+const BETA_PATHS = new Set(["/beta", "/Light-Stats-beta.dmg"]);
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    const isBeta = url.pathname === "/Light-Stats-beta.dmg";
-    if (url.pathname !== "/Light-Stats.dmg" && !isBeta) {
+    const path = new URL(request.url).pathname.replace(/\/$/, "") || "/";
+    const isBeta = BETA_PATHS.has(path);
+    if (!isBeta && !STABLE_PATHS.has(path)) {
       return new Response("Not found", { status: 404 });
     }
 

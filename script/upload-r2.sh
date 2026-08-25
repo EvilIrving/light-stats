@@ -3,9 +3,9 @@
 # upload-r2.sh — 把公证后的 DMG 传到 Cloudflare R2
 # =============================================================================
 #
-# 两条互不覆盖的稳定地址：
-#   正式包  https://download.onecat.dev/Light-Stats.dmg
-#   Beta    https://download.onecat.dev/Light-Stats-beta.dmg
+# 两条互不覆盖的稳定地址（不要用 .dmg 当 permalink，否则浏览器会按 URL 存成无版本文件名）：
+#   正式包  https://download.onecat.dev/stable
+#   Beta    https://download.onecat.dev/beta
 # 版本固定地址：
 #   https://download.onecat.dev/Light-Stats-<version>.dmg
 #
@@ -173,7 +173,7 @@ if prerelease:
         "public, no-cache, must-revalidate",
         None,
     )
-    print("beta URL: https://download.onecat.dev/Light-Stats-beta.dmg")
+    print("beta URL: https://download.onecat.dev/beta")
     print("left Light-Stats.dmg unchanged")
 else:
     put_object(
@@ -198,7 +198,7 @@ else:
         "public, no-cache, must-revalidate",
         None,
     )
-    print("stable URL: https://download.onecat.dev/Light-Stats.dmg")
+    print("stable URL: https://download.onecat.dev/stable")
     print("left Light-Stats-beta.dmg unchanged")
 
 print(f"versioned URL: https://download.onecat.dev/{versioned_name}")

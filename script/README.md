@@ -11,7 +11,7 @@
 | `validate_localization.sh` | 校验 en / zh-Hans / ja / ko 四份 `Localizable.strings` key 一致（CI 在 `quality.yml` 中调用） |
 | `gen-changelog.sh` | 从 git 提交记录生成 CHANGELOG.md（CI 在 `release.yml` 中调用） |
 | `upload-r2.sh` | 把公证 DMG 传到 Cloudflare R2；正式 `Light-Stats.dmg`，Beta `Light-Stats-beta.dmg` |
-| `download-redirect/` | Cloudflare Worker：稳定 URL 302 到带版本号的 DMG |
+| `download-redirect/` | Cloudflare Worker：`/stable` 与 `/beta` 302 到带版本号的 DMG |
 | `add_test_target.rb` | pbxproj 重建后重新接线 XCTest target（`ruby script/add_test_target.rb`） |
 | `add_finder_extension_target.rb` | pbxproj 重建后重新接线 FinderSync extension target |
 | `stress-cpu.sh [秒数]` | 打满所有 CPU 核心（压测健康分） |
