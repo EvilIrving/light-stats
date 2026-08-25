@@ -107,6 +107,16 @@ final class HealthScoreServiceTests: XCTestCase {
         XCTAssertEqual(sub(compute(load1: 40, coreCount: 8, toggles: t), .load), 0, accuracy: 0.001)     // clamps
     }
 
+    func testLoadWeightDoesNotDominateIdleCPU() {
+        // LoadAvg can sit high on an idle Mac. Weight 8 keeps I/O-inflated load
+        // from dominating the blend the way the old weight of 15 did.
+        let t = only(cpu: true, load: true)
+        // CPU idle (100) + 0.85/core load (80).
+        // raw = (100*25 + 80*8) / 33 ≈ 95; cap 80+25 does not bind.
+        let s = compute(cpu: 0, load1: 6.8, coreCount: 8, toggles: t)
+        XCTAssertEqual(s.score, 95)
+    }
+
     // MARK: - Temperature dimension (min of SMC temp score and thermal-state score)
 
     func testTemperatureKnees() {
@@ -188,7 +198,7 @@ final class HealthScoreServiceTests: XCTestCase {
     // MARK: - Bottleneck cap (single saturated performance dim drags the total)
 
     func testBottleneckCapAppliesToPerformanceDimensions() {
-        // CPU 100 + memory 100 + load 0. Weighted avg ≈ 78.6, but a saturated
+        // CPU 100 + memory 100 + load 0. Weighted avg is high, but a saturated
         // performance dimension caps the total at worst(0) + 25 = 25.
         let s = compute(cpu: 0, memoryPressure: .normal, load1: 99, coreCount: 8,
                         toggles: only(cpu: true, memory: true, load: true))

@@ -96,9 +96,10 @@ struct OverviewTabView: View {
                     }
                 }
                 MetricRow(label: "overview.load".localized, icon: "speedometer", trend: loadTrend) {
-                    Text(monitor.loadAverage.displayString)
+                    // 按每核归一化展示（与健康分口径一致），不直接显示被 macOS I/O 线程虚增的系统 LoadAvg。
+                    Text(monitor.loadAverage.perCoreDisplayString(coreCount: loadCoreCount))
                         .font(theme.chromeStyle.metricValueFont)
-                        .foregroundStyle(colorForUsage(loadUsagePercent))
+                        .foregroundStyle(colorForLoad(perCore: loadPerCore))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                 }

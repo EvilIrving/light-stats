@@ -25,7 +25,9 @@ nonisolated enum HealthScoreService {
     private enum Weight {
         static let cpu = 25.0
         static let memory = 30.0
-        static let load = 15.0
+        // 负载权重刻意压低：macOS 的 LoadAvg 会把大量阻塞在 I/O 上的线程算进去，
+        // 经常在 CPU 空闲时仍虚高，与「此刻卡不卡」相关性弱。仅作参考信号，占比约 7%。
+        static let load = 8.0
         static let temperature = 20.0
         static let gpu = 15.0
         // 电源维度：电池电量（笔记本）或磁盘 I/O（台式机回退），共用同一权重

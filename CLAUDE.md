@@ -283,7 +283,7 @@ when pressure stays normal and swap is near zero.
 |-----------|-------:|--------|-------------|
 | `cpu` | 25 | usage % | ≤50→100, 50–85→linear 100→60, 85+→linear 60→0 |
 | `memory` | 30 | min(pressure score, swap%RAM score) | pressure: normal=100, warning=55, critical=15. swap%RAM: ≤2%→100, 2–10%→linear 100→60, 10–25%→linear 60→0 |
-| `load` | 15 | LoadAvg(1m) ÷ core count | ≤0.7→100, 0.7–1.0→linear 100→60, 1.0–2.0→linear 60→0 |
+| `load` | 8 | LoadAvg(1m) ÷ core count | ≤0.7→100, 0.7–1.0→linear 100→60, 1.0–2.0→linear 60→0 (weight deliberately low: macOS LoadAvg counts I/O-blocked threads, often inflated when idle) |
 | `temperature` | 20 | min(SMC temp score, thermal state score) | temp ≤60→100, 60–85→linear 100→60, 85+→linear 60→0. thermal: nominal=100, fair=80, serious=45, critical=10 |
 | `gpu` | 15 | utilisation % | ≤70→100, 70–90→linear 100→60, 90+→linear 60→0 |
 | `power` | 10 | battery charge (laptop) or disk I/O MB/s (desktop) | on AC=100. discharge≥40%→100, <20%→0. diskIO: ≤50→100, 150→60, 300→0 |
@@ -472,11 +472,14 @@ not a stale-version bug.
 | `quality.yml` | Reusable (`workflow_call`) | Parallel SwiftLint, localization, and XCTest gates |
 | `build.yml` | Main push / PR / manual | Reuse quality gates, then package an unsigned DMG artifact |
 | `deploy.yml` | Docs change on main / manual | Build and deploy GitHub Pages independently of app CI |
-| `release.yml` | `v*` tags | Validate SemVer/main ancestry, reuse quality gates, sign + notarise + verify, then publish |
+| `release.yml` | `v*` tags | Validate SemVer/main ancestry, reuse quality gates, sign + notarise + verify, publish GitHub Release, upload DMG to R2 |
 
 Release ordering is mandatory: `prepare + quality` → `notarize` → `publish`. Release notes may run
 in parallel with quality/notarization, but the final GitHub Release depends on both. Apple signing
 secrets are scoped to the `notarize` job; `contents: write` is scoped to `publish` only.
+R2 permalinks stay on separate channels and must not end in `.dmg`: `https://download.onecat.dev/stable`
+(final) and `https://download.onecat.dev/beta` (prerelease). Each 302s to `Light-Stats-<version>.dmg`.
+A permalink that itself ends in `.dmg` is saved without a version. In-app updates still use GitHub Releases.
 
 ### Tests
 

@@ -117,11 +117,23 @@ extension OverviewTabView {
         .foregroundStyle(colorForUsage(usage))
     }
 
-    var loadUsagePercent: Double {
-        let coreCount = monitor.coreTopology.totalCores > 0
+    var loadCoreCount: Int {
+        monitor.coreTopology.totalCores > 0
             ? monitor.coreTopology.totalCores
             : max(monitor.coreUsages.count, 1)
-        return min(100, max(0, monitor.loadAverage.load1 / Double(coreCount) * 100))
+    }
+
+    /// 每核归一化负载（load1 ÷ 核心数），与 HealthScoreService.loadScore 的判断口径一致。
+    var loadPerCore: Double {
+        let cores = loadCoreCount > 0 ? Double(loadCoreCount) : 1
+        return monitor.loadAverage.load1 / cores
+    }
+
+    /// 按每核负载阈值着色：≤0.7 健康、0.7–1.0 临界、>1.0 排队（与健康分曲线同节点）。
+    func colorForLoad(perCore: Double) -> Color {
+        if perCore <= 0.7 { return theme.signalGood }
+        if perCore <= 1.0 { return theme.signalWarn }
+        return theme.signalBad
     }
 
     var cpuTrend: SparklineSeries {
