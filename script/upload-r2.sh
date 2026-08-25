@@ -3,12 +3,14 @@
 # upload-r2.sh — 把公证后的 DMG 传到 Cloudflare R2
 # =============================================================================
 #
-# 稳定公开地址（最终版会覆盖 latest）：
-#   https://download.onecat.dev/Light-Stats.dmg
+# 两条互不覆盖的稳定地址：
+#   正式包  https://download.onecat.dev/Light-Stats.dmg
+#   Beta    https://download.onecat.dev/Light-Stats-beta.dmg
 # 版本固定地址：
 #   https://download.onecat.dev/Light-Stats-<version>.dmg
 #
-# 预发布（tag 含连字符，如 v1.9.1-beta.1）只上传版本对象，不覆盖 latest。
+# 正式 tag 只覆盖 Light-Stats.dmg；预发布（tag 含连字符，如 v1.9.1-beta.1）
+# 只覆盖 Light-Stats-beta.dmg。两条通道的 latest 互不改写。
 # 应用内自动更新仍走 GitHub Releases；R2 只服务站点/分享用的安装包链接。
 #
 # 环境变量：
@@ -139,7 +141,25 @@ put_object(
     None,
 )
 
-if not prerelease:
+if prerelease:
+    put_object(
+        "Light-Stats-beta.dmg",
+        body,
+        "application/x-apple-diskimage",
+        "public, no-cache, must-revalidate",
+        'attachment; filename="Light Stats-beta.dmg"',
+    )
+    sums = f"{digest}  Light-Stats-beta.dmg\n{digest}  {versioned_name}\n"
+    put_object(
+        "SHA256SUMS-beta.txt",
+        sums.encode("utf-8"),
+        "text/plain; charset=utf-8",
+        "public, no-cache, must-revalidate",
+        None,
+    )
+    print("beta URL: https://download.onecat.dev/Light-Stats-beta.dmg")
+    print("left Light-Stats.dmg unchanged")
+else:
     put_object(
         "Light-Stats.dmg",
         body,
@@ -155,9 +175,8 @@ if not prerelease:
         "public, no-cache, must-revalidate",
         None,
     )
-    print(f"stable URL: https://download.onecat.dev/Light-Stats.dmg")
-else:
-    print("prerelease: left Light-Stats.dmg unchanged")
+    print("stable URL: https://download.onecat.dev/Light-Stats.dmg")
+    print("left Light-Stats-beta.dmg unchanged")
 
 print(f"versioned URL: https://download.onecat.dev/{versioned_name}")
 PY

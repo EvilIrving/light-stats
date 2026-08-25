@@ -2,9 +2,9 @@
 
 ## 安装包稳定下载走 Cloudflare R2 · 2026-08-25 11:35 CST · grok
 
-站点给人点的安装包不再用会随 tag 变的 GitHub Releases 附件地址。当前稳定公开地址是 `https://download.onecat.dev/Light-Stats.dmg`，绑在 Cloudflare 账号 `cain` 的 R2 桶 `light-stats` 上，自定义域是 `download.onecat.dev`（zone `onecat.dev`）。版本对象是 `https://download.onecat.dev/Light-Stats-<version>.dmg`，正式版会覆盖 latest，预发布（tag 含连字符）只上传版本对象。校验和在 `SHA256SUMS.txt`。应用内自动更新仍只打 GitHub Releases，R2 不管版本发现。
+站点给人点的安装包不再用会随 tag 变的 GitHub Releases 附件地址。R2 桶 `light-stats` 绑在 `download.onecat.dev`。正式包和 Beta 是两条互不覆盖的通道：`https://download.onecat.dev/Light-Stats.dmg` 只被无连字符的正式 tag 覆盖；`https://download.onecat.dev/Light-Stats-beta.dmg` 只被预发布 tag 覆盖。版本对象是 `Light-Stats-<version>.dmg`。校验和分别是 `SHA256SUMS.txt` 与 `SHA256SUMS-beta.txt`。应用内自动更新仍只打 GitHub Releases，R2 不管版本发现。
 
-发版时 `release.yml` 的 publish job 在创建 GitHub Release 之后调用 `script/upload-r2.sh`。仓库 Secrets 是 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`（S3 兼容 API，账号级，可写该桶）；Variable `R2_BUCKET` 默认 `light-stats`。不要把 R2 密钥写进仓库。边缘对 latest 可能仍套 zone 默认约 4 小时 TTL；覆盖后新 ETag 会在重新校验时生效。GitHub Pages 的 Download 按钮和 JSON-LD `downloadUrl` 指向上述 latest 地址。
+发版时 `release.yml` 的 publish job 在创建 GitHub Release 之后调用 `script/upload-r2.sh`。仓库 Secrets 是 `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`（S3 兼容 API，账号级，可写该桶）；Variable `R2_BUCKET` 默认 `light-stats`。不要把 R2 密钥写进仓库。边缘对 latest 可能仍套 zone 默认约 4 小时 TTL；覆盖后新 ETag 会在重新校验时生效。GitHub Pages 的 Download 按钮和 JSON-LD `downloadUrl` 指向正式包；Beta 是旁边的次要入口。
 
 ## CALayer 复制初始化禁止重建子图层 · 2026-08-19 16:28 CST · agent
 
