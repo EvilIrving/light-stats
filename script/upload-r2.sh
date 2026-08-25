@@ -11,6 +11,8 @@
 #
 # 正式 tag 只覆盖 Light-Stats.dmg；预发布（tag 含连字符，如 v1.9.1-beta.1）
 # 只覆盖 Light-Stats-beta.dmg。两条通道的 latest 互不改写。
+# 稳定 URL 的对象名不变，但 Content-Disposition 带当前版本，下载下来是
+# Light Stats-<version>.dmg，不会长期只叫 Light Stats.dmg。
 # 应用内自动更新仍走 GitHub Releases；R2 只服务站点/分享用的安装包链接。
 #
 # 环境变量：
@@ -51,10 +53,12 @@ done
 python3 - "$DMG_PATH" "$VERSION" "$PRERELEASE" "$R2_BUCKET" <<'PY'
 import hashlib
 import hmac
+import json
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 dmg_path = Path(sys.argv[1])
@@ -72,6 +76,9 @@ digest = hashlib.sha256(body).hexdigest()
 
 def sign(key: bytes, msg: str) -> bytes:
     return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+def attachment_disposition(filename):
+    return f'attachment; filename="{filename}"; filename*=UTF-8\'\'{quote(filename)}'
 
 def put_object(key, data, content_type, cache_control, content_disposition=None):
     now = datetime.now(timezone.utc)
@@ -126,12 +133,13 @@ def put_object(key, data, content_type, cache_control, content_disposition=None)
     print(f"uploaded s3://{bucket}/{key} ({len(data)} bytes)")
 
 versioned_name = f"Light-Stats-{version}.dmg"
+download_name = f"Light Stats-{version}.dmg"
 put_object(
     versioned_name,
     body,
     "application/x-apple-diskimage",
     "public, max-age=31536000, immutable",
-    f'attachment; filename="Light Stats-{version}.dmg"',
+    attachment_disposition(download_name),
 )
 put_object(
     f"{versioned_name}.sha256",
@@ -141,19 +149,27 @@ put_object(
     None,
 )
 
+marker = json.dumps({"version": version, "file": versioned_name}, separators=(",", ":")).encode("utf-8") + b"\n"
 if prerelease:
     put_object(
         "Light-Stats-beta.dmg",
         body,
         "application/x-apple-diskimage",
         "public, no-cache, must-revalidate",
-        'attachment; filename="Light Stats-beta.dmg"',
+        attachment_disposition(download_name),
     )
     sums = f"{digest}  Light-Stats-beta.dmg\n{digest}  {versioned_name}\n"
     put_object(
         "SHA256SUMS-beta.txt",
         sums.encode("utf-8"),
         "text/plain; charset=utf-8",
+        "public, no-cache, must-revalidate",
+        None,
+    )
+    put_object(
+        "latest-beta.json",
+        marker,
+        "application/json",
         "public, no-cache, must-revalidate",
         None,
     )
@@ -165,13 +181,20 @@ else:
         body,
         "application/x-apple-diskimage",
         "public, no-cache, must-revalidate",
-        'attachment; filename="Light Stats.dmg"',
+        attachment_disposition(download_name),
     )
     sums = f"{digest}  Light-Stats.dmg\n{digest}  {versioned_name}\n"
     put_object(
         "SHA256SUMS.txt",
         sums.encode("utf-8"),
         "text/plain; charset=utf-8",
+        "public, no-cache, must-revalidate",
+        None,
+    )
+    put_object(
+        "latest-stable.json",
+        marker,
+        "application/json",
         "public, no-cache, must-revalidate",
         None,
     )

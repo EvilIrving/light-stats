@@ -1,0 +1,16 @@
+name = "light-stats-download"
+main = "worker.js"
+compatibility_date = "2026-08-25"
+account_id = "747065b1adc6a0ad30cfc001dde4d491"
+
+[[routes]]
+pattern = "download.onecat.dev/Light-Stats.dmg"
+zone_name = "onecat.dev"
+
+[[routes]]
+pattern = "download.onecat.dev/Light-Stats-beta.dmg"
+zone_name = "onecat.dev"
+
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "light-stats"
