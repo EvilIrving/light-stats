@@ -53,6 +53,7 @@ playground.xcworkspace
 *~
 
 # AI / agent tooling
+.wrangler/
 .qwen/
 .claude/
 .cursor/

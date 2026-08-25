@@ -228,6 +228,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
       - name: Download notarized release assets
         uses: actions/download-artifact@v4
         with:
@@ -253,3 +256,20 @@ jobs:
             release-assets/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG to Cloudflare R2
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET || 'light-stats' }}
+        run: |
+          set -euo pipefail
+          DMG="$(find release-assets -maxdepth 1 -name '*.dmg' | head -1)"
+          if [ -z "$DMG" ]; then
+            echo "::error::No DMG found in release-assets"
+            exit 1
+          fi
+          ./script/upload-r2.sh "$DMG" "$VERSION" "$PRERELEASE"
