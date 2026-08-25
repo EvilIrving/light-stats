@@ -63,7 +63,7 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # ---- 优先：手工撰写的面向用户 Release Notes ----
 # 存在 docs/releases/<tag>.md 时直接使用（正式版/major 应写这份，勿把 docs: commit 当发布说明）。
-# 面向用户的官网 Changelog 在 docs/index.html 的 Changelog 页签，发版时把新版本插到该页顶部。
+# 面向用户的官网 Changelog 在 docs/index.html 的 Changelog 页签：只写正式版，发版时插到该页顶部。Beta 不上官网。
 curated_notes() {
     local f1="${ROOT}/docs/releases/${TAG}.md"
     local f2="${ROOT}/docs/releases/${TAG#v}.md"

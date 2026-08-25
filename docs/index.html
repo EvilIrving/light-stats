@@ -208,11 +208,6 @@
     .log-head { display: flex; align-items: baseline; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
     .log-head h2 { font-size: 1.05rem; font-weight: 600; font-family: var(--mono); margin: 0; letter-spacing: -0.02em; }
     .log-date { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); }
-    .log-ch {
-      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--live-strong);
-    }
-    .log-ch.beta { color: var(--muted); }
     .log-get { margin-left: auto; font-family: var(--mono); font-size: 0.78rem; }
     .log-item h3 {
       font-size: 0.72rem; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
@@ -526,66 +521,256 @@
         </section>
 
         <!-- ══════════ CHANGELOG ══════════ -->
-        <!-- New versions go at the top. Source notes: docs/releases/ -->
+        <!-- Stable releases only. New official versions go at the top. Do not list betas. -->
         <section data-panel="changelog" class="prose col" hidden>
-          <p>Signed and notarized releases. The Download button always gets the current stable build. Beta is opt-in in the app, and from the Beta link.</p>
-
-          <article class="log-item">
-            <div class="log-head">
-              <h2>1.9.2-beta.1</h2>
-              <span class="log-ch beta">Beta</span>
-              <span class="log-date">25 Aug 2026</span>
-              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.2-beta.1.dmg">Get</a>
-            </div>
-            <h3>Changed</h3>
-            <ul>
-              <li>Health score down-weights LoadAvg. macOS counts I/O-blocked threads, so load can look high while the CPU is idle.</li>
-              <li>Overview load is per-core (load ÷ cores), colored with the same 0.7 / 1.0 knees as the score.</li>
-            </ul>
-          </article>
+          <p>Stable releases only. The Download button always installs the current stable build.</p>
 
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.1</h2>
-              <span class="log-ch">Stable</span>
               <span class="log-date">25 Aug 2026</span>
               <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.1.dmg">Get</a>
             </div>
             <h3>Added</h3>
             <ul>
-              <li>Four themes: Classic, Golden Hour, Amber, Ink Night. Ink Night is the clean-install default. Bento and Ash Veil are gone.</li>
-              <li>Scroll controls for trackpad and Magic Mouse; optional fixed-line wheel scrolling.</li>
-              <li>Keep-awake in the popover toolbar, with optional clamshell virtual display on AC.</li>
-              <li>Optional DDC display brightness, 48-hour local performance recording, and three-hour trend history.</li>
-              <li>Settings split into General, Monitoring, Input Devices, Window Management, AI Usage, and Right-Click Menu.</li>
+              <li>Four themes: Classic, Golden Hour, Amber, Ink Night. New installs use Ink Night. Settings stays a white tool panel.</li>
+              <li>Scroll reverse for trackpad and Magic Mouse, plus optional fixed-line wheel steps.</li>
+              <li>Keep-awake in the popover toolbar, with an optional virtual display for clamshell on AC power.</li>
+              <li>Optional hardware display brightness, 48-hour local performance logs, and three-hour trend lines.</li>
+              <li>Settings destinations: General, Monitoring, Input Devices, Window Management, AI Usage, Right-Click Menu.</li>
             </ul>
             <h3>Fixed</h3>
             <ul>
-              <li>Scroll reversal now updates CGEvent and IOHID together; the tap recovers after wake.</li>
-              <li>Update verification hangs, a quit-time deadlock, and missing notarization tickets.</li>
-              <li>Popover click-through, and titlebar-gesture cancels that still snapped the window.</li>
+              <li>Scroll direction under Natural Scrolling, and restoring the scroll tap after sleep.</li>
+              <li>Updates that hung on verify or quit, and installers missing a notarization ticket.</li>
+              <li>Clicks through empty popover space, and titlebar swipes that snapped after you cancelled.</li>
             </ul>
           </article>
 
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.0</h2>
-              <span class="log-ch">Stable</span>
-              <span class="log-date">12 Jul 2026</span>
+              <span class="log-date">13 Jul 2026</span>
               <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.0.dmg">Get</a>
             </div>
             <h3>Added</h3>
             <ul>
-              <li>Themed product surfaces, Finder right-click actions, and a Stable / Beta update channel.</li>
-              <li>Local diagnostic logs. Automatic update checks off by default.</li>
+              <li>Themed popover, About, Update, and permission prompts. Grain and light motion on Sun Gold and Ink Night.</li>
+              <li>Finder menu: terminal, cmux, typed new-file names. Stable or Beta update channel.</li>
+              <li>Local diagnostic logs. Automatic update checks off on a clean install.</li>
             </ul>
             <h3>Fixed</h3>
             <ul>
-              <li>Finder pickers fighting scroll and gesture services; cleaning mode now blocks media and function keys.</li>
+              <li>Finder pickers fighting scroll and window gestures. Cleaning mode now also blocks media keys.</li>
+              <li>Laptop detection, AC-plugged-not-charging, disk decimals, and pnpm-installed Codex paths.</li>
             </ul>
           </article>
 
-          <p class="updated"><a href="https://github.com/EvilIrving/light-stats/releases" target="_blank" rel="noopener">All GitHub Releases</a></p>
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.8.0</h2>
+              <span class="log-date">28 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.8.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Optional Finder right-click menu, file templates, and Claude/Codex usage-window warmup.</li>
+              <li>Optional keep-display-awake. Settings, About, and Update use system glass.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.7.0</h2>
+              <span class="log-date">27 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.7.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Window management is one master switch. Launch at login.</li>
+              <li>Short trend lines on the overview. Settings grouped by concern.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.6.0</h2>
+              <span class="log-date">21 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.6.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Cleaning mode locks the keyboard. Window snap, global shortcuts, and titlebar swipe.</li>
+              <li>Mouse scroll reverse, spinning fan icon, toast, and a dedicated update window.</li>
+              <li>UI language changes apply without a restart.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.5.2</h2>
+              <span class="log-date">17 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.5.2">GitHub</a>
+            </div>
+            <ul>
+              <li>Reads CLI credentials without a Keychain permission dialog.</li>
+              <li>No AppKit focus rings on settings controls.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.5.1</h2>
+              <span class="log-date">16 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.5.1">GitHub</a>
+            </div>
+            <ul>
+              <li>Maintenance build.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.5.0</h2>
+              <span class="log-date">16 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.5.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Gemini CLI usage. Claude and Codex usage retries when a fetch goes stale.</li>
+              <li>Health dimensions as text with live color. Calmer settings layout.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.4.3</h2>
+              <span class="log-date">16 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.4.3">GitHub</a>
+            </div>
+            <ul>
+              <li>Korean localization.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.4.2</h2>
+              <span class="log-date">16 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.4.2">GitHub</a>
+            </div>
+            <ul>
+              <li>Status bar can show the app icon. Process memory scanning starts only when needed.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.4.1</h2>
+              <span class="log-date">16 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.4.1">GitHub</a>
+            </div>
+            <ul>
+              <li>Health score uses swap page rate. Monitor list uses color. Provider logos for AI usage.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.4.0</h2>
+              <span class="log-date">15 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.4.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Built-in updater: check, download, verify signature and notarization, then replace the app.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.3.0</h2>
+              <span class="log-date">15 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.3.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Health score from live pressure, with optional dimensions. macOS 26 system glass.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.2.2</h2>
+              <span class="log-date">12 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.2.2">GitHub</a>
+            </div>
+            <ul>
+              <li>Stops repeated Keychain permission dialogs. SMC sensor connection stays open.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.2.1</h2>
+              <span class="log-date">10 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.2.1">GitHub</a>
+            </div>
+            <ul>
+              <li>AI usage stays off until you enable it. No battery row on desktops.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.2.0</h2>
+              <span class="log-date">10 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.2.0">GitHub</a>
+            </div>
+            <ul>
+              <li>Claude Code and Codex subscription usage in the panel.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.0.3</h2>
+              <span class="log-date">7 Jun 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.0.3">GitHub</a>
+            </div>
+            <ul>
+              <li>Health score, battery, disk I/O, local proxy, and optional exit-node lookup.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.0.2</h2>
+              <span class="log-date">3 May 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.0.2">GitHub</a>
+            </div>
+            <ul>
+              <li>Menu bar panel as a proper window. About window. Memory cleanup improvements.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.0.1</h2>
+              <span class="log-date">9 Mar 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.0.1">GitHub</a>
+            </div>
+            <ul>
+              <li>Menu bar icon artwork and Chinese documentation.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.0.0</h2>
+              <span class="log-date">9 Mar 2026</span>
+              <a class="log-get" href="https://github.com/EvilIrving/light-stats/releases/tag/v1.0.0">GitHub</a>
+            </div>
+            <ul>
+              <li>First public release: menu bar readings, process list, and memory cleanup.</li>
+            </ul>
+          </article>
+
+          <p class="updated"><a href="https://github.com/EvilIrving/light-stats/releases" target="_blank" rel="noopener">GitHub Releases</a></p>
         </section>
 
         <!-- ══════════ PRIVACY ══════════ -->
@@ -655,7 +840,7 @@
             </div>
             <div>
               <h3>Changelog</h3>
-              <p>Stable and Beta notes, with a download for each listed build.</p>
+              <p>Stable release notes, with a download for each listed build.</p>
               <a class="lnk" href="#changelog">→ Changelog</a>
             </div>
             <div>
