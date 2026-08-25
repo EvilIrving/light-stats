@@ -94,7 +94,7 @@
     }
 
     /* ── Tab bar ─────────────────────────────── */
-    nav.tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunken); border-radius: 9px; border: 1px solid var(--line); margin-bottom: clamp(2.5rem, 5vw, 3.5rem); }
+    nav.tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--sunken); border-radius: 9px; border: 1px solid var(--line); margin-bottom: clamp(2.5rem, 5vw, 3.5rem); }
     nav.tabs button {
       font: inherit; font-size: 0.8125rem; font-weight: 500; cursor: pointer;
       padding: 0.35rem 0.9rem; border: none; border-radius: 7px; background: transparent; color: var(--muted);
@@ -202,6 +202,23 @@
     dl.faq { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 1.1rem; }
     dl.faq dt { font-weight: 600; font-size: 0.9375rem; }
     dl.faq dd { color: var(--muted); font-size: 0.875rem; margin-top: 0.2rem; }
+
+    .log-item { padding: 1.6rem 0; border-bottom: 1px solid var(--line); }
+    .log-item:first-of-type { padding-top: 0.4rem; }
+    .log-head { display: flex; align-items: baseline; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
+    .log-head h2 { font-size: 1.05rem; font-weight: 600; font-family: var(--mono); margin: 0; letter-spacing: -0.02em; }
+    .log-date { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); }
+    .log-ch {
+      font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--live-strong);
+    }
+    .log-ch.beta { color: var(--muted); }
+    .log-get { margin-left: auto; font-family: var(--mono); font-size: 0.78rem; }
+    .log-item h3 {
+      font-size: 0.72rem; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--faint); font-weight: 500; margin: 0.85rem 0 0.25rem;
+    }
+    .log-item h3:first-of-type { margin-top: 0.2rem; }
 
     footer { margin-top: clamp(4rem, 9vw, 7rem); padding-top: 1.5rem; border-top: 1px solid var(--line); }
     footer p { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); letter-spacing: 0.02em; }
@@ -316,6 +333,7 @@
 
     <nav class="tabs" aria-label="Site sections">
       <button type="button" data-tab="landing">Overview</button>
+      <button type="button" data-tab="changelog">Changelog</button>
       <button type="button" data-tab="privacy">Privacy</button>
       <button type="button" data-tab="support">Support</button>
     </nav>
@@ -507,6 +525,69 @@
           </div>
         </section>
 
+        <!-- ══════════ CHANGELOG ══════════ -->
+        <!-- New versions go at the top. Source notes: docs/releases/ -->
+        <section data-panel="changelog" class="prose col" hidden>
+          <p>Signed and notarized releases. The Download button always gets the current stable build. Beta is opt-in in the app, and from the Beta link.</p>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.2-beta.1</h2>
+              <span class="log-ch beta">Beta</span>
+              <span class="log-date">25 Aug 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.2-beta.1.dmg">Get</a>
+            </div>
+            <h3>Changed</h3>
+            <ul>
+              <li>Health score down-weights LoadAvg. macOS counts I/O-blocked threads, so load can look high while the CPU is idle.</li>
+              <li>Overview load is per-core (load ÷ cores), colored with the same 0.7 / 1.0 knees as the score.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.1</h2>
+              <span class="log-ch">Stable</span>
+              <span class="log-date">25 Aug 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.1.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>Four themes: Classic, Golden Hour, Amber, Ink Night. Ink Night is the clean-install default. Bento and Ash Veil are gone.</li>
+              <li>Scroll controls for trackpad and Magic Mouse; optional fixed-line wheel scrolling.</li>
+              <li>Keep-awake in the popover toolbar, with optional clamshell virtual display on AC.</li>
+              <li>Optional DDC display brightness, 48-hour local performance recording, and three-hour trend history.</li>
+              <li>Settings split into General, Monitoring, Input Devices, Window Management, AI Usage, and Right-Click Menu.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Scroll reversal now updates CGEvent and IOHID together; the tap recovers after wake.</li>
+              <li>Update verification hangs, a quit-time deadlock, and missing notarization tickets.</li>
+              <li>Popover click-through, and titlebar-gesture cancels that still snapped the window.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.0</h2>
+              <span class="log-ch">Stable</span>
+              <span class="log-date">12 Jul 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.0.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>Themed product surfaces, Finder right-click actions, and a Stable / Beta update channel.</li>
+              <li>Local diagnostic logs. Automatic update checks off by default.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Finder pickers fighting scroll and gesture services; cleaning mode now blocks media and function keys.</li>
+            </ul>
+          </article>
+
+          <p class="updated"><a href="https://github.com/EvilIrving/light-stats/releases" target="_blank" rel="noopener">All GitHub Releases</a></p>
+        </section>
+
         <!-- ══════════ PRIVACY ══════════ -->
         <section data-panel="privacy" class="prose col" hidden>
           <p>Light Stats is local by default. It has no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. Optional features contact only the service needed to perform the action described below.</p>
@@ -573,6 +654,11 @@
               <a class="lnk" href="mailto:jescain2024@gmail.com">→ jescain2024@gmail.com</a>
             </div>
             <div>
+              <h3>Changelog</h3>
+              <p>Stable and Beta notes, with a download for each listed build.</p>
+              <a class="lnk" href="#changelog">→ Changelog</a>
+            </div>
+            <div>
               <h3>Frequently asked</h3>
               <dl class="faq">
                 <div>
@@ -620,14 +706,14 @@
 
     <footer>
       <p>Not affiliated with Apple Inc. Apple, macOS, and Mac are trademarks of Apple Inc.</p>
-      <p>Open source under the MIT License.</p>
+      <p>Open source under the MIT License. <a href="#changelog">Changelog</a></p>
     </footer>
 
   </div>
 </div>
 
 <script>
-  const validTabs = ['landing', 'privacy', 'support']
+  const validTabs = ['landing', 'changelog', 'privacy', 'support']
   const buttons = document.querySelectorAll('[data-tab]')
   const panels = document.querySelectorAll('[data-panel]')
 
