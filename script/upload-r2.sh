@@ -12,7 +12,7 @@
 # 正式 tag 只覆盖 Light-Stats.dmg；预发布（tag 含连字符，如 v1.9.1-beta.1）
 # 只覆盖 Light-Stats-beta.dmg。两条通道的 latest 互不改写。
 # 稳定 URL 的对象名不变，但 Content-Disposition 带当前版本，下载下来是
-# Light Stats-<version>.dmg，不会长期只叫 Light Stats.dmg。
+# Light-Stats-<version>.dmg，不会长期只叫 Light-Stats.dmg。
 # 应用内自动更新仍走 GitHub Releases；R2 只服务站点/分享用的安装包链接。
 #
 # 环境变量：
@@ -24,7 +24,7 @@
 #   PRERELEASE           true/false（可用参数 3）
 #
 # 用法：
-#   ./script/upload-r2.sh "build/output/Light Stats-1.9.0.dmg" 1.9.0 false
+#   ./script/upload-r2.sh "build/output/Light-Stats-1.9.0.dmg" 1.9.0 false
 # =============================================================================
 
 set -euo pipefail
@@ -133,7 +133,7 @@ def put_object(key, data, content_type, cache_control, content_disposition=None)
     print(f"uploaded s3://{bucket}/{key} ({len(data)} bytes)")
 
 versioned_name = f"Light-Stats-{version}.dmg"
-download_name = f"Light Stats-{version}.dmg"
+download_name = f"Light-Stats-{version}.dmg"
 put_object(
     versioned_name,
     body,

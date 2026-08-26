@@ -166,7 +166,7 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
-          DMG="build/output/Light Stats-${VERSION}.dmg"
+          DMG="build/output/Light-Stats-${VERSION}.dmg"
           test -f "$DMG"
 
           xcrun stapler validate "$DMG"
@@ -187,9 +187,19 @@ jobs:
           spctl --assess --verbose=2 --type execute "$APP"
           codesign -dv --verbose=4 "$APP" 2>&1 | grep -q '^TeamIdentifier=QZZ878S3NS$'
 
+          HELPER="$APP/Contents/Resources/LightStatsBatteryHelper"
+          test -x "$HELPER"
+          codesign --verify --strict --verbose=2 "$HELPER"
+          codesign -dv --verbose=4 "$HELPER" 2>&1 | grep -q '^TeamIdentifier=QZZ878S3NS$'
+          if codesign -d --entitlements :- "$HELPER" 2>&1 \
+              | grep -q 'com.apple.developer.service-management.managed-by-main-app'; then
+            echo "::error::Battery helper contains a restricted entitlement without a provisioning profile"
+            exit 1
+          fi
+
           (
             cd build/output
-            shasum -a 256 "Light Stats-${VERSION}.dmg" > SHA256SUMS.txt
+            shasum -a 256 "Light-Stats-${VERSION}.dmg" > SHA256SUMS.txt
           )
 
       - name: Upload release diagnostics
