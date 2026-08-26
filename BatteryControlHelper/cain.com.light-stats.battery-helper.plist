@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>cain.com.light-stats.battery-helper</string>
+    <key>BundleProgram</key>
+    <string>Contents/Resources/LightStatsBatteryHelper</string>
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>cain.com.light-stats</string>
+    </array>
+    <key>MachServices</key>
+    <dict>
+        <key>cain.com.light-stats.battery-helper</key>
+        <true/>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>

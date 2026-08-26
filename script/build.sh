@@ -42,6 +42,8 @@ fi
 APP_PATH="$OUTPUT_DIR/$APP_NAME.app"
 MAIN_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
 FINDER_EXTENSION_PATH="$APP_PATH/Contents/PlugIns/FinderMenuExtension.appex"
+BATTERY_HELPER_PATH="$APP_PATH/Contents/Resources/LightStatsBatteryHelper"
+BATTERY_HELPER_ENTITLEMENTS="BatteryControlHelper/BatteryControlHelper.entitlements"
 APP_NOTARY_ARCHIVE="$BUILD_DIR/${APP_NAME}-${VERSION}.zip"
 
 verify_signed_runtime() {
@@ -162,6 +164,12 @@ if [ -n "${DEVELOPER_ID:-}" ]; then
     echo "✍️  签名..."
     codesign --force --verify \
       --options runtime \
+      --entitlements "$BATTERY_HELPER_ENTITLEMENTS" \
+      --sign "$DEVELOPER_ID" \
+      --timestamp \
+      "$BATTERY_HELPER_PATH"
+    codesign --force --verify \
+      --options runtime \
       --entitlements "$FINDER_EXTENSION_ENTITLEMENTS" \
       --sign "$DEVELOPER_ID" \
       --timestamp \
@@ -173,6 +181,7 @@ if [ -n "${DEVELOPER_ID:-}" ]; then
       --timestamp \
       "$APP_PATH"
     codesign --verify --strict --deep --verbose=2 "$APP_PATH"
+    verify_signed_runtime "$BATTERY_HELPER_PATH" "Battery helper"
     verify_signed_runtime "$FINDER_EXTENSION_PATH" "FinderSync 扩展"
     verify_signed_runtime "$APP_PATH" "App bundle"
     verify_signed_runtime "$MAIN_BINARY" "主二进制文件"

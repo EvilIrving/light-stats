@@ -42,6 +42,12 @@
 "settings.refreshAndUnits" = "刷新与单位";
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
+"settings.batteryProtection.section" = "电池保护";
+"settings.batteryProtection.enabled" = "控制充电";
+"settings.batteryProtection.hint" = "达到上限停止，低于下限恢复";
+"settings.batteryProtection.helperHint" = "需系统授权。卸载前请先关闭。";
+"settings.batteryProtection.upperLimit" = "停止充电";
+"settings.batteryProtection.lowerLimit" = "低于此值恢复";
 "settings.language" = "语言";
 "settings.minimumItemAlert" = "状态栏至少需要显示一个系统状态";
 "settings.ok" = "确定";
@@ -89,6 +95,17 @@
 "battery.state.discharging" = "使用电池";
 "battery.state.charged" = "已充满";
 "battery.state.acNotCharging" = "已接电源";
+"battery.control.status.disabled" = "保护关闭";
+"battery.control.status.charging" = "充电中";
+"battery.control.status.holding" = "已暂停充电";
+"battery.control.status.discharging" = "使用电池";
+"battery.control.status.unavailable" = "不可用";
+"battery.control.status.error" = "控制失败";
+"battery.control.unsupportedDevice" = "此 Mac 不支持";
+"battery.control.approvalRequired" = "请在系统设置中允许电池助手";
+"battery.control.helperUnavailable" = "电池助手不可用";
+"battery.control.applyFailed" = "无法应用电池保护";
+"battery.control.resetFailed" = "无法恢复正常充电";
 
 // MARK: - Health
 "health.title" = "健康";

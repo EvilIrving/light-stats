@@ -33,7 +33,7 @@ Themes (Overview):
 
 Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for power users and developers who want quick status checks without keeping Activity Monitor open, plus optional workflow context for AI coding agents, networks, and Finder.
 
-The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; network requests and persistent system interactions are **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, and no outbound request.
+The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; network requests and persistent system interactions are **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, no privileged helper, and no outbound request.
 
 ---
 
@@ -189,6 +189,7 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 - Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures)
 - Finder menu, terminal selection, cmux actions, favorite directories, apps, and file templates
 - Health score dimension toggles
+- Battery protection (opt-in charge limits via a signed privileged helper; turn off before uninstalling)
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
 The Settings sidebar links directly to **General**, **Monitoring**, **Input Devices**, **Window Management**, **AI Usage**, and **Right-Click Menu**. It is navigation-only and does not show runtime status dots. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.

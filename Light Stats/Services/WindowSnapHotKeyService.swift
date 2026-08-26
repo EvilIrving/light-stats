@@ -1,27 +1,27 @@
 //
-//  MagnetHotKeyService.swift
+//  WindowSnapHotKeyService.swift
 //  Light Stats
 //
-//  Registers Magnet-style global shortcuts and routes them to WindowSnappingService.
+//  Registers global snap shortcuts and routes them to WindowSnappingService.
 //
 
 import Carbon
 import Foundation
 import OSLog
 
-protocol MagnetHotKeyControlling: AnyObject {
+protocol WindowSnapHotKeyControlling: AnyObject {
     var isRunning: Bool { get }
     func start() -> Bool
     func stop()
 }
 
-final class MagnetHotKeyService: MagnetHotKeyControlling {
+final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
     private struct Registration {
         var reference: EventHotKeyRef
         var action: WindowSnapAction
     }
 
-    private let logger = AppLogger(category: "MagnetHotKeys")
+    private let logger = AppLogger(category: "WindowSnapHotKeys")
     private let snappingService: WindowSnappingService
     private var registrations: [UInt32: Registration] = [:]
     private var eventHandler: EventHandlerRef?
@@ -47,7 +47,7 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
             stop()
             return false
         }
-        logger.info("Magnet hotkeys started with \(self.registrations.count) registrations")
+        logger.info("Window snap hotkeys started with \(self.registrations.count) registrations")
         return true
     }
 
@@ -57,7 +57,7 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
         }
         registrations.removeAll()
         removeHandler()
-        logger.info("Magnet hotkeys stopped")
+        logger.info("Window snap hotkeys stopped")
     }
 
     private func installHandler() -> Bool {
@@ -70,7 +70,7 @@ final class MagnetHotKeyService: MagnetHotKeyControlling {
 
         let callback: EventHandlerUPP = { _, event, userData in
             guard let event, let userData else { return noErr }
-            let service = Unmanaged<MagnetHotKeyService>.fromOpaque(userData).takeUnretainedValue()
+            let service = Unmanaged<WindowSnapHotKeyService>.fromOpaque(userData).takeUnretainedValue()
             service.handle(event: event)
             return noErr
         }

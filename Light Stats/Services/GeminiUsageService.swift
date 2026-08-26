@@ -155,7 +155,7 @@ nonisolated enum GeminiUsageService {
 
     /// Attempts the request with URLSession; on timeout, retries with /usr/bin/curl.
     /// Google Cloud APIs sometimes trigger NSURLErrorTimedOut spuriously on macOS;
-    /// curl often succeeds on the same network (CodexBar pattern).
+    /// curl often succeeds on the same network.
     private static func fetchWithCurlFallback(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await URLSession.shared.data(for: request)

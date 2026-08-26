@@ -11,6 +11,8 @@ macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · 
 ## Layout
 
 ```
+BatteryControlShared/                # XPC protocol + charge-limit policy
+BatteryControlHelper/                # Privileged SMAppService daemon (opt-in, default off)
 Light Stats/
 ├── LightStatsApp.swift              # @main, Settings scene
 ├── AppDelegate.swift                # NSStatusItem + popover lifecycle
@@ -45,7 +47,7 @@ Light Stats/
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
 │   ├── WindowSnappingService.swift  # AX window move/resize snap engine
 │   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
-│   ├── MagnetHotKeyService.swift    # Global snap hotkeys (CGEventTap, opt-in)
+│   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
 │   ├── TitlebarGestureService.swift # Titlebar swipe-to-snap (CGEventTap, opt-in)
 │   ├── AccessibilityPermission.swift # Shared AXIsProcessTrusted check + prompt
 │   ├── LaunchAtLoginService.swift   # SMAppService login-item registration
@@ -98,7 +100,7 @@ Light Stats/
 │   ├── SVGIcon.swift                # Template-tinted bundle SVG
 │   └── WindowSnapIconProvider.swift # SF Symbol icons for snap actions
 └── Resources/
-    ├── Icons/                       # Reicon Outline metric SVGs
+    ├── Icons/                       # Metric SVG outlines
     ├── en.lproj/Localizable.strings
     ├── zh-Hans.lproj/Localizable.strings
     ├── ja.lproj/Localizable.strings
@@ -167,7 +169,7 @@ actor ExitNodeService {
 Services return Model types. They never return View types or ObservableObject conformances.
 They are forbidden from importing ViewModels or Views.
 
-**Shape C — opt-in event-tap services.** `ScrollDirectionService`, `MagnetHotKeyService`,
+**Shape C — opt-in event-tap services.** `ScrollDirectionService`, `WindowSnapHotKeyService`,
 `TitlebarGestureService`, and `KeyboardLockService` each own a `CGEventTap` (or an
 Accessibility session via `WindowSnappingService`) behind a `start()/stop()` lifecycle.
 They are the only services that hold OS-level taps, so they are also the only ones gated by
@@ -527,6 +529,8 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   installed until the matching switch is turned on.
 - **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
   alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
+- **No privileged helper.** Battery charge control is off; a clean install does not register the
+  `SMAppService` daemon or open its Mach service.
 - **Window management is a single master switch.** `windowManagementEnabled` (default off)
   drives the menu bar icon **and** snap shortcuts **and** titlebar gestures together —
   on = icon + shortcuts + gestures + taps all start; off = all stop. There are no
@@ -543,6 +547,6 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
 - No content cards behind instrument readouts — the scene is the surface. Do not
   reintroduce Bento-style plates as “reading boards”.
 - No plugin system — every metric is a built-in Service.
-- No background daemon — runs as a normal menu bar app; no XPC, no LaunchAgents.
+- Privileged helper is opt-in — battery charge control registers an SMAppService daemon only when enabled.
 - No remote telemetry — the app phones home only for user-initiated update checks and opt-in exit-node detection.
 - No Intel-only or pre-macOS-14 support — Apple Silicon is the primary target.

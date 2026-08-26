@@ -1,5 +1,13 @@
 # Project Memory
 
+## Light Stats 与其他开源软件只保留致敬关系 · 2026-08-26 01:39 CST · pi
+
+产品已经自成体系。以后不要再把 Light Stats 写成 Stats 或其他菜单栏工具的衍生、对标实现或技术借鉴产物。对外文案、代码注释、服务命名都按独立产品处理；唯一要保留的第三方关系是许可证要求的图标致谢（`Resources/Icons/ATTRIBUTION.txt`：Reicon / Solar Icons / Zappicon）。
+
+已删除内部对标研究：`docs/stats-anylysis.md`、`docs/monitoring-metrics-research.md`、`docs/audience-research.md`。窗口快捷键服务从 `MagnetHotKeyService` 改名为 `WindowSnapHotKeyService`（协议 `WindowSnapHotKeyControlling`）。Claude / Codex / Gemini、终端和 cmux 仍是产品集成对象，不是来源项目。
+
+下方滚动反转条目里的 Scroll Reverser / UnnaturalScrollWheels / Mac Mouse Fix 只解释历史上的 IOHID 实现约束，不表示当前产品从那些项目衍生。不要把那些名字写回代码或对外文档。
+
 ## 安装包稳定下载走 Cloudflare R2 · 2026-08-25 11:35 CST · grok
 
 站点给人点的安装包不再用会随 tag 变的 GitHub Releases 附件地址。R2 桶 `light-stats` 绑在 `download.onecat.dev`。稳定 permalink **不能以 `.dmg` 结尾**：浏览器（尤其 Safari）会用 URL 最后一段当文件名，点 `Light-Stats.dmg` 就会存成不带版本的包。对外地址是 `https://download.onecat.dev/stable` 与 `https://download.onecat.dev/beta`。Worker `light-stats-download` 把它们 302 到 `Light-Stats-<version>.dmg`。旧的 `/Light-Stats.dmg` 与 `/Light-Stats-beta.dmg` 仍跳转，只作兼容。Worker 读 `latest-stable.json` / `latest-beta.json`。校验和是 `SHA256SUMS.txt` 与 `SHA256SUMS-beta.txt`。应用内自动更新仍只打 GitHub Releases。

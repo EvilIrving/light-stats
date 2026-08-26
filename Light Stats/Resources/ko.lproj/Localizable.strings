@@ -42,6 +42,12 @@
 "settings.refreshAndUnits" = "새로고침 및 단위";
 "settings.units" = "단위 설정";
 "settings.temperatureUnit" = "온도";
+"settings.batteryProtection.section" = "배터리 보호";
+"settings.batteryProtection.enabled" = "충전 제어";
+"settings.batteryProtection.hint" = "상한에서 중지하고 하한 아래에서 재개";
+"settings.batteryProtection.helperHint" = "시스템 승인이 필요합니다. 삭제 전에 끄세요.";
+"settings.batteryProtection.upperLimit" = "충전 중지";
+"settings.batteryProtection.lowerLimit" = "충전 재개 하한";
 "settings.language" = "언어";
 "settings.minimumItemAlert" = "메뉴 막대 항목을 하나 이상 표시해야 합니다";
 "settings.ok" = "확인";
@@ -89,6 +95,17 @@
 "battery.state.discharging" = "배터리 사용";
 "battery.state.charged" = "충전 완료";
 "battery.state.acNotCharging" = "전원 연결됨";
+"battery.control.status.disabled" = "보호 꺼짐";
+"battery.control.status.charging" = "충전 중";
+"battery.control.status.holding" = "충전 일시 중지";
+"battery.control.status.discharging" = "배터리 사용";
+"battery.control.status.unavailable" = "사용 불가";
+"battery.control.status.error" = "제어 오류";
+"battery.control.unsupportedDevice" = "이 Mac에서는 사용할 수 없음";
+"battery.control.approvalRequired" = "시스템 설정에서 배터리 도우미를 허용하세요";
+"battery.control.helperUnavailable" = "배터리 도우미를 사용할 수 없음";
+"battery.control.applyFailed" = "배터리 보호를 적용할 수 없음";
+"battery.control.resetFailed" = "일반 충전으로 복원할 수 없음";
 
 // MARK: - Health
 "health.title" = "건강도";

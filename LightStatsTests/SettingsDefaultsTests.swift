@@ -82,6 +82,22 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().keepAwakeEnabled)
     }
 
+    func testBatteryChargeControlDefaultsOff() {
+        let settings = freshSettings()
+        XCTAssertFalse(settings.batteryChargeControlEnabled)
+        XCTAssertEqual(settings.batteryChargeUpperLimit, BatteryControlLimits.defaultUpper)
+        XCTAssertEqual(settings.batteryChargeLowerLimit, BatteryControlLimits.defaultLower)
+        XCTAssertFalse(settings.batteryChargeHelperMayBeControlling)
+    }
+
+    func testBatteryChargeLimitsClampStoredValues() {
+        cleanDefaults.set(10, forKey: "settings.batteryChargeUpperLimit")
+        cleanDefaults.set(0, forKey: "settings.batteryChargeLowerLimit")
+        let settings = freshSettings()
+        XCTAssertEqual(settings.batteryChargeUpperLimit, BatteryControlLimits.minimumUpper)
+        XCTAssertEqual(settings.batteryChargeLowerLimit, BatteryControlLimits.minimumLower)
+    }
+
     // MARK: - Monitoring core defaults (positive controls)
 
     func testCoreMonitoringDefaultsStayOn() {

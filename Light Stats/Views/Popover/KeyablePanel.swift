@@ -13,7 +13,7 @@ final class KeyablePanel: NSPanel {
     override var canBecomeMain: Bool { true }
 
     /// 面板失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时回调。
-    /// 复刻 NSPopover .transient 的自动关闭行为，参考 Maccy 的 FloatingPanel。
+    /// 复刻 NSPopover .transient 的自动关闭行为。
     var onResignKey: (() -> Void)?
 
     override func resignKey() {

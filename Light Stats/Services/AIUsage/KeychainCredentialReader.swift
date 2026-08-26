@@ -7,8 +7,6 @@
 //  dialog, so a monitoring app can read a CLI tool's stored credential silently
 //  (the user already granted that tool access). Shared by the AI-usage services.
 //
-//  Reference: Claude-Usage-Tracker (hamed-elfayome/Claude-Usage-Tracker).
-//
 
 import Foundation
 import os

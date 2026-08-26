@@ -273,5 +273,9 @@ extension Notification.Name {
 #if DEBUG
 #Preview {
     PopoverContentView()
+        .environmentObject(SystemMonitor.shared)
+        .environmentObject(AIUsageMonitor.shared)
+        .environmentObject(DisplayControlManager.shared)
+        .environmentObject(BatteryChargeControlManager.shared)
 }
 #endif

@@ -42,6 +42,12 @@
 "settings.refreshAndUnits" = "更新と単位";
 "settings.units" = "単位設定";
 "settings.temperatureUnit" = "温度単位";
+"settings.batteryProtection.section" = "バッテリー保護";
+"settings.batteryProtection.enabled" = "充電を制御";
+"settings.batteryProtection.hint" = "上限で停止し、下限を下回ると再開";
+"settings.batteryProtection.helperHint" = "システム許可が必要。削除前にオフにしてください。";
+"settings.batteryProtection.upperLimit" = "充電停止";
+"settings.batteryProtection.lowerLimit" = "充電再開の下限";
 "settings.language" = "言語";
 "settings.minimumItemAlert" = "少なくとも1つのステータスバー項目を表示する必要があります";
 "settings.ok" = "OK";
@@ -89,6 +95,17 @@
 "battery.state.discharging" = "バッテリー駆動";
 "battery.state.charged" = "充電完了";
 "battery.state.acNotCharging" = "電源接続中";
+"battery.control.status.disabled" = "保護オフ";
+"battery.control.status.charging" = "充電中";
+"battery.control.status.holding" = "充電一時停止";
+"battery.control.status.discharging" = "バッテリー駆動";
+"battery.control.status.unavailable" = "利用不可";
+"battery.control.status.error" = "制御エラー";
+"battery.control.unsupportedDevice" = "この Mac では利用できません";
+"battery.control.approvalRequired" = "システム設定でバッテリー補助機能を許可してください";
+"battery.control.helperUnavailable" = "バッテリー補助機能を利用できません";
+"battery.control.applyFailed" = "バッテリー保護を適用できません";
+"battery.control.resetFailed" = "通常の充電に戻せません";
 
 // MARK: - Health
 "health.title" = "健康度";

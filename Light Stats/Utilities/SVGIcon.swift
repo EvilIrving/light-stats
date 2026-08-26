@@ -2,8 +2,8 @@
 //  SVGIcon.swift
 //  Light Stats
 //
-//  Bundle SVG → template-tinted SwiftUI image. Used for Reicon Outline icons
-//  (and any future monochrome SVG assets under Resources/Icons/).
+//  Bundle SVG → template-tinted SwiftUI image. Used for monochrome metric
+//  SVG assets under Resources/Icons/.
 //
 
 import AppKit
@@ -19,6 +19,7 @@ enum AppSVGIcon: String {
     case disk
     case temperature
     case processes
+    case batteryCharge = "battery-charge"
 }
 
 /// Renders a bundle SVG as a template image (picks up `foregroundStyle` / tint).

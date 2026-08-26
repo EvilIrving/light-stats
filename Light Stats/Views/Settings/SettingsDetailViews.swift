@@ -212,6 +212,7 @@ struct MonitoringDetail: View {
                     item("settings.health", $settings.showHealth, "heart.text.square")
                 }
             }
+            BatteryChargeProtectionSection(settings: settings)
             SettingsSection("settings.refreshAndUnits".localized) {
                 SettingsGroup {
                     SettingsRow("settings.refreshRate.label".localized) {

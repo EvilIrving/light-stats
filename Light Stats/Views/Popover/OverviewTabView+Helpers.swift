@@ -256,6 +256,26 @@ extension OverviewTabView {
         }
     }
 
+    func batteryControlStatusText(_ status: BatteryChargeControlStatus) -> String {
+        switch status {
+        case .disabled: return "battery.control.status.disabled".localized
+        case .charging: return "battery.control.status.charging".localized
+        case .holding: return "battery.control.status.holding".localized
+        case .discharging: return "battery.control.status.discharging".localized
+        case .unavailable: return "battery.control.status.unavailable".localized
+        case .error: return "battery.control.status.error".localized
+        }
+    }
+
+    func batteryControlStatusColor(_ status: BatteryChargeControlStatus) -> Color {
+        switch status {
+        case .charging: return theme.signalWarn
+        case .holding: return theme.signalGood
+        case .discharging, .disabled: return theme.inkMuted
+        case .unavailable, .error: return theme.signalBad.opacity(0.85)
+        }
+    }
+
     func batteryTimeText(_ battery: BatteryInfo) -> String? {
         guard battery.state != .charged, battery.state != .acNotCharging,
               let minutes = battery.timeRemaining, minutes > 0 else {

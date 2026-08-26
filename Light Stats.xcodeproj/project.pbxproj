@@ -30,9 +30,18 @@
 		F24E8CA7BD77C5A06B851C33 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */; };
 		FD71052D19A898945F9D4557 /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */; };
 		FE5621022D1FCBCBE9889361 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DF32BDFC092895A8EC0A53 /* FinderMenuRequest.swift */; };
+		3CD25D59874245EC89402CC3 /* LightStatsBatteryHelper in Embed Battery Helper */ = {isa = PBXBuildFile; fileRef = 47CC92E2625846ADBA2A7EC2 /* LightStatsBatteryHelper */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
+		0E19B635D6E84EE286F035F7 /* cain.com.light-stats.battery-helper.plist in Embed Battery Helper LaunchDaemon */ = {isa = PBXBuildFile; fileRef = E50922D362FA442D984FB9D8 /* cain.com.light-stats.battery-helper.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		9C2F8A1D4E6B47B09D5E3C18 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A4163D412EFBC3DB0013ED8C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BAF31963E4D940E39DF2A908;
+			remoteInfo = LightStatsBatteryHelper;
+		};
 		D20107429E5ACFCA3B242278 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A4163D412EFBC3DB0013ED8C /* Project object */;
@@ -61,6 +70,28 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		22BF5FF086CF4F4896EBD2EA /* Embed Battery Helper */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				3CD25D59874245EC89402CC3 /* LightStatsBatteryHelper in Embed Battery Helper */,
+			);
+			name = "Embed Battery Helper";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A09E852120764CFC90778D3D /* Embed Battery Helper LaunchDaemon */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "../Library/LaunchDaemons";
+			dstSubfolderSpec = 7;
+			files = (
+				0E19B635D6E84EE286F035F7 /* cain.com.light-stats.battery-helper.plist in Embed Battery Helper LaunchDaemon */,
+			);
+			name = "Embed Battery Helper LaunchDaemon";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -75,6 +106,8 @@
 		7C473C581872387215E268E4 /* LightStatsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LightStatsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuController.swift; sourceTree = "<group>"; };
 		A4163D492EFBC3DB0013ED8C /* Light Stats.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Light Stats.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		47CC92E2625846ADBA2A7EC2 /* LightStatsBatteryHelper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = LightStatsBatteryHelper; sourceTree = BUILT_PRODUCTS_DIR; };
+		E50922D362FA442D984FB9D8 /* cain.com.light-stats.battery-helper.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "BatteryControlHelper/cain.com.light-stats.battery-helper.plist"; sourceTree = "<group>"; };
 		A475FD742F164E9000806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A475FDC32F165B3900806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		A475FF0E2F175DC600806CD9 /* menu-stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "menu-stats.xcodeproj"; sourceTree = "<group>"; };
@@ -94,6 +127,15 @@
 			);
 			target = A4163D482EFBC3DB0013ED8C /* Light Stats */;
 		};
+		B7E41C9A2F5846D08A13C5E2 /* Exceptions for "BatteryControlHelper" folder in "LightStatsBatteryHelper" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BatteryControlHelper.entitlements,
+				Info.plist,
+				cain.com.light-stats.battery-helper.plist,
+			);
+			target = BAF31963E4D940E39DF2A908 /* LightStatsBatteryHelper */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -112,10 +154,32 @@
 			path = "Light Stats";
 			sourceTree = "<group>";
 		};
+		EB6E7E0D7C2B4B92A771C347 /* BatteryControlShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = BatteryControlShared;
+			sourceTree = "<group>";
+		};
+		F481688B5C6E451A91870DA3 /* BatteryControlHelper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B7E41C9A2F5846D08A13C5E2 /* Exceptions for "BatteryControlHelper" folder in "LightStatsBatteryHelper" target */,
+			);
+			path = BatteryControlHelper;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		2355D6DD73130BE018864AE6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		54AC454D271244E9AD24C20A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -154,6 +218,9 @@
 			isa = PBXGroup;
 			children = (
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
+				EB6E7E0D7C2B4B92A771C347 /* BatteryControlShared */,
+				F481688B5C6E451A91870DA3 /* BatteryControlHelper */,
+				E50922D362FA442D984FB9D8 /* cain.com.light-stats.battery-helper.plist */,
 				A4163D4A2EFBC3DB0013ED8C /* Products */,
 				52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */,
 				C019218879934C3EA19D7C71 /* FinderMenu */,
@@ -165,6 +232,7 @@
 			isa = PBXGroup;
 			children = (
 				A4163D492EFBC3DB0013ED8C /* Light Stats.app */,
+				47CC92E2625846ADBA2A7EC2 /* LightStatsBatteryHelper */,
 				7C473C581872387215E268E4 /* LightStatsTests.xctest */,
 				E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */,
 			);
@@ -260,14 +328,18 @@
 				A4163D462EFBC3DB0013ED8C /* Frameworks */,
 				A4163D472EFBC3DB0013ED8C /* Resources */,
 				6EE48E23A84CB7EC8EACE2E4 /* Embed Foundation Extensions */,
+				22BF5FF086CF4F4896EBD2EA /* Embed Battery Helper */,
+				A09E852120764CFC90778D3D /* Embed Battery Helper LaunchDaemon */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				70A4396006F7ED4528FE16AF /* PBXTargetDependency */,
+				75AF49613701490AB1638BBD /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A4163D4B2EFBC3DB0013ED8C /* Light Stats */,
+				EB6E7E0D7C2B4B92A771C347 /* BatteryControlShared */,
 			);
 			name = "Light Stats";
 			productName = "Light Stats";
@@ -291,6 +363,27 @@
 			productReference = E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		BAF31963E4D940E39DF2A908 /* LightStatsBatteryHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B9E2EAB100164636AFD4B3B0 /* Build configuration list for PBXNativeTarget "LightStatsBatteryHelper" */;
+			buildPhases = (
+				AE5A2F23668E4BF0A8C3647B /* Sources */,
+				54AC454D271244E9AD24C20A /* Frameworks */,
+				FA4B3D1D22BD41EEBBA122C3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EB6E7E0D7C2B4B92A771C347 /* BatteryControlShared */,
+				F481688B5C6E451A91870DA3 /* BatteryControlHelper */,
+			);
+			name = LightStatsBatteryHelper;
+			productName = LightStatsBatteryHelper;
+			productReference = 47CC92E2625846ADBA2A7EC2 /* LightStatsBatteryHelper */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -302,6 +395,9 @@
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					A4163D482EFBC3DB0013ED8C = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					BAF31963E4D940E39DF2A908 = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -352,6 +448,7 @@
 				A4163D482EFBC3DB0013ED8C /* Light Stats */,
 				2DBF011A75D43B2B5DCC0246 /* LightStatsTests */,
 				AD1B0FF495F6021E26524778 /* FinderMenuExtension */,
+				BAF31963E4D940E39DF2A908 /* LightStatsBatteryHelper */,
 			);
 		};
 /* End PBXProject section */
@@ -372,6 +469,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AD8BEC7FE1657D16381EC4B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA4B3D1D22BD41EEBBA122C3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -417,6 +521,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AE5A2F23668E4BF0A8C3647B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -431,6 +542,12 @@
 			name = FinderMenuExtension;
 			target = AD1B0FF495F6021E26524778 /* FinderMenuExtension */;
 			targetProxy = D20107429E5ACFCA3B242278 /* PBXContainerItemProxy */;
+		};
+		75AF49613701490AB1638BBD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = LightStatsBatteryHelper;
+			target = BAF31963E4D940E39DF2A908 /* LightStatsBatteryHelper */;
+			targetProxy = 9C2F8A1D4E6B47B09D5E3C18 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -866,6 +983,58 @@
 			};
 			name = Debug;
 		};
+		5AB5B666F28244A5810733D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BatteryControlHelper/BatteryControlHelper.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BatteryControlHelper/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.battery-helper";
+				PRODUCT_NAME = LightStatsBatteryHelper;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B7069544EDBE46B68C5C5FA4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = BatteryControlHelper/BatteryControlHelper.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = QZZ878S3NS;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = BatteryControlHelper/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.battery-helper";
+				PRODUCT_NAME = LightStatsBatteryHelper;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -892,6 +1061,15 @@
 			buildConfigurations = (
 				A4163D572EFBC3DC0013ED8C /* Debug */,
 				A4163D582EFBC3DC0013ED8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B9E2EAB100164636AFD4B3B0 /* Build configuration list for PBXNativeTarget "LightStatsBatteryHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5AB5B666F28244A5810733D0 /* Debug */,
+				B7069544EDBE46B68C5C5FA4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

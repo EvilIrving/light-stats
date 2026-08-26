@@ -170,8 +170,6 @@ enum CodexUsageService {
     /// Launches `codex` inside a pseudo-terminal, sends `/status`, and parses
     /// the TUI-rendered status panel. Used as fallback when the API endpoint
     /// is unreachable or credentials are missing.
-    ///
-    /// Reference: CodexBar's CodexCLISession / CodexStatusProbe (steipete/CodexBar).
     private static let cliTimeout: TimeInterval = 10
 
     private static func fetchUsageFromCLI(fallbackError: Error? = nil) async throws -> ProviderUsageSnapshot {

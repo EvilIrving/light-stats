@@ -9,22 +9,6 @@ import AppKit
 import SwiftUI
 import Combine
 
-private enum PanelDismissReason: String {
-    case resignKey
-    case globalMouseDown
-    case statusItemToggle
-    case externalRequest
-
-    var isAutomatic: Bool {
-        switch self {
-        case .resignKey, .globalMouseDown:
-            return true
-        case .statusItemToggle, .externalRequest:
-            return false
-        }
-    }
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
@@ -41,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
     private var lastGlobalMouseDownAt: Date?
     private var windowControlPermissionAlertShown = false
+    var isPreparingTermination = false
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -48,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let appMemoryManager: AppMemoryManager
     private let scrollService: ScrollReversing
     private let windowSnappingService: WindowSnappingService
-    private let magnetHotKeyService: MagnetHotKeyControlling
+    private let windowSnapHotKeyService: WindowSnapHotKeyControlling
     private let titlebarGestureService: TitlebarGestureControlling
     private static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
         (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf),
@@ -67,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.scrollService = ScrollDirectionService()
         let windowSnappingService = WindowSnappingService()
         self.windowSnappingService = windowSnappingService
-        self.magnetHotKeyService = MagnetHotKeyService(snappingService: windowSnappingService)
+        self.windowSnapHotKeyService = WindowSnapHotKeyService(snappingService: windowSnappingService)
         self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
         super.init()
     }
@@ -85,63 +70,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
         _ = CleaningModeOverlayController.shared
 
-        // 滚动处理：垂直反转 / 水平反转 / 步长倍率 / 加速度 / 触控板 任一变更都重新同步服务。
-        Publishers.MergeMany([
-            settings.$scrollReverseEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollReverseHorizontalEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollStepMultiplier.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollDisableAcceleration.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollLines.dropFirst().map { _ in () }.eraseToAnyPublisher(),
-            settings.$scrollIncludeTrackpad.dropFirst().map { _ in () }.eraseToAnyPublisher()
-        ])
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.syncScrollService() }
-            .store(in: &cancellables)
-
-        // 窗口管理总开关：单一开关同时驱动菜单栏图标、快捷键、标题栏手势的起停。
-        settings.$windowManagementEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.windowControlPermissionAlertShown = false
-                self?.syncWindowControlServices()
-            }
-            .store(in: &cancellables)
-
-        // Finder 右键菜单总开关：开 → 注册宿主 CFMessagePort；关 → 注销。
-        settings.$finderMenuEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.syncFinderMenuService() }
-            .store(in: &cancellables)
-
-        // 保持唤醒总开关：开 → 空闲断言 + 插电合盖虚拟屏；关 → 全部释放。
-        settings.$keepAwakeEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.syncKeepAwakeService() }
-            .store(in: &cancellables)
-
-        settings.$displayBrightnessControlEnabled
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] enabled in
-                self?.displayControlManager.setEnabled(enabled)
-            }
-            .store(in: &cancellables)
-
-        // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
-        settings.$appLanguage
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { _ in FinderMenuHostService.shared.publishLabels() }
-            .store(in: &cancellables)
+        observePreferenceChanges()
 
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
         syncScrollService()
         syncWindowControlServices()
         syncFinderMenuService()
         syncKeepAwakeService()
+        if BatteryChargeControlManager.privilegedLifecycleAllowed {
+            syncBatteryChargeControl()
+        }
         displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
@@ -349,6 +287,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 .environmentObject(monitor)
                 .environmentObject(AIUsageMonitor.shared)
                 .environmentObject(displayControlManager)
+                .environmentObject(BatteryChargeControlManager.shared)
         )
 
         // 失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时自动关闭，
@@ -580,6 +519,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         syncWindowControlServices()
         displayControlManager.applicationDidBecomeActive()
+        if BatteryChargeControlManager.privilegedLifecycleAllowed {
+            BatteryChargeControlManager.shared.applicationDidBecomeActive()
+        }
         if settings.finderMenuEnabled {
             syncFinderMenuService()
             FinderMenuConfigStore.shared.refreshExtensionStatus()
@@ -597,22 +539,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
     }
 
+    private func syncBatteryChargeControl() {
+        BatteryChargeControlManager.shared.synchronize(
+            enabled: settings.batteryChargeControlEnabled,
+            upperLimit: settings.batteryChargeUpperLimit,
+            lowerLimit: settings.batteryChargeLowerLimit
+        )
+    }
+
     /// 窗口管理总开关统一驱动：开 → 图标 + 快捷键 + 手势全起；关 → 三者一起停。
     private func syncWindowControlServices() {
         if settings.windowManagementEnabled {
             ensureWindowControlsStatusItem()
-            startMagnetHotKeysOrPrompt()
+            startWindowSnapHotKeysOrPrompt()
             startTitlebarGesturesOrPrompt()
         } else {
-            magnetHotKeyService.stop()
+            windowSnapHotKeyService.stop()
             titlebarGestureService.stop()
             removeWindowControlsStatusItem()
         }
     }
 
-    private func startMagnetHotKeysOrPrompt() {
-        guard !magnetHotKeyService.isRunning else { return }
-        if magnetHotKeyService.start() { return }
+    private func startWindowSnapHotKeysOrPrompt() {
+        guard !windowSnapHotKeyService.isRunning else { return }
+        if windowSnapHotKeyService.start() { return }
         if !windowSnappingService.checkPermission(promptIfNeeded: false) {
             presentWindowControlPermissionAlert()
         }
@@ -662,16 +612,6 @@ extension AppDelegate {
         dismissPanel(reason: .externalRequest)
     }
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        DiagnosticLogService.record(category: "application", action: "willTerminate")
-        stopRuntimeServices()
-        return .terminateNow
-    }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        stopRuntimeServices()
-    }
-
     private func syncKeepAwakeService() {
         if settings.keepAwakeEnabled {
             KeepAwakeService.shared.start()
@@ -690,7 +630,7 @@ extension AppDelegate {
         }
     }
 
-    private func stopRuntimeServices() {
+    func stopRuntimeServices() {
         statusBarView?.stopFanAnimation()
         monitor.stopMonitoring()
         appMemoryManager.stopMonitoring()
@@ -698,15 +638,90 @@ extension AppDelegate {
         AIUsageMonitor.shared.stop()
         UsageWarmupManager.shared.stopAll()
         scrollService.stop()
-        magnetHotKeyService.stop()
+        windowSnapHotKeyService.stop()
         titlebarGestureService.stop()
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
+        BatteryChargeControlManager.shared.shutdown()
         SMCInfo.shutdown()
     }
 }
 
 private extension AppDelegate {
+    func observePreferenceChanges() {
+        // 滚动处理：垂直反转 / 水平反转 / 步长倍率 / 加速度 / 触控板 任一变更都重新同步服务。
+        Publishers.MergeMany([
+            settings.$scrollReverseEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollReverseHorizontalEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollStepMultiplier.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollDisableAcceleration.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollLines.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$scrollIncludeTrackpad.dropFirst().map { _ in () }.eraseToAnyPublisher()
+        ])
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.syncScrollService() }
+            .store(in: &cancellables)
+
+        // 电池保护：设置变更时把上下限同步到特权 helper；XCTest 宿主不启动特权生命周期。
+        if BatteryChargeControlManager.privilegedLifecycleAllowed {
+            Publishers.CombineLatest3(
+                settings.$batteryChargeControlEnabled,
+                settings.$batteryChargeUpperLimit,
+                settings.$batteryChargeLowerLimit
+            )
+                .dropFirst()
+                .sink { enabled, upperLimit, lowerLimit in
+                    Task { @MainActor in
+                        BatteryChargeControlManager.shared.synchronize(
+                            enabled: enabled,
+                            upperLimit: upperLimit,
+                            lowerLimit: lowerLimit
+                        )
+                    }
+                }
+                .store(in: &cancellables)
+        }
+
+        // 窗口管理总开关：单一开关同时驱动菜单栏图标、快捷键、标题栏手势的起停。
+        settings.$windowManagementEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.windowControlPermissionAlertShown = false
+                self?.syncWindowControlServices()
+            }
+            .store(in: &cancellables)
+
+        // Finder 右键菜单总开关：开 → 注册宿主 CFMessagePort；关 → 注销。
+        settings.$finderMenuEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncFinderMenuService() }
+            .store(in: &cancellables)
+
+        // 保持唤醒总开关：开 → 空闲断言 + 插电合盖虚拟屏；关 → 全部释放。
+        settings.$keepAwakeEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.syncKeepAwakeService() }
+            .store(in: &cancellables)
+
+        settings.$displayBrightnessControlEnabled
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                self?.displayControlManager.setEnabled(enabled)
+            }
+            .store(in: &cancellables)
+
+        // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
+        settings.$appLanguage
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { _ in FinderMenuHostService.shared.publishLabels() }
+            .store(in: &cancellables)
+    }
+
     func recordApplicationLaunch() {
         DiagnosticLogService.record(
             category: "application",

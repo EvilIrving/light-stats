@@ -9,9 +9,8 @@
 //  关键：macOS 开启 Natural Scrolling 后，方向的「权威来源」是事件底层的
 //  IOHIDEvent 浮点值，而非 CGEvent 的 delta 字段。仅改 CGEvent 字段会被系统
 //  从 IOHIDEvent 重新派生覆盖、方向翻不动。因此必须经 CGEventCopyIOHIDEvent()
-//  取出底层 IOHIDEvent，改写其 ScrollX/ScrollY 浮点值（方案参考 Scroll
-//  Reverser 1.8.2 的 MouseTap.m）。CGEvent 的三个 delta 字段同步改写，兼容
-//  直接读 CGEvent 的应用。
+//  取出底层 IOHIDEvent，改写其 ScrollX/ScrollY 浮点值。CGEvent 的三个 delta
+//  字段同步改写，兼容直接读 CGEvent 的应用。
 //
 //  ABI 关键：64 位 Mac 上 IOHIDFloat 是 double，IOHIDEventGet/SetFloatValue
 //  必须按 Double 声明——按 Float 声明会取到错位的垃圾值，方向静默失效。

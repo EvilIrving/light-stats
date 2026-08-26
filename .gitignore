@@ -6,6 +6,9 @@ DerivedData/
 *.xcscmblueprint
 xcuserdata/
 stats-master/*
+design/reicon/outline/
+design/reicon/filled/
+design/reicon/*.zip
 # Swift Package Manager
 build/
 .swiftpm/

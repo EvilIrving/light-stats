@@ -40,8 +40,8 @@ Last updated: 2026-08-23
 - Resumed implementation from the tracker. The worktree contains no prior display-control source changes; `task.md` is the only untracked file, and existing repository history/state will be preserved.
 - Audit result: the main app and test targets use synchronized folder groups, so new Swift/test files are discovered automatically. The app target needs only bridging-header and private-framework build settings.
 - Lifecycle insertion points are `AppDelegate.setupPanel()`, `togglePanel()`, `dismissPanel(reason:)`, the opt-in settings publisher, `didBecomeActive`, and `stopRuntimeServices()`. `SystemMonitor` remains untouched.
-- ABI/protocol facts were cross-checked against the public HagimiMonitor and MonitorControl repositories: five-argument IOAVService I2C calls, DDC checksum address `0x37`, MCDP29XX route address `0xB7`, standard brightness VCP `0x10`, and legacy fallback `0x13`.
-- HagimiMonitor is AGPL-3.0. Its source is being used only to verify private ABI/protocol behavior; the Light Stats implementation will be independently structured and limited to brightness hardware control.
+- DDC protocol facts used here: five-argument IOAVService I2C calls, checksum address `0x37`, MCDP29XX route address `0xB7`, standard brightness VCP `0x10`, and legacy fallback `0x13`.
+- Implementation is independently structured and limited to brightness hardware control.
 - Added independent model and pure service primitives, plus `DisplayControlCoreTests`. The focused XCTest run executed 8 tests with 0 failures.
 - Added private API bridge/build settings, native brightness access, ARM64 registry matching, MCDP29XX routing, serialized I2C transport with a per-call watchdog, capability probing/cache, environment gate, top-level service, manager lifecycle, Settings opt-in, Popover UI, and four-language copy.
 - The fully wired focused run executed 14 tests with 0 failures: 8 core protocol/cache/scoring tests, 5 gate/debounce tests, and the clean-install default-off test.

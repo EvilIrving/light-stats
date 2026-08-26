@@ -14,8 +14,6 @@
 //  │  4. security find-generic-password -w → Keychain CLI     │
 //  │     ^^^ /usr/bin/security subprocess — NO auth dialog    │
 //  │     (unlike SecItemCopyMatching).                        │
-//  │     Reference: Claude-Usage-Tracker                      │
-//  │     (hamed-elfayome/Claude-Usage-Tracker).               │
 //  │  5. Truncated JSON fallback: regex "accessToken":"..."   │
 //  │     (expiry unknown → recovery relies on the 401 signal).│
 //  └──────────────────────────────────────────────────────────┘
@@ -75,7 +73,6 @@ private struct CachedCredential {
 /// Parses the `claudeAiOauth` credential JSON into a token + expiry.
 /// Falls back to a regex extraction when the JSON is truncated (Keychain limit);
 /// in that case the expiry is unknown and recovery relies on the 401 signal.
-/// Reference: Claude-Usage-Tracker's Keychain truncation recovery.
 private func parseClaudeCredential(from data: Data) -> CachedCredential? {
     guard !data.isEmpty else { return nil }
     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -360,8 +357,6 @@ enum ClaudeUsageService {
     /// Launches `claude` inside a pseudo-terminal, sends `/usage`, and parses
     /// the TUI-rendered usage panel. This is the ultimate fallback — it requires
     /// no network access and works as long as `claude` is installed and logged in.
-    ///
-    /// Reference: CodexBar's ClaudeCLISession / ClaudeStatusProbe (steipete/CodexBar).
     private static let cliTimeout: TimeInterval = 14
 
     private static func fetchUsageFromCLI() async throws -> ProviderUsageSnapshot {

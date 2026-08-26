@@ -583,7 +583,6 @@ enum SMCInfo {
     }
 
     // MARK: - SMC Structures (must match AppleSMC.kext exactly)
-    // Based on smctemp.h from https://github.com/narugit/smctemp
 
     private struct SMCVersion {
         var major: CChar = 0
