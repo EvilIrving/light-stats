@@ -4,7 +4,5 @@
 <dict>
     <key>com.apple.security.app-sandbox</key>
     <false/>
-    <key>com.apple.developer.service-management.managed-by-main-app</key>
-    <true/>
 </dict>
 </plist>

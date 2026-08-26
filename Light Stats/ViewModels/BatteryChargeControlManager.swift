@@ -188,7 +188,10 @@ final class BatteryChargeControlManager: ObservableObject {
                 try service.register()
             } catch {
                 helperStatus = service.status
-                if helperStatus == .requiresApproval {
+                let registrationError = error as NSError
+                if helperStatus == .requiresApproval
+                    || (registrationError.domain == NSPOSIXErrorDomain
+                        && registrationError.code == Int(EPERM)) {
                     openApprovalSettings()
                     throw BatteryControlManagerError.requiresApproval
                 }
