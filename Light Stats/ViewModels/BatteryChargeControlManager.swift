@@ -183,8 +183,17 @@ final class BatteryChargeControlManager: ObservableObject {
         case .enabled:
             didOpenApprovalSettings = false
             snapshot.helperAvailable = true
-        case .notRegistered:
-            try service.register()
+        case .notRegistered, .notFound:
+            do {
+                try service.register()
+            } catch {
+                helperStatus = service.status
+                if helperStatus == .requiresApproval {
+                    openApprovalSettings()
+                    throw BatteryControlManagerError.requiresApproval
+                }
+                throw error
+            }
             helperStatus = service.status
             if helperStatus == .requiresApproval {
                 openApprovalSettings()
@@ -198,8 +207,6 @@ final class BatteryChargeControlManager: ObservableObject {
         case .requiresApproval:
             openApprovalSettings()
             throw BatteryControlManagerError.requiresApproval
-        case .notFound:
-            throw BatteryControlManagerError.registrationFailed
         @unknown default:
             throw BatteryControlManagerError.registrationFailed
         }
