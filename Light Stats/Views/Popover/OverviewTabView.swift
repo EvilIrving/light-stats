@@ -42,7 +42,8 @@ struct OverviewTabView: View {
             thermalStrip
             PanelDivider().padding(.vertical, 10)
             aiSection
-            if settings.displayBrightnessControlEnabled, !displayControlManager.displays.isEmpty {
+            if settings.displayBrightnessControlEnabled,
+               !displayControlManager.adjustableDisplays.isEmpty {
                 DisplayBrightnessSection()
                 PanelDivider().padding(.vertical, 10)
             }

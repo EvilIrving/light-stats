@@ -325,5 +325,6 @@
 "display.builtIn" = "内蔵ディスプレイ";
 "display.external" = "外部ディスプレイ";
 "settings.displayControl" = "ディスプレイの明るさ";
+"settings.displayControl.hint" = "KVM / ドックは DDC を遮断しやすく、輝度は変えられません。";
 "display.role.builtIn" = "内蔵";
 "display.role.external" = "外部";

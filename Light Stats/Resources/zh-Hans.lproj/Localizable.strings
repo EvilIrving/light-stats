@@ -325,5 +325,6 @@
 "display.builtIn" = "内建显示器";
 "display.external" = "外接显示器";
 "settings.displayControl" = "显示器亮度";
+"settings.displayControl.hint" = "KVM / 扩展坞常拦截 DDC，无法调硬件亮度。";
 "display.role.builtIn" = "内建屏";
 "display.role.external" = "外接屏";

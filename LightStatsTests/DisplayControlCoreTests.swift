@@ -141,6 +141,40 @@ final class DisplayControlCoreTests: XCTestCase {
         XCTAssertEqual(DisplayMatchScorer.score(display: display, service: nameOnly), 2)
     }
 
+    func testHardwareAdjustableRequiresSupportedCapability() {
+        let supported = ControlledDisplay(
+            id: 2,
+            storageID: "display.000010AC.0000436A.4242394C",
+            displayName: "DELL U2725QE",
+            backend: .ddc,
+            isBuiltIn: false,
+            capability: .supported,
+            brightness: 81
+        )
+        let unknown = ControlledDisplay(
+            id: 3,
+            storageID: "display.000010AC.000041AC.41595A57",
+            displayName: "DELL U2719DS",
+            backend: .ddc,
+            isBuiltIn: false,
+            capability: .unknown,
+            brightness: 73
+        )
+        let unsupported = ControlledDisplay(
+            id: 4,
+            storageID: "display.000010AC.000041AC.41595A57",
+            displayName: "DELL U2719DS",
+            backend: .ddc,
+            isBuiltIn: false,
+            capability: .unsupported,
+            brightness: 73
+        )
+
+        XCTAssertTrue(supported.isHardwareAdjustable)
+        XCTAssertFalse(unknown.isHardwareAdjustable)
+        XCTAssertFalse(unsupported.isHardwareAdjustable)
+    }
+
     private func makeReply(
         resultCode: UInt8,
         code: UInt8,

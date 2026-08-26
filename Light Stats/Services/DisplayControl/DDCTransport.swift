@@ -12,7 +12,17 @@ actor DDCTransport {
     private static let watchdogDuration: Duration = .seconds(2)
 
     private let logger = AppLogger(category: "DisplayControl")
-    private var activeKernelCallID: UUID?
+    private let bus = DDCBusState()
+    private var didLogHungSkip = false
+
+    var isHung: Bool {
+        bus.isHung
+    }
+
+    func resetHungState() {
+        bus.resetHung()
+        didLogHungSkip = false
+    }
 
     func read(
         route: DDCServiceRoute,
@@ -20,8 +30,10 @@ actor DDCTransport {
         retries: Int = 3
     ) async -> DDCPacketCodec.Reply? {
 #if arch(arm64)
+        guard !skipHungBus() else { return nil }
         let packet = DDCPacketCodec.readRequest(vcpCode: code.rawValue)
         for _ in 0..<max(1, retries) {
+            guard !skipHungBus() else { return nil }
             var wrotePacket = false
             for _ in 0..<2 {
                 try? await Task.sleep(for: .milliseconds(10))
@@ -58,8 +70,10 @@ actor DDCTransport {
         retries: Int = 3
     ) async -> Bool {
 #if arch(arm64)
+        guard !skipHungBus() else { return false }
         let packet = DDCPacketCodec.writeRequest(vcpCode: code.rawValue, value: value)
         for _ in 0..<max(1, retries) {
+            guard !skipHungBus() else { return false }
             var success = false
             for _ in 0..<2 {
                 try? await Task.sleep(for: .milliseconds(10))
@@ -122,13 +136,14 @@ actor DDCTransport {
     private func runKernelCall(
         _ operation: @escaping @Sendable () -> KernelCallResult
     ) async -> KernelCallResult? {
-        guard activeKernelCallID == nil else {
+        if skipHungBus() {
+            return nil
+        }
+        guard let callID = bus.beginCall() else {
             logger.error("Skipped DDC I/O while a timed-out kernel call is still active")
             return nil
         }
 
-        let callID = UUID()
-        activeKernelCallID = callID
         let result: KernelCallResult? = await withCheckedContinuation { (continuation: CheckedContinuation<KernelCallResult?, Never>) in
             let watchdog = DDCWatchdogBox<KernelCallResult>(continuation: continuation)
             Thread.detachNewThread { [weak self] in
@@ -144,18 +159,26 @@ actor DDCTransport {
             }
         }
 
-        if result != nil, activeKernelCallID == callID {
-            activeKernelCallID = nil
-        } else if result == nil {
+        if result == nil {
+            bus.markHung()
             logger.error("DDC kernel call exceeded the 2 second watchdog")
+        } else {
+            bus.completeCall(callID)
         }
         return result
     }
 
     private func kernelCallDidFinish(_ callID: UUID) {
-        if activeKernelCallID == callID {
-            activeKernelCallID = nil
+        bus.completeCall(callID)
+    }
+
+    private func skipHungBus() -> Bool {
+        guard bus.isHung else { return false }
+        if !didLogHungSkip {
+            didLogHungSkip = true
+            logger.error("Skipped DDC I/O after a hung kernel call")
         }
+        return true
     }
 
     private struct KernelCallResult: Sendable {

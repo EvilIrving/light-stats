@@ -12,7 +12,7 @@ struct DisplayBrightnessSection: View {
     var body: some View {
         PanelSection(title: "display.section".localized) {
             VStack(spacing: 10) {
-                ForEach(manager.displays) { display in
+                ForEach(manager.adjustableDisplays) { display in
                     displayRow(display)
                 }
             }

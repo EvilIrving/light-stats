@@ -73,4 +73,34 @@ final class DisplayControlLifecycleTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(60))
         XCTAssertEqual(writtenValues, [1: 25, 2: 80])
     }
+
+    func testHardwareBrightnessSwitchStartsEnabledUntilUseFails() {
+        let manager = DisplayControlManager()
+        XCTAssertTrue(manager.canEnableHardwareBrightness)
+        XCTAssertFalse(manager.hardwareBrightnessUnavailable)
+    }
+
+    func testHungBusStopsFurtherIOAfterWatchdogTimeout() {
+        let bus = DDCBusState()
+        XCTAssertFalse(bus.isHung)
+        XCTAssertFalse(bus.hasActiveCall)
+
+        guard let first = bus.beginCall() else {
+            return XCTFail("Expected the first DDC call to acquire the bus")
+        }
+        XCTAssertNil(bus.beginCall())
+
+        bus.markHung()
+        XCTAssertTrue(bus.isHung)
+        XCTAssertTrue(bus.hasActiveCall)
+        XCTAssertNil(bus.beginCall(), "A hung bus must not start another kernel call")
+
+        bus.resetHung()
+        XCTAssertFalse(bus.isHung)
+        XCTAssertNil(bus.beginCall(), "The timed-out kernel call still owns the bus")
+
+        bus.completeCall(first)
+        XCTAssertFalse(bus.hasActiveCall)
+        XCTAssertNotNil(bus.beginCall())
+    }
 }

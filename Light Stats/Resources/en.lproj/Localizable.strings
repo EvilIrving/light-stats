@@ -323,5 +323,6 @@
 "display.builtIn" = "Built-in Display";
 "display.external" = "External Display";
 "settings.displayControl" = "Display Brightness";
+"settings.displayControl.hint" = "KVM/docks often block DDC; hardware brightness unavailable.";
 "display.role.builtIn" = "Built-in";
 "display.role.external" = "External";

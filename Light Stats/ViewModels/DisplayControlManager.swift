@@ -10,6 +10,7 @@ import Foundation
 final class DisplayControlManager: ObservableObject {
     @Published private(set) var displays: [ControlledDisplay] = []
     @Published private(set) var isRefreshing = false
+    @Published private(set) var hardwareBrightnessUnavailable = false
 
     static let shared = DisplayControlManager()
 
@@ -49,11 +50,17 @@ final class DisplayControlManager: ObservableObject {
             gate.start { [weak self] in
                 self?.environmentDidChange()
             }
-            refresh()
-            syncPolling()
+            Task { @MainActor [weak self] in
+                await self?.service.resetHungBus()
+                guard let self, self.isEnabled else { return }
+                self.refresh()
+                self.syncPolling()
+            }
         } else {
-            gate.stop()
             stopRuntimeWork(clearDisplays: true)
+            if !hardwareBrightnessUnavailable {
+                gate.stop()
+            }
         }
     }
 
@@ -98,14 +105,21 @@ final class DisplayControlManager: ObservableObject {
         scheduleWrite(value: clampedValue, displayID: displayID)
     }
 
+    var adjustableDisplays: [ControlledDisplay] {
+        displays.filter(\.isHardwareAdjustable)
+    }
+
+    var canEnableHardwareBrightness: Bool {
+        !hardwareBrightnessUnavailable
+    }
+
     func isAdjustable(displayID: UInt32) -> Bool {
-        guard let display = displays.first(where: { $0.id == displayID }) else { return false }
-        return display.capability == .supported || display.capability == .unknown
+        displays.first { $0.id == displayID }?.isHardwareAdjustable == true
     }
 
     func stop() {
-        guard isEnabled else { return }
         isEnabled = false
+        hardwareBrightnessUnavailable = false
         gate.stop()
         stopRuntimeWork(clearDisplays: true)
     }
@@ -141,15 +155,13 @@ final class DisplayControlManager: ObservableObject {
                 return
             }
 
-            let detectedIDs = Set(detected.map(\.id))
-            self.pendingValues = self.pendingValues.filter { detectedIDs.contains($0.key) }
-            self.recentlySetValues = self.recentlySetValues.filter { detectedIDs.contains($0.key) }
-            self.lastWrittenValues = self.lastWrittenValues.filter { detectedIDs.contains($0.key) }
             self.displays = detected.map { display in
                 var result = display
                 result.brightness = self.protectedBrightness(for: display)
                 return result
             }
+            self.publishAvailability()
+            self.pruneTransientState()
             self.isRefreshing = false
             self.retryPendingWrites()
         }
@@ -192,16 +204,23 @@ final class DisplayControlManager: ObservableObject {
 
     private func pollBrightness() async {
         guard isEnabled, isPanelVisible, !gate.isSuppressed else { return }
-        let displayIDs = displays.map(\.id)
+        let displayIDs = adjustableDisplays.map(\.id)
         for displayID in displayIDs {
             guard pendingValues[displayID] == nil,
                   !isGripProtected(displayID: displayID),
-                  let brightness = await service.readBrightness(displayID: displayID),
                   let index = displays.firstIndex(where: { $0.id == displayID })
             else {
                 continue
             }
-            displays[index].brightness = brightness
+            if let brightness = await service.readBrightness(displayID: displayID) {
+                displays[index].brightness = brightness
+                continue
+            }
+            if await service.capability(displayID: displayID) == .unsupported {
+                displays[index].capability = .unsupported
+                pruneTransientState()
+                publishAvailability()
+            }
         }
     }
 
@@ -233,6 +252,13 @@ final class DisplayControlManager: ObservableObject {
             lastWrittenValues[displayID] = value
         } else {
             logger.error("Brightness write failed for display \(displayID)")
+            if await service.capability(displayID: displayID) == .unsupported,
+               let index = displays.firstIndex(where: { $0.id == displayID }) {
+                displays[index].capability = .unsupported
+                pruneTransientState()
+                publishAvailability()
+                return
+            }
         }
         clearPendingValue(value, displayID: displayID)
     }
@@ -250,9 +276,31 @@ final class DisplayControlManager: ObservableObject {
     }
 
     private func environmentDidChange() {
-        guard isEnabled else { return }
-        refresh()
-        retryPendingWrites()
+        hardwareBrightnessUnavailable = false
+        if !isEnabled {
+            gate.stop()
+            return
+        }
+        Task { @MainActor [weak self] in
+            await self?.service.resetHungBus()
+            guard let self, self.isEnabled else { return }
+            self.refresh()
+            self.retryPendingWrites()
+        }
+    }
+
+    private func publishAvailability() {
+        let available = displays.contains(where: \.isHardwareAdjustable)
+        hardwareBrightnessUnavailable = !available
+        guard !available, SettingsManager.shared.displayBrightnessControlEnabled else { return }
+        SettingsManager.shared.displayBrightnessControlEnabled = false
+    }
+
+    private func pruneTransientState() {
+        let adjustableIDs = Set(displays.filter(\.isHardwareAdjustable).map(\.id))
+        pendingValues = pendingValues.filter { adjustableIDs.contains($0.key) }
+        recentlySetValues = recentlySetValues.filter { adjustableIDs.contains($0.key) }
+        lastWrittenValues = lastWrittenValues.filter { adjustableIDs.contains($0.key) }
     }
 
     private func stopRuntimeWork(clearDisplays: Bool) {

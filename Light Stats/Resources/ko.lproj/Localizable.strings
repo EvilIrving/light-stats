@@ -325,5 +325,6 @@
 "display.builtIn" = "내장 디스플레이";
 "display.external" = "외장 디스플레이";
 "settings.displayControl" = "디스플레이 밝기";
+"settings.displayControl.hint" = "KVM/독은 DDC를 막는 경우가 많아 밝기를 조절할 수 없습니다.";
 "display.role.builtIn" = "내장";
 "display.role.external" = "외장";

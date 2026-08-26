@@ -109,7 +109,11 @@ actor DisplayControlService {
         case .native:
             return nativeBrightness.brightness(displayID: displayID)
         case .ddc:
-            return await ddcController.readBrightness(displayID: displayID)
+            let brightness = await ddcController.readBrightness(displayID: displayID)
+            if brightness == nil, await ddcController.isBusHung() {
+                displaysByID[displayID]?.capability = .unsupported
+            }
+            return brightness
         }
     }
 
@@ -130,8 +134,18 @@ actor DisplayControlService {
         if success {
             saveBrightness(value, storageID: display.storageID)
             displaysByID[displayID]?.brightness = value
+        } else if display.backend == .ddc, await ddcController.isBusHung() {
+            displaysByID[displayID]?.capability = .unsupported
         }
         return success
+    }
+
+    func capability(displayID: UInt32) -> DisplayControlCapability? {
+        displaysByID[displayID]?.capability
+    }
+
+    func resetHungBus() async {
+        await ddcController.resetHungBus()
     }
 
     func stop() async {

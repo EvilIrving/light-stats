@@ -192,6 +192,7 @@ struct GeneralDetail: View {
 
 struct MonitoringDetail: View {
     @ObservedObject var settings: SettingsManager
+    @ObservedObject private var displayControlManager = DisplayControlManager.shared
     @Binding var showPrivacyAlert: Bool
     let onValidate: () -> Void
 
@@ -234,8 +235,13 @@ struct MonitoringDetail: View {
             }
             SettingsSection("display.section".localized) {
                 SettingsGroup {
-                    SettingsRow("settings.displayControl".localized) {
+                    SettingsRow(
+                        "settings.displayControl".localized,
+                        subtitle: "settings.displayControl.hint".localized
+                    ) {
                         SettingsToggle(isOn: $settings.displayBrightnessControlEnabled)
+                            .disabled(!displayControlManager.canEnableHardwareBrightness)
+                            .opacity(displayControlManager.canEnableHardwareBrightness ? 1 : 0.45)
                     }
                 }
             }

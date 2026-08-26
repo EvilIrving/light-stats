@@ -35,6 +35,14 @@ actor DDCController {
         capabilityCache.retain(displayIDs: Set(displayIDs))
     }
 
+    func resetHungBus() async {
+        await transport.resetHungState()
+    }
+
+    func isBusHung() async -> Bool {
+        await transport.isHung
+    }
+
     func probeBrightness(displayID: UInt32) async -> ProbeResult {
         guard let route = routes[displayID] else {
             return ProbeResult(capability: .unsupported, brightness: nil)
@@ -46,13 +54,8 @@ actor DDCController {
             )
         }
 
-        var sawExplicitUnsupported = false
         for code in orderedCandidates(displayID: displayID) {
             guard let reply = await transport.read(route: route, code: code) else { continue }
-            if reply.resultCode == 0x01 {
-                sawExplicitUnsupported = true
-                continue
-            }
             guard reply.resultCode == 0, reply.maximum > 0 else { continue }
 
             let maximum = DDCRawConversion.sanitizedMaximum(reply.maximum)
@@ -63,12 +66,8 @@ actor DDCController {
             )
         }
 
-        if sawExplicitUnsupported {
-            capabilityCache.setUnsupported(displayID: displayID)
-            return ProbeResult(capability: .unsupported, brightness: nil)
-        }
-        capabilityCache.setUnknown(displayID: displayID)
-        return ProbeResult(capability: .unknown, brightness: nil)
+        capabilityCache.setUnsupported(displayID: displayID)
+        return ProbeResult(capability: .unsupported, brightness: nil)
     }
 
     func readBrightness(displayID: UInt32) async -> Double? {
@@ -85,6 +84,9 @@ actor DDCController {
               reply.resultCode == 0,
               reply.maximum > 0
         else {
+            if await transport.isHung {
+                capabilityCache.setUnsupported(displayID: displayID)
+            }
             return nil
         }
 
@@ -110,12 +112,16 @@ actor DDCController {
             capabilityCache.setPreferredCode(displayID: displayID, code: code, maximum: maximum)
             return true
         }
+        if await transport.isHung {
+            capabilityCache.setUnsupported(displayID: displayID)
+        }
         return false
     }
 
-    func stop() {
+    func stop() async {
         routes.removeAll()
         capabilityCache.retain(displayIDs: [])
+        await transport.resetHungState()
     }
 
     private func orderedCandidates(displayID: UInt32) -> [DDCVCPCode] {

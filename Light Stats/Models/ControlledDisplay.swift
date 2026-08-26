@@ -11,4 +11,8 @@ nonisolated struct ControlledDisplay: Identifiable, Sendable {
     let isBuiltIn: Bool
     var capability: DisplayControlCapability
     var brightness: Double
+
+    var isHardwareAdjustable: Bool {
+        capability == .supported
+    }
 }
