@@ -11,8 +11,6 @@ macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · 
 ## Layout
 
 ```
-BatteryControlShared/                # XPC protocol + charge-limit policy
-BatteryControlHelper/                # Privileged SMAppService daemon (opt-in, default off)
 Light Stats/
 ├── LightStatsApp.swift              # @main, Settings scene
 ├── AppDelegate.swift                # NSStatusItem + popover lifecycle
@@ -535,8 +533,8 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   nothing is installed until the matching switch is turned on.
 - **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
   alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
-- **No privileged helper.** Battery charge control is off; a clean install does not register the
-  `SMAppService` daemon or open its Mach service.
+- **No privileged helper.** The app bundle contains no privileged executable, LaunchDaemon,
+  or `SMAppService` daemon.
 - **Window management is a single master switch.** `windowManagementEnabled` (default off)
   drives the menu bar icon **and** snap shortcuts **and** titlebar gestures together —
   on = icon + shortcuts + gestures + taps all start; off = all stop. There are no
@@ -553,6 +551,6 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
 - No content cards behind instrument readouts — the scene is the surface. Do not
   reintroduce Bento-style plates as “reading boards”.
 - No plugin system — every metric is a built-in Service.
-- Privileged helper is opt-in — battery charge control registers an SMAppService daemon only when enabled.
+- No privileged helper or battery charge-control feature.
 - No remote telemetry — the app phones home only for user-initiated update checks and opt-in exit-node detection.
 - No Intel-only or pre-macOS-14 support — Apple Silicon is the primary target.

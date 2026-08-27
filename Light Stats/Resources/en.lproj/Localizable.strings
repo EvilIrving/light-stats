@@ -42,12 +42,6 @@
 "settings.refreshAndUnits" = "Refresh & Units";
 "settings.units" = "Unit Settings";
 "settings.temperatureUnit" = "Temperature";
-"settings.batteryProtection.section" = "Battery Protection";
-"settings.batteryProtection.enabled" = "Control charging";
-"settings.batteryProtection.hint" = "Stop at the upper limit; resume below the lower limit";
-"settings.batteryProtection.helperHint" = "Needs system approval. Turn off before uninstalling.";
-"settings.batteryProtection.upperLimit" = "Stop charging at";
-"settings.batteryProtection.lowerLimit" = "Resume charging below";
 "settings.language" = "Language";
 "settings.minimumItemAlert" = "At least one status bar item must be displayed";
 "settings.ok" = "OK";
@@ -93,17 +87,6 @@
 "battery.state.discharging" = "On battery";
 "battery.state.charged" = "Charged";
 "battery.state.acNotCharging" = "Plugged in";
-"battery.control.status.disabled" = "Protection off";
-"battery.control.status.charging" = "Charging";
-"battery.control.status.holding" = "Charging paused";
-"battery.control.status.discharging" = "On battery";
-"battery.control.status.unavailable" = "Unavailable";
-"battery.control.status.error" = "Control error";
-"battery.control.unsupportedDevice" = "Unavailable on this Mac";
-"battery.control.approvalRequired" = "Allow the battery helper in System Settings";
-"battery.control.helperUnavailable" = "Battery helper is unavailable";
-"battery.control.applyFailed" = "Could not apply battery protection";
-"battery.control.resetFailed" = "Could not restore normal charging";
 
 // MARK: - Health
 "health.title" = "Health";

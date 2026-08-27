@@ -25,7 +25,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
     private var lastGlobalMouseDownAt: Date?
     private var windowControlPermissionAlertShown = false
-    var isPreparingTermination = false
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
@@ -78,9 +77,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         findMouseCoordinator.start()
         syncFinderMenuService()
         syncKeepAwakeService()
-        if BatteryChargeControlManager.privilegedLifecycleAllowed {
-            syncBatteryChargeControl()
-        }
         displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
@@ -286,7 +282,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 .environmentObject(monitor)
                 .environmentObject(AIUsageMonitor.shared)
                 .environmentObject(displayControlManager)
-                .environmentObject(BatteryChargeControlManager.shared)
         )
 
         // 失去 key 焦点（点击外部 / 切换到别的菜单栏图标）时自动关闭，
@@ -519,9 +514,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         findMouseCoordinator.retryIfNeeded()
         syncWindowControlServices()
         displayControlManager.applicationDidBecomeActive()
-        if BatteryChargeControlManager.privilegedLifecycleAllowed {
-            BatteryChargeControlManager.shared.applicationDidBecomeActive()
-        }
         if settings.finderMenuEnabled {
             syncFinderMenuService()
             FinderMenuConfigStore.shared.refreshExtensionStatus()
@@ -536,14 +528,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             disableAcceleration: settings.scrollDisableAcceleration,
             scrollLines: settings.scrollLines,
             includeTrackpad: settings.scrollIncludeTrackpad
-        )
-    }
-
-    private func syncBatteryChargeControl() {
-        BatteryChargeControlManager.shared.synchronize(
-            enabled: settings.batteryChargeControlEnabled,
-            upperLimit: settings.batteryChargeUpperLimit,
-            lowerLimit: settings.batteryChargeLowerLimit
         )
     }
 
@@ -643,7 +627,6 @@ extension AppDelegate {
         findMouseCoordinator.stop()
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
-        BatteryChargeControlManager.shared.shutdown()
         SMCInfo.shutdown()
     }
 }
@@ -662,26 +645,6 @@ private extension AppDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.syncScrollService() }
             .store(in: &cancellables)
-
-        // 电池保护：设置变更时把上下限同步到特权 helper；XCTest 宿主不启动特权生命周期。
-        if BatteryChargeControlManager.privilegedLifecycleAllowed {
-            Publishers.CombineLatest3(
-                settings.$batteryChargeControlEnabled,
-                settings.$batteryChargeUpperLimit,
-                settings.$batteryChargeLowerLimit
-            )
-                .dropFirst()
-                .sink { enabled, upperLimit, lowerLimit in
-                    Task { @MainActor in
-                        BatteryChargeControlManager.shared.synchronize(
-                            enabled: enabled,
-                            upperLimit: upperLimit,
-                            lowerLimit: lowerLimit
-                        )
-                    }
-                }
-                .store(in: &cancellables)
-        }
 
         // 窗口管理总开关：单一开关同时驱动菜单栏图标、快捷键、标题栏手势的起停。
         settings.$windowManagementEnabled

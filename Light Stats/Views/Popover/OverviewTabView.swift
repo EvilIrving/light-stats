@@ -11,7 +11,6 @@ struct OverviewTabView: View {
     @EnvironmentObject var monitor: SystemMonitor
     @EnvironmentObject var aiMonitor: AIUsageMonitor
     @EnvironmentObject private var displayControlManager: DisplayControlManager
-    @EnvironmentObject private var batteryControlManager: BatteryChargeControlManager
     @Environment(\.theme) var theme
     @ObservedObject var settings = SettingsManager.shared
 
@@ -134,20 +133,6 @@ struct OverviewTabView: View {
                     if let time = batteryTimeText(battery) {
                         Text(time)
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                }
-
-                if DeviceCapabilities.isPortable, settings.batteryChargeControlEnabled {
-                    HStack(spacing: 6) {
-                        SVGIcon(.batteryCharge, size: 12)
-                            .foregroundStyle(batteryControlStatusColor(batteryControlManager.snapshot.status))
-                        Text(batteryControlStatusText(batteryControlManager.snapshot.status))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(theme.inkMuted)
-                        Spacer()
-                        Text("\(batteryControlManager.snapshot.lowerLimit)-\(batteryControlManager.snapshot.upperLimit)%")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundStyle(theme.inkMuted)
                     }
                 }

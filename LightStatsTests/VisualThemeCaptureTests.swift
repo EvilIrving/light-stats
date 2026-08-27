@@ -17,7 +17,6 @@ final class VisualThemeCaptureTests: XCTestCase {
         let originalNoirLightFlow = settings.noirLightFlow
         let originalExitNodeDetectionEnabled = settings.exitNodeDetectionEnabled
         let originalDisplayBrightnessControlEnabled = settings.displayBrightnessControlEnabled
-        let originalBatteryChargeControlEnabled = settings.batteryChargeControlEnabled
         let originalClaudeEnabled = settings.aiMonitorClaudeEnabled
         let originalCodexEnabled = settings.aiMonitorCodexEnabled
         let originalGeminiEnabled = settings.aiMonitorGeminiEnabled
@@ -38,7 +37,6 @@ final class VisualThemeCaptureTests: XCTestCase {
             settings.noirLightFlow = originalNoirLightFlow
             settings.exitNodeDetectionEnabled = originalExitNodeDetectionEnabled
             settings.displayBrightnessControlEnabled = originalDisplayBrightnessControlEnabled
-            settings.batteryChargeControlEnabled = originalBatteryChargeControlEnabled
             settings.aiMonitorClaudeEnabled = originalClaudeEnabled
             settings.aiMonitorCodexEnabled = originalCodexEnabled
             settings.aiMonitorGeminiEnabled = originalGeminiEnabled
@@ -60,7 +58,6 @@ final class VisualThemeCaptureTests: XCTestCase {
         settings.noirLightFlow = 0
         settings.exitNodeDetectionEnabled = false
         settings.displayBrightnessControlEnabled = false
-        settings.batteryChargeControlEnabled = false
         settings.aiMonitorClaudeEnabled = false
         settings.aiMonitorCodexEnabled = false
         settings.aiMonitorGeminiEnabled = false
@@ -125,7 +122,6 @@ final class VisualThemeCaptureTests: XCTestCase {
             .environmentObject(SystemMonitor.shared)
             .environmentObject(AIUsageMonitor.shared)
             .environmentObject(DisplayControlManager.shared)
-            .environmentObject(BatteryChargeControlManager.shared)
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = CGRect(origin: .zero, size: PopoverContentView.canvasSize)
         let window = NSWindow(

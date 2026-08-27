@@ -37,10 +37,6 @@ protocol SettingsManaging: ObservableObject {
     var showNetwork: Bool { get set }
     var showFan: Bool { get set }
     var showBattery: Bool { get set }
-    var batteryChargeControlEnabled: Bool { get set }
-    var batteryChargeUpperLimit: Int { get set }
-    var batteryChargeLowerLimit: Int { get set }
-    var batteryChargeHelperMayBeControlling: Bool { get set }
     var showHealth: Bool { get set }
     var healthIncludeCPU: Bool { get set }
     var healthIncludeMemory: Bool { get set }
@@ -91,23 +87,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     @Published var showBattery: Bool {
         didSet { save(showBattery, for: .showBattery) }
-    }
-    @Published var batteryChargeControlEnabled: Bool {
-        didSet { save(batteryChargeControlEnabled, for: .batteryChargeControlEnabled) }
-    }
-    @Published var batteryChargeUpperLimit: Int {
-        didSet { persistClampedChargeLimits() }
-    }
-    @Published var batteryChargeLowerLimit: Int {
-        didSet { persistClampedChargeLimits() }
-    }
-    var batteryChargeHelperMayBeControlling: Bool {
-        didSet {
-            save(
-                batteryChargeHelperMayBeControlling,
-                for: .batteryChargeHelperMayBeControlling
-            )
-        }
     }
     @Published var showHealth: Bool {
         didSet { save(showHealth, for: .showHealth) }
@@ -460,10 +439,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showNetwork = "settings.showNetwork"
         case showFan = "settings.showFan"
         case showBattery = "settings.showBattery"
-        case batteryChargeControlEnabled = "settings.batteryChargeControlEnabled"
-        case batteryChargeUpperLimit = "settings.batteryChargeUpperLimit"
-        case batteryChargeLowerLimit = "settings.batteryChargeLowerLimit"
-        case batteryChargeHelperMayBeControlling = "state.batteryChargeHelperMayBeControlling"
         case showHealth = "settings.showHealth"
         case healthIncludeCPU = "settings.healthIncludeCPU"
         case healthIncludeMemory = "settings.healthIncludeMemory"
@@ -526,18 +501,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         showFan = defaults.object(forKey: Key.showFan.rawValue) as? Bool ?? false
         // 电池：菜单栏默认关闭（沿用 disk/fan 的 toggle 模式）。
         showBattery = defaults.object(forKey: Key.showBattery.rawValue) as? Bool ?? false
-        // Battery protection is opt-in and starts with a narrow, ordinary-user range.
-        batteryChargeControlEnabled =
-            defaults.object(forKey: Key.batteryChargeControlEnabled.rawValue) as? Bool ?? false
-        let storedUpper = defaults.object(forKey: Key.batteryChargeUpperLimit.rawValue) as? Int
-            ?? BatteryControlLimits.defaultUpper
-        let storedLower = defaults.object(forKey: Key.batteryChargeLowerLimit.rawValue) as? Int
-            ?? BatteryControlLimits.defaultLower
-        let clampedLimits = BatteryControlLimits.clamp(upper: storedUpper, lower: storedLower)
-        batteryChargeUpperLimit = clampedLimits.upper
-        batteryChargeLowerLimit = clampedLimits.lower
-        batteryChargeHelperMayBeControlling =
-            defaults.object(forKey: Key.batteryChargeHelperMayBeControlling.rawValue) as? Bool ?? false
         // 健康分：总门面默认关闭，避免改变现有菜单栏宽度。
         showHealth = defaults.object(forKey: Key.showHealth.rawValue) as? Bool ?? false
 
@@ -653,23 +616,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
 
     // MARK: - Private
-
-    private func persistClampedChargeLimits() {
-        let clamped = BatteryControlLimits.clamp(
-            upper: batteryChargeUpperLimit,
-            lower: batteryChargeLowerLimit
-        )
-        if batteryChargeUpperLimit != clamped.upper {
-            batteryChargeUpperLimit = clamped.upper
-            return
-        }
-        if batteryChargeLowerLimit != clamped.lower {
-            batteryChargeLowerLimit = clamped.lower
-            return
-        }
-        save(batteryChargeUpperLimit, for: .batteryChargeUpperLimit)
-        save(batteryChargeLowerLimit, for: .batteryChargeLowerLimit)
-    }
 
     private func save<T>(_ value: T, for key: Key) {
         UserDefaults.standard.set(value, forKey: key.rawValue)

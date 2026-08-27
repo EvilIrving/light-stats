@@ -19,7 +19,6 @@ enum AppSVGIcon: String {
     case disk
     case temperature
     case processes
-    case batteryCharge = "battery-charge"
 }
 
 /// Renders a bundle SVG as a template image (picks up `foregroundStyle` / tint).

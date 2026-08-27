@@ -276,6 +276,5 @@ extension Notification.Name {
         .environmentObject(SystemMonitor.shared)
         .environmentObject(AIUsageMonitor.shared)
         .environmentObject(DisplayControlManager.shared)
-        .environmentObject(BatteryChargeControlManager.shared)
 }
 #endif

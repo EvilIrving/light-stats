@@ -54,7 +54,6 @@ enum DebugSnapshot {
                     .environmentObject(monitor)
                     .environmentObject(aiMonitor)
                     .environmentObject(DisplayControlManager.shared)
-                    .environmentObject(BatteryChargeControlManager.shared)
             )),
             ("popover-cleanup", AnyView(
                 CleanupTabView()

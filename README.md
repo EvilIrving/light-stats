@@ -195,7 +195,6 @@ Requirements: macOS 14 or later. Apple Silicon is the primary target.
 - Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures)
 - Finder menu, terminal selection, cmux actions, favorite directories, apps, and file templates
 - Health score dimension toggles
-- Battery protection (opt-in charge limits via a signed privileged helper; turn off before uninstalling)
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
 The Settings sidebar links directly to **General**, **Monitoring**, **Input Devices**, **Window Management**, **AI Usage**, and **Right-Click Menu**. It is navigation-only and does not show runtime status dots. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.
