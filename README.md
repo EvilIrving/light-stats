@@ -106,6 +106,12 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Step multiplier for fine-tuning reversed wheel movement
 - Uses an Accessibility event tap only when reversal or acceleration control is enabled, and rebuilds the tap after wake when needed
 
+### Find My Mouse
+
+- Double-tap a left modifier key (Control, Option, Command, or Shift — picker in Settings) to dim every display and spotlight the pointer
+- The spotlight follows the pointer; any click or key press fades it out, with a 4-second safety timeout
+- Listen-only event tap that never intercepts or rewrites events; requires Accessibility permission and is off by default
+
 ### Cleaning Mode
 
 - 60-second keyboard lock for safe keyboard cleaning

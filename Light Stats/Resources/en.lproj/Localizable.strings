@@ -238,6 +238,11 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "Input Devices";
+"settings.findMouse" = "Find My Mouse";
+"settings.findMouse.hint" = "Double-tap the trigger key to dim the screen and spotlight the pointer";
+"settings.findMouseTriggerKey" = "Trigger Key";
+"settings.findMouse.permissionTitle" = "Accessibility Access Needed";
+"settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the double-tap trigger key. Enable it in System Settings to use this feature.";
 "settings.scrollReverse" = "Reverse Scroll Direction";
 "settings.scrollReverseHorizontal" = "Reverse Horizontal Scroll";
 "settings.scrollStep" = "Scroll Step Multiplier";

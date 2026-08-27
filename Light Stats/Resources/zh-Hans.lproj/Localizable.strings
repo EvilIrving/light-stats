@@ -240,6 +240,11 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "输入设备";
+"settings.findMouse" = "找到我的鼠标";
+"settings.findMouse.hint" = "双击触发键后全屏变暗，聚光显示指针位置";
+"settings.findMouseTriggerKey" = "触发键";
+"settings.findMouse.permissionTitle" = "需要辅助功能权限";
+"settings.findMouse.permissionMessage" = "「找到我的鼠标」需要辅助功能权限来监听双击触发键。请在系统设置中开启后使用。";
 "settings.scrollReverse" = "反转鼠标滚动方向";
 "settings.scrollReverseHorizontal" = "反转鼠标水平滚动";
 "settings.scrollStep" = "滚动步长倍率";

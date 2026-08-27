@@ -35,12 +35,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let windowSnappingService: WindowSnappingService
     private let windowSnapHotKeyService: WindowSnapHotKeyControlling
     private let titlebarGestureService: TitlebarGestureControlling
+    private let findMouseCoordinator: FindMouseCoordinator
     private static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
-        (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf),
-        (5, .topLeft), (6, .topRight), (7, .bottomLeft), (8, .bottomRight),
-        (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
-        (12, .rightTwoThirds), (13, .rightThird),
-        (14, .previousDisplay), (15, .nextDisplay),
+        (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf), (5, .topLeft), (6, .topRight),
+        (7, .bottomLeft), (8, .bottomRight), (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
+        (12, .rightTwoThirds), (13, .rightThird), (14, .previousDisplay), (15, .nextDisplay),
         (16, .maximize), (17, .center), (18, .restore), (19, .minimize)
     ]
 
@@ -54,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.windowSnappingService = windowSnappingService
         self.windowSnapHotKeyService = WindowSnapHotKeyService(snappingService: windowSnappingService)
         self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
+        self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: FindMouseService())
         super.init()
     }
 
@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
         syncScrollService()
         syncWindowControlServices()
+        findMouseCoordinator.start()
         syncFinderMenuService()
         syncKeepAwakeService()
         if BatteryChargeControlManager.privilegedLifecycleAllowed {
@@ -84,15 +85,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
 
-        // 应用回到前台时复查权限（用户可能已授权但之前 tap 创建失败）。
-        // 权限已满足且开关开启但服务未运行时自动启动。
+        // 回到前台时复查权限：用户可能刚授权，开关开着但 tap 尚未建起来。
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleAppDidBecomeActive),
             name: NSApplication.didBecomeActiveNotification,
             object: nil
         )
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleShowAbout),
@@ -517,6 +516,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             scrollService.updateConfig(currentScrollConfig())
             _ = scrollService.start()
         }
+        findMouseCoordinator.retryIfNeeded()
         syncWindowControlServices()
         displayControlManager.applicationDidBecomeActive()
         if BatteryChargeControlManager.privilegedLifecycleAllowed {
@@ -640,6 +640,7 @@ extension AppDelegate {
         scrollService.stop()
         windowSnapHotKeyService.stop()
         titlebarGestureService.stop()
+        findMouseCoordinator.stop()
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
         BatteryChargeControlManager.shared.shutdown()

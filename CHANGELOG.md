@@ -1,3 +1,9 @@
+## Unreleased
+
+### ✨ 新功能 / Added
+
+- 找到我的鼠标：双击左修饰键（Control / Option / Command / Shift 可选）全屏压暗并聚光指针，点击或按键淡出；listen-only 事件 tap，需辅助功能权限，默认关闭
+
 ## v1.9.1-beta.3（预发布 / Prerelease）
 
 相对 **v1.9.1-beta.2** 的补丁预发布。面向用户的完整说明见 `docs/releases/v1.9.1-beta.3.md`。

@@ -57,6 +57,8 @@ protocol SettingsManaging: ObservableObject {
     var autoCheckUpdates: Bool { get set }
     var includeBetaUpdates: Bool { get set }
     var windowManagementEnabled: Bool { get set }
+    var findMouseEnabled: Bool { get set }
+    var findMouseTriggerKey: FindMouseTriggerKey { get set }
     var displayBrightnessControlEnabled: Bool { get set }
     var finderMenuEnabled: Bool { get set }
 }
@@ -330,6 +332,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var keepAwakeEnabled: Bool {
         didSet { save(keepAwakeEnabled, for: .keepAwakeEnabled) }
     }
+    /// 找到我的鼠标：默认关闭（opt-in，需辅助功能权限）。开 → 双击左修饰键全屏聚光指针。
+    @Published var findMouseEnabled: Bool {
+        didSet { save(findMouseEnabled, for: .findMouseEnabled) }
+    }
+    @Published var findMouseTriggerKey: FindMouseTriggerKey {
+        didSet { save(findMouseTriggerKey.rawValue, for: .findMouseTriggerKey) }
+    }
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
@@ -494,6 +503,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case scrollLines = "settings.scrollLines"
         case scrollIncludeTrackpad = "settings.scrollIncludeTrackpad"
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
+        case findMouseEnabled = "settings.findMouseEnabled"
+        case findMouseTriggerKey = "settings.findMouseTriggerKey"
         case diagnosticLogLevel = "settings.diagnosticLogLevel"
     }
 
@@ -603,6 +614,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollIncludeTrackpad = defaults.object(forKey: Key.scrollIncludeTrackpad.rawValue) as? Bool ?? false
         // 保持唤醒：默认关闭（opt-in）。
         keepAwakeEnabled = defaults.object(forKey: Key.keepAwakeEnabled.rawValue) as? Bool ?? false
+        // 找到我的鼠标：默认关闭（opt-in）；触发键默认左 Control，与 PowerToys 一致。
+        findMouseEnabled = defaults.object(forKey: Key.findMouseEnabled.rawValue) as? Bool ?? false
+        findMouseTriggerKey = defaults.string(forKey: Key.findMouseTriggerKey.rawValue)
+            .flatMap(FindMouseTriggerKey.init(rawValue:)) ?? .leftControl
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
 
         // 诊断日志：默认完整（含限速 sample）；关 / 仅错误可在设置中收窄。

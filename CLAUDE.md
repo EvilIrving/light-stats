@@ -28,6 +28,7 @@ Light Stats/
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
+│   ├── FindMouseTriggerKey.swift    # Left-modifier trigger for Find My Mouse
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -45,6 +46,7 @@ Light Stats/
 │   ├── UpdateService.swift          # GitHub Release → download → verify → install (actor)
 │   ├── KeyboardLockService.swift    # CGEventTap key suppression (cleaning mode)
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
+│   ├── FindMouseService.swift       # CGEventTap double-tap modifier → pointer spotlight overlay (opt-in)
 │   ├── WindowSnappingService.swift  # AX window move/resize snap engine
 │   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
 │   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
@@ -68,6 +70,7 @@ Light Stats/
 │   ├── LocalizationManager.swift    # Language change broadcast
 │   ├── SystemAppFilter.swift        # Apple-signed app exclusion list
 │   ├── CleaningModeViewModel.swift  # 60s countdown + keyboard lock
+│   ├── FindMouseCoordinator.swift   # Settings → FindMouseService wiring (opt-in)
 │   └── UpdateManager.swift          # Update UI state machine
 ├── Views/                           # SwiftUI panels/settings; AppKit for menu bar
 │   ├── StatusBar/StatusBarView.swift
@@ -86,6 +89,7 @@ Light Stats/
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
+│   ├── Settings/FindMouseSettingsSection.swift
 │   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
@@ -170,15 +174,15 @@ Services return Model types. They never return View types or ObservableObject co
 They are forbidden from importing ViewModels or Views.
 
 **Shape C — opt-in event-tap services.** `ScrollDirectionService`, `WindowSnapHotKeyService`,
-`TitlebarGestureService`, and `KeyboardLockService` each own a `CGEventTap` (or an
-Accessibility session via `WindowSnappingService`) behind a `start()/stop()` lifecycle.
+`TitlebarGestureService`, `FindMouseService`, and `KeyboardLockService` each own a `CGEventTap`
+(or an Accessibility session via `WindowSnappingService`) behind a `start()/stop()` lifecycle.
 They are the only services that hold OS-level taps, so they are also the only ones gated by
 the "default off" rule: AppDelegate creates the tap **only** when the owning switch turns on
-(`windowManagementEnabled` for the window trio; `scrollReverse*` for scrolling; cleaning-mode
-activation for the keyboard lock) and calls `stop()` immediately when it turns off. `start()`
-returns `false` when Accessibility permission is missing — the caller keeps the switch on and
-retries on `didBecomeActive`. None of these run on a clean default install. See
-*Default form (zero-intrusion)* below.
+(`windowManagementEnabled` for the window trio; `scrollReverse*` for scrolling;
+`findMouseEnabled` for Find My Mouse; cleaning-mode activation for the keyboard lock) and
+calls `stop()` immediately when it turns off. `start()` returns `false` when Accessibility
+permission is missing — the caller keeps the switch on and retries on `didBecomeActive`.
+None of these run on a clean default install. See *Default form (zero-intrusion)* below.
 
 ### ViewModels
 
@@ -508,6 +512,8 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
 - `PTYProbeTests` — drives the shared `PTYProbe` capture engine with a synthetic shell
   script (no claude/codex CLI needed): completion predicate, timeout, buffer reset, ANSI
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.
+- `FindMouseTriggerTests` — double-tap detector: alternation, 0.5s window, 1.2s cooldown,
+  reset, and left-modifier key-code mapping. Overlay / CGEventTap paths stay out of XCTest.
 - `LightStatsSmokeTests` — model sentinels + formatter sanity.
 
 ## Default form (zero-intrusion)
@@ -524,9 +530,9 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   only the monitoring status item.
 - **No Accessibility prompt.** `AXIsProcessTrustedWithOptions` is never called by default;
   permission is requested only when the user actively enables a feature that needs it
-  (scroll reversal, window management, cleaning mode).
-- **No `CGEventTap`.** scroll / keyboard / window taps are all off by default; nothing is
-  installed until the matching switch is turned on.
+  (scroll reversal, window management, Find My Mouse, cleaning mode).
+- **No `CGEventTap`.** scroll / keyboard / window / find-mouse taps are all off by default;
+  nothing is installed until the matching switch is turned on.
 - **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
   alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
 - **No privileged helper.** Battery charge control is off; a clean install does not register the

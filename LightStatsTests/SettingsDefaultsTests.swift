@@ -82,6 +82,12 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().keepAwakeEnabled)
     }
 
+    func testFindMouseDefaultsOffWithLeftControlTrigger() {
+        let settings = freshSettings()
+        XCTAssertFalse(settings.findMouseEnabled)
+        XCTAssertEqual(settings.findMouseTriggerKey, .leftControl)
+    }
+
     func testBatteryChargeControlDefaultsOff() {
         let settings = freshSettings()
         XCTAssertFalse(settings.batteryChargeControlEnabled)

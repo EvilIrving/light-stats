@@ -240,6 +240,11 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "入力デバイス";
+"settings.findMouse" = "マウスを探す";
+"settings.findMouse.hint" = "トリガーキーを2回押すと画面が暗くなり、ポインタをスポットライトで表示します";
+"settings.findMouseTriggerKey" = "トリガーキー";
+"settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
+"settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーのダブルタップ検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
 "settings.scrollReverse" = "マウスのスクロール方向を反転";
 "settings.scrollReverseHorizontal" = "マウスの水平スクロールを反転";
 "settings.scrollStep" = "スクロール量の倍率";
