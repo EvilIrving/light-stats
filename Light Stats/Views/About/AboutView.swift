@@ -13,8 +13,7 @@ struct AboutView: View {
 
     private var version: String {
         let marketing = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-        return "v\(marketing) (\(build))"
+        return "v\(marketing)"
     }
 
     private var appIcon: NSImage? {
