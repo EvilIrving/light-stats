@@ -137,20 +137,6 @@ struct OverviewTabView: View {
                     }
                 }
 
-                if DeviceCapabilities.isPortable, settings.batteryChargeControlEnabled {
-                    HStack(spacing: 6) {
-                        SVGIcon(.batteryCharge, size: 12)
-                            .foregroundStyle(batteryControlStatusColor(batteryControlManager.snapshot.status))
-                        Text(batteryControlStatusText(batteryControlManager.snapshot.status))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(theme.inkMuted)
-                        Spacer()
-                        Text("\(batteryControlManager.snapshot.lowerLimit)-\(batteryControlManager.snapshot.upperLimit)%")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                }
-
                 HStack {
                     SubStat(label: "battery.cycles".localized, value: battery.cycleCount.map { "\($0)" })
                     Spacer()

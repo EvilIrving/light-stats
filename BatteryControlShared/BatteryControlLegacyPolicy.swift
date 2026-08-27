@@ -1,6 +1,10 @@
 import Foundation
 
 enum BatteryControlLegacyPolicy {
+    static func shouldHoldChargingBeforeSleep(enabled: Bool, upperLimit: Int) -> Bool {
+        enabled && upperLimit < BatteryControlLimits.maximumUpper
+    }
+
     static func shouldEnableCharging(
         percent: Int,
         upperLimit: Int,

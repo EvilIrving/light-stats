@@ -18,6 +18,7 @@ final class BatteryControlEngine {
     private var powerRootPort: io_connect_t = 0
     private var powerNotificationPort: IONotificationPortRef?
     private var powerNotifier: io_object_t = 0
+    private var isSleepTransitionActive = false
     private var activeConnectionGeneration: Int64 = -1
     private var latestRequestRevision: Int64 = -1
 
@@ -109,6 +110,7 @@ final class BatteryControlEngine {
     }
 
     func reconcile() {
+        guard !isSleepTransitionActive else { return }
         do {
             try reconcileOrThrow()
         } catch {
@@ -162,7 +164,7 @@ final class BatteryControlEngine {
                     try smc.disableLegacyCharging()
                 }
             }
-            statusCode = shouldEnable ? .charging : .holding
+            statusCode = shouldEnable && power.isCharging ? .charging : .holding
         case .unknown:
             statusCode = .unavailable
             throw BatteryControlEngineError.unsupported
@@ -220,9 +222,15 @@ final class BatteryControlEngine {
         case Self.canSystemSleepMessage:
             allowPowerChange(notificationID)
         case Self.systemWillSleepMessage:
-            if configuration.enabled, smc.backend == .legacy {
+            isSleepTransitionActive = true
+            if BatteryControlLegacyPolicy.shouldHoldChargingBeforeSleep(
+                enabled: configuration.enabled,
+                upperLimit: configuration.upperLimit
+            ) {
                 do {
-                    try reconcileOrThrow()
+                    try smc.disableLegacyCharging()
+                    statusCode = .holding
+                    lastError = nil
                 } catch {
                     _ = fail(error.localizedDescription)
                 }
@@ -230,7 +238,9 @@ final class BatteryControlEngine {
             allowPowerChange(notificationID)
         case Self.systemHasPoweredOnMessage:
             wakeTimer?.invalidate()
-            let target = BatteryControlTimerTarget { [weak self] in self?.reconcile() }
+            let target = BatteryControlTimerTarget { [weak self] in
+                self?.finishWakeTransition()
+            }
             wakeTimer = Timer.scheduledTimer(
                 timeInterval: 30,
                 target: target,
@@ -241,6 +251,11 @@ final class BatteryControlEngine {
         default:
             break
         }
+    }
+
+    private func finishWakeTransition() {
+        isSleepTransitionActive = false
+        reconcile()
     }
 
     private func allowPowerChange(_ notificationID: Int) {

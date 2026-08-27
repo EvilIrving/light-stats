@@ -1,5 +1,20 @@
 # Project Memory
 
+## 电池限充必须按实机能力与恢复事务设计 · 2026-08-26 13:11 CST · pi
+
+Light Stats 的电池保护实现保持独立；开源项目只用于验证硬件行为和吸收事故经验，不在产品文案或代码注释中宣称衍生关系。本轮核对了 `charlie0129/batt`、`actuallymentor/battery`、`mhaeuser/Battery-Toolkit`、`zackelia/bclm` 的源码与 issue，形成以下长期约束。
+
+- 后端只能按 SMC key 的实际存在、长度和可写性运行时探测，不能按 macOS 版本猜。`bfF0/bfD0/bfE0` 固件范围后端优先；范围是特殊小端 `ui32`，写入顺序固定为 deactivate → upper → lower → activate。Legacy 才使用 `CH0B+CH0C` 或 `CHTE`。Intel 的 `BCLM/CHWA` 结论不能套到 Apple Silicon。
+- Legacy daemon 睡眠时不执行轮询。若睡前保持 charging enabled，已有人复现从 67% 合盖后醒来变 92%，甚至冲到 100%。严格上限模式必须在 `upper < 100` 时睡前关闭 charging，冻结 reconcile timer，唤醒约 30 秒后重新读取状态并按滞回恢复；代价是低电量睡眠期间不会补电。当前工作树已按此策略修正 `BatteryControlEngine`，上限 100 或功能关闭不干预。
+- “接着电源”“SMC 允许充电”“电池实际有正向电流”是三个不同状态。`AC connected` 和闪电图标都不能证明正在充电；UI 应以 IOPS `IsCharging`/电流表达 battery flow，以 helper 状态表达 policy。当前 100%、接 AC、20–70 配置的实机状态是适配器供电且暂停电池充电。
+- 普通限充禁止通过 `CHIE/CH0I/CH0J` 切断适配器来强制放电；该方案会退出 Clamshell 条件，导致外接显示器黑屏或整机睡眠。高于上限时默认只停止给电池充电，继续由适配器供电。
+- 关闭、卸载和升级必须是事务：停止策略 → 恢复本产品写过的 key → 写后读回并观察 `IsCharging`/电流效果 → 删除 root 配置 → 注销 helper → 最后清本地状态。不能只相信 XPC success，也不能先删 daemon。需要保留独立于正常 UI 的恢复入口；拖 app 到废纸篓不等于 helper 已安全恢复。
+- SMC key “仍能读写”不代表固件仍执行其语义。系统/固件升级和唤醒后应重建 AppleSMC connection、重新探测 backend；持续超过上限 2% 或仍有正向充电电流时要读回、重写一次，超过 5% 应明确报“限制未生效”，不能继续显示 holding。
+- 同时运行 AlDente、Battery、batt、Battery Toolkit、Apple Optimized Charging 或 macOS 26.4+ 原生 Charge Limit 可能互相覆盖。启用自定义严格范围前应检测并提示二选一，不自动修改系统设置。26.4+ 原生范围仅 80–100 且 Apple 会偶尔充到 100% 校准，不能描述为严格 hard limit。
+- 用户态 daemon 在完全关机后无法保证限充；休眠还可能重置 Legacy SMC key。产品说明必须明确该边界，不能承诺关机仍保持上限。
+
+高优先级仍待补齐：Legacy/firmware 写后读回与效果验证、唤醒重连并重新探测、其他充电控制器冲突检测、独立恢复/卸载诊断入口。关键证据包括 `batt` 的 `pkg/smc/charging.go` 与 `pkg/daemon/sleepcallback.go`、`actuallymentor/battery` issues #123/#282/#321/#348/#442、Battery-Toolkit issues #47/#54，以及 bclm issue #49。
+
 ## Light Stats 与其他开源软件只保留致敬关系 · 2026-08-26 01:39 CST · pi
 
 产品已经自成体系。以后不要再把 Light Stats 写成 Stats 或其他菜单栏工具的衍生、对标实现或技术借鉴产物。对外文案、代码注释、服务命名都按独立产品处理；唯一要保留的第三方关系是许可证要求的图标致谢（`Resources/Icons/ATTRIBUTION.txt`：Reicon / Solar Icons / Zappicon）。

@@ -105,6 +105,7 @@ final class BatteryControlSMC {
         } else {
             throw BatteryControlSMCError.keyUnavailable("legacy")
         }
+        try verifyLegacyCharging(enabled: true)
     }
 
     func disableLegacyCharging() throws {
@@ -117,6 +118,7 @@ final class BatteryControlSMC {
         } else {
             throw BatteryControlSMCError.keyUnavailable("legacy")
         }
+        try verifyLegacyCharging(enabled: false)
     }
 
     func isLegacyChargingEnabled() throws -> Bool {
@@ -154,12 +156,38 @@ final class BatteryControlSMC {
         try writeLittleEndianUInt32(key: "bfD0", value: UInt32(upper))
         try writeLittleEndianUInt32(key: "bfE0", value: UInt32(lower))
         try write(key: "bfF0", bytes: [2])
+        let updated = try readFirmwareLimit()
+        guard updated.active, updated.lower == lower, updated.upper == upper else {
+            throw BatteryControlSMCError.invalidData("firmware limit verification")
+        }
     }
 
     func disableFirmwareLimit() throws {
         guard backend == .firmware else { throw BatteryControlSMCError.keyUnavailable("firmware") }
         guard try read(key: "bfF0").first == 2 else { return }
         try write(key: "bfF0", bytes: [0])
+        guard try read(key: "bfF0").first == 0 else {
+            throw BatteryControlSMCError.invalidData("firmware limit reset verification")
+        }
+    }
+
+    private func verifyLegacyCharging(enabled: Bool) throws {
+        if supportsLegacyPair {
+            let expected: UInt8 = enabled ? 0 : 2
+            guard try read(key: "CH0B") == [expected],
+                  try read(key: "CH0C") == [expected] else {
+                throw BatteryControlSMCError.invalidData("legacy charging verification")
+            }
+            return
+        }
+        if supportsLegacySingle {
+            let expected: [UInt8] = enabled ? [0, 0, 0, 0] : [1, 0, 0, 0]
+            guard try read(key: "CHTE") == expected else {
+                throw BatteryControlSMCError.invalidData("legacy charging verification")
+            }
+            return
+        }
+        throw BatteryControlSMCError.keyUnavailable("legacy")
     }
 
     private func openConnection() {

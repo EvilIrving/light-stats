@@ -82,6 +82,27 @@ final class BatteryControlLimitsTests: XCTestCase {
         )
     }
 
+    func testLegacySleepHoldOnlyAppliesToAnActiveLimit() {
+        XCTAssertTrue(
+            BatteryControlLegacyPolicy.shouldHoldChargingBeforeSleep(
+                enabled: true,
+                upperLimit: 80
+            )
+        )
+        XCTAssertFalse(
+            BatteryControlLegacyPolicy.shouldHoldChargingBeforeSleep(
+                enabled: true,
+                upperLimit: 100
+            )
+        )
+        XCTAssertFalse(
+            BatteryControlLegacyPolicy.shouldHoldChargingBeforeSleep(
+                enabled: false,
+                upperLimit: 80
+            )
+        )
+    }
+
     private func assertClamped(
         upper: Int,
         lower: Int,
