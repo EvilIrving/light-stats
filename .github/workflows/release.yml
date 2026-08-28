@@ -265,6 +265,7 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_BUCKET: ${{ vars.R2_BUCKET || 'light-stats' }}
+          NOTES_FILE: release-notes/CHANGELOG.md
         run: |
           set -euo pipefail
           DMG="$(find release-assets -maxdepth 1 -name '*.dmg' | head -1)"
@@ -272,4 +273,4 @@ jobs:
             echo "::error::No DMG found in release-assets"
             exit 1
           fi
-          ./script/upload-r2.sh "$DMG" "$VERSION" "$PRERELEASE"
+          ./script/upload-r2.sh "$DMG" "$VERSION" "$PRERELEASE" "$NOTES_FILE"

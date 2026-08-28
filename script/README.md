@@ -10,12 +10,13 @@
 | `skillmesh.sh` | 把 `.agents/skills` 的 Skill 以软链同步到 Claude / Codex / Cursor / Pi / Grok |
 | `validate_localization.sh` | 校验 en / zh-Hans / ja / ko 四份 `Localizable.strings` key 一致（CI 在 `quality.yml` 中调用） |
 | `gen-changelog.sh` | 从 git 提交记录生成 CHANGELOG.md（CI 在 `release.yml` 中调用） |
-| `upload-r2.sh` | 把公证 DMG 传到 Cloudflare R2；正式 `Light-Stats.dmg`，Beta `Light-Stats-beta.dmg` |
+| `upload-r2.sh` | 把公证 DMG 传到 Cloudflare R2；维护 `latest-stable.json` / `latest-beta.json` 渠道标记（含发布说明，应用内自动更新读取）与 `.sha256` 校验文件 |
 | `download-redirect/` | Cloudflare Worker：`/stable` 与 `/beta` 302 到带版本号的 DMG |
 | `add_test_target.rb` | pbxproj 重建后重新接线 XCTest target（`ruby script/add_test_target.rb`） |
 | `add_finder_extension_target.rb` | pbxproj 重建后重新接线 FinderSync extension target |
 | `stress-cpu.sh [秒数]` | 打满所有 CPU 核心（压测健康分） |
 | `stress-memory.sh [GB] [秒数]` | 分配并触碰大块内存（压测健康分） |
+| `license-tool/` | 离线激活码发码器（SwiftPM 包：`generate-keypair` / `issue` / `verify`），私钥不进 repo |
 
 ## 压测脚本
 

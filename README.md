@@ -111,6 +111,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Double-tap a left modifier key (Control, Option, Command, or Shift — picker in Settings) to dim every display and spotlight the pointer
 - The spotlight follows the pointer; any click or key press fades it out, with a 4-second safety timeout
 - Listen-only event tap that never intercepts or rewrites events; requires Accessibility permission and is off by default
+- Pro features: anyone who launches the app during the current gift period keeps Pro for life. After the first paid release, new users unlock Pro with an activation code (Settings → General). The app stays MIT-licensed; codes are verified offline with Ed25519 and make no network call
 
 ### Cleaning Mode
 

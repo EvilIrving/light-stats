@@ -162,7 +162,9 @@ struct SettingsView: View {
                 onValidate: validateMinimumItems
             )
         case .inputDevices:
-            ScrollDetail(settings: settings)
+            ScrollDetail(settings: settings) {
+                selectedRaw = SettingsCategory.general.rawValue
+            }
         case .windowManagement:
             WindowManagementDetail(settings: settings)
         case .aiUsage:

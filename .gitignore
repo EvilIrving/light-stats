@@ -11,6 +11,7 @@ design/reicon/filled/
 design/reicon/*.zip
 # Swift Package Manager
 build/
+**/.build/
 .swiftpm/
 Packages/
 Package.resolved
@@ -49,6 +50,10 @@ playground.xcworkspace
 
 # Archives
 *.xcarchive
+
+# License tool private keys
+script/license-tool/keys/
+*.license-private.key
 
 # Temporary files
 *.swp

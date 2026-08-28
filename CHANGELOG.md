@@ -3,6 +3,9 @@
 ### ✨ 新功能 / Added
 
 - 找到我的鼠标：双击左修饰键（Control / Option / Command / Shift 可选）全屏压暗并聚光指针，点击或按键淡出；listen-only 事件 tap，需辅助功能权限，默认关闭
+- 离线激活码：高级功能（首个为「找到我的鼠标」）需要激活码解锁；Ed25519 签名本地校验、零网络请求；`script/license-tool` 离线发码器（生成密钥对 / 发码 / 验码）
+- Pro 赠送期：正式收费前启动过 App 的用户永久获赠 Pro；收费版本发布后仅新用户需要激活码
+- 自动更新源改为 Cloudflare R2 渠道标记（`latest-stable.json` / `latest-beta.json`，含发布说明与 SHA-256 校验），GitHub Releases 保留为回退；正式版上传同时刷新 Beta 标记
 
 ### 🔧 调整 / Changed
 

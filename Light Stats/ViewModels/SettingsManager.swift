@@ -24,6 +24,9 @@ nonisolated enum AppConfig {
     static let batteryHealthCacheTTL: TimeInterval = 30
     /// AI 用量刷新间隔固定为 2 分钟，降低令牌长时间闲置后失效的概率。
     static let aiUsageRefreshInterval: TimeInterval = 120
+    /// 正式收费前保持开启：每个启动过本版本的用户都会永久获赠 Pro。
+    /// 首个正式收费版本改为 false；已写入的赠送资格仍永久有效。
+    static let proGiftEnabled = true
 }
 
 /// User settings for the menu stats app
@@ -55,12 +58,16 @@ protocol SettingsManaging: ObservableObject {
     var windowManagementEnabled: Bool { get set }
     var findMouseEnabled: Bool { get set }
     var findMouseTriggerKey: FindMouseTriggerKey { get set }
+    var activationCode: String? { get set }
+    /// 赠送期用户或收费前老用户享有的永久 Pro 资格。
+    var isGrandfathered: Bool { get }
     var displayBrightnessControlEnabled: Bool { get set }
     var finderMenuEnabled: Bool { get set }
 }
 
 @MainActor
 final class SettingsManager: ObservableObject, SettingsManaging {
+    private let defaults: UserDefaults
 
     // MARK: - Status Bar Display Settings
 
@@ -318,6 +325,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var findMouseTriggerKey: FindMouseTriggerKey {
         didSet { save(findMouseTriggerKey.rawValue, for: .findMouseTriggerKey) }
     }
+    /// 高级功能激活码（离线 Ed25519 签名载荷）。原始码落 UserDefaults，启动时由
+    /// `LicenseManager` 重新校验；签名载荷非机密，与「不绑定机器」策略一致。
+    @Published var activationCode: String? {
+        didSet { save(activationCode, for: .activationCode) }
+    }
+    /// 赠送期用户及收费前老用户的永久 Pro 资格。标记一旦为 true，收费后仍保持有效。
+    @Published private(set) var isGrandfathered: Bool
     /// 用户「忽略此版本」记录的 tag，自动检查时跳过该版本（手动检查仍会提示）。
     @Published var lastIgnoredVersion: String {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
@@ -480,16 +494,30 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
         case findMouseEnabled = "settings.findMouseEnabled"
         case findMouseTriggerKey = "settings.findMouseTriggerKey"
+        case activationCode = "settings.activationCode"
+        case isGrandfathered = "settings.grandfathered"
         case diagnosticLogLevel = "settings.diagnosticLogLevel"
     }
 
     // MARK: - Init
 
-    /// `defaults` is injectable purely so tests can assert the documented
-    /// cold-start defaults against a clean `UserDefaults` suite. Production
-    /// always uses `.standard` via the singleton; `save(_:for:)` still writes
-    /// to `.standard`, so this initializer is read-only for non-standard suites.
-    init(defaults: UserDefaults = .standard) {
+    /// `defaults` is injectable so tests can exercise persistence in an isolated suite.
+    /// Production uses `.standard` through the process-lifetime singleton.
+    init(defaults: UserDefaults = .standard, proGiftEnabled: Bool = AppConfig.proGiftEnabled) {
+        self.defaults = defaults
+
+        // 赠送期开启时，无条件把永久 Pro 资格写为 true（也修正试运行版本曾写入的 false）。
+        // 收费后关闭开关：已获赠的 true 永久保留；没有标记但存在历史偏好的升级用户仍
+        // 获得资格；真正的收费后全新安装才写入 false。边界由发布版本决定，不依赖系统日期。
+        let storedGift = defaults.object(forKey: Key.isGrandfathered.rawValue) as? Bool
+        let hasHistoricalSettings = defaults.dictionaryRepresentation().keys.contains { key in
+            key.hasPrefix("settings.")
+                && key != Key.activationCode.rawValue
+                && key != Key.isGrandfathered.rawValue
+        }
+        let hasPermanentPro = proGiftEnabled || storedGift == true || (storedGift == nil && hasHistoricalSettings)
+        isGrandfathered = hasPermanentPro
+        defaults.set(hasPermanentPro, forKey: Key.isGrandfathered.rawValue)
 
         // Status bar items - default all to true except disk/fan
         showLogo = defaults.object(forKey: Key.showLogo.rawValue) as? Bool ?? true
@@ -581,6 +609,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         findMouseEnabled = defaults.object(forKey: Key.findMouseEnabled.rawValue) as? Bool ?? false
         findMouseTriggerKey = defaults.string(forKey: Key.findMouseTriggerKey.rawValue)
             .flatMap(FindMouseTriggerKey.init(rawValue:)) ?? .leftControl
+        // 激活码：冷启动默认未激活（无高级功能解锁）。
+        activationCode = defaults.string(forKey: Key.activationCode.rawValue)
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
 
         // 诊断日志：默认完整（含限速 sample）；关 / 仅错误可在设置中收窄。
@@ -618,15 +648,28 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     // MARK: - Private
 
     private func save<T>(_ value: T, for key: Key) {
-        UserDefaults.standard.set(value, forKey: key.rawValue)
+        // Optional values: set(_:forKey:) boxes a nil optional as NSNull, which is not a
+        // property-list type and throws NSInvalidArgumentException — remove the key instead.
+        if Self.isNilOptional(value) {
+            defaults.removeObject(forKey: key.rawValue)
+        } else {
+            defaults.set(value, forKey: key.rawValue)
+        }
+        let loggedValue = key == .activationCode ? "<redacted>" : String(describing: value)
         DiagnosticLogService.record(
             category: "settings",
             action: "changed",
-            fields: ["key": key.rawValue, "value": String(describing: value)]
+            fields: ["key": key.rawValue, "value": loggedValue]
         )
         // 延迟执行以避免在视图更新过程中修改状态
         Task { @MainActor in
             ensureAtLeastOneItem()
         }
+    }
+
+    /// True when `value` is an optional in its `.none` state.
+    static func isNilOptional<T>(_ value: T) -> Bool {
+        let mirror = Mirror(reflecting: value)
+        return mirror.displayStyle == .optional && mirror.children.isEmpty
     }
 }

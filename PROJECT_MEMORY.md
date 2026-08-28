@@ -1,5 +1,25 @@
 # Project Memory
 
+## 离线激活码体系：付费策略与实现约束 · 2026-08-28 · grok
+
+产品决策：保持 MIT 开源，「找到我的鼠标」是第一个需要激活码解锁的高级功能。**离线激活码**（本地 Ed25519 校验、零网络请求）、**不绑定机器**、**终身有效**、**本地 CLI 发码器**。私钥只在发码机器（`~/.light-stats-license/private.key`，chmod 600，永不提交），公钥内嵌 App。新高级功能 = `LicensePayload.Feature` 加 case + `issue --feature`，老 App 容忍未知功能键。
+
+**永久 Pro 赠送期**：预计 2026 年 10 月以后才正式收费；正式收费前启动过 App 的所有用户（包括赠送期内的新安装）永久获赠 Pro。边界用发布期开关 `AppConfig.proGiftEnabled`，不依赖可被修改的系统日期：赠送期保持 `true`，首次正式收费版本改为 `false`。赠送期开启会把 `settings.grandfathered` 无条件升级为 true（包括试运行版本曾写入 false 的用户）；收费后已存 true 永久保留，没有标记但存在历史 `settings.*` 偏好的升级用户也获赠，只有收费后真正的全新安装写入 false。`LicenseManager.isPremiumUnlocked = isGrandfathered || 激活码授予了任意功能`。
+
+非显然约束（改动前必读）：
+- **`SettingsManager.save<T>` 不能 set nil optional**：`set(_:forKey:)` 会把 nil optional 桥接成 NSNull 抛 `NSInvalidArgumentException`（「移除激活」曾直接崩溃、key 残留）。已用 `isNilOptional`（Mirror 检测）在 nil 时 `removeObject`。泛型里 `value as Any?` 检测 nil **不可靠**，必须用 Mirror。
+- **码格式双端镜像**：`Light Stats/Services/LicenseCodec.swift` ↔ `script/license-tool/Sources/license-tool/LicenseCodec.swift`（payload JSON 同理），两侧任何改动必须同步；格式由 `LicenseValidatorTests.testGoldenFixture` 钉死。
+- **CLI main.swift 顶层 `let` 按声明顺序立即初始化**：`defaultKeyDirectory` 必须声明在使用它的命令 switch 之前，否则读到未初始化内存直接段错误（退出码 139）。
+- 激活码存 UserDefaults（签名载荷非机密，与不绑机器一致），但诊断日志必须将值记为 `<redacted>`；启动时 `LicenseManager` 重新校验，失效/移除立即停服务。`@Published` 在属性赋值前发送，`FindMouseCoordinator` 必须使用 publisher 回调携带的新 payload 同步服务，不能在 sink 里回读 `license.payload`，否则会读到旧授权状态。
+
+长期风险：私钥丢失后旧码仍可由 App 内公钥验证，但无法继续签发匹配该公钥的新码；若轮换密钥，App 应在过渡期同时信任旧、新公钥，不能直接替换导致旧码失效。发码器发现目标目录已有密钥文件时必须拒绝覆盖。开源可被 fork 移除门禁（已接受）；码可分享（不绑机器的代价，已接受）。落地页 `docs/index.html` 仍写 $0 免费，待产品侧决定是否更新。购买渠道未定，设置页 hint 是占位文案。
+
+**激活文案基调**：用户要求温暖、有被重视的感觉，但不要过度尊贵。永久赠送状态定稿为标题「一路同行」、副文案「感谢支持，Pro 已永久赠送」；按钮「立即解锁」，错误「激活码没对上，再核对一下」，激活成功弹 toast。文案源语言 zh-Hans，四语言母语化，标签保持简短（翻译原则不变）。
+
+## 自动更新源 = Cloudflare R2 渠道标记（GitHub 仅回退） · 2026-08-28 · grok
+
+应用内自动更新从 GitHub Releases API 改为 **R2 渠道标记文件**：`https://download.onecat.dev/latest-stable.json` / `latest-beta.json`（`{"version","file","notes"}`，由 `upload-r2.sh` 每次发版写入，对象直读不受 Worker 路由限制——Worker 只接管 `/stable` `/beta` `/Light-Stats.dmg` `/Light-Stats-beta.dmg` 四个路径）。App 查标记 → 比版本 → 下载 R2 版本化 DMG → 用 `.sha256` 对象做哈希校验（新增的完整性防线）→ 原有 codesign/spctl/TeamID 三重校验不变。GitHub Releases 保留为网络故障回退；`latest-beta.json` 语义 = 「最新版本」（正式版上传时一并刷新），与 GitHub beta 通道一致。改动面：`ReleaseInfo`（manifest 解析）、`UpdateService`（fetchLatest 先 R2 后 GitHub + sha256 校验）、`upload-r2.sh`（notes 字段 + stable 同步刷新 beta 标记）、`release.yml`（传 NOTES_FILE）。测试：`UpdateManifestTests`。
+
 ## Light Stats 与其他开源软件只保留致敬关系 · 2026-08-26 01:39 CST · pi
 
 产品已经自成体系。以后不要再把 Light Stats 写成 Stats 或其他菜单栏工具的衍生、对标实现或技术借鉴产物。对外文案、代码注释、服务命名都按独立产品处理；唯一要保留的第三方关系是许可证要求的图标致谢（`Resources/Icons/ATTRIBUTION.txt`：Reicon / Solar Icons / Zappicon）。

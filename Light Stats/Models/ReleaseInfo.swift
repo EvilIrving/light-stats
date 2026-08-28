@@ -100,6 +100,8 @@ nonisolated struct ReleaseInfo: Sendable, Equatable {
     let releaseNotes: String
     let downloadURL: URL
     let htmlURL: URL
+    /// R2 通道提供的 DMG SHA-256 校验文件地址；GitHub 资产无此文件时为 nil（跳过哈希校验）。
+    let sha256URL: URL?
 
     private struct Asset: Decodable {
         let name: String
@@ -113,6 +115,32 @@ nonisolated struct ReleaseInfo: Sendable, Equatable {
         let prerelease: Bool?
         let draft: Bool?
         let assets: [Asset]
+    }
+
+    /// R2 渠道标记文件（`latest-stable.json` / `latest-beta.json`）：
+    /// `{"version":"1.9.2","file":"Light-Stats-1.9.2.dmg","notes":"..."}`。
+    private struct Manifest: Decodable {
+        let version: String
+        let file: String
+        let notes: String?
+    }
+
+    /// R2 对象地址前缀：版本固定 DMG 与 `.sha256` 校验文件均在此域名下直读。
+    static let r2BaseURL = URL(string: "https://download.onecat.dev")!
+
+    /// 解析 R2 渠道标记。版本号非法或缺少文件名时返回 nil。
+    init?(manifest data: Data) {
+        guard let manifest = try? JSONDecoder().decode(Manifest.self, from: data),
+              !manifest.file.isEmpty,
+              let semantic = SemanticVersion(manifest.version),
+              let url = URL(string: "\(Self.r2BaseURL.absoluteString)/\(manifest.file)") else { return nil }
+
+        tagName = "v" + manifest.version
+        version = semantic
+        releaseNotes = manifest.notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        downloadURL = url
+        htmlURL = URL(string: "https://github.com/EvilIrving/light-stats/releases/tag/\(tagName)") ?? url
+        sha256URL = URL(string: "\(url.absoluteString).sha256")
     }
 
     /// 解析 GitHub `releases/latest`（单对象）。该 endpoint 天然排除 draft/prerelease，
@@ -149,5 +177,6 @@ nonisolated struct ReleaseInfo: Sendable, Equatable {
         releaseNotes = response.body?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         downloadURL = url
         htmlURL = response.html_url.flatMap(URL.init(string:)) ?? url
+        sha256URL = nil
     }
 }

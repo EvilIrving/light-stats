@@ -39,8 +39,8 @@ final class SettingsDefaultsTests: XCTestCase {
         super.tearDown()
     }
 
-    private func freshSettings() -> SettingsManager {
-        let settings = SettingsManager(defaults: cleanDefaults)
+    private func freshSettings(proGiftEnabled: Bool = AppConfig.proGiftEnabled) -> SettingsManager {
+        let settings = SettingsManager(defaults: cleanDefaults, proGiftEnabled: proGiftEnabled)
         Self.retained.append(settings)
         return settings
     }
@@ -86,6 +86,59 @@ final class SettingsDefaultsTests: XCTestCase {
         let settings = freshSettings()
         XCTAssertFalse(settings.findMouseEnabled)
         XCTAssertEqual(settings.findMouseTriggerKey, .leftControl)
+    }
+
+    func testActivationCodeDefaultsNil() {
+        XCTAssertNil(freshSettings().activationCode)
+    }
+
+    // MARK: - Permanent Pro gift
+
+    func testGiftPeriodGrantsProToCleanInstall() {
+        XCTAssertTrue(freshSettings().isGrandfathered)
+        XCTAssertEqual(cleanDefaults.object(forKey: "settings.grandfathered") as? Bool, true)
+    }
+
+    func testGiftPeriodUpgradesAnEarlierFalseMarker() {
+        cleanDefaults.set(false, forKey: "settings.grandfathered")
+
+        XCTAssertTrue(freshSettings().isGrandfathered)
+        XCTAssertEqual(cleanDefaults.object(forKey: "settings.grandfathered") as? Bool, true)
+    }
+
+    func testPaidReleaseLocksCleanInstall() {
+        XCTAssertFalse(freshSettings(proGiftEnabled: false).isGrandfathered)
+        XCTAssertEqual(cleanDefaults.object(forKey: "settings.grandfathered") as? Bool, false)
+    }
+
+    func testPaidReleaseStillGrantsUpgradingUserWithoutMarker() {
+        cleanDefaults.set(true, forKey: "settings.autoCheckUpdates")
+
+        XCTAssertTrue(freshSettings(proGiftEnabled: false).isGrandfathered)
+    }
+
+    func testPermanentGiftSurvivesPaidRelease() {
+        cleanDefaults.set(true, forKey: "settings.grandfathered")
+
+        XCTAssertTrue(freshSettings(proGiftEnabled: false).isGrandfathered)
+    }
+
+    func testPaidReleaseKeepsStoredFalseDecision() {
+        cleanDefaults.set(false, forKey: "settings.grandfathered")
+        cleanDefaults.set(true, forKey: "settings.showLogo")
+
+        XCTAssertFalse(freshSettings(proGiftEnabled: false).isGrandfathered)
+    }
+
+    /// Regression: `save(_:for:)` must detect nil optionals — `set(_:forKey:)` bridges a
+    /// nil optional to NSNull and throws NSInvalidArgumentException (deactivate crashed).
+    func testNilOptionalDetection() {
+        let nilString: String? = nil
+        XCTAssertTrue(SettingsManager.isNilOptional(nilString))
+        XCTAssertFalse(SettingsManager.isNilOptional("x"))
+        XCTAssertFalse(SettingsManager.isNilOptional(true))
+        XCTAssertFalse(SettingsManager.isNilOptional(3))
+        XCTAssertFalse(SettingsManager.isNilOptional(Int?.some(3)))
     }
 
     // MARK: - Monitoring core defaults (positive controls)

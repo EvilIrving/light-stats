@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import CryptoKit
 import os
 import Darwin
 
@@ -52,9 +53,29 @@ actor UpdateService {
 
     // MARK: - 检查最新版本
 
-    /// `includePrereleases == true`：打 `/releases` 列表并接受 prerelease（用户开启 Beta 尝鲜）；
-    /// 否则打 `/releases/latest`，GitHub 天然只回稳定版。
+    /// R2 渠道优先（`latest-stable.json` / `latest-beta.json`，Cloudflare CDN 边缘）；
+    /// 失败时回退 GitHub Releases API，保证单点故障不阻塞更新。
     func fetchLatest(includePrereleases: Bool = false) async throws -> ReleaseInfo {
+        if let release = try? await fetchLatestFromR2(includePrereleases: includePrereleases) {
+            return release
+        }
+        return try await fetchLatestFromGitHub(includePrereleases: includePrereleases)
+    }
+
+    /// R2 标记文件：`includePrereleases == true` 读 beta 通道，否则读 stable 通道。
+    private func fetchLatestFromR2(includePrereleases: Bool) async throws -> ReleaseInfo {
+        let marker = includePrereleases ? "latest-beta.json" : "latest-stable.json"
+        let endpoint = "\(ReleaseInfo.r2BaseURL.absoluteString)/\(marker)"
+        guard let url = URL(string: endpoint) else { throw UpdateError.network }
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let release = ReleaseInfo(manifest: data) else { throw UpdateError.noRelease }
+        return release
+    }
+
+    /// GitHub Releases：`includePrereleases == true` 打 `/releases` 列表并接受 prerelease；
+    /// 否则打 `/releases/latest`，GitHub 天然只回稳定版。
+    private func fetchLatestFromGitHub(includePrereleases: Bool) async throws -> ReleaseInfo {
         let path = includePrereleases ? "releases?per_page=20" : "releases/latest"
         let endpoint = "https://api.github.com/repos/\(Self.repo)/\(path)"
         guard let url = URL(string: endpoint) else { throw UpdateError.network }
@@ -103,10 +124,37 @@ actor UpdateService {
             }
             if !buffer.isEmpty { try handle.write(contentsOf: buffer) }
             onProgress(1.0)
+            if let sha256URL = release.sha256URL {
+                try await verifySHA256(of: destination, against: sha256URL)
+            }
             return destination
         } catch {
             try? FileManager.default.removeItem(at: destination)
             throw UpdateError.download
+        }
+    }
+
+    /// R2 通道附带 `<DMG>.sha256` 校验文件；比对不通过视为下载产物损坏，拒绝进入安装流程。
+    private func verifySHA256(of file: URL, against remoteURL: URL) async throws {
+        do {
+            let (data, response) = try await session.data(from: remoteURL)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+                  let line = String(data: data, encoding: .utf8)?
+                      .split(separator: "\n").first,
+                  let expected = line.split(separator: " ").first else {
+                throw UpdateError.verificationFailed("sha256-unavailable")
+            }
+            let handle = try FileHandle(forReadingFrom: file)
+            let digest = SHA256.hash(data: try handle.readToEnd() ?? Data())
+            let actual = digest.map { String(format: "%02x", $0) }.joined()
+            handle.closeFile()
+            guard actual == String(expected) else {
+                throw UpdateError.verificationFailed("sha256-mismatch")
+            }
+        } catch let error as UpdateError {
+            throw error
+        } catch {
+            throw UpdateError.verificationFailed("sha256-unavailable")
         }
     }
 

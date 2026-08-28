@@ -27,6 +27,7 @@ Light Stats/
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
 │   ├── FindMouseTriggerKey.swift    # Left-modifier trigger for Find My Mouse
+│   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -42,6 +43,8 @@ Light Stats/
 │   ├── CodexUsageService.swift      # Codex CLI usage
 │   ├── GeminiUsageService.swift     # Gemini CLI usage (OAuth refresh flow)
 │   ├── UpdateService.swift          # GitHub Release → download → verify → install (actor)
+│   ├── LicenseCodec.swift           # Base32 + activation-code wire format (mirrored by script/license-tool)
+│   ├── LicenseValidator.swift       # Offline Ed25519 signature validation (embedded public key)
 │   ├── KeyboardLockService.swift    # CGEventTap key suppression (cleaning mode)
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
 │   ├── FindMouseService.swift       # CGEventTap double-tap modifier → pointer spotlight overlay (opt-in)
@@ -69,6 +72,7 @@ Light Stats/
 │   ├── SystemAppFilter.swift        # Apple-signed app exclusion list
 │   ├── CleaningModeViewModel.swift  # 60s countdown + keyboard lock
 │   ├── FindMouseCoordinator.swift   # Settings → FindMouseService wiring (opt-in)
+│   ├── LicenseManager.swift         # License state: validate stored code, activate/deactivate
 │   └── UpdateManager.swift          # Update UI state machine
 ├── Views/                           # SwiftUI panels/settings; AppKit for menu bar
 │   ├── StatusBar/StatusBarView.swift
@@ -88,6 +92,7 @@ Light Stats/
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
 │   ├── Settings/FindMouseSettingsSection.swift
+│   ├── Settings/ActivationSection.swift
 │   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
@@ -335,15 +340,16 @@ button is the only manual exit — keyboard is fully suppressed.
 
 ## Auto-Update
 
-Zero-dependency self-updater. Checks GitHub Releases, downloads the DMG, verifies it
-cryptographically, replaces the running app via a detached shell script after exit.
+Zero-dependency self-updater. Checks the Cloudflare R2 channel marker (falling back to
+GitHub Releases), downloads the DMG, verifies it cryptographically (R2 channel also checks
+the SHA-256 sum), replaces the running app via a detached shell script after exit.
 
 ```
 UpdateManager (@MainActor, ObservableObject)
  ├── phase: idle → checking → downloading(pct) → installing → idle
  └── UpdateService (actor)
-      ├── check(): GET /repos/EvilIrving/light-stats/releases/latest
-      ├── download(): stream DMG to temp file; report progress via callback
+      ├── check(): GET download.onecat.dev/latest-{stable,beta}.json → GitHub Releases fallback
+      ├── download(): stream DMG to temp file; R2 channel verifies .sha256; report progress
       ├── verify(): three-stage gate — all must pass
       │   ├── codesign --verify --deep          (signature valid)
       │   ├── spctl --assess --verbose           (notarised)
@@ -512,6 +518,11 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.
 - `FindMouseTriggerTests` — double-tap detector: alternation, 0.5s window, 1.2s cooldown,
   reset, and left-modifier key-code mapping. Overlay / CGEventTap paths stay out of XCTest.
+- `LicenseValidatorTests` — offline activation codes: golden fixture pins the wire format
+  against `script/license-tool`, plus round-trip, tamper/wrong-key/malformed rejection,
+  input normalization, unknown-feature tolerance, payload-version guard.
+- `LicenseManagerTests` — license state semantics: gift-period installs receive permanent Pro;
+  after the paid-release switch, only new installs are locked, while prior gifts persist and invalid codes are rejected.
 - `LightStatsSmokeTests` — model sentinels + formatter sanity.
 
 ## Default form (zero-intrusion)

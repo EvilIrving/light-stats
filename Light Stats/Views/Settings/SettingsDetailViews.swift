@@ -79,6 +79,8 @@ struct GeneralDetail: View {
             SettingsSection("settings.update.section".localized) {
                 SettingsGroup {
                     updateRow
+                    rowDivider()
+                    ActivationSection()
                 }
             }
         }
@@ -288,10 +290,11 @@ struct MonitoringDetail: View {
 
 struct ScrollDetail: View {
     @ObservedObject var settings: SettingsManager
+    var onRequestActivation: () -> Void = {}
 
     var body: some View {
         SettingsDetailScaffold("settings.inputDevices".localized) {
-            FindMouseSettingsSection(settings: settings)
+            FindMouseSettingsSection(settings: settings, onRequestActivation: onRequestActivation)
             SettingsGroup {
                 SettingsRow("settings.scrollReverse".localized) {
                     SettingsToggle(isOn: $settings.scrollReverseEnabled)

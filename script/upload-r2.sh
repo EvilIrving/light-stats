@@ -22,9 +22,10 @@
 #   R2_BUCKET            默认 light-stats
 #   VERSION              无 v 前缀的版本号，如 1.9.0（可用参数 2）
 #   PRERELEASE           true/false（可用参数 3）
+#   NOTES_FILE           发布说明 markdown 路径（可用参数 4，可选；会写进 latest-*.json 标记）
 #
 # 用法：
-#   ./script/upload-r2.sh "build/output/Light-Stats-1.9.0.dmg" 1.9.0 false
+#   ./script/upload-r2.sh "build/output/Light-Stats-1.9.0.dmg" 1.9.0 false "CHANGELOG.md"
 # =============================================================================
 
 set -euo pipefail
@@ -33,6 +34,7 @@ cd "$(dirname "$0")/.."
 DMG_PATH="${1:-}"
 VERSION="${2:-${VERSION:-}}"
 PRERELEASE="${3:-${PRERELEASE:-false}}"
+NOTES_FILE="${4:-${NOTES_FILE:-}}"
 R2_BUCKET="${R2_BUCKET:-light-stats}"
 
 if [ -z "$DMG_PATH" ] || [ -z "$VERSION" ]; then
@@ -50,7 +52,7 @@ for name in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
     fi
 done
 
-python3 - "$DMG_PATH" "$VERSION" "$PRERELEASE" "$R2_BUCKET" <<'PY'
+python3 - "$DMG_PATH" "$VERSION" "$PRERELEASE" "$R2_BUCKET" "$NOTES_FILE" <<'PY'
 import hashlib
 import hmac
 import json
@@ -65,6 +67,7 @@ dmg_path = Path(sys.argv[1])
 version = sys.argv[2]
 prerelease = sys.argv[3].lower() in {"1", "true", "yes"}
 bucket = sys.argv[4]
+notes_file = sys.argv[5]
 account = os.environ["R2_ACCOUNT_ID"]
 access = os.environ["R2_ACCESS_KEY_ID"]
 secret = os.environ["R2_SECRET_ACCESS_KEY"]
@@ -149,7 +152,15 @@ put_object(
     None,
 )
 
-marker = json.dumps({"version": version, "file": versioned_name}, separators=(",", ":")).encode("utf-8") + b"\n"
+notes = ""
+if notes_file:
+    notes_path = Path(notes_file)
+    if notes_path.is_file():
+        notes = notes_path.read_text(encoding="utf-8")
+marker_obj = {"version": version, "file": versioned_name}
+if notes:
+    marker_obj["notes"] = notes
+marker = json.dumps(marker_obj, separators=(",", ":")).encode("utf-8") + b"\n"
 if prerelease:
     put_object(
         "Light-Stats-beta.dmg",
@@ -193,6 +204,14 @@ else:
     )
     put_object(
         "latest-stable.json",
+        marker,
+        "application/json",
+        "public, no-cache, must-revalidate",
+        None,
+    )
+    # Beta 通道始终指向「最新版本」：正式版比任何既有 beta 都新，标记一并刷新。
+    put_object(
+        "latest-beta.json",
         marker,
         "application/json",
         "public, no-cache, must-revalidate",

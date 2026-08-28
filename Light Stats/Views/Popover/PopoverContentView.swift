@@ -13,6 +13,7 @@ struct PopoverContentView: View {
     @Namespace private var animation
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var settings = SettingsManager.shared
+    @ObservedObject private var license = LicenseManager.shared
     @Environment(\.openSettings) private var openSettingsAction
     @State private var hoveredIcon: String?
 
@@ -79,6 +80,15 @@ struct PopoverContentView: View {
                 Spacer()
 
                 HStack(spacing: 4) {
+                    // 已激活 / 老用户永久授权时仅展示文字状态，不增加徽标边框。
+                    if license.isPremiumUnlocked {
+                        Text("Pro")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .tracking(0.2)
+                            .foregroundStyle(theme.inkPrimary)
+                            .offset(y: -1)
+                            .padding(.trailing, 2)
+                    }
 #if DEBUG
                     toolbarIcon(
                         systemName: "camera.circle.fill",
