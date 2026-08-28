@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>演示指针 · 多方案对比</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+      background: #090a0e;
+      color: #f6f7fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(84, 96, 170, 0.16), transparent 34%),
+        #090a0e;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 306px minmax(0, 1fr);
+    }
+
+    .panel {
+      min-height: 0;
+      overflow: auto;
+      padding: 22px;
+      border-right: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(14, 16, 23, 0.9);
+      backdrop-filter: blur(24px);
+    }
+
+    .kicker {
+      margin: 0 0 7px;
+      color: #8d93a4;
+      font-size: 10px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 23px;
+      letter-spacing: -0.035em;
+    }
+
+    .intro {
+      margin: 9px 0 20px;
+      color: #999eaa;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .option-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .option {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 43px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 11px;
+      padding: 10px;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      color: #c8cbd3;
+      background: transparent;
+      text-align: left;
+      transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+    }
+
+    .option:hover { background: rgba(255, 255, 255, 0.045); }
+
+    .option[aria-pressed="true"] {
+      color: white;
+      border-color: rgba(150, 162, 255, 0.32);
+      background: rgba(116, 129, 231, 0.12);
+    }
+
+    .preview {
+      position: relative;
+      width: 43px;
+      height: 43px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(145deg, #e6e3dc 0 50%, #262a34 50%);
+    }
+
+    .preview::before,
+    .preview::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+    }
+
+    .preview.halo::before { background: rgba(255, 202, 59, 0.34); box-shadow: 0 0 10px rgba(255, 177, 42, 0.6); }
+    .preview.halo::after { inset: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: transparent; }
+    .preview.lens::before { border: 2px solid rgba(189, 226, 255, 0.76); box-shadow: inset 3px 2px 5px rgba(255, 255, 255, 0.55), 0 0 8px #7185ff; }
+    .preview.lens::after { inset: 14px; border: 1px solid rgba(255, 255, 255, 0.55); }
+    .preview.eclipse::before { inset: 14px; background: #030407; box-shadow: -3px 2px 7px #fff0aa, 4px -2px 9px #ff7335; }
+    .preview.eclipse::after { inset: 11px; border: 1px solid rgba(255, 186, 93, 0.5); }
+    .preview.orbit::before { border: 2px solid rgba(123, 245, 255, 0.8); border-left-color: transparent; border-bottom-color: transparent; transform: rotate(28deg); }
+    .preview.orbit::after { inset: 15px; border: 2px solid rgba(139, 116, 255, 0.76); border-right-color: transparent; border-top-color: transparent; }
+    .preview.focus::before { inset: 12px; border: 2px solid rgba(255, 255, 255, 0.78); border-radius: 8px; clip-path: polygon(0 0, 32% 0, 32% 9%, 9% 9%, 9% 32%, 0 32%, 0 0, 100% 0, 100% 32%, 91% 32%, 91% 9%, 68% 9%, 68% 0, 100% 0, 100% 100%, 68% 100%, 68% 91%, 91% 91%, 91% 68%, 100% 68%, 100% 100%, 0 100%, 0 68%, 9% 68%, 9% 91%, 32% 91%, 32% 100%); }
+    .preview.dots::before { inset: 19px; background: white; box-shadow: 0 -10px #88e8ff, 9px 5px #8f79ff, -9px 5px #ffbf66; }
+    .preview.dots::after { inset: 9px; border: 1px solid rgba(255, 255, 255, 0.2); }
+
+    .option-copy strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 12px;
+      font-weight: 690;
+    }
+
+    .option-copy small {
+      display: block;
+      color: #858b99;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .key {
+      align-self: start;
+      min-width: 19px;
+      padding: 2px 5px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      color: #797f8d;
+      font-size: 9px;
+      text-align: center;
+    }
+
+    .controls {
+      margin-top: 18px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .control-row {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: #b9bdc7;
+      font-size: 11px;
+      font-weight: 620;
+    }
+
+    input[type="range"] { width: 112px; accent-color: #8390ff; }
+
+    .switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      border: 0;
+      border-radius: 99px;
+      background: #343844;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      transition: transform 150ms ease;
+    }
+
+    .switch[aria-pressed="true"] { background: #7280f5; }
+    .switch[aria-pressed="true"]::after { transform: translateX(16px); }
+
+    .stage {
+      min-width: 0;
+      min-height: 0;
+      padding: 24px;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 14px;
+    }
+
+    .test-surface {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 23px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+    }
+
+    .surface {
+      position: relative;
+      min-width: 0;
+      padding: clamp(26px, 5vw, 68px);
+      overflow: hidden;
+    }
+
+    .surface.light { color: #18191d; background: #efede7; }
+    .surface.dark { color: #f3f5f9; background: #151821; }
+
+    .surface-label {
+      position: absolute;
+      top: 20px;
+      left: 22px;
+      color: #81838b;
+      font-size: 9px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .surface.dark .surface-label { color: #747b8c; }
+
+    .sample {
+      height: 100%;
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .sample-kicker {
+      margin: 0 0 10px;
+      color: #777980;
+      font-size: 10px;
+      font-weight: 740;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .dark .sample-kicker { color: #80889a; }
+
+    .sample h2 {
+      max-width: 430px;
+      margin: 0;
+      font-size: clamp(31px, 4vw, 60px);
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .sample p {
+      max-width: 430px;
+      margin: 18px 0 27px;
+      color: #6f7178;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .dark .sample p { color: #9198a8; }
+
+    .sample-actions { display: flex; gap: 9px; flex-wrap: wrap; }
+
+    .sample-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      color: white;
+      background: #1d1f24;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .sample-button.secondary {
+      color: #24262c;
+      border: 1px solid rgba(20, 21, 25, 0.14);
+      background: rgba(255, 255, 255, 0.46);
+    }
+
+    .dark .sample-button { color: #15171c; background: #f0f2f7; }
+    .dark .sample-button.secondary { color: #d5d9e2; border-color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.07); }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 5px;
+      color: #858b99;
+      font-size: 11px;
+    }
+
+    .active-name { color: #d9dce4; font-weight: 650; }
+
+    #pointer-effect {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      width: 180px;
+      height: 180px;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    @media (max-width: 850px) {
+      body { overflow: auto; }
+      .app { height: auto; grid-template-columns: 1fr; }
+      .panel { border-right: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.09); }
+      .option-list { grid-template-columns: repeat(2, 1fr); }
+      .stage { min-height: 760px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="panel">
+      <p class="kicker">Presentation Pointer Lab</p>
+      <h1>演示指针方案</h1>
+      <p class="intro">六种轻量方向，全部固定使用暗色外缘 + 亮色主体，不提供颜色选择，也不依赖当前 App 的深浅主题。</p>
+
+      <div class="option-list" role="group" aria-label="选择演示指针样式">
+        <button class="option" type="button" data-mode="halo" aria-pressed="false">
+          <span class="preview halo"></span><span class="option-copy"><strong>柔光定位</strong><small>最清楚，最像演示工具</small></span><span class="key">1</span>
+        </button>
+        <button class="option" type="button" data-mode="lens" aria-pressed="true">
+          <span class="preview lens"></span><span class="option-copy"><strong>玻璃透镜</strong><small>透明、克制、macOS 感</small></span><span class="key">2</span>
+        </button>
+        <button class="option" type="button" data-mode="eclipse" aria-pressed="false">
+          <span class="preview eclipse"></span><span class="option-copy"><strong>微型日蚀</strong><small>保留黑洞气质但不拟真</small></span><span class="key">3</span>
+        </button>
+        <button class="option" type="button" data-mode="orbit" aria-pressed="false">
+          <span class="preview orbit"></span><span class="option-copy"><strong>双轨光弧</strong><small>有动感，不遮挡中心</small></span><span class="key">4</span>
+        </button>
+        <button class="option" type="button" data-mode="focus" aria-pressed="false">
+          <span class="preview focus"></span><span class="option-copy"><strong>圆角焦点</strong><small>精准、安静、非十字线</small></span><span class="key">5</span>
+        </button>
+        <button class="option" type="button" data-mode="dots" aria-pressed="false">
+          <span class="preview dots"></span><span class="option-copy"><strong>三点引力</strong><small>轻巧，有一点生命感</small></span><span class="key">6</span>
+        </button>
+      </div>
+
+      <div class="controls">
+        <label class="control-row"><span>尺寸</span><input id="size" type="range" min="32" max="70" value="48"></label>
+        <label class="control-row"><span>亮度</span><input id="intensity" type="range" min="35" max="100" value="76"></label>
+        <div class="control-row"><span>点击反馈</span><button id="click-toggle" class="switch" type="button" aria-label="切换点击反馈" aria-pressed="true"></button></div>
+        <div class="control-row"><span>演示指针</span><button id="effect-toggle" class="switch" type="button" aria-label="切换演示指针" aria-pressed="true"></button></div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="test-surface">
+        <article class="surface light">
+          <span class="surface-label">Light Background</span>
+          <div class="sample">
+            <p class="sample-kicker">Project overview</p>
+            <h2>浅色内容上的可见性</h2>
+            <p>指针不能遮住按钮、正文和精确点击位置。这里用来测试亮色界面中的边界和对比度。</p>
+            <div class="sample-actions"><button class="sample-button">点击测试</button><button class="sample-button secondary">次要操作</button></div>
+          </div>
+        </article>
+        <article class="surface dark">
+          <span class="surface-label">Dark Background</span>
+          <div class="sample">
+            <p class="sample-kicker">Live presentation</p>
+            <h2>深色画面上的辨识度</h2>
+            <p>演示指针需要持续可见，但不能比真正要讲解的数据和内容更抢眼。</p>
+            <div class="sample-actions"><button class="sample-button">点击测试</button><button class="sample-button secondary">次要操作</button></div>
+          </div>
+        </article>
+      </div>
+      <footer class="footer"><span>当前：<span id="active-name" class="active-name">玻璃透镜</span></span><span>把鼠标放在中间分界线上测试 · 数字键 1–6 切换</span></footer>
+    </section>
+  </main>
+
+  <canvas id="pointer-effect" aria-hidden="true"></canvas>
+
+  <script>
+    const canvas = document.querySelector('#pointer-effect');
+    const outputContext = canvas.getContext('2d');
+    const effectCanvas = document.createElement('canvas');
+    const context = effectCanvas.getContext('2d');
+    const sizeInput = document.querySelector('#size');
+    const intensityInput = document.querySelector('#intensity');
+    const clickToggle = document.querySelector('#click-toggle');
+    const effectToggle = document.querySelector('#effect-toggle');
+    const activeName = document.querySelector('#active-name');
+    const options = [...document.querySelectorAll('.option')];
+
+    const canvasSize = 180;
+    const modes = {
+      halo: { name: '柔光定位', color: [255, 190, 54] },
+      lens: { name: '玻璃透镜', color: [139, 195, 255] },
+      eclipse: { name: '微型日蚀', color: [255, 154, 70] },
+      orbit: { name: '双轨光弧', color: [99, 229, 255] },
+      focus: { name: '圆角焦点', color: [246, 248, 255] },
+      dots: { name: '三点引力', color: [154, 139, 255] }
+    };
+
+    const state = {
+      mode: 'lens',
+      enabled: true,
+      clickFeedback: true,
+      visible: false,
+      x: window.innerWidth * 0.62,
+      y: window.innerHeight * 0.5,
+      size: Number(sizeInput.value),
+      intensity: Number(intensityInput.value) / 100,
+      clicks: []
+    };
+
+    function rgba(color, alpha) {
+      return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+    }
+
+    function resizeCanvas() {
+      const scale = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = canvasSize * scale;
+      canvas.height = canvasSize * scale;
+      effectCanvas.width = canvasSize * scale;
+      effectCanvas.height = canvasSize * scale;
+      canvas.style.width = `${canvasSize}px`;
+      canvas.style.height = `${canvasSize}px`;
+      outputContext.setTransform(scale, 0, 0, scale, 0, 0);
+      context.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+
+    function positionCanvas() {
+      const offset = canvasSize * 0.5;
+      canvas.style.transform = `translate3d(${state.x - offset}px, ${state.y - offset}px, 0)`;
+    }
+
+    function drawHalo(time, center, radius, intensity) {
+      const pulse = 1 + Math.sin(time * 0.0032) * 0.035;
+      const gradient = context.createRadialGradient(center, center, radius * 0.22, center, center, radius * 1.12);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+      gradient.addColorStop(0.35, `rgba(255, 210, 83, ${0.23 * intensity})`);
+      gradient.addColorStop(0.72, `rgba(255, 158, 34, ${0.14 * intensity})`);
+      gradient.addColorStop(1, 'rgba(255, 155, 24, 0)');
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(center, center, radius * 1.15 * pulse, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = `rgba(255, 244, 194, ${0.72 * intensity})`;
+      context.lineWidth = 1.2;
+      context.shadowBlur = 8;
+      context.shadowColor = `rgba(255, 176, 45, ${intensity})`;
+      context.beginPath();
+      context.arc(center, center, radius * 0.69 * pulse, 0, Math.PI * 2);
+      context.stroke();
+    }
+
+    function drawLens(time, center, radius, intensity) {
+      const rotation = time * 0.00038;
+      const lens = context.createRadialGradient(center - radius * 0.2, center - radius * 0.24, radius * 0.08, center, center, radius);
+      lens.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+      lens.addColorStop(0.42, 'rgba(174, 219, 255, 0.035)');
+      lens.addColorStop(0.7, `rgba(104, 139, 255, ${0.1 * intensity})`);
+      lens.addColorStop(1, 'rgba(104, 139, 255, 0)');
+      context.fillStyle = lens;
+      context.beginPath();
+      context.arc(center, center, radius, 0, Math.PI * 2);
+      context.fill();
+
+      context.lineCap = 'round';
+      context.shadowBlur = 9;
+      context.shadowColor = `rgba(106, 135, 255, ${0.8 * intensity})`;
+      context.strokeStyle = `rgba(178, 223, 255, ${0.68 * intensity})`;
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.arc(center, center, radius * 0.77, rotation + 0.2, rotation + 2.15);
+      context.stroke();
+      context.strokeStyle = `rgba(139, 117, 255, ${0.5 * intensity})`;
+      context.beginPath();
+      context.arc(center, center, radius * 0.77, rotation + 3.25, rotation + 4.55);
+      context.stroke();
+      context.shadowBlur = 0;
+      context.strokeStyle = `rgba(255, 255, 255, ${0.68 * intensity})`;
+      context.lineWidth = 0.8;
+      context.beginPath();
+      context.arc(center, center, radius * 0.52, rotation - 0.4, rotation + 0.45);
+      context.stroke();
+    }
+
+    function drawEclipse(time, center, radius, intensity) {
+      const rotation = time * 0.00024;
+      const corona = context.createRadialGradient(center, center, radius * 0.25, center, center, radius * 1.08);
+      corona.addColorStop(0, 'rgba(0, 0, 0, 0.88)');
+      corona.addColorStop(0.39, 'rgba(0, 0, 2, 0.9)');
+      corona.addColorStop(0.48, `rgba(255, 243, 188, ${0.63 * intensity})`);
+      corona.addColorStop(0.59, `rgba(255, 119, 39, ${0.23 * intensity})`);
+      corona.addColorStop(1, 'rgba(255, 101, 30, 0)');
+      context.fillStyle = corona;
+      context.beginPath();
+      context.arc(center, center, radius * 1.08, 0, Math.PI * 2);
+      context.fill();
+
+      context.lineCap = 'round';
+      context.shadowBlur = 9;
+      context.shadowColor = `rgba(255, 123, 50, ${intensity})`;
+      context.strokeStyle = `rgba(255, 231, 170, ${0.76 * intensity})`;
+      context.lineWidth = 1.8;
+      context.beginPath();
+      context.arc(center, center, radius * 0.49, rotation + 1.7, rotation + 3.25);
+      context.stroke();
+    }
+
+    function drawOrbit(time, center, radius, intensity) {
+      const rotation = time * 0.001;
+      context.lineCap = 'round';
+      context.shadowBlur = 8;
+      context.shadowColor = `rgba(85, 225, 255, ${intensity})`;
+      context.strokeStyle = `rgba(118, 238, 255, ${0.72 * intensity})`;
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(center, center, radius * 0.74, rotation, rotation + 2.12);
+      context.stroke();
+      context.shadowColor = `rgba(132, 104, 255, ${intensity})`;
+      context.strokeStyle = `rgba(157, 137, 255, ${0.68 * intensity})`;
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.arc(center, center, radius, -rotation * 0.68 + 1.4, -rotation * 0.68 + 3.1);
+      context.stroke();
+      const dotX = center + Math.cos(rotation) * radius * 0.74;
+      const dotY = center + Math.sin(rotation) * radius * 0.74;
+      context.fillStyle = `rgba(255, 255, 255, ${0.9 * intensity})`;
+      context.beginPath();
+      context.arc(dotX, dotY, 1.8, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    function drawFocus(time, center, radius, intensity) {
+      const pulse = 1 + Math.sin(time * 0.003) * 0.04;
+      const edge = radius * 0.75 * pulse;
+      const corner = radius * 0.28;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.strokeStyle = `rgba(255, 255, 255, ${0.82 * intensity})`;
+      context.shadowBlur = 7;
+      context.shadowColor = `rgba(98, 156, 255, ${0.85 * intensity})`;
+      context.lineWidth = 1.7;
+      const corners = [
+        [-1, -1, 0, 1], [1, -1, 1, 0], [1, 1, 0, -1], [-1, 1, -1, 0]
+      ];
+      for (const [xSign, ySign, xDirection, yDirection] of corners) {
+        const x = center + xSign * edge;
+        const y = center + ySign * edge;
+        context.beginPath();
+        context.moveTo(x + xDirection * corner, y);
+        context.lineTo(x, y);
+        context.lineTo(x, y + yDirection * corner);
+        context.stroke();
+      }
+      context.fillStyle = `rgba(255, 255, 255, ${0.74 * intensity})`;
+      context.beginPath();
+      context.arc(center, center, 1.4, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    function drawDots(time, center, radius, intensity) {
+      const rotation = time * 0.00075;
+      const colors = [[126, 239, 255], [148, 124, 255], [255, 184, 86]];
+      for (let index = 0; index < 3; index += 1) {
+        const angle = rotation + index * Math.PI * 2 / 3;
+        const orbit = radius * (0.62 + index * 0.12);
+        const x = center + Math.cos(angle) * orbit;
+        const y = center + Math.sin(angle) * orbit;
+        context.shadowBlur = 10;
+        context.shadowColor = rgba(colors[index], intensity);
+        context.fillStyle = rgba(colors[index], 0.86 * intensity);
+        context.beginPath();
+        context.arc(x, y, 2.3 - index * 0.35, 0, Math.PI * 2);
+        context.fill();
+      }
+      const gradient = context.createRadialGradient(center, center, 0, center, center, radius * 0.66);
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${0.13 * intensity})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(center, center, radius * 0.66, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    function drawClickFeedback(now, center) {
+      state.clicks = state.clicks.filter((click) => now - click.startedAt < 420);
+      if (!state.clickFeedback) return;
+      for (const click of state.clicks) {
+        const progress = (now - click.startedAt) / 420;
+        const radius = state.size * (0.2 + progress * 0.75);
+        const alpha = (1 - progress) * 0.64 * state.intensity;
+        context.shadowBlur = 8;
+        context.shadowColor = rgba(modes[state.mode].color, alpha);
+        context.strokeStyle = rgba(modes[state.mode].color, alpha);
+        context.lineWidth = Math.max(0.6, 1.8 * (1 - progress));
+        context.beginPath();
+        context.arc(center, center, radius, 0, Math.PI * 2);
+        context.stroke();
+      }
+    }
+
+    function drawEffect(now) {
+      const center = canvasSize * 0.5;
+      const radius = state.size * 0.5;
+      context.save();
+      switch (state.mode) {
+      case 'halo': drawHalo(now, center, radius, state.intensity); break;
+      case 'lens': drawLens(now, center, radius, state.intensity); break;
+      case 'eclipse': drawEclipse(now, center, radius, state.intensity); break;
+      case 'orbit': drawOrbit(now, center, radius, state.intensity); break;
+      case 'focus': drawFocus(now, center, radius, state.intensity); break;
+      case 'dots': drawDots(now, center, radius, state.intensity); break;
+      default: break;
+      }
+      drawClickFeedback(now, center);
+      context.restore();
+    }
+
+    function compositeForAnyBackground() {
+      const scale = canvas.width / canvasSize;
+      outputContext.save();
+      outputContext.setTransform(1, 0, 0, 1, 0, 0);
+      outputContext.clearRect(0, 0, canvas.width, canvas.height);
+      outputContext.restore();
+
+      // The same dark keyline sits behind every design. It remains visible on light
+      // content while the original bright body remains visible on dark content.
+      outputContext.save();
+      outputContext.globalAlpha = 0.88;
+      outputContext.shadowBlur = 2.2;
+      outputContext.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      const outlineOffsets = [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+      for (const [offsetX, offsetY] of outlineOffsets) {
+        outputContext.drawImage(effectCanvas, offsetX, offsetY, canvasSize, canvasSize);
+      }
+      outputContext.globalCompositeOperation = 'source-in';
+      outputContext.fillStyle = 'rgba(2, 4, 8, 0.92)';
+      outputContext.fillRect(0, 0, canvasSize, canvasSize);
+      outputContext.restore();
+
+      outputContext.drawImage(effectCanvas, 0, 0, canvasSize, canvasSize);
+
+      // A permanent black/white hotspot anchor is shared by all choices. The native
+      // arrow remains above it, and the anchor survives even across a split background.
+      const center = canvasSize * 0.5;
+      outputContext.save();
+      outputContext.shadowBlur = 2;
+      outputContext.shadowColor = 'rgba(0, 0, 0, 0.85)';
+      outputContext.strokeStyle = 'rgba(2, 4, 8, 0.92)';
+      outputContext.lineWidth = 3.8;
+      outputContext.beginPath();
+      outputContext.arc(center, center, 5.2, 0, Math.PI * 2);
+      outputContext.stroke();
+      outputContext.shadowBlur = 1.5;
+      outputContext.shadowColor = 'rgba(255, 255, 255, 0.78)';
+      outputContext.strokeStyle = 'rgba(255, 255, 255, 0.94)';
+      outputContext.lineWidth = 1.25;
+      outputContext.stroke();
+      outputContext.restore();
+
+      // Keep the backing-store scale explicit after the pixel-space clear above.
+      outputContext.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+
+    function render(now) {
+      context.clearRect(0, 0, canvasSize, canvasSize);
+      if (state.enabled && state.visible) {
+        drawEffect(now);
+        compositeForAnyBackground();
+      } else {
+        outputContext.clearRect(0, 0, canvasSize, canvasSize);
+      }
+      requestAnimationFrame(render);
+    }
+
+    function selectMode(mode) {
+      if (!modes[mode]) return;
+      state.mode = mode;
+      options.forEach((option) => option.setAttribute('aria-pressed', String(option.dataset.mode === mode)));
+      activeName.textContent = modes[mode].name;
+    }
+
+    options.forEach((option) => option.addEventListener('click', () => selectMode(option.dataset.mode)));
+    sizeInput.addEventListener('input', () => { state.size = Number(sizeInput.value); });
+    intensityInput.addEventListener('input', () => { state.intensity = Number(intensityInput.value) / 100; });
+
+    clickToggle.addEventListener('click', () => {
+      state.clickFeedback = !state.clickFeedback;
+      clickToggle.setAttribute('aria-pressed', String(state.clickFeedback));
+    });
+
+    effectToggle.addEventListener('click', () => {
+      state.enabled = !state.enabled;
+      effectToggle.setAttribute('aria-pressed', String(state.enabled));
+    });
+
+    window.addEventListener('pointermove', (event) => {
+      state.x = event.clientX;
+      state.y = event.clientY;
+      state.visible = true;
+      positionCanvas();
+    }, { passive: true });
+
+    window.addEventListener('pointerdown', () => {
+      if (state.enabled && state.clickFeedback) state.clicks.push({ startedAt: performance.now() });
+    }, { passive: true });
+
+    window.addEventListener('keydown', (event) => {
+      const option = options[Number(event.key) - 1];
+      if (option) selectMode(option.dataset.mode);
+    });
+
+    document.documentElement.addEventListener('mouseleave', () => { state.visible = false; });
+    document.documentElement.addEventListener('mouseenter', () => { state.visible = true; });
+    window.addEventListener('resize', resizeCanvas);
+
+    resizeCanvas();
+    positionCanvas();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

@@ -47,7 +47,8 @@ Light Stats/
 │   ├── LicenseValidator.swift       # Offline Ed25519 signature validation (embedded public key)
 │   ├── KeyboardLockService.swift    # CGEventTap key suppression (cleaning mode)
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
-│   ├── FindMouseService.swift       # CGEventTap double-tap modifier → pointer spotlight overlay (opt-in)
+│   ├── FindMouseService.swift       # Shared modifier tap: double=find mouse, triple=presentation pointer
+│   ├── PresentationPointerService.swift # Click-through persistent cursor halo
 │   ├── WindowSnappingService.swift  # AX window move/resize snap engine
 │   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
 │   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
@@ -516,8 +517,9 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
 - `PTYProbeTests` — drives the shared `PTYProbe` capture engine with a synthetic shell
   script (no claude/codex CLI needed): completion predicate, timeout, buffer reset, ANSI
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.
-- `FindMouseTriggerTests` — double-tap detector: alternation, 0.5s window, 1.2s cooldown,
-  reset, and left-modifier key-code mapping. Overlay / CGEventTap paths stay out of XCTest.
+- `FindMouseTriggerTests` — shared modifier sequence: double-tap delay/commit, triple-tap
+  cancellation and toggle action, cooldown, reset, and key-code mapping. CGEventTap stays out of XCTest.
+- `PresentationPointerServiceTests` — real 112×112 click-through overlay window lifecycle.
 - `LicenseValidatorTests` — offline activation codes: golden fixture pins the wire format
   against `script/license-tool`, plus round-trip, tamper/wrong-key/malformed rejection,
   input normalization, unknown-feature tolerance, payload-version guard.

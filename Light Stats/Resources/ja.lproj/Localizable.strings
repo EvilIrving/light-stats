@@ -224,10 +224,10 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "入力デバイス";
 "settings.findMouse" = "マウスを探す";
-"settings.findMouse.hint" = "トリガーキーを2回押すと画面が暗くなり、ポインタをスポットライトで表示します";
+"settings.findMouse.hint" = "2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
 "settings.findMouseTriggerKey" = "トリガーキー";
 "settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
-"settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーのダブルタップ検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
+"settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
 "settings.activation" = "ライセンス認証";
 "settings.activation.owner" = "所有者";
 "settings.activation.features" = "有効な機能";
@@ -241,7 +241,7 @@
 "settings.activation.remove" = "認証を解除";
 "settings.activation.feature.findMouse" = "マウスを探す";
 "settings.activation.successToast" = "認証完了！プレミアム機能が使えるようになりました";
-"settings.findMouse.lockedHint" = "認証で使えるようになります：修飾キーのダブルタップでポインタを照らします";
+"settings.findMouse.lockedHint" = "認証後、2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
 "settings.scrollReverse" = "マウスのスクロール方向を反転";
 "settings.scrollReverseHorizontal" = "マウスの水平スクロールを反転";
 "settings.scrollStep" = "スクロール量の倍率";

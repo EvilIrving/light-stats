@@ -222,10 +222,10 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "Input Devices";
 "settings.findMouse" = "Find My Mouse";
-"settings.findMouse.hint" = "Double-tap the trigger key to dim the screen and spotlight the pointer";
+"settings.findMouse.hint" = "Double-tap to find the pointer; triple-tap to toggle Presentation Pointer";
 "settings.findMouseTriggerKey" = "Trigger Key";
 "settings.findMouse.permissionTitle" = "Accessibility Access Needed";
-"settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the double-tap trigger key. Enable it in System Settings to use this feature.";
+"settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
 "settings.activation" = "Activation";
 "settings.activation.owner" = "Owner";
 "settings.activation.features" = "Unlocked Features";
@@ -239,7 +239,7 @@
 "settings.activation.remove" = "Remove Activation";
 "settings.activation.feature.findMouse" = "Find My Mouse";
 "settings.activation.successToast" = "Activated — premium features unlocked!";
-"settings.findMouse.lockedHint" = "Unlock: double-tap a modifier to spotlight the pointer";
+"settings.findMouse.lockedHint" = "Unlock: double-tap to find the pointer; triple-tap for Presentation Pointer";
 "settings.scrollReverse" = "Reverse Scroll Direction";
 "settings.scrollReverseHorizontal" = "Reverse Horizontal Scroll";
 "settings.scrollStep" = "Scroll Step Multiplier";

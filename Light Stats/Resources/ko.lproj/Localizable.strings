@@ -224,10 +224,10 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "입력 장치";
 "settings.findMouse" = "마우스 찾기";
-"settings.findMouse.hint" = "트리거 키를 두 번 누르면 화면이 어두워지고 포인터를 스포트라이트로 표시합니다";
+"settings.findMouse.hint" = "두 번 누르면 마우스 찾기, 세 번 누르면 프레젠테이션 포인터 전환";
 "settings.findMouseTriggerKey" = "트리거 키";
 "settings.findMouse.permissionTitle" = "접근성 권한 필요";
-"settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 두 번 누름 감지를 위해 접근성 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
+"settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 접근성 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
 "settings.activation" = "활성화";
 "settings.activation.owner" = "소유자";
 "settings.activation.features" = "잠금 해제된 기능";
@@ -241,7 +241,7 @@
 "settings.activation.remove" = "활성화 해제";
 "settings.activation.feature.findMouse" = "마우스 찾기";
 "settings.activation.successToast" = "활성화 완료! 모든 프리미엄 기능을 이용할 수 있어요";
-"settings.findMouse.lockedHint" = "활성화 후 사용 가능: 수정자 키를 두 번 누르면 포인터가 나타나요";
+"settings.findMouse.lockedHint" = "활성화 후 두 번 누르면 마우스 찾기, 세 번 누르면 프레젠테이션 포인터 전환";
 "settings.scrollReverse" = "마우스 스크롤 방향 반전";
 "settings.scrollReverseHorizontal" = "마우스 가로 스크롤 방향 반전";
 "settings.scrollStep" = "스크롤 단계 배율";

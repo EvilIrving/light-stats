@@ -2,9 +2,8 @@
 //  FindMouseService.swift
 //  Light Stats
 //
-//  PowerToys-style Find My Mouse: double-tap a left modifier, dim every
-//  display, and leave a spotlight around the pointer. Moving the mouse
-//  follows the hole; a click, key, or extra modifier tap fades it out.
+//  Shared pointer gestures on one left modifier: double-tap to dim every
+//  display and spotlight the cursor; triple-tap to toggle Presentation Pointer.
 //  The event tap is listen-only and never rewrites events.
 //
 
@@ -15,36 +14,78 @@ import CoreGraphics
 import Foundation
 import OSLog
 
-/// Double-tap detector: press/release must alternate (stuck keys do not
-/// fire), the second press must land within 0.5s, and a 1.2s cooldown
-/// after a trigger blocks a triple-tap from firing again.
+enum FindMouseTriggerAction: Equatable, Sendable {
+    case none
+    case doubleTapPending(Int)
+    case tripleTap
+}
+
+/// Shared modifier sequence: two taps schedule Find My Mouse; a quick third tap
+/// cancels that pending action and toggles the presentation pointer instead.
 struct FindMouseTriggerDetector: Sendable {
     var doubleTapWindow: TimeInterval = 0.5
+    var tripleTapWindow: TimeInterval = 0.3
     var retriggerCooldown: TimeInterval = 1.2
 
     private(set) var lastPressAt: TimeInterval = -.infinity
     private(set) var lastReleaseAt: TimeInterval = -.infinity
     private(set) var lastTriggerAt: TimeInterval = -.infinity
+    private var tapCount = 0
+    private var nextToken = 0
+    private var pendingDoubleToken: Int?
 
-    /// Modifier down. `true` means a valid double-tap.
-    mutating func registerPress(at now: TimeInterval) -> Bool {
+    mutating func registerPress(at now: TimeInterval) -> FindMouseTriggerAction {
         let releasedSincePress = lastReleaseAt > lastPressAt
-        let withinWindow = now - lastPressAt <= doubleTapWindow
-        let pastCooldown = now - lastTriggerAt >= retriggerCooldown
+        let continuationWindow = tapCount == 2 ? tripleTapWindow : doubleTapWindow
+        let continuesSequence = releasedSincePress && now - lastPressAt <= continuationWindow
         lastPressAt = now
-        guard releasedSincePress, withinWindow, pastCooldown else { return false }
-        lastTriggerAt = now
-        return true
+
+        guard now - lastTriggerAt >= retriggerCooldown else {
+            tapCount = 0
+            pendingDoubleToken = nil
+            return .none
+        }
+
+        tapCount = continuesSequence ? tapCount + 1 : 1
+        switch tapCount {
+        case 2:
+            nextToken += 1
+            pendingDoubleToken = nextToken
+            return .doubleTapPending(nextToken)
+        case 3:
+            pendingDoubleToken = nil
+            tapCount = 0
+            lastTriggerAt = now
+            return .tripleTap
+        default:
+            pendingDoubleToken = nil
+            return .none
+        }
     }
 
     mutating func registerRelease(at now: TimeInterval) {
         lastReleaseAt = now
     }
 
+    mutating func commitDoubleTap(token: Int, at now: TimeInterval) -> Bool {
+        guard pendingDoubleToken == token, tapCount == 2 else { return false }
+        pendingDoubleToken = nil
+        tapCount = 0
+        lastTriggerAt = now
+        return true
+    }
+
+    mutating func cancelPendingDoubleTap() {
+        pendingDoubleToken = nil
+        tapCount = 0
+    }
+
     mutating func reset() {
         lastPressAt = -.infinity
         lastReleaseAt = -.infinity
         lastTriggerAt = -.infinity
+        tapCount = 0
+        pendingDoubleToken = nil
     }
 }
 
@@ -71,6 +112,7 @@ final class FindMouseService: FindMouseControlling {
     private var runLoopSource: CFRunLoopSource?
 
     private let spotlight = FindMouseSpotlightController()
+    private let presentationPointer: PresentationPointerControlling
 
     /// Safety timeout: 4s with no pointer/key/click activity auto-hides.
     private let spotlightIdleTimeout: TimeInterval = 4
@@ -80,6 +122,10 @@ final class FindMouseService: FindMouseControlling {
     var isRunning: Bool {
         stateLock.lock(); defer { stateLock.unlock() }
         return running
+    }
+
+    init(presentationPointer: PresentationPointerControlling) {
+        self.presentationPointer = presentationPointer
     }
 
     /// Create the tap on this thread before returning true, matching
@@ -125,6 +171,7 @@ final class FindMouseService: FindMouseControlling {
     }
 
     func stop() {
+        presentationPointer.stop()
         stateLock.lock()
         guard running else { stateLock.unlock(); return }
         running = false
@@ -161,6 +208,9 @@ final class FindMouseService: FindMouseControlling {
                 continue
             }
             runTapSession(tap: tap, source: source)
+        }
+        Task { @MainActor [weak self] in
+            self?.presentationPointer.stop()
         }
         logger.info("Find-my-mouse service stopped")
     }
@@ -261,6 +311,7 @@ final class FindMouseService: FindMouseControlling {
         case .mouseMoved:
             handleMouseMoved()
         case .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown:
+            cancelPendingDoubleTap()
             dismissSpotlightIfActive()
         default:
             break
@@ -285,21 +336,61 @@ final class FindMouseService: FindMouseControlling {
         let now = ProcessInfo.processInfo.systemUptime
         if isPress {
             stateLock.lock()
-            let triggered = detector.registerPress(at: now)
-            let alreadyActive = spotlightActive
-            if triggered, !alreadyActive {
-                spotlightActive = true
-                lastSpotlightActivityAt = now
-            }
+            let action = detector.registerPress(at: now)
             stateLock.unlock()
-            guard triggered, !alreadyActive else { return }
-            Task { @MainActor [weak self] in
-                self?.showSpotlight()
-            }
+            handleTriggerAction(action)
         } else {
             stateLock.lock()
             detector.registerRelease(at: now)
             stateLock.unlock()
+        }
+    }
+
+    private func handleTriggerAction(_ action: FindMouseTriggerAction) {
+        switch action {
+        case .none:
+            break
+        case .doubleTapPending(let token):
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                self?.commitDoubleTap(token: token)
+            }
+        case .tripleTap:
+            dismissSpotlightIfActive()
+            Task { @MainActor [weak self] in
+                self?.togglePresentationPointer()
+            }
+        }
+    }
+
+    private func commitDoubleTap(token: Int) {
+        let now = ProcessInfo.processInfo.systemUptime
+        stateLock.lock()
+        let triggered = detector.commitDoubleTap(token: token, at: now)
+        let alreadyActive = spotlightActive
+        if triggered, !alreadyActive {
+            spotlightActive = true
+            lastSpotlightActivityAt = now
+        }
+        stateLock.unlock()
+        guard triggered, !alreadyActive else { return }
+        Task { @MainActor [weak self] in
+            self?.showSpotlight()
+        }
+    }
+
+    private func cancelPendingDoubleTap() {
+        stateLock.lock()
+        detector.cancelPendingDoubleTap()
+        stateLock.unlock()
+    }
+
+    @MainActor
+    private func togglePresentationPointer() {
+        if presentationPointer.isRunning {
+            presentationPointer.stop()
+        } else {
+            presentationPointer.start()
         }
     }
 

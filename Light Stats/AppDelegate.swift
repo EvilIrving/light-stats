@@ -52,7 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.windowSnappingService = windowSnappingService
         self.windowSnapHotKeyService = WindowSnapHotKeyService(snappingService: windowSnappingService)
         self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
-        self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: FindMouseService())
+        let findMouseService = FindMouseService(presentationPointer: PresentationPointerService())
+        self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: findMouseService)
         super.init()
     }
 

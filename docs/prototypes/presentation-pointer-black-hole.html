@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>演示指针 · 微型黑洞效果</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+      background: #080a0f;
+      color: #f7f7fa;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 72% 12%, rgba(69, 86, 166, 0.18), transparent 32%),
+        linear-gradient(145deg, #0d1018, #07080c 72%);
+      cursor: default;
+    }
+
+    button, input { font: inherit; }
+
+    .stage {
+      min-height: 100vh;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 286px;
+      gap: 18px;
+    }
+
+    .demo-window {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 22px;
+      background: #f2f0eb;
+      color: #16171a;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
+    }
+
+    .window-bar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 18px;
+      border-bottom: 1px solid rgba(12, 15, 20, 0.1);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .traffic-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5f57;
+      box-shadow: 20px 0 #febc2e, 40px 0 #28c840;
+    }
+
+    .window-title {
+      margin: 0 auto;
+      padding-right: 52px;
+      color: #5a5c63;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.03em;
+    }
+
+    .demo-content {
+      height: calc(100vh - 110px);
+      overflow: auto;
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      padding: 22px 14px;
+      border-right: 1px solid rgba(12, 15, 20, 0.1);
+      background: #e8e5df;
+    }
+
+    .brand {
+      padding: 0 10px 22px;
+      font-size: 14px;
+      font-weight: 760;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 38px;
+      margin-bottom: 4px;
+      padding: 0 11px;
+      border-radius: 10px;
+      color: #66676c;
+      font-size: 13px;
+      font-weight: 590;
+    }
+
+    .nav-item.active {
+      color: #191a1d;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 1px 3px rgba(27, 25, 19, 0.08);
+    }
+
+    .nav-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.7;
+    }
+
+    .dashboard {
+      padding: clamp(26px, 4vw, 52px);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #75767c;
+      font-size: 11px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 660px;
+      margin: 0;
+      font-size: clamp(30px, 5vw, 66px);
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+    }
+
+    .lead {
+      max-width: 610px;
+      margin: 22px 0 34px;
+      color: #676970;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .actions { display: flex; gap: 10px; }
+
+    .demo-button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 18px;
+      color: white;
+      background: #17191e;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 7px 18px rgba(18, 19, 23, 0.18);
+    }
+
+    .demo-button.secondary {
+      color: #24252a;
+      border: 1px solid rgba(19, 20, 24, 0.12);
+      background: rgba(255, 255, 255, 0.64);
+      box-shadow: none;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 46px;
+    }
+
+    .metric {
+      min-height: 124px;
+      padding: 18px;
+      border: 1px solid rgba(19, 20, 24, 0.1);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.54);
+    }
+
+    .metric-label { color: #777980; font-size: 11px; }
+    .metric-value { margin-top: 16px; font-size: 30px; font-weight: 750; letter-spacing: -0.04em; }
+    .metric-note { margin-top: 8px; color: #84868b; font-size: 11px; }
+
+    .controls {
+      align-self: start;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 20px;
+      background: rgba(20, 23, 32, 0.82);
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(24px);
+    }
+
+    .control-kicker {
+      margin: 0 0 7px;
+      color: #8f94a3;
+      font-size: 10px;
+      font-weight: 760;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .controls h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.025em;
+    }
+
+    .control-copy {
+      margin: 9px 0 22px;
+      color: #999eab;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .toggle-row,
+    .range-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      border: 0;
+      border-radius: 99px;
+      background: #343844;
+      transition: background 160ms ease;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+      transition: transform 160ms ease;
+    }
+
+    .switch[aria-pressed="true"] { background: #6a78ff; }
+    .switch[aria-pressed="true"]::after { transform: translateX(16px); }
+
+    input[type="range"] {
+      width: 110px;
+      accent-color: #7783ff;
+    }
+
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .palette button {
+      height: 34px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .palette button[aria-pressed="true"] { border-color: rgba(255, 255, 255, 0.52); }
+    .swatch { display: block; width: 16px; height: 16px; margin: auto; border-radius: 50%; }
+    .swatch.ice { background: linear-gradient(135deg, #89f7ff, #806dff); box-shadow: 0 0 12px #7183ff; }
+    .swatch.solar { background: linear-gradient(135deg, #fff08a, #ff6a00); box-shadow: 0 0 12px #ff8a18; }
+    .swatch.mono { background: linear-gradient(135deg, #fff, #a7b2c2); box-shadow: 0 0 12px #fff; }
+
+    .hint {
+      margin: 18px 0 0;
+      padding: 11px 12px;
+      border-radius: 11px;
+      color: #abb0bd;
+      background: rgba(255, 255, 255, 0.055);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    #pointer-effect {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      width: 320px;
+      height: 320px;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .status-pill {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 10000;
+      transform: translateX(-50%);
+      padding: 8px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.72);
+      background: rgba(8, 10, 15, 0.74);
+      backdrop-filter: blur(16px);
+      font-size: 11px;
+      pointer-events: none;
+      transition: opacity 300ms ease;
+    }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .stage { grid-template-columns: 1fr; }
+      .controls { order: -1; }
+      .demo-content { grid-template-columns: 1fr; height: auto; }
+      .sidebar { display: none; }
+      .metrics { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="demo-window" aria-label="效果测试区域">
+      <header class="window-bar">
+        <span class="traffic-light" aria-hidden="true"></span>
+        <span class="window-title">演示画面 · 指针保持可见</span>
+      </header>
+      <div class="demo-content">
+        <aside class="sidebar">
+          <div class="brand">Presentation</div>
+          <div class="nav-item active"><span class="nav-icon"></span>Overview</div>
+          <div class="nav-item"><span class="nav-icon"></span>Analytics</div>
+          <div class="nav-item"><span class="nav-icon"></span>Activity</div>
+          <div class="nav-item"><span class="nav-icon"></span>Settings</div>
+        </aside>
+        <article class="dashboard">
+          <p class="eyebrow">Live system overview</p>
+          <h1>让观众始终知道<br>鼠标在哪里。</h1>
+          <p class="lead">移动鼠标查看持续跟随效果。系统箭头仍然保留，黑洞只负责强化定位；点击任意位置会触发一次短暂的引力波。</p>
+          <div class="actions">
+            <button class="demo-button">试试点击这里</button>
+            <button class="demo-button secondary">或者移动到这里</button>
+          </div>
+          <section class="metrics" aria-label="示例数据">
+            <div class="metric"><div class="metric-label">CPU LOAD</div><div class="metric-value">23%</div><div class="metric-note">8 performance cores</div></div>
+            <div class="metric"><div class="metric-label">MEMORY</div><div class="metric-value">18.4 GB</div><div class="metric-note">Pressure is normal</div></div>
+            <div class="metric"><div class="metric-label">HEALTH</div><div class="metric-value">96</div><div class="metric-note">Excellent condition</div></div>
+          </section>
+        </article>
+      </div>
+    </section>
+
+    <aside class="controls">
+      <p class="control-kicker">Web Prototype</p>
+      <h2>微型黑洞指针</h2>
+      <p class="control-copy">没有 Logo、没有十字线、不暗化屏幕。效果会一直跟随，直到手动关闭。</p>
+
+      <div class="toggle-row">
+        <span>演示指针</span>
+        <button id="toggle" class="switch" type="button" aria-label="切换演示指针" aria-pressed="true"></button>
+      </div>
+      <label class="range-row">
+        <span>尺寸</span>
+        <input id="size" type="range" min="48" max="96" value="68">
+      </label>
+      <label class="range-row">
+        <span>亮度</span>
+        <input id="intensity" type="range" min="45" max="100" value="78">
+      </label>
+      <div class="toggle-row" style="display:block">
+        <span>色彩</span>
+        <div class="palette" role="group" aria-label="黑洞色彩">
+          <button type="button" data-palette="ice" aria-label="冰蓝" aria-pressed="false"><span class="swatch ice"></span></button>
+          <button type="button" data-palette="solar" aria-label="日冕" aria-pressed="true"><span class="swatch solar"></span></button>
+          <button type="button" data-palette="mono" aria-label="银白" aria-pressed="false"><span class="swatch mono"></span></button>
+        </div>
+      </div>
+      <p class="hint">建议重点看：它是否遮挡按钮文字、静止时是否太抢眼，以及点击波纹是否有必要。</p>
+    </aside>
+  </main>
+
+  <canvas id="pointer-effect" aria-hidden="true"></canvas>
+  <div id="status" class="status-pill">移动鼠标 · 点击测试引力波</div>
+
+  <script>
+    const canvas = document.querySelector('#pointer-effect');
+    const context = canvas.getContext('2d');
+    const toggle = document.querySelector('#toggle');
+    const sizeInput = document.querySelector('#size');
+    const intensityInput = document.querySelector('#intensity');
+    const status = document.querySelector('#status');
+
+    const palettes = {
+      ice: {
+        primary: [91, 237, 255],
+        secondary: [124, 91, 255],
+        hot: [232, 253, 255]
+      },
+      solar: {
+        primary: [255, 205, 74],
+        secondary: [255, 79, 22],
+        hot: [255, 249, 202]
+      },
+      mono: {
+        primary: [230, 239, 255],
+        secondary: [125, 143, 171],
+        hot: [255, 255, 255]
+      }
+    };
+
+    const canvasSize = 320;
+    const ribbonCount = 28;
+    const particleCount = 132;
+    const frameInterval = 1000 / 30;
+    let lastRenderedAt = 0;
+    const state = {
+      enabled: true,
+      visible: false,
+      x: window.innerWidth * 0.5,
+      y: window.innerHeight * 0.5,
+      size: Number(sizeInput.value),
+      intensity: Number(intensityInput.value) / 100,
+      palette: palettes.solar,
+      ripples: []
+    };
+
+    function rgba(rgb, alpha) {
+      return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+    }
+
+    function fract(value) {
+      return value - Math.floor(value);
+    }
+
+    function hash(index, salt = 0) {
+      return fract(Math.sin(index * 127.1 + salt * 311.7) * 43758.5453);
+    }
+
+    function mixRGB(first, second, amount) {
+      return first.map((value, index) => Math.round(value + (second[index] - value) * amount));
+    }
+
+    function resizeCanvas() {
+      const scale = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(canvasSize * scale);
+      canvas.height = Math.round(canvasSize * scale);
+      canvas.style.width = `${canvasSize}px`;
+      canvas.style.height = `${canvasSize}px`;
+      context.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+
+    function positionCanvas() {
+      const offset = canvasSize * 0.5;
+      canvas.style.transform = `translate3d(${state.x - offset}px, ${state.y - offset}px, 0)`;
+    }
+
+    function drawBlackHole(time) {
+      if (!state.enabled || !state.visible) return;
+
+      const { size, intensity, palette } = state;
+      const x = canvasSize * 0.5;
+      const y = canvasSize * 0.5;
+      const radius = size * 0.5;
+      const coreRadius = radius * 0.3;
+      const outerRadius = radius * 1.52;
+      const rotation = time * 0.00016;
+      const pulse = 1 + Math.sin(time * 0.0011) * 0.006;
+
+      context.save();
+      context.translate(x, y);
+      context.scale(pulse, pulse);
+      context.lineCap = 'round';
+
+      // The gravity well is mostly transparent; only the central shadow is opaque.
+      const well = context.createRadialGradient(0, 0, coreRadius * 0.3, 0, 0, outerRadius);
+      well.addColorStop(0, 'rgba(0, 0, 0, 0.98)');
+      well.addColorStop(0.18, 'rgba(0, 0, 2, 0.9)');
+      well.addColorStop(0.31, rgba(palette.secondary, 0.15 * intensity));
+      well.addColorStop(0.58, rgba(palette.primary, 0.055 * intensity));
+      well.addColorStop(1, rgba(palette.primary, 0));
+      context.fillStyle = well;
+      context.beginPath();
+      context.arc(0, 0, outerRadius, 0, Math.PI * 2);
+      context.fill();
+
+      context.globalCompositeOperation = 'lighter';
+
+      // Layered turbulent gas replaces clean vector lines. Every ribbon has a different
+      // thickness, temperature, rotation rate and radial wobble.
+      for (let ribbon = 0; ribbon < ribbonCount; ribbon += 1) {
+        const seed = hash(ribbon, 1);
+        const arm = ribbon % 5;
+        const baseAngle = arm * (Math.PI * 2 / 5) + seed * 1.35 + rotation * (0.55 + hash(ribbon, 2));
+        const startRadius = radius * (1.1 + hash(ribbon, 3) * 0.52);
+        const endRadius = coreRadius * (0.76 + hash(ribbon, 4) * 0.22);
+        const curl = 3.2 + hash(ribbon, 5) * 2.7;
+        const warmAmount = 0.25 + hash(ribbon, 6) * 0.75;
+        const ribbonColor = mixRGB(palette.secondary, palette.hot, warmAmount);
+        const beam = 0.32 + 0.68 * Math.pow(Math.max(0, Math.cos(baseAngle - 2.35)) * 0.82 + 0.18, 1.4);
+        const alpha = (0.025 + hash(ribbon, 7) * 0.075) * beam * intensity;
+
+        context.beginPath();
+        for (let step = 0; step <= 22; step += 1) {
+          const progress = step / 22;
+          const collapse = Math.pow(progress, 1.5);
+          const turbulence = Math.sin(progress * (8 + seed * 17) + seed * 19 + time * 0.0012) * radius * 0.018;
+          const pathRadius = startRadius - (startRadius - endRadius) * collapse + turbulence * (1 - progress);
+          const angle = baseAngle + collapse * curl + Math.sin(progress * Math.PI * 2 + seed * 8) * 0.06;
+          const pointX = Math.cos(angle) * pathRadius;
+          const pointY = Math.sin(angle) * pathRadius;
+          if (step === 0) context.moveTo(pointX, pointY);
+          else context.lineTo(pointX, pointY);
+        }
+        context.shadowBlur = radius * (0.12 + hash(ribbon, 8) * 0.2);
+        context.shadowColor = rgba(ribbonColor, alpha * 2.5);
+        context.strokeStyle = rgba(ribbonColor, alpha);
+        context.lineWidth = Math.max(0.35, radius * (0.012 + hash(ribbon, 9) * 0.036));
+        context.stroke();
+      }
+
+      // Hundreds of dust packets fall inward. Their non-linear radial motion makes them
+      // visibly accelerate before the event horizon erases them.
+      for (let particle = 0; particle < particleCount; particle += 1) {
+        const seed = hash(particle, 11);
+        const cycle = fract(time * (0.000055 + hash(particle, 12) * 0.000075) + seed);
+        const fall = 1 - Math.pow(1 - cycle, 2.65);
+        const startRadius = radius * (1.08 + hash(particle, 13) * 0.58);
+        const particleRadius = startRadius - (startRadius - coreRadius * 0.78) * fall;
+        const baseAngle = hash(particle, 14) * Math.PI * 2;
+        const curl = 3.7 + hash(particle, 15) * 3.4;
+        const angle = baseAngle + fall * curl + rotation * (0.8 + hash(particle, 16));
+        const horizonFade = Math.max(0, Math.min(1, (particleRadius - coreRadius * 0.78) / (radius * 0.2)));
+        const entryFade = Math.min(1, cycle * 14);
+        const density = 0.35 + hash(particle, 17) * 0.65;
+        const beam = 0.22 + 0.78 * Math.pow(Math.max(0, Math.cos(angle - 2.35)) * 0.86 + 0.14, 1.55);
+        const alpha = horizonFade * entryFade * density * beam * intensity;
+        if (alpha < 0.025) continue;
+
+        const temperature = Math.min(1, fall * 0.78 + hash(particle, 18) * 0.35);
+        const particleColor = mixRGB(palette.secondary, palette.hot, temperature);
+        const previousFall = Math.max(0, fall - (0.018 + hash(particle, 19) * 0.035));
+        const previousRadius = startRadius - (startRadius - coreRadius * 0.78) * previousFall;
+        const previousAngle = baseAngle + previousFall * curl + rotation * (0.8 + hash(particle, 16));
+        const pointX = Math.cos(angle) * particleRadius;
+        const pointY = Math.sin(angle) * particleRadius;
+        const previousX = Math.cos(previousAngle) * previousRadius;
+        const previousY = Math.sin(previousAngle) * previousRadius;
+
+        context.shadowBlur = radius * (0.1 + fall * 0.28);
+        context.shadowColor = rgba(particleColor, alpha);
+        context.strokeStyle = rgba(particleColor, alpha * 0.72);
+        context.lineWidth = Math.max(0.45, radius * (0.009 + hash(particle, 20) * 0.032));
+        context.beginPath();
+        context.moveTo(previousX, previousY);
+        context.lineTo(pointX, pointY);
+        context.stroke();
+
+        if (hash(particle, 21) > 0.72) {
+          context.fillStyle = rgba(palette.hot, alpha * 0.82);
+          context.beginPath();
+          context.arc(pointX, pointY, 0.35 + hash(particle, 22) * 1.05, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+
+      // Gravitational lensing appears as fragmented, unequal photon arcs. The approaching
+      // side is much brighter (Doppler beaming), which breaks the synthetic symmetry.
+      const photonArcs = [
+        { radius: 1.06, start: 1.72, length: 1.58, alpha: 0.72, width: 0.038 },
+        { radius: 1.12, start: 3.68, length: 0.68, alpha: 0.28, width: 0.022 },
+        { radius: 1.2, start: 5.06, length: 0.38, alpha: 0.16, width: 0.014 }
+      ];
+      for (const [index, arc] of photonArcs.entries()) {
+        context.shadowBlur = radius * (0.18 + index * 0.08);
+        context.shadowColor = rgba(index === 0 ? palette.hot : palette.primary, intensity);
+        context.strokeStyle = rgba(index === 0 ? palette.hot : palette.primary, arc.alpha * intensity);
+        context.lineWidth = Math.max(0.55, radius * arc.width);
+        context.beginPath();
+        context.arc(0, 0, coreRadius * arc.radius, arc.start + rotation * 0.55, arc.start + arc.length + rotation * 0.55);
+        context.stroke();
+      }
+
+      context.globalCompositeOperation = 'source-over';
+
+      // A subtly unstable edge prevents the shadow from reading as a flat, perfect icon.
+      context.shadowBlur = radius * 0.34;
+      context.shadowColor = 'rgba(0, 0, 0, 1)';
+      context.fillStyle = 'rgba(0, 0, 0, 1)';
+      context.beginPath();
+      for (let point = 0; point <= 72; point += 1) {
+        const angle = point / 72 * Math.PI * 2;
+        const edgeNoise = Math.sin(angle * 7 + time * 0.0007) * 0.018
+          + Math.sin(angle * 13 - time * 0.00043) * 0.009;
+        const edgeRadius = coreRadius * (1 + edgeNoise);
+        const pointX = Math.cos(angle) * edgeRadius;
+        const pointY = Math.sin(angle) * edgeRadius;
+        if (point === 0) context.moveTo(pointX, pointY);
+        else context.lineTo(pointX, pointY);
+      }
+      context.closePath();
+      context.fill();
+
+      // A razor-thin partial rim is lensing, not an outline; most of the horizon stays black.
+      context.shadowBlur = radius * 0.22;
+      context.shadowColor = rgba(palette.hot, 0.9 * intensity);
+      context.strokeStyle = rgba(palette.hot, 0.42 * intensity);
+      context.lineWidth = Math.max(0.45, radius * 0.014);
+      context.beginPath();
+      context.arc(0, 0, coreRadius * 1.03, 1.82 + rotation * 0.4, 2.92 + rotation * 0.4);
+      context.stroke();
+
+      context.restore();
+    }
+
+    function drawRipples(now) {
+      state.ripples = state.ripples.filter((ripple) => now - ripple.startedAt < 460);
+      for (const ripple of state.ripples) {
+        const progress = (now - ripple.startedAt) / 460;
+        const radius = state.size * (1.12 - progress * 0.82);
+        const alpha = Math.sin(progress * Math.PI) * 0.46 * state.intensity;
+        context.save();
+        context.lineWidth = Math.max(0.7, 1.8 * (1 - progress));
+        context.strokeStyle = rgba(state.palette.primary, alpha);
+        context.shadowBlur = 10;
+        context.shadowColor = rgba(state.palette.secondary, alpha);
+        context.beginPath();
+        context.arc(canvasSize * 0.5, canvasSize * 0.5, radius, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+    }
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (now - lastRenderedAt < frameInterval) return;
+      lastRenderedAt = now;
+      context.clearRect(0, 0, canvasSize, canvasSize);
+      if (state.enabled && state.visible) {
+        drawRipples(now);
+        drawBlackHole(now);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('pointermove', (event) => {
+      state.x = event.clientX;
+      state.y = event.clientY;
+      state.visible = true;
+      positionCanvas();
+      status.style.opacity = '0';
+    }, { passive: true });
+
+    window.addEventListener('pointerdown', (event) => {
+      if (!state.enabled) return;
+      state.ripples.push({ startedAt: performance.now() });
+    }, { passive: true });
+
+    document.documentElement.addEventListener('mouseleave', () => { state.visible = false; });
+    document.documentElement.addEventListener('mouseenter', () => { state.visible = true; });
+
+    toggle.addEventListener('click', () => {
+      state.enabled = !state.enabled;
+      toggle.setAttribute('aria-pressed', String(state.enabled));
+      status.textContent = state.enabled ? '演示指针已开启' : '演示指针已关闭';
+      status.style.opacity = '1';
+      window.setTimeout(() => { status.style.opacity = '0'; }, 900);
+    });
+
+    sizeInput.addEventListener('input', () => { state.size = Number(sizeInput.value); });
+    intensityInput.addEventListener('input', () => { state.intensity = Number(intensityInput.value) / 100; });
+
+    document.querySelectorAll('[data-palette]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-palette]').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        button.setAttribute('aria-pressed', 'true');
+        state.palette = palettes[button.dataset.palette];
+      });
+    });
+
+    resizeCanvas();
+    positionCanvas();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
