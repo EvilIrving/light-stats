@@ -153,7 +153,7 @@
 "settings.aiUsageInterval" = "更新間隔";
 "aiUsage.title" = "AI 使用量";
 "aiUsage.claude" = "Claude Code";
-"aiUsage.codex" = "Codex";
+"aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "ウィンドウ自動更新";
 "aiUsage.fetching" = "取得中...";

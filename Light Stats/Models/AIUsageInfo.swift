@@ -16,7 +16,7 @@ enum AIProvider: String, Codable, CaseIterable {
     var displayName: String {
         switch self {
         case .claude: return "Claude Code"
-        case .codex: return "Codex"
+        case .codex: return "ChatGPT"
         case .gemini: return "Gemini"
         }
     }

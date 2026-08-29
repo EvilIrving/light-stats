@@ -153,7 +153,7 @@
 "settings.aiUsageInterval" = "새로 고침 간격";
 "aiUsage.title" = "AI 사용량";
 "aiUsage.claude" = "Claude Code";
-"aiUsage.codex" = "Codex";
+"aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "윈도우 자동 갱신";
 "aiUsage.fetching" = "가져오는 중...";
