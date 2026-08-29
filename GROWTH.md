@@ -1,11 +1,11 @@
 # Growth Context
 
-*Last updated: 2026-08-18*
+*Last updated: 2026-08-30*
 
 ## Product
 - **Name:** Light Stats
 - **One-liner:** Native macOS menu bar instrument for live system pressure, with optional developer tools and four visual themes.
-- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, mouse and trackpad scroll controls, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Classic, Golden Hour, Amber, Ink Night), with Ink Night selected on a clean install; Settings stays a system-white tool panel. Local privacy-aware diagnostic logging is optional. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
+- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, Find My Mouse and a presentation pointer with a user-recorded trigger, mouse and trackpad scroll controls, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Classic, Golden Hour, Amber, Ink Night), with Ink Night selected on a clean install; Settings stays a system-white tool panel. Local privacy-aware diagnostic logging is optional. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
 - **Category:** macOS menu bar system and developer-workflow monitor
 
 ## Platform & distribution
@@ -28,7 +28,7 @@
 3. **Developer context in one instrument:** Displays Claude Code, Codex, and Gemini subscription usage, and adds an opt-in Finder menu for terminal, type-aware file templates, copy, move, and open-with workflows.
 4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, zero third-party runtime dependencies (including template-tinted SVG icons in-bundle).
 5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel are all disabled by default, so a clean install makes no outbound request. Diagnostic logs (default Full, switchable to Errors or Off) stay local with redaction and are never uploaded.
-6. **Opt-in Mac utilities:** Window placement, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
+6. **Opt-in Mac utilities:** Window placement, Find My Mouse and its presentation pointer, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
 7. **Selectable instrument chrome:** Four themes (Classic, Golden Hour, Amber, Ink Night) on product surfaces; the three dynamic themes provide grain and light-dynamics controls; Settings remains a white tool panel.
 
 ## Competitors / alternatives
