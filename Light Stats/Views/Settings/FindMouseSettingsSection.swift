@@ -34,9 +34,9 @@ struct FindMouseSettingsSection: View {
                         SettingsSegmentLabel(title: key.symbol).tag(key)
                     }
                 }
-                .disabled(!settings.findMouseEnabled || !license.isFindMouseUnlocked)
-                .opacity((settings.findMouseEnabled && license.isFindMouseUnlocked) ? 1 : 0.45)
             }
+            .disabled(!settings.findMouseEnabled || !license.isFindMouseUnlocked)
+            .opacity((settings.findMouseEnabled && license.isFindMouseUnlocked) ? 1 : 0.45)
         }
     }
 }

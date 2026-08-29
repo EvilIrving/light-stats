@@ -224,7 +224,7 @@
 // MARK: - Input Devices
 "settings.inputDevices" = "输入设备";
 "settings.findMouse" = "找到我的鼠标";
-"settings.findMouse.hint" = "双按聚光找到鼠标，三按切换演示指针";
+"settings.findMouse.hint" = "双按定位鼠标，三按切换演示指针";
 "settings.findMouseTriggerKey" = "触发键";
 "settings.findMouse.permissionTitle" = "需要辅助功能权限";
 "settings.findMouse.permissionMessage" = "「找到我的鼠标」需要辅助功能权限来监听触发键。请在系统设置中开启后使用。";

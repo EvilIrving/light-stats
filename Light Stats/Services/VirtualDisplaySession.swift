@@ -45,8 +45,6 @@ final class VirtualDisplaySession {
         guard let created = makeDisplay() else { return false }
         display = created.object
         displayID = created.displayID
-        activateIfNeeded(created.displayID)
-        placeBesideMain(created.displayID)
         return true
     }
 
@@ -98,39 +96,10 @@ final class VirtualDisplaySession {
         return CreatedDisplay(object: display, displayID: id)
     }
 
-    // MARK: - Topology
-
-    private func activateIfNeeded(_ id: CGDirectDisplayID) {
-        if Self.activeDisplayIDs().contains(id) { return }
-        guard let managerClass = NSClassFromString("SLWindowMirroringManager") else { return }
-        let shared = ObjCCall.classObject(managerClass, "sharedManager")
-            ?? ObjCCall.classObject(managerClass, "shared")
-        guard let shared else { return }
-        _ = ObjCCall.extend(shared, displayID: id)
-    }
-
-    private func placeBesideMain(_ id: CGDirectDisplayID) {
-        let main = CGMainDisplayID()
-        guard id != main else { return }
-        let originX = Int32(CGDisplayBounds(main).maxX.rounded())
-        let originY = Int32(CGDisplayBounds(main).minY.rounded())
-        var config: CGDisplayConfigRef?
-        guard CGBeginDisplayConfiguration(&config) == .success, let config else { return }
-        if CGConfigureDisplayOrigin(config, id, originX, originY) == .success {
-            _ = CGCompleteDisplayConfiguration(config, .forSession)
-        } else {
-            CGCancelDisplayConfiguration(config)
-        }
-    }
-
     // MARK: - Display lists
 
     static func onlineDisplayIDs() -> [CGDirectDisplayID] {
         displayIDs(CGGetOnlineDisplayList)
-    }
-
-    private static func activeDisplayIDs() -> [CGDirectDisplayID] {
-        displayIDs(CGGetActiveDisplayList)
     }
 
     private static func displayIDs(
@@ -222,17 +191,4 @@ private enum ObjCCall {
         return unsafeBitCast(impl, to: MsgSend.self)(display, selector)
     }
 
-    static func classObject(_ cls: AnyClass, _ selectorName: String) -> AnyObject? {
-        let selector = NSSelectorFromString(selectorName)
-        guard cls.responds(to: selector) else { return nil }
-        return (cls as AnyObject).perform(selector)?.takeUnretainedValue()
-    }
-
-    static func extend(_ manager: AnyObject, displayID: CGDirectDisplayID) -> Bool {
-        let selector = NSSelectorFromString("extend:")
-        guard manager.responds(to: selector) else { return false }
-        typealias MsgSend = @convention(c) (AnyObject, Selector, UInt32) -> Bool
-        let impl = class_getMethodImplementation(object_getClass(manager), selector)
-        return unsafeBitCast(impl, to: MsgSend.self)(manager, selector, displayID)
-    }
 }
