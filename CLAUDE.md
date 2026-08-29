@@ -26,7 +26,7 @@ Light Stats/
 │   ├── AIUsageInfo.swift
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
-│   ├── FindMouseTriggerKey.swift    # Left-modifier trigger for Find My Mouse
+│   ├── FindMouseTriggerKey.swift    # User-recorded shortcut for Find My Mouse
 │   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
 │   ├── CoreType.swift
 │   ├── AppGroup.swift

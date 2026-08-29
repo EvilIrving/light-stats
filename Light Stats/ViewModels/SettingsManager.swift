@@ -318,7 +318,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var keepAwakeEnabled: Bool {
         didSet { save(keepAwakeEnabled, for: .keepAwakeEnabled) }
     }
-    /// 找到我的鼠标：默认关闭（opt-in，需辅助功能权限）。开 → 双击左修饰键全屏聚光指针。
+    /// 找到我的鼠标：默认关闭（opt-in，需辅助功能权限）。开 → 双按所选快捷键全屏聚光指针。
     @Published var findMouseEnabled: Bool {
         didSet { save(findMouseEnabled, for: .findMouseEnabled) }
     }
@@ -605,7 +605,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollIncludeTrackpad = defaults.object(forKey: Key.scrollIncludeTrackpad.rawValue) as? Bool ?? false
         // 保持唤醒：默认关闭（opt-in）。
         keepAwakeEnabled = defaults.object(forKey: Key.keepAwakeEnabled.rawValue) as? Bool ?? false
-        // 找到我的鼠标：默认关闭（opt-in）；触发键默认左 Control，与 PowerToys 一致。
+        // 找到我的鼠标：默认关闭（opt-in）；触发快捷键默认左 Control。
         findMouseEnabled = defaults.object(forKey: Key.findMouseEnabled.rawValue) as? Bool ?? false
         findMouseTriggerKey = defaults.string(forKey: Key.findMouseTriggerKey.rawValue)
             .flatMap(FindMouseTriggerKey.init(rawValue:)) ?? .leftControl

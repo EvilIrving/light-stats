@@ -174,16 +174,16 @@ struct GeneralDetail: View {
                 .controlSize(.small)
             }
 
+            Text("settings.update.automaticLabel".localized)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+            SettingsToggle(isOn: $settings.autoCheckUpdates)
+
             SettingsSegmentedPicker(selection: $settings.includeBetaUpdates, segmentMinWidth: 48) {
                 SettingsSegmentLabel(title: "settings.update.channel.stable".localized).tag(false)
                 SettingsSegmentLabel(title: "settings.update.channel.beta".localized).tag(true)
             }
             .help("settings.update.channel.hint".localized)
-
-            Text("settings.update.automaticLabel".localized)
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-            SettingsToggle(isOn: $settings.autoCheckUpdates)
         }
         .padding(.horizontal, 12)
         .frame(minHeight: 40)

@@ -226,6 +226,9 @@
 "settings.findMouse" = "마우스 찾기";
 "settings.findMouse.hint" = "두 번 누르면 마우스 찾기, 세 번 누르면 프레젠테이션 포인터 전환";
 "settings.findMouseTriggerKey" = "트리거 키";
+"settings.findMouseTriggerKey.left" = "왼쪽";
+"settings.findMouseTriggerKey.right" = "오른쪽";
+"settings.findMouseTriggerKey.recording" = "단축키 입력";
 "settings.findMouse.permissionTitle" = "접근성 권한 필요";
 "settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 접근성 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
 "settings.activation" = "활성화";

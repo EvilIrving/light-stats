@@ -13,7 +13,14 @@ struct FindMouseSettingsSection: View {
                     "settings.findMouse".localized,
                     subtitle: "settings.findMouse.hint".localized
                 ) {
-                    SettingsToggle(isOn: $settings.findMouseEnabled)
+                    HStack(spacing: 10) {
+                        SettingsToggle(isOn: $settings.findMouseEnabled)
+
+                        FindMouseTriggerRecorder(
+                            selection: $settings.findMouseTriggerKey,
+                            isEnabled: settings.findMouseEnabled
+                        )
+                    }
                 }
             } else {
                 SettingsRow(
@@ -24,19 +31,6 @@ struct FindMouseSettingsSection: View {
                         .controlSize(.regular)
                 }
             }
-            Divider().padding(.leading, 12)
-            SettingsRow("settings.findMouseTriggerKey".localized) {
-                SettingsSegmentedPicker(
-                    selection: $settings.findMouseTriggerKey,
-                    segmentMinWidth: 36
-                ) {
-                    ForEach(FindMouseTriggerKey.allCases, id: \.self) { key in
-                        SettingsSegmentLabel(title: key.symbol).tag(key)
-                    }
-                }
-            }
-            .disabled(!settings.findMouseEnabled || !license.isFindMouseUnlocked)
-            .opacity((settings.findMouseEnabled && license.isFindMouseUnlocked) ? 1 : 0.45)
         }
     }
 }

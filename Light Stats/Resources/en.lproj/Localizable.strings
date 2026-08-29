@@ -224,6 +224,9 @@
 "settings.findMouse" = "Find My Mouse";
 "settings.findMouse.hint" = "Double-tap to find the pointer; triple-tap to toggle Presentation Pointer";
 "settings.findMouseTriggerKey" = "Trigger Key";
+"settings.findMouseTriggerKey.left" = "Left";
+"settings.findMouseTriggerKey.right" = "Right";
+"settings.findMouseTriggerKey.recording" = "Press Shortcut";
 "settings.findMouse.permissionTitle" = "Accessibility Access Needed";
 "settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
 "settings.activation" = "Activation";

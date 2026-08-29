@@ -129,5 +129,22 @@ final class FindMouseTriggerTests: XCTestCase {
         XCTAssertEqual(FindMouseTriggerKey.leftOption.keyCode, 58)
         XCTAssertEqual(FindMouseTriggerKey.leftCommand.keyCode, 55)
         XCTAssertEqual(FindMouseTriggerKey.leftShift.keyCode, 56)
+        XCTAssertEqual(FindMouseTriggerKey.rightControl.keyCode, 62)
+        XCTAssertEqual(FindMouseTriggerKey.rightOption.keyCode, 61)
+        XCTAssertEqual(FindMouseTriggerKey.rightCommand.keyCode, 54)
+        XCTAssertEqual(FindMouseTriggerKey.rightShift.keyCode, 60)
+        XCTAssertEqual(FindMouseTriggerKey.function.keyCode, 63)
+    }
+
+    func testRecordedShortcutRoundTripsThroughSettingsValue() {
+        let shortcut = FindMouseTriggerKey(
+            keyCode: 46,
+            modifiers: FindMouseTriggerKey.controlModifier | FindMouseTriggerKey.commandModifier,
+            displayKey: "M"
+        )
+
+        XCTAssertEqual(FindMouseTriggerKey(rawValue: shortcut.rawValue), shortcut)
+        XCTAssertEqual(FindMouseTriggerKey(rawValue: "leftControl"), .leftControl)
+        XCTAssertNil(FindMouseTriggerKey(rawValue: "invalid"))
     }
 }

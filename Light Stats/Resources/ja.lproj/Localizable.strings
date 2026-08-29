@@ -226,6 +226,9 @@
 "settings.findMouse" = "マウスを探す";
 "settings.findMouse.hint" = "2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
 "settings.findMouseTriggerKey" = "トリガーキー";
+"settings.findMouseTriggerKey.left" = "左";
+"settings.findMouseTriggerKey.right" = "右";
+"settings.findMouseTriggerKey.recording" = "キーを入力";
 "settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
 "settings.activation" = "ライセンス認証";

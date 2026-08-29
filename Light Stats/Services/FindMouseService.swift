@@ -247,11 +247,12 @@ final class FindMouseService: FindMouseControlling {
     }
 
     private func makeTap() -> (CFMachPort, CFRunLoopSource)? {
-        // flagsChanged detects the double-tap; mouseMoved follows the
-        // pointer; keys/clicks dismiss. All listen-only.
+        // Modifier-only triggers use flagsChanged; recorded shortcuts use
+        // keyDown/keyUp. Mouse movement follows the pointer. All listen-only.
         let mask = (1 << CGEventType.flagsChanged.rawValue)
             | (1 << CGEventType.mouseMoved.rawValue)
             | (1 << CGEventType.keyDown.rawValue)
+            | (1 << CGEventType.keyUp.rawValue)
             | (1 << CGEventType.leftMouseDown.rawValue)
             | (1 << CGEventType.rightMouseDown.rawValue)
             | (1 << CGEventType.otherMouseDown.rawValue)
@@ -308,9 +309,15 @@ final class FindMouseService: FindMouseControlling {
         switch type {
         case .flagsChanged:
             handleFlagsChanged(event)
+        case .keyDown:
+            guard !handleKeyDown(event) else { return }
+            cancelPendingDoubleTap()
+            dismissSpotlightIfActive()
+        case .keyUp:
+            handleKeyUp(event)
         case .mouseMoved:
             handleMouseMoved()
-        case .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown:
+        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
             cancelPendingDoubleTap()
             dismissSpotlightIfActive()
         default:
@@ -323,15 +330,9 @@ final class FindMouseService: FindMouseControlling {
         stateLock.lock()
         let key = triggerKey
         stateLock.unlock()
-        guard keyCode == key.keyCode else { return }
+        guard key.isModifierOnly, keyCode == key.keyCode else { return }
 
-        let isPress: Bool
-        switch key {
-        case .leftControl: isPress = event.flags.contains(.maskControl)
-        case .leftOption: isPress = event.flags.contains(.maskAlternate)
-        case .leftCommand: isPress = event.flags.contains(.maskCommand)
-        case .leftShift: isPress = event.flags.contains(.maskShift)
-        }
+        let isPress = eventModifiers(event.flags) & key.modifiers != 0
 
         let now = ProcessInfo.processInfo.systemUptime
         if isPress {
@@ -344,6 +345,45 @@ final class FindMouseService: FindMouseControlling {
             detector.registerRelease(at: now)
             stateLock.unlock()
         }
+    }
+
+    private func handleKeyDown(_ event: CGEvent) -> Bool {
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        stateLock.lock()
+        let key = triggerKey
+        stateLock.unlock()
+        guard !key.isModifierOnly,
+              keyCode == key.keyCode,
+              eventModifiers(event.flags) == key.modifiers else { return false }
+
+        let now = ProcessInfo.processInfo.systemUptime
+        stateLock.lock()
+        let action = detector.registerPress(at: now)
+        stateLock.unlock()
+        handleTriggerAction(action)
+        return true
+    }
+
+    private func handleKeyUp(_ event: CGEvent) {
+        let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+        stateLock.lock()
+        let key = triggerKey
+        guard !key.isModifierOnly, keyCode == key.keyCode else {
+            stateLock.unlock()
+            return
+        }
+        detector.registerRelease(at: ProcessInfo.processInfo.systemUptime)
+        stateLock.unlock()
+    }
+
+    private func eventModifiers(_ flags: CGEventFlags) -> UInt8 {
+        var modifiers: UInt8 = 0
+        if flags.contains(.maskControl) { modifiers |= FindMouseTriggerKey.controlModifier }
+        if flags.contains(.maskAlternate) { modifiers |= FindMouseTriggerKey.optionModifier }
+        if flags.contains(.maskShift) { modifiers |= FindMouseTriggerKey.shiftModifier }
+        if flags.contains(.maskCommand) { modifiers |= FindMouseTriggerKey.commandModifier }
+        if flags.contains(.maskSecondaryFn) { modifiers |= FindMouseTriggerKey.functionModifier }
+        return modifiers
     }
 
     private func handleTriggerAction(_ action: FindMouseTriggerAction) {

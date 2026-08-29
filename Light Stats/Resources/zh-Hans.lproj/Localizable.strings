@@ -226,6 +226,9 @@
 "settings.findMouse" = "找到我的鼠标";
 "settings.findMouse.hint" = "双按定位鼠标，三按切换演示指针";
 "settings.findMouseTriggerKey" = "触发键";
+"settings.findMouseTriggerKey.left" = "左";
+"settings.findMouseTriggerKey.right" = "右";
+"settings.findMouseTriggerKey.recording" = "请按快捷键";
 "settings.findMouse.permissionTitle" = "需要辅助功能权限";
 "settings.findMouse.permissionMessage" = "「找到我的鼠标」需要辅助功能权限来监听触发键。请在系统设置中开启后使用。";
 "settings.activation" = "激活";
