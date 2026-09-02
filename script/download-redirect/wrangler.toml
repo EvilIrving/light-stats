@@ -19,6 +19,10 @@ zone_name = "onecat.dev"
 pattern = "download.onecat.dev/Light-Stats-beta.dmg"
 zone_name = "onecat.dev"
 
+[[routes]]
+pattern = "download.onecat.dev/charge-limiter"
+zone_name = "onecat.dev"
+
 [[r2_buckets]]
 binding = "RELEASES"
 bucket_name = "light-stats"
