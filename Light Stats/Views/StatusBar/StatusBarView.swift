@@ -184,7 +184,7 @@ final class StatusBarView: NSView {
         }
 
         // Fan（独立 Core Animation 图层旋转，无数字/标签 → 固定宽度，不抖动）
-        if settings.showFan {
+        if settings.showFan, AppDistribution.includesSMC {
             displayItems.append(DisplayItem(
                 value: "",
                 label: "",
@@ -275,7 +275,7 @@ final class StatusBarView: NSView {
             width += Layout.networkItemWidth
             itemCount += 1
         }
-        if settings.showFan {
+        if settings.showFan, AppDistribution.includesSMC {
             width += Layout.fanItemWidth
             itemCount += 1
         }

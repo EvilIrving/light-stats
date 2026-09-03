@@ -67,20 +67,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         setupStatusItem()
         setupPanel()
         startMonitoring()
-        // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
-        _ = CleaningModeOverlayController.shared
+        if AppDistribution.includesCleaningMode {
+            // 触发清洁模式遮罩控制器的惰性初始化，使其开始监听 isActive。
+            _ = CleaningModeOverlayController.shared
+        }
 
         observePreferenceChanges()
 
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
-        syncScrollService()
-        syncWindowControlServices()
-        findMouseCoordinator.start()
-        syncFinderMenuService()
-        syncKeepAwakeService()
-        displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
-        // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
-        FinderMenuHostService.shared.publishLabels()
+        // App Store builds skip Direct-only taps / private-framework tools.
+        if AppDistribution.includesScrollReverse {
+            syncScrollService()
+        }
+        if AppDistribution.includesWindowManagement {
+            syncWindowControlServices()
+        }
+        if AppDistribution.includesFindMouse {
+            findMouseCoordinator.start()
+        }
+        if AppDistribution.includesFinderMenu {
+            syncFinderMenuService()
+            // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
+            FinderMenuHostService.shared.publishLabels()
+        }
+        if AppDistribution.includesKeepAwake {
+            syncKeepAwakeService()
+        }
+        if AppDistribution.includesDisplayControl {
+            displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
+        }
 
         // 回到前台时复查权限：用户可能刚授权，开关开着但 tap 尚未建起来。
         NotificationCenter.default.addObserver(
@@ -114,9 +129,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             object: nil
         )
 
-        // 启动后延迟检查更新，避开冷启动高峰；尊重「自动检查」开关。
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            UpdateManager.shared.checkOnLaunch()
+        if AppDistribution.includesSelfUpdate {
+            // 启动后延迟检查更新，避开冷启动高峰；尊重「自动检查」开关。
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                UpdateManager.shared.checkOnLaunch()
+            }
         }
 
     }
@@ -306,8 +323,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 始终 start()：仅建立设置订阅，无 provider 开启时不发请求、不弹 Keychain（见
         // AIUsageMonitor 注释）。这样用户在运行期才开启某 provider 也能即时生效，
         // 且 warmup 自动续期依赖监控发布的窗口快照拿 reset 时间。
-        AIUsageMonitor.shared.start()
-        UsageWarmupManager.shared.start()
+        if AppDistribution.includesAIUsage {
+            AIUsageMonitor.shared.start()
+            UsageWarmupManager.shared.start()
+        }
 
         // 监听刷新频率变化，重新启动监控
         settings.$refreshRate
@@ -480,14 +499,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             action: "opened",
             fields: panelDiagnosticFields()
         )
-        AIUsageMonitor.shared.refreshIfStale()
+        if AppDistribution.includesAIUsage {
+            AIUsageMonitor.shared.refreshIfStale()
+        }
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         monitor.setPopoverVisible(true)
-        displayControlManager.setPanelVisible(true)
+        if AppDistribution.includesDisplayControl {
+            displayControlManager.setPanelVisible(true)
+        }
         // 面板一打开即预热进程内存扫描，用户从 Overview 切到 Cleanup 时数据已就绪。
         // Cleanup 页的 onAppear/onDisappear 仍会幂等地接管 start/stop。
-        appMemoryManager.startMonitoring()
+        // App Store 无 Cleanup Tab，不启动全进程扫描。
+        if AppDistribution.includesProcessCleanup {
+            appMemoryManager.startMonitoring()
+        }
         installGlobalClickMonitor()
     }
 
@@ -508,14 +534,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc private func handleAppDidBecomeActive() {
-        if currentScrollConfig().isActive, !scrollService.isRunning {
+        if AppDistribution.includesScrollReverse,
+           currentScrollConfig().isActive,
+           !scrollService.isRunning {
             scrollService.updateConfig(currentScrollConfig())
             _ = scrollService.start()
         }
-        findMouseCoordinator.retryIfNeeded()
-        syncWindowControlServices()
-        displayControlManager.applicationDidBecomeActive()
-        if settings.finderMenuEnabled {
+        if AppDistribution.includesFindMouse {
+            findMouseCoordinator.retryIfNeeded()
+        }
+        if AppDistribution.includesWindowManagement {
+            syncWindowControlServices()
+        }
+        if AppDistribution.includesDisplayControl {
+            displayControlManager.applicationDidBecomeActive()
+        }
+        if AppDistribution.includesFinderMenu, settings.finderMenuEnabled {
             syncFinderMenuService()
             FinderMenuConfigStore.shared.refreshExtensionStatus()
         }
@@ -534,6 +568,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     /// 窗口管理总开关统一驱动：开 → 图标 + 快捷键 + 手势全起；关 → 三者一起停。
     private func syncWindowControlServices() {
+        guard AppDistribution.includesWindowManagement else {
+            windowSnapHotKeyService.stop()
+            titlebarGestureService.stop()
+            removeWindowControlsStatusItem()
+            return
+        }
         if settings.windowManagementEnabled {
             ensureWindowControlsStatusItem()
             startWindowSnapHotKeysOrPrompt()
@@ -562,6 +602,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     /// 同步滚动服务：热更新配置；按「垂直∨水平反转∨关闭加速度」决定 tap 起停。步长倍率
     /// 与触控板开关依附于这些主开关 —— 仅在 tap 运行时生效，单独调整不会启动 tap。
     private func syncScrollService() {
+        guard AppDistribution.includesScrollReverse else {
+            scrollService.stop()
+            return
+        }
         let config = currentScrollConfig()
         scrollService.updateConfig(config)
         if config.isActive {
@@ -598,6 +642,10 @@ extension AppDelegate {
     }
 
     private func syncKeepAwakeService() {
+        guard AppDistribution.includesKeepAwake else {
+            KeepAwakeService.shared.stop()
+            return
+        }
         if settings.keepAwakeEnabled {
             KeepAwakeService.shared.start()
         } else {
@@ -606,6 +654,11 @@ extension AppDelegate {
     }
 
     private func syncFinderMenuService() {
+        guard AppDistribution.includesFinderMenu else {
+            FinderMenuHostService.shared.stop()
+            FinderMenuShared.setEnabled(false)
+            return
+        }
         FinderMenuShared.setEnabled(settings.finderMenuEnabled)
         if settings.finderMenuEnabled {
             FinderMenuHostService.shared.publishLabels()

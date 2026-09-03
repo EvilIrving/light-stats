@@ -14,6 +14,19 @@ import ObjectiveC
 
 /// One retained virtual display. Shape C helper: start() creates, stop() drops
 /// the object (WindowServer removes the display). Main-actor only.
+#if APP_STORE
+/// MAS stub — virtual display keep-awake is Direct-only.
+@MainActor
+final class VirtualDisplaySession {
+    private(set) var displayID: CGDirectDisplayID?
+    var isActive: Bool { false }
+    static var isSupported: Bool { false }
+    static func hasForeignExternalDisplay(excluding excludedID: CGDirectDisplayID?) -> Bool { false }
+    @discardableResult
+    func start() -> Bool { false }
+    func stop() {}
+}
+#else
 @MainActor
 final class VirtualDisplaySession {
 
@@ -236,3 +249,5 @@ private enum ObjCCall {
         return unsafeBitCast(impl, to: MsgSend.self)(manager, selector, displayID)
     }
 }
+
+#endif

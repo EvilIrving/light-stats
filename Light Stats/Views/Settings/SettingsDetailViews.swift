@@ -76,11 +76,19 @@ struct GeneralDetail: View {
                     PerformanceRecordingSettingsRow()
                 }
             }
-            SettingsSection("settings.update.section".localized) {
-                SettingsGroup {
-                    updateRow
-                    rowDivider()
-                    ActivationSection()
+            if AppDistribution.includesSelfUpdate || AppDistribution.includesLicenseActivation {
+                SettingsSection("settings.update.section".localized) {
+                    SettingsGroup {
+                        if AppDistribution.includesSelfUpdate {
+                            updateRow
+                        }
+                        if AppDistribution.includesSelfUpdate, AppDistribution.includesLicenseActivation {
+                            rowDivider()
+                        }
+                        if AppDistribution.includesLicenseActivation {
+                            ActivationSection()
+                        }
+                    }
                 }
             }
         }
@@ -210,7 +218,9 @@ struct MonitoringDetail: View {
                     item("settings.memory", $settings.showMemory, "memorychip")
                     item("settings.disk", $settings.showDisk, "internaldrive")
                     item("settings.network", $settings.showNetwork, "network")
-                    item("settings.fan", $settings.showFan, "fanblades")
+                    if AppDistribution.includesSMC {
+                        item("settings.fan", $settings.showFan, "fanblades")
+                    }
                     item("settings.battery", $settings.showBattery, "battery.100")
                     item("settings.health", $settings.showHealth, "heart.text.square")
                 }
@@ -234,15 +244,17 @@ struct MonitoringDetail: View {
                     }
                 }
             }
-            SettingsSection("display.section".localized) {
-                SettingsGroup {
-                    SettingsRow(
-                        "settings.displayControl".localized,
-                        subtitle: "settings.displayControl.hint".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.displayBrightnessControlEnabled)
-                            .disabled(!displayControlManager.canEnableHardwareBrightness)
-                            .opacity(displayControlManager.canEnableHardwareBrightness ? 1 : 0.45)
+            if AppDistribution.includesDisplayControl {
+                SettingsSection("display.section".localized) {
+                    SettingsGroup {
+                        SettingsRow(
+                            "settings.displayControl".localized,
+                            subtitle: "settings.displayControl.hint".localized
+                        ) {
+                            SettingsToggle(isOn: $settings.displayBrightnessControlEnabled)
+                                .disabled(!displayControlManager.canEnableHardwareBrightness)
+                                .opacity(displayControlManager.canEnableHardwareBrightness ? 1 : 0.45)
+                        }
                     }
                 }
             }

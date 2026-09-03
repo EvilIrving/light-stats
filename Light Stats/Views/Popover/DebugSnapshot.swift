@@ -48,19 +48,23 @@ enum DebugSnapshot {
         let monitor = SystemMonitor.shared
         let aiMonitor = AIUsageMonitor.shared
 
-        let targets: [(name: String, view: AnyView)] = [
+        var targets: [(name: String, view: AnyView)] = [
             ("popover-overview", AnyView(
                 OverviewTabView()
                     .environmentObject(monitor)
                     .environmentObject(aiMonitor)
                     .environmentObject(DisplayControlManager.shared)
-            )),
-            ("popover-cleanup", AnyView(
-                CleanupTabView()
-                    .environmentObject(monitor)
-                    .environmentObject(aiMonitor)
             ))
         ]
+        if AppDistribution.includesProcessCleanup {
+            targets.append(
+                ("popover-cleanup", AnyView(
+                    CleanupTabView()
+                        .environmentObject(monitor)
+                        .environmentObject(aiMonitor)
+                ))
+            )
+        }
 
         // 跟随系统当前外观：深色给深底，浅色给浅底（玻璃无法离屏还原，用纯色替代）。
         let isDark = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua

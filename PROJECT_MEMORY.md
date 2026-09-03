@@ -1,5 +1,21 @@
 # Project Memory
 
+## Mac App Store 双通道：免费精简版与直销并行 · 2026-09-03 · grok
+
+产品决定上架 Mac App Store，但**不替代**现有 Developer ID + 公证 + R2/DMG 直销。商店版**免费**（无 IAP、无激活码 UI）；完整工具箱仍只在直销。工程暂在分支 `feature/app-store`，**约定暂不合 `main`**，避免干扰直销发版。
+
+身份与签名（勿混用）：
+
+- Bundle ID 与直销相同：`cain.com.light-stats`；扩展 `cain.com.light-stats.FinderMenuExtension`；App Group `QZZ878S3NS.com.light-stats.shared`；Team `QZZ878S3NS`
+- 商店签 **Apple Distribution**（本机已有 `Apple Distribution: TIANBAO DONG (QZZ878S3NS)`）；直销继续 **Developer ID Application** + notarytool
+- Scheme / 配置：`Light Stats AppStore` → `AppStore` / `AppStoreDebug`；编译条件 `APP_STORE`；entitlements `LightStats-AppStore.entitlements`（sandbox on）。直销仍用 `Light Stats` + `LightStats.entitlements`（sandbox off）
+
+能力边界（商店裁剪，直销全开）：监控核心 + 主题 + 进程 + 可选 Finder 菜单 + 可选出口节点保留；自更新、激活码、SMC 温风扇、AI 用量（Keychain/PTY）、窗口吸附/AX、找鼠标、滚轮反转、清洁模式、保持唤醒/虚拟屏、DDC 亮度均排除。能力表在 `AppDistribution`；设计见 `docs/app-store-edition.md`。
+
+版本号陷阱：`project.pbxproj` 的 `MARKETING_VERSION = 1.0.2` / `CURRENT_PROJECT_VERSION = 2` 仍是**本地 Debug 回退**（直销正式版由 git tag + `script/build.sh` 的 `MARKETING_VERSION=$VERSION` 覆盖）。商店 Archive **必须显式**设营销版本（对齐产品线如 `1.9.2`，正式上架避免 `beta`）和更大的 Build（如 `100`，ASC 内单调递增）。Organizer 若显示 `1.0.2 (2)` 说明没用覆盖。
+
+操作与素材：上架步骤 `docs/mac-app-store-listing.md`；可上传截图 `docs/app-store-screenshots/mas-2560x1600/`（2560×1600）。总览截图若含 Pro / 保持唤醒 / 清洁模式图标，应用 AppStore 包重截再换，以免与审核备注「商店无这些工具」矛盾。官网 / README **等有 App Store 链接后再加徽章**；当前落地页仍只推 DMG。内测走 TestFlight（Mac），与 `download.onecat.dev` 无关；同 Bundle ID 勿与直销版并存安装。
+
 ## 演示指针复用 Find My Mouse 三按手势 · 2026-08-28 17:38 · pi
 
 产品决定不为演示指针新增快捷键、开关或独立设置项。它复用「找到我的鼠标」现有的启用开关、左修饰触发键、Accessibility 权限和 listen-only `CGEventTap`：双按仍触发全屏聚光，三按切换常驻演示指针，再次三按关闭。为避免三按时先闪出双按聚光，第二次按下只创建待定动作，等待 0.3 秒第三按窗口；第三按会取消待定双按，窗口结束后才提交真正的双按动作。关闭 Find My Mouse、移除授权、tap 停止或 App 退出时都必须同步关闭演示指针。

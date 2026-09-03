@@ -20,6 +20,14 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Categories shown in the sidebar. App Store builds hide Direct-only tools.
+    static var visibleCases: [SettingsCategory] {
+        if AppDistribution.isAppStore {
+            return [.general, .monitoring]
+        }
+        return Array(allCases)
+    }
+
     var titleKey: String {
         switch self {
         case .general: return "settings.general"
@@ -54,7 +62,11 @@ struct SettingsView: View {
     @State private var showExitPrivacyAlert = false
 
     private var selectedCategory: SettingsCategory {
-        SettingsCategory(rawValue: selectedRaw) ?? .general
+        let parsed = SettingsCategory(rawValue: selectedRaw) ?? .general
+        if SettingsCategory.visibleCases.contains(parsed) {
+            return parsed
+        }
+        return .general
     }
 
     var body: some View {
@@ -101,7 +113,7 @@ struct SettingsView: View {
     /// 自绘导航内容保留稳定布局，背景使用原生 `.sidebar` 材质。
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 3) {
-            ForEach(SettingsCategory.allCases) { category in
+            ForEach(SettingsCategory.visibleCases) { category in
                 Button {
                     selectedRaw = category.rawValue
                 } label: {

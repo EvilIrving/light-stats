@@ -39,10 +39,14 @@ struct OverviewTabView: View {
             }
             PanelDivider().padding(.vertical, 10)
             thermalStrip
-            PanelDivider().padding(.vertical, 10)
-            aiSection
-            if settings.displayBrightnessControlEnabled,
+            if AppDistribution.includesAIUsage {
+                PanelDivider().padding(.vertical, 10)
+                aiSection
+            }
+            if AppDistribution.includesDisplayControl,
+               settings.displayBrightnessControlEnabled,
                !displayControlManager.adjustableDisplays.isEmpty {
+                PanelDivider().padding(.vertical, 10)
                 DisplayBrightnessSection()
                 PanelDivider().padding(.vertical, 10)
             }

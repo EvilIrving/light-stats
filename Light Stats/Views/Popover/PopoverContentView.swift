@@ -28,60 +28,62 @@ struct PopoverContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab Bar
+            // Tab Bar — App Store hides the Cleanup tab (sandbox cannot quit other apps).
             HStack(spacing: 0) {
-                HStack(spacing: 2) {
-                    TabButton(title: "tab.overview".localized, isSelected: selectedTab == 0, namespace: animation) {
-                        withAnimation(tabSelectionAnimation) {
-                            selectedTab = 0
+                if AppDistribution.includesProcessCleanup {
+                    HStack(spacing: 2) {
+                        TabButton(title: "tab.overview".localized, isSelected: selectedTab == 0, namespace: animation) {
+                            withAnimation(tabSelectionAnimation) {
+                                selectedTab = 0
+                            }
                         }
-                    }
 
-                    TabButton(title: "tab.cleanup".localized, isSelected: selectedTab == 1, namespace: animation) {
-                        withAnimation(tabSelectionAnimation) {
-                            selectedTab = 1
+                        TabButton(title: "tab.cleanup".localized, isSelected: selectedTab == 1, namespace: animation) {
+                            withAnimation(tabSelectionAnimation) {
+                                selectedTab = 1
+                            }
                         }
                     }
-                }
-                .padding(3)
-                .background(
-                    RoundedRectangle(
-                        cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
-                        style: .continuous
+                    .padding(3)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                            style: .continuous
+                        )
+                        .fill(theme.tabTrackFill)
+                        .overlay {
+                            if theme.chromeStyle.usesNeonTreatment {
+                                RoundedRectangle(
+                                    cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                                    style: .continuous
+                                )
+                                .stroke(theme.surfaceStroke.opacity(0.42), lineWidth: 0.5)
+                            } else if theme.chromeStyle.usesNightBarTreatment {
+                                RoundedRectangle(
+                                    cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
+                                    style: .continuous
+                                )
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            theme.signalAccent.opacity(0.36),
+                                            theme.signalGood.opacity(0.22)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
+                                    lineWidth: 0.6
+                                )
+                            }
+                        }
                     )
-                    .fill(theme.tabTrackFill)
-                    .overlay {
-                        if theme.chromeStyle.usesNeonTreatment {
-                            RoundedRectangle(
-                                cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
-                                style: .continuous
-                            )
-                            .stroke(theme.surfaceStroke.opacity(0.42), lineWidth: 0.5)
-                        } else if theme.chromeStyle.usesNightBarTreatment {
-                            RoundedRectangle(
-                                cornerRadius: theme.chromeStyle.tabCornerRadius + 3,
-                                style: .continuous
-                            )
-                            .stroke(
-                                LinearGradient(
-                                    colors: [
-                                        theme.signalAccent.opacity(0.36),
-                                        theme.signalGood.opacity(0.22)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 0.6
-                            )
-                        }
-                    }
-                )
+                }
 
                 Spacer()
 
                 HStack(spacing: 4) {
-                    // 已激活 / 老用户永久授权时仅展示文字状态，不增加徽标边框。
-                    if license.isPremiumUnlocked {
+                    // Direct only: Pro badge / keep-awake / cleaning mode.
+                    if AppDistribution.includesLicenseActivation, license.isPremiumUnlocked {
                         Text("Pro")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .tracking(0.2)
@@ -95,20 +97,21 @@ struct PopoverContentView: View {
                         key: "snapshot"
                     ) { DebugSnapshot.dumpPanel() }
 #endif
-                    // 保持唤醒：点按开/关，图标以 accent 色高亮表示已开启。
-                    toolbarIcon(
-                        systemName: "cup.and.saucer.fill",
-                        key: "keepAwake",
-                        iconSize: 15,
-                        verticalOffset: -1,
-                        isActive: settings.keepAwakeEnabled
-                    ) {
-                        settings.keepAwakeEnabled.toggle()
+                    if AppDistribution.includesKeepAwake {
+                        toolbarIcon(
+                            systemName: "cup.and.saucer.fill",
+                            key: "keepAwake",
+                            iconSize: 15,
+                            verticalOffset: -1,
+                            isActive: settings.keepAwakeEnabled
+                        ) {
+                            settings.keepAwakeEnabled.toggle()
+                        }
                     }
 
                     // 擦屏模式锁内置键盘，仅对带内置键盘的便携机型（MacBook）有意义；
                     // Mac mini / Studio / iMac 等台式机无内置键盘，隐藏入口。
-                    if DeviceCapabilities.isPortable {
+                    if AppDistribution.includesCleaningMode, DeviceCapabilities.isPortable {
                         toolbarIcon(
                             image: "cleaningLock",
                             key: "cleaning",
@@ -130,11 +133,11 @@ struct PopoverContentView: View {
 
             // Content Area
             ZStack {
-                if selectedTab == 0 {
-                    OverviewTabView()
+                if AppDistribution.includesProcessCleanup, selectedTab == 1 {
+                    CleanupTabView()
                         .transition(.opacity)
                 } else {
-                    CleanupTabView()
+                    OverviewTabView()
                         .transition(.opacity)
                 }
             }

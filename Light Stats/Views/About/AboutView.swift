@@ -52,22 +52,23 @@ struct AboutView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
-            Spacer().frame(height: 12)
+            if AppDistribution.includesSelfUpdate {
+                Spacer().frame(height: 12)
 
-            // Check for Updates
-            Button {
-                UpdateManager.shared.check(userInitiated: true)
-            } label: {
-                HStack(spacing: 5) {
-                    if updateManager.isChecking {
-                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                Button {
+                    UpdateManager.shared.check(userInitiated: true)
+                } label: {
+                    HStack(spacing: 5) {
+                        if updateManager.isChecking {
+                            ProgressView().controlSize(.small).scaleEffect(0.7)
+                        }
+                        Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    Text((updateManager.isChecking ? "update.checking" : "update.checkButton").localized)
-                        .font(.system(size: 11, weight: .medium))
                 }
+                .buttonStyle(.borderless)
+                .disabled(updateManager.isChecking)
             }
-            .buttonStyle(.borderless)
-            .disabled(updateManager.isChecking)
 
             Spacer().frame(height: 24)
 

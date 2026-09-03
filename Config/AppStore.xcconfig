@@ -1,0 +1,20 @@
+// Mac App Store Release overrides — included by the AppStore configuration.
+// Direct Debug/Release configurations do not include this file.
+
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) APP_STORE
+
+CODE_SIGN_ENTITLEMENTS = Light Stats/LightStats-AppStore.entitlements
+ENABLE_APP_SANDBOX = YES
+ENABLE_HARDENED_RUNTIME = YES
+ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES
+ENABLE_INCOMING_NETWORK_CONNECTIONS = NO
+ENABLE_USER_SELECTED_FILES = none
+
+// Private display frameworks must not ship in the MAS binary.
+SWIFT_OBJC_BRIDGING_HEADER =
+OTHER_LDFLAGS = $(inherited)
+FRAMEWORK_SEARCH_PATHS = $(inherited)
+
+// Drop DDC / private display control sources (stubs live behind #if APP_STORE).
+EXCLUDED_SOURCE_FILE_NAMES = $(inherited) DisplayControl/* DisplayPrivateAPI.h
+ENABLE_USER_SCRIPT_SANDBOXING = NO

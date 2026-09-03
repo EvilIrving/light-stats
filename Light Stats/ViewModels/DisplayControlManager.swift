@@ -6,6 +6,8 @@
 import Combine
 import Foundation
 
+
+#if !APP_STORE
 @MainActor
 final class DisplayControlManager: ObservableObject {
     @Published private(set) var displays: [ControlledDisplay] = []
@@ -324,3 +326,25 @@ final class DisplayControlManager: ObservableObject {
         }
     }
 }
+
+#else
+/// MAS stub — private display frameworks are not linked in App Store builds.
+@MainActor
+final class DisplayControlManager: ObservableObject {
+    static let shared = DisplayControlManager()
+
+    @Published private(set) var displays: [ControlledDisplay] = []
+    @Published private(set) var isRefreshing = false
+    @Published private(set) var hardwareBrightnessUnavailable = true
+
+    func setEnabled(_ enabled: Bool) {}
+    func setPanelVisible(_ visible: Bool) {}
+    func applicationDidBecomeActive() {}
+    func brightness(displayID: UInt32) -> Double { 50 }
+    func setBrightness(_ value: Double, displayID: UInt32) {}
+    var adjustableDisplays: [ControlledDisplay] { [] }
+    var canEnableHardwareBrightness: Bool { false }
+    func isAdjustable(displayID: UInt32) -> Bool { false }
+    func stop() {}
+}
+#endif

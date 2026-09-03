@@ -311,6 +311,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var finderMenuEnabled: Bool {
         didSet {
             save(finderMenuEnabled, for: .finderMenuEnabled)
+            guard AppDistribution.includesFinderMenu else { return }
             FinderMenuShared.setEnabled(finderMenuEnabled)
         }
     }
@@ -620,8 +621,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         DiagnosticLogService.setJournalMode(diagnosticLogLevel.journalMode)
 
         // 所有存储属性初始化完成后，把 Finder 菜单开关初值镜像进 App Group 容器，
-        // 确保沙盒扩展冷启动即读到正确状态。
-        FinderMenuShared.setEnabled(finderMenuEnabled)
+        // 确保沙盒扩展冷启动即读到正确状态。App Store 无扩展，跳过。
+        if AppDistribution.includesFinderMenu {
+            FinderMenuShared.setEnabled(finderMenuEnabled)
+        }
     }
 
     // MARK: - Validation

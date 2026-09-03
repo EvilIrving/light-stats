@@ -8,8 +8,14 @@
 import Foundation
 import IOKit
 
-/// SMC access for temperature and fan speed
-/// Based on AppleSMC.kext interface - struct size must be exactly 80 bytes
+#if APP_STORE
+/// App Store builds omit AppleSMC access (private interface / sandbox).
+enum SMCInfo {
+    static func getCPUTemperature() -> Double? { nil }
+    static func getFanSpeed() -> Int? { nil }
+    static func shutdown() {}
+}
+#else
 enum SMCInfo {
 
     // SMC connection (persistent across reads)
@@ -625,3 +631,4 @@ enum SMCInfo {
              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     }
 }
+#endif

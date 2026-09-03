@@ -8,6 +8,23 @@ composite health score. Compact status item + detailed popover panel.
 
 macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · `LSUIElement = YES`
 
+## Distribution channels
+
+Two parallel builds share this repo. Design: `docs/app-store-edition.md`.
+
+| | Direct (default) | Mac App Store |
+|---|---|---|
+| Configurations | `Debug` / `Release` | `AppStoreDebug` / `AppStore` |
+| Scheme | `Light Stats` | `Light Stats AppStore` |
+| Flag | _(none)_ | `APP_STORE` via `SWIFT_ACTIVE_COMPILATION_CONDITIONS` |
+| Entitlements | `LightStats.entitlements` (sandbox off) | `LightStats-AppStore.entitlements` (sandbox on) |
+| Pricing | activation codes / gift period | **free** (no IAP, no activation UI) |
+| Capabilities | full toolbelt | monitoring core + opt-in exit node (no cleanup / Finder menu) |
+
+`AppDistribution` (`Light Stats/AppDistribution.swift`) is the capability table. Direct
+CI/DMG (`script/build.sh`, `release.yml`) must keep using `Release` without `APP_STORE`.
+Do not link private display frameworks or ship AppleSMC in App Store configurations.
+
 ## Layout
 
 ```
