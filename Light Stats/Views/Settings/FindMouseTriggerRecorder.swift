@@ -8,6 +8,15 @@ struct FindMouseTriggerRecorder: View {
     @State private var isRecording = false
     @State private var eventMonitor: Any?
 
+    private static let specialKeyLabels: [UInt16: String] = [
+        36: "↩", 76: "↩", 48: "⇥", 49: "␣", 51: "⌫", 53: "⎋",
+        96: "F5", 97: "F6", 98: "F7", 99: "F3", 100: "F8", 101: "F9",
+        103: "F11", 105: "F13", 106: "F16", 107: "F14", 109: "F10", 111: "F12",
+        113: "F15", 114: "Help", 115: "↖", 116: "⇞", 117: "⌦", 118: "F4",
+        119: "↘", 120: "F2", 121: "⇟", 122: "F1", 123: "←", 124: "→",
+        125: "↓", 126: "↑"
+    ]
+
     var body: some View {
         Button(action: toggleRecording) {
             Text(isRecording ? "settings.findMouseTriggerKey.recording".localized : displayTitle)
@@ -99,43 +108,12 @@ struct FindMouseTriggerRecorder: View {
     }
 
     private func keyLabel(for event: NSEvent) -> String {
-        switch event.keyCode {
-        case 36, 76: return "↩"
-        case 48: return "⇥"
-        case 49: return "␣"
-        case 51: return "⌫"
-        case 53: return "⎋"
-        case 96: return "F5"
-        case 97: return "F6"
-        case 98: return "F7"
-        case 99: return "F3"
-        case 100: return "F8"
-        case 101: return "F9"
-        case 103: return "F11"
-        case 105: return "F13"
-        case 106: return "F16"
-        case 107: return "F14"
-        case 109: return "F10"
-        case 111: return "F12"
-        case 113: return "F15"
-        case 114: return "Help"
-        case 115: return "↖"
-        case 116: return "⇞"
-        case 117: return "⌦"
-        case 118: return "F4"
-        case 119: return "↘"
-        case 120: return "F2"
-        case 121: return "⇟"
-        case 122: return "F1"
-        case 123: return "←"
-        case 124: return "→"
-        case 125: return "↓"
-        case 126: return "↑"
-        default:
-            guard let characters = event.charactersIgnoringModifiers, !characters.isEmpty else {
-                return "⌨︎\(event.keyCode)"
-            }
-            return characters.uppercased()
+        if let label = Self.specialKeyLabels[event.keyCode] {
+            return label
         }
+        guard let characters = event.charactersIgnoringModifiers, !characters.isEmpty else {
+            return "⌨︎\(event.keyCode)"
+        }
+        return characters.uppercased()
     }
 }
