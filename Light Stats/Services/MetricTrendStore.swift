@@ -14,6 +14,7 @@ actor MetricTrendStore {
     nonisolated static let maximumSampleCount = Int(retention / sampleInterval)
 
     private static let logger = AppLogger(category: "MetricTrendStore")
+    private static let timestampTolerance: TimeInterval = 0.001
 
     private let fileManager: FileManager
     private let fileURL: URL
@@ -27,6 +28,13 @@ actor MetricTrendStore {
         fileURL = applicationSupport
             .appendingPathComponent("Light Stats/History", isDirectory: true)
             .appendingPathComponent("metric-trends-v1.json")
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+    }
+
+    init(fileURL: URL, fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+        self.fileURL = fileURL
         encoder.dateEncodingStrategy = .millisecondsSince1970
         decoder.dateDecodingStrategy = .millisecondsSince1970
     }
@@ -53,11 +61,8 @@ actor MetricTrendStore {
             samples = []
         }
 
-        if let index = samples.firstIndex(where: { $0.timestamp == sample.timestamp }) {
-            samples[index] = sample
-        } else {
-            samples.append(sample)
-        }
+        samples.removeAll { isSameTimestamp($0.timestamp, sample.timestamp) }
+        samples.append(sample)
         samples = retained(samples, referenceDate: referenceDate)
 
         do {
@@ -81,9 +86,22 @@ actor MetricTrendStore {
 
     private func retained(_ samples: [MetricTrendSample], referenceDate: Date) -> [MetricTrendSample] {
         let cutoff = referenceDate.addingTimeInterval(-Self.retention)
-        let recent = samples
-            .filter { $0.timestamp >= cutoff && $0.timestamp <= referenceDate }
-            .sorted { $0.timestamp < $1.timestamp }
+        var uniqueSamples: [MetricTrendSample] = []
+        for sample in samples where sample.timestamp >= cutoff && sample.timestamp <= referenceDate {
+            if let index = uniqueSamples.firstIndex(where: {
+                isSameTimestamp($0.timestamp, sample.timestamp)
+            }) {
+                uniqueSamples[index] = sample
+            } else {
+                uniqueSamples.append(sample)
+            }
+        }
+        let recent = uniqueSamples.sorted { $0.timestamp < $1.timestamp }
         return Array(recent.suffix(Self.maximumSampleCount))
+    }
+
+    /// JSON 日期往返可能引入亚微秒浮点误差；相差不足一毫秒视为同一个趋势桶。
+    private func isSameTimestamp(_ lhs: Date, _ rhs: Date) -> Bool {
+        abs(lhs.timeIntervalSince(rhs)) < Self.timestampTolerance
     }
 }
