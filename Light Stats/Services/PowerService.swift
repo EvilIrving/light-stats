@@ -117,14 +117,33 @@ actor PowerService {
     }
 
     private func readSmartBattery() -> SmartData? {
+        let source = "IORegistry/AppleSmartBattery"
         let service = IOServiceGetMatchingService(kIOMainPortDefault,
                                                   IOServiceMatching("AppleSmartBattery"))
-        guard service != 0 else { return nil }
+        guard service != 0 else {
+            DiagnosticLogService.recordProbe(
+                component: "PowerService",
+                operation: "readSmartBattery",
+                status: .unavailable,
+                reasonCode: "serviceNotFound",
+                source: source
+            )
+            return nil
+        }
         defer { IOObjectRelease(service) }
 
         var propsRef: Unmanaged<CFMutableDictionary>?
-        guard IORegistryEntryCreateCFProperties(service, &propsRef, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+        let propertiesResult = IORegistryEntryCreateCFProperties(service, &propsRef, kCFAllocatorDefault, 0)
+        guard propertiesResult == kIOReturnSuccess,
               let dict = propsRef?.takeRetainedValue() as? [String: Any] else {
+            DiagnosticLogService.recordProbe(
+                component: "PowerService",
+                operation: "readSmartBattery",
+                status: .failure,
+                reasonCode: "propertyReadFailed",
+                source: source,
+                fields: ["nativeCode": .privateValue(.integer(Int64(propertiesResult)))]
+            )
             return nil
         }
 
@@ -189,7 +208,91 @@ actor PowerService {
             }
         }
 
+        recordSmartBatteryDiagnostics(properties: dict, data: data)
         return data
+    }
+
+    private func recordSmartBatteryDiagnostics(properties: [String: Any], data: SmartData) {
+        let source = "IORegistry/AppleSmartBattery"
+        DiagnosticLogService.recordProbe(
+            component: "PowerService",
+            operation: "batteryCycleCount",
+            status: data.cycleCount == nil ? .unavailable : .success,
+            reasonCode: data.cycleCount == nil ? "missingOrInvalidCycleCount" : "valueRead",
+            source: source,
+            fields: diagnosticFields(for: ["CycleCount"], in: properties)
+        )
+
+        let healthKeys = ["DesignCapacity", "AppleRawMaxCapacity", "NominalChargeCapacity", "MaxCapacity"]
+        DiagnosticLogService.recordProbe(
+            component: "PowerService",
+            operation: "batteryHealth",
+            status: data.healthPercent == nil ? .unavailable : .success,
+            reasonCode: data.healthPercent == nil ? Self.healthFailureReason(properties) : "capacityRatioComputed",
+            source: source,
+            fields: diagnosticFields(for: healthKeys, in: properties)
+        )
+
+        DiagnosticLogService.recordProbe(
+            component: "PowerService",
+            operation: "batteryTemperature",
+            status: data.temperature == nil ? .unavailable : .success,
+            reasonCode: Self.batteryTemperatureReason(properties: properties, value: data.temperature),
+            source: source,
+            fields: diagnosticFields(for: ["Temperature"], in: properties)
+        )
+
+        let powerKeys = ["Voltage", "InstantAmperage", "Amperage", "PowerTelemetryData"]
+        DiagnosticLogService.recordProbe(
+            component: "PowerService",
+            operation: "batteryPower",
+            status: data.powerWatts == nil ? .unavailable : .success,
+            reasonCode: data.powerWatts == nil ? "noUsablePowerSource" : "valueRead",
+            source: source,
+            fields: diagnosticFields(for: powerKeys, in: properties)
+        )
+    }
+
+    nonisolated static func healthFailureReason(_ properties: [String: Any]) -> String {
+        guard let design = (properties["DesignCapacity"] as? NSNumber)?.doubleValue else {
+            return properties["DesignCapacity"] == nil ? "missingDesignCapacity" : "invalidDesignCapacityType"
+        }
+        guard design > 0 else { return "nonPositiveDesignCapacity" }
+        let candidateKeys = ["AppleRawMaxCapacity", "NominalChargeCapacity", "MaxCapacity"]
+        let hasNumericCandidate = candidateKeys.contains { properties[$0] is NSNumber }
+        return hasNumericCandidate ? "noUsableMaximumCapacity" : "missingOrInvalidMaximumCapacity"
+    }
+
+    nonisolated static func batteryTemperatureReason(properties: [String: Any], value: Double?) -> String {
+        if value != nil { return "valueRead" }
+        guard let raw = properties["Temperature"] else { return "missingTemperature" }
+        guard let number = raw as? NSNumber else { return "invalidTemperatureType" }
+        let celsius = number.doubleValue / 100
+        return celsius > 0 && celsius < 80 ? "parseFailed" : "temperatureOutOfRange"
+    }
+
+    private func diagnosticFields(for keys: [String], in properties: [String: Any])
+        -> [String: DiagnosticLogService.Field] {
+        let attempts = keys.map { key -> DiagnosticLogService.Value in
+            guard let value = properties[key] else {
+                return .object([
+                    "key": .string(key),
+                    "present": .bool(false)
+                ])
+            }
+            var detail: [String: DiagnosticLogService.Value] = [
+                "key": .string(key),
+                "present": .bool(true),
+                "type": .string(String(describing: type(of: value)))
+            ]
+            if let number = value as? NSNumber {
+                detail["numericValue"] = .double(number.doubleValue)
+            } else if let dictionary = value as? [String: Any] {
+                detail["nestedKeys"] = .array(dictionary.keys.sorted().map(DiagnosticLogService.Value.string))
+            }
+            return .object(detail)
+        }
+        return ["attempts": .privateValue(.array(attempts))]
     }
 
     /// IORegistry 可能把负电流/功耗作为 UInt64 two's complement 暴露，这里还原成真实有符号值。

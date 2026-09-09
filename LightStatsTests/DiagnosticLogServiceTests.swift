@@ -10,11 +10,11 @@ final class DiagnosticLogServiceTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        DiagnosticLogService.resetPolicyForTesting(mode: .full, sampleInterval: 45)
+        DiagnosticLogService.resetPolicyForTesting(sampleInterval: 45)
     }
 
     override func tearDown() {
-        DiagnosticLogService.resetPolicyForTesting(mode: .full, sampleInterval: 45)
+        DiagnosticLogService.resetPolicyForTesting(sampleInterval: 45)
         super.tearDown()
     }
 
@@ -41,6 +41,9 @@ final class DiagnosticLogServiceTests: XCTestCase {
             DiagnosticLogService.Record.self,
             from: Data(lines[0].utf8)
         )
+        XCTAssertEqual(decoded.schemaVersion, 3)
+        XCTAssertEqual(decoded.eventVersion, 1)
+        XCTAssertFalse(decoded.sessionID.isEmpty)
         XCTAssertEqual(decoded.category, "test")
         XCTAssertEqual(decoded.fields["cpu"], .privateValue(.integer(42)))
     }
@@ -144,7 +147,7 @@ final class DiagnosticLogServiceTests: XCTestCase {
         XCTAssertEqual(files.count, 2)
     }
 
-    func testCleanupDeletesFilesOlderThanFiveDays() async throws {
+    func testCleanupDeletesFilesOlderThanRetentionWindow() async throws {
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -188,77 +191,87 @@ final class DiagnosticLogServiceTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: newer.path))
     }
 
-    // MARK: - Journal mode + sample throttle
-
-    func testJournalModeOffBlocksAllLevels() {
-        let policy = DiagnosticJournalPolicy(mode: .off, sampleInterval: 45)
-        XCTAssertFalse(policy.allows(level: .debug))
-        XCTAssertFalse(policy.allows(level: .info))
-        XCTAssertFalse(policy.allows(level: .warning))
-        XCTAssertFalse(policy.allows(level: .error))
-        XCTAssertFalse(policy.allowsSample(category: "system", fields: [:], at: Date()))
-    }
-
-    func testJournalModeErrorsOnlyAllowsErrorsOnly() {
-        let policy = DiagnosticJournalPolicy(mode: .errorsOnly, sampleInterval: 45)
-        XCTAssertFalse(policy.allows(level: .info))
-        XCTAssertFalse(policy.allows(level: .warning))
-        XCTAssertTrue(policy.allows(level: .error))
-        XCTAssertFalse(policy.allowsSample(category: "system", fields: [:], at: Date()))
-    }
+    // MARK: - Semantic rate control
 
     func testSampleThrottleDropsWithinInterval() {
-        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45)
         let base = Date(timeIntervalSince1970: 1_700_000_000)
-        let fields: [String: DiagnosticLogService.Field] = [
-            "memory.pressure": .privateValue(.string("normal"))
-        ]
 
-        XCTAssertTrue(policy.allowsSample(category: "system", fields: fields, at: base))
+        XCTAssertTrue(policy.allowsSample(category: "system", action: "collected", at: base))
         XCTAssertFalse(policy.allowsSample(
             category: "system",
-            fields: fields,
+            action: "collected",
             at: base.addingTimeInterval(10)
         ))
         XCTAssertTrue(policy.allowsSample(
             category: "system",
-            fields: fields,
+            action: "collected",
             at: base.addingTimeInterval(45)
         ))
     }
 
-    func testSampleThrottleAllowsEarlyWriteOnPressureChange() {
-        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+    func testSampleThrottleSeparatesActionsWithinCategory() {
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45)
         let base = Date(timeIntervalSince1970: 1_700_000_000)
-        let normal: [String: DiagnosticLogService.Field] = [
-            "memory.pressure": .privateValue(.string("normal"))
-        ]
-        let warning: [String: DiagnosticLogService.Field] = [
-            "memory.pressure": .privateValue(.string("warning"))
-        ]
 
-        XCTAssertTrue(policy.allowsSample(category: "system", fields: normal, at: base))
-        XCTAssertTrue(policy.allowsSample(
+        XCTAssertTrue(policy.allowsSample(category: "system", action: "collected", at: base))
+        XCTAssertTrue(policy.allowsSample(category: "system", action: "thermal", at: base))
+        XCTAssertFalse(policy.allowsSample(
             category: "system",
-            fields: warning,
-            at: base.addingTimeInterval(5)
+            action: "collected",
+            at: base.addingTimeInterval(1)
         ))
     }
 
-    func testSampleThrottleIsPerCategory() {
-        let policy = DiagnosticJournalPolicy(mode: .full, sampleInterval: 45)
+    func testStateWritesFirstObservationAndChangesImmediately() {
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45, stateHeartbeatInterval: 3600)
         let base = Date(timeIntervalSince1970: 1_700_000_000)
-        let fields: [String: DiagnosticLogService.Field] = [
-            "pressure": .privateValue(.string("normal"))
-        ]
 
-        XCTAssertTrue(policy.allowsSample(category: "system", fields: fields, at: base))
-        XCTAssertTrue(policy.allowsSample(category: "processMemory", fields: fields, at: base))
-        XCTAssertFalse(policy.allowsSample(
-            category: "system",
-            fields: fields,
-            at: base.addingTimeInterval(1)
+        XCTAssertTrue(policy.allowsState(
+            category: "probe", action: "batteryHealth", identity: "PowerService",
+            fingerprint: "unavailable", at: base
         ))
+        XCTAssertFalse(policy.allowsState(
+            category: "probe", action: "batteryHealth", identity: "PowerService",
+            fingerprint: "unavailable", at: base.addingTimeInterval(10)
+        ))
+        XCTAssertTrue(policy.allowsState(
+            category: "probe", action: "batteryHealth", identity: "PowerService",
+            fingerprint: "success", at: base.addingTimeInterval(11)
+        ))
+    }
+
+    func testStateWritesHeartbeatWhileUnchanged() {
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45, stateHeartbeatInterval: 3600)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertTrue(policy.allowsState(
+            category: "probe", action: "gpuUtilization", identity: "GPUInfo",
+            fingerprint: "success", at: base
+        ))
+        XCTAssertFalse(policy.allowsState(
+            category: "probe", action: "gpuUtilization", identity: "GPUInfo",
+            fingerprint: "success", at: base.addingTimeInterval(3599)
+        ))
+        XCTAssertTrue(policy.allowsState(
+            category: "probe", action: "gpuUtilization", identity: "GPUInfo",
+            fingerprint: "success", at: base.addingTimeInterval(3600)
+        ))
+    }
+
+    func testPerformanceRecordingsUseSeparateStorage() {
+        XCTAssertNotEqual(
+            PerformanceLogService.recordingsDirectoryURL,
+            DiagnosticLogService.diagnosticsDirectoryURL
+        )
+        XCTAssertTrue(PerformanceLogService.recordingsDirectoryURL.lastPathComponent.contains("Performance"))
+    }
+
+    func testDiagnosticReportFilenameIsStableZipName() {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let filename = DiagnosticReportService.suggestedFilename(date: date)
+        XCTAssertTrue(filename.hasPrefix("Light-Stats-Diagnostics-"))
+        XCTAssertTrue(filename.hasSuffix(".zip"))
     }
 
     private func makeService(directory: URL, maximumBytes: UInt64 = 1_024) -> DiagnosticLogService {

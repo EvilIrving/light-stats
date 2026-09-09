@@ -2,10 +2,8 @@
 //  DiagnosticLogService.swift
 //  Light Stats
 //
-//  App-owned structured diagnostics with privacy-aware fields, bounded sample
-//  coalescing (time + pressure-signature throttle), a single writer actor,
-//  five-day retention, and explicit flush. Journal verbosity is gated by
-//  `JournalMode` (off / errorsOnly / full).
+//  App-owned structured diagnostics with privacy-aware fields, semantic
+//  rate control, a single writer actor, bounded retention, and explicit flush.
 //
 
 import Foundation
@@ -18,16 +16,6 @@ actor DiagnosticLogService {
         case info
         case warning
         case error
-    }
-
-    /// User-facing journal verbosity. Independent of os.Logger dual-write.
-    enum JournalMode: String, Codable, Sendable, CaseIterable {
-        /// No JSONL writes.
-        case off
-        /// Only `error` level important records; samples dropped.
-        case errorsOnly
-        /// All important records + rate-limited samples.
-        case full
     }
 
     enum Privacy: String, Codable, Sendable {
@@ -100,12 +88,41 @@ actor DiagnosticLogService {
     }
 
     struct Record: Codable, Sendable, Equatable {
-        let schemaVersion = 2
+        let schemaVersion: Int
+        let eventVersion: Int
+        let sessionID: String
         let timestamp: Date
         let level: Level
         let category: String
         let action: String
         let fields: [String: Field]
+
+        init(
+            timestamp: Date,
+            level: Level,
+            category: String,
+            action: String,
+            fields: [String: Field],
+            eventVersion: Int = 1,
+            sessionID: String = DiagnosticLogService.sessionID
+        ) {
+            schemaVersion = 3
+            self.eventVersion = eventVersion
+            self.sessionID = sessionID
+            self.timestamp = timestamp
+            self.level = level
+            self.category = category
+            self.action = action
+            self.fields = fields
+        }
+    }
+
+    enum ProbeStatus: String, Codable, Sendable {
+        case success
+        case degraded
+        case unavailable
+        case unsupported
+        case failure
     }
 
     struct Configuration: Sendable {
@@ -118,16 +135,17 @@ actor DiagnosticLogService {
                 ?? FileManager.default.temporaryDirectory
             return Configuration(
                 directory: base.appendingPathComponent("Light Stats/Diagnostics", isDirectory: true),
-                retentionDays: 5,
-                maximumBytes: 1_024 * 1_024 * 1_024
+                retentionDays: 7,
+                maximumBytes: 50 * 1_024 * 1_024
             )
         }
     }
 
     static let shared = DiagnosticLogService(configuration: .production)
+    nonisolated static let sessionID = UUID().uuidString
     nonisolated static var diagnosticsDirectoryURL: URL { Configuration.production.directory }
 
-    /// Default sample spacing under `.full`. Pressure-signature changes bypass the wait.
+    /// Default spacing for continuously changing metric samples.
     nonisolated static let defaultSampleInterval: TimeInterval = 45
 
     private static let systemLog = Logger(subsystem: AppLogger.subsystem, category: "Diagnostics")
@@ -151,21 +169,12 @@ actor DiagnosticLogService {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
     }
 
-    /// Apply user preference from Settings. Safe to call from MainActor.
-    nonisolated static func setJournalMode(_ mode: JournalMode) {
-        policy.setMode(mode)
-    }
-
-    nonisolated static func journalMode() -> JournalMode {
-        policy.mode
-    }
-
-    /// Test seam: reset mode, sample interval, and throttle state.
+    /// Test seam: reset sample, state-change, and heartbeat throttle state.
     nonisolated static func resetPolicyForTesting(
-        mode: JournalMode = .full,
-        sampleInterval: TimeInterval = defaultSampleInterval
+        sampleInterval: TimeInterval = defaultSampleInterval,
+        stateHeartbeatInterval: TimeInterval = 6 * 60 * 60
     ) {
-        policy.reset(mode: mode, sampleInterval: sampleInterval)
+        policy.reset(sampleInterval: sampleInterval, stateHeartbeatInterval: stateHeartbeatInterval)
     }
 
     nonisolated static func record(
@@ -174,7 +183,6 @@ actor DiagnosticLogService {
         action: String,
         fields: [String: Field] = [:]
     ) {
-        guard policy.allows(level: level) else { return }
         let record = Record(
             timestamp: Date(),
             level: level,
@@ -192,7 +200,7 @@ actor DiagnosticLogService {
         fields: [String: Field] = [:]
     ) {
         let cleaned = sanitized(fields)
-        guard policy.allowsSample(category: category, fields: cleaned, at: Date()) else { return }
+        guard policy.allowsSample(category: category, action: action, at: Date()) else { return }
         let record = Record(
             timestamp: Date(),
             level: .info,
@@ -204,21 +212,69 @@ actor DiagnosticLogService {
         Task { await shared.drain() }
     }
 
-    /// Records an event for an explicitly started performance session even when the
-    /// general app-journal preference is off. This path is inactive without user opt-in.
-    nonisolated static func recordPerformanceEvent(
+    /// Writes the first observed state, every state change, and a sparse heartbeat while unchanged.
+    nonisolated static func recordState(
+        level: Level = .info,
+        category: String,
         action: String,
+        identity: String = "default",
+        fingerprint: String? = nil,
         fields: [String: Field] = [:]
     ) {
-        enqueuePerformanceRecord(action: action, fields: fields, kind: .important)
+        let cleaned = sanitized(fields)
+        guard policy.allowsState(
+            category: category,
+            action: action,
+            identity: identity,
+            fingerprint: fingerprint ?? canonicalString(cleaned),
+            at: Date()
+        ) else { return }
+        record(level: level, category: category, action: action, fields: cleaned)
     }
 
-    /// Records one already-throttled performance sample. Cadence is owned by
-    /// `PerformanceRecordingManager`, so the general journal policy does not re-throttle it.
-    nonisolated static func recordPerformanceSample(
-        fields: [String: Field]
+    /// Standard collector diagnostic. Missing data is explicit instead of collapsing into nil.
+    nonisolated static func recordProbe(
+        component: String,
+        operation: String,
+        identity: String? = nil,
+        status: ProbeStatus,
+        reasonCode: String,
+        source: String,
+        fields: [String: Field] = [:]
     ) {
-        enqueuePerformanceRecord(action: "sampled", fields: fields, kind: .sample)
+        var payload = fields
+        payload["component"] = .publicValue(component)
+        payload["status"] = .publicValue(status.rawValue)
+        payload["reasonCode"] = .publicValue(reasonCode)
+        payload["source"] = .publicValue(source)
+        let level: Level = switch status {
+        case .success: .info
+        case .degraded, .unavailable, .unsupported: .warning
+        case .failure: .error
+        }
+        recordState(
+            level: level,
+            category: "probe",
+            action: operation,
+            identity: identity ?? component,
+            fingerprint: "\(status.rawValue)|\(reasonCode)|\(source)",
+            fields: payload
+        )
+    }
+
+    /// Repeated human-readable messages are useful, but identical copies are not.
+    nonisolated static func recordRepeatedMessage(
+        level: Level,
+        category: String,
+        message: String
+    ) {
+        recordState(
+            level: level,
+            category: category,
+            action: "message",
+            identity: message,
+            fields: ["message": .privateValue(message)]
+        )
     }
 
     nonisolated static func recordPrivate(
@@ -320,7 +376,7 @@ actor DiagnosticLogService {
         let day = Self.dayString(date)
         guard currentDay != day || currentHandle == nil else { return }
         try closeCurrentFile()
-        let url = configuration.directory.appendingPathComponent("diagnostics-v2-\(day).jsonl")
+        let url = configuration.directory.appendingPathComponent("diagnostics-v3-\(day).jsonl")
         if !fileManager.fileExists(atPath: url.path) {
             guard fileManager.createFile(
                 atPath: url.path,
@@ -369,6 +425,29 @@ actor DiagnosticLogService {
         }
     }
 
+    nonisolated private static func canonicalString(_ fields: [String: Field]) -> String {
+        fields.keys.sorted().map { key in
+            guard let field = fields[key] else { return key }
+            return "\(key)=\(canonicalString(field.value))"
+        }.joined(separator: "|")
+    }
+
+    nonisolated private static func canonicalString(_ value: Value) -> String {
+        switch value {
+        case .string(let value): return value
+        case .integer(let value): return String(value)
+        case .unsignedInteger(let value): return String(value)
+        case .double(let value): return String(value)
+        case .bool(let value): return String(value)
+        case .array(let values): return values.map(canonicalString).joined(separator: ",")
+        case .object(let values):
+            return values.keys.sorted().map { key in
+                "\(key):\(values[key].map(canonicalString) ?? "null")"
+            }.joined(separator: ",")
+        case .null: return "null"
+        }
+    }
+
     nonisolated private static func dayString(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .iso8601)
@@ -378,22 +457,6 @@ actor DiagnosticLogService {
         return formatter.string(from: date)
     }
 
-    nonisolated private static func enqueuePerformanceRecord(
-        action: String,
-        fields: [String: Field],
-        kind: DiagnosticRecordBuffer.Kind
-    ) {
-        let record = Record(
-            timestamp: Date(),
-            level: .info,
-            category: "selfMonitoring",
-            action: action,
-            fields: sanitized(fields)
-        )
-        guard buffer.enqueue(record, kind: kind) else { return }
-        Task { await shared.drain() }
-    }
-
     private struct DiagnosticFile {
         let url: URL
         let modifiedAt: Date
@@ -401,114 +464,65 @@ actor DiagnosticLogService {
     }
 }
 
-/// Process-wide journal gate: mode filter + per-category sample throttle.
-/// Time window (default 45s) OR discrete pressure-signature change admits a sample.
+/// Process-wide semantic rate control. Events are never severity-filtered.
+/// Samples use a fixed cadence; states write on change plus a sparse heartbeat.
 nonisolated final class DiagnosticJournalPolicy: @unchecked Sendable {
-
-    private static let signatureKeys = [
-        "memory.pressure",
-        "temperature.thermalState",
-        "battery.state",
-        "pressure"
-    ]
-
     private let lock = NSLock()
-    private var _mode: DiagnosticLogService.JournalMode
     private var sampleInterval: TimeInterval
+    private var stateHeartbeatInterval: TimeInterval
     private var lastSampleAt: [String: Date] = [:]
-    private var lastSignature: [String: String] = [:]
-
-    var mode: DiagnosticLogService.JournalMode {
-        lock.lock()
-        defer { lock.unlock() }
-        return _mode
-    }
+    private var lastStateAt: [String: Date] = [:]
+    private var lastStateFingerprint: [String: String] = [:]
 
     init(
-        mode: DiagnosticLogService.JournalMode = .full,
-        sampleInterval: TimeInterval = DiagnosticLogService.defaultSampleInterval
+        sampleInterval: TimeInterval = DiagnosticLogService.defaultSampleInterval,
+        stateHeartbeatInterval: TimeInterval = 6 * 60 * 60
     ) {
-        _mode = mode
         self.sampleInterval = sampleInterval
+        self.stateHeartbeatInterval = stateHeartbeatInterval
     }
 
-    func setMode(_ mode: DiagnosticLogService.JournalMode) {
+    func reset(sampleInterval: TimeInterval, stateHeartbeatInterval: TimeInterval = 6 * 60 * 60) {
         lock.lock()
-        _mode = mode
-        lock.unlock()
-    }
-
-    func reset(mode: DiagnosticLogService.JournalMode, sampleInterval: TimeInterval) {
-        lock.lock()
-        _mode = mode
         self.sampleInterval = sampleInterval
+        self.stateHeartbeatInterval = stateHeartbeatInterval
         lastSampleAt.removeAll()
-        lastSignature.removeAll()
+        lastStateAt.removeAll()
+        lastStateFingerprint.removeAll()
         lock.unlock()
     }
 
-    func allows(level: DiagnosticLogService.Level) -> Bool {
+    func allowsSample(category: String, action: String, at date: Date) -> Bool {
         lock.lock()
-        let current = _mode
-        lock.unlock()
-        switch current {
-        case .off: return false
-        case .errorsOnly: return level == .error
-        case .full: return true
+        defer { lock.unlock() }
+        let key = "\(category).\(action)"
+        if let last = lastSampleAt[key], date.timeIntervalSince(last) < sampleInterval {
+            return false
         }
+        lastSampleAt[key] = date
+        return true
     }
 
-    func allowsSample(
+    func allowsState(
         category: String,
-        fields: [String: DiagnosticLogService.Field],
+        action: String,
+        identity: String,
+        fingerprint: String,
         at date: Date
     ) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        guard _mode == .full else { return false }
-
-        let signature = Self.pressureSignature(fields)
-        if lastSignature[category] != signature {
-            lastSignature[category] = signature
-            lastSampleAt[category] = date
+        let key = "\(category).\(action).\(identity)"
+        if lastStateFingerprint[key] != fingerprint {
+            lastStateFingerprint[key] = fingerprint
+            lastStateAt[key] = date
             return true
         }
-        if let last = lastSampleAt[category], date.timeIntervalSince(last) < sampleInterval {
-            return false
+        guard let last = lastStateAt[key], date.timeIntervalSince(last) < stateHeartbeatInterval else {
+            lastStateAt[key] = date
+            return true
         }
-        lastSampleAt[category] = date
-        return true
-    }
-
-    private static func pressureSignature(_ fields: [String: DiagnosticLogService.Field]) -> String {
-        var parts: [String] = []
-        for key in signatureKeys where fields[key] != nil {
-            parts.append("\(key)=\(stringValue(fields[key]?.value))")
-        }
-        if let score = fields["health.score"]?.value {
-            switch score {
-            case .integer(let value):
-                parts.append("health.bucket=\(value / 10)")
-            case .double(let value):
-                parts.append("health.bucket=\(Int(value) / 10)")
-            default:
-                break
-            }
-        }
-        return parts.joined(separator: "|")
-    }
-
-    private static func stringValue(_ value: DiagnosticLogService.Value?) -> String {
-        guard let value else { return "" }
-        switch value {
-        case .string(let string): return string
-        case .integer(let number): return String(number)
-        case .unsignedInteger(let number): return String(number)
-        case .double(let number): return String(number)
-        case .bool(let flag): return flag ? "true" : "false"
-        case .null: return "null"
-        case .array, .object: return "<complex>"
-        }
+        return false
     }
 }
 
@@ -538,7 +552,7 @@ nonisolated final class DiagnosticRecordBuffer: @unchecked Sendable {
             if samples.count < Self.maximumSamples {
                 samples.append(record)
             } else {
-                coalescedSamples[record.category] = record
+                coalescedSamples["\(record.category).\(record.action)"] = record
                 coalescedCount += 1
             }
         case .important:

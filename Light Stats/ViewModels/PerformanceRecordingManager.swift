@@ -3,6 +3,7 @@
 //  Light Stats
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -63,6 +64,25 @@ final class PerformanceRecordingManager: ObservableObject {
         finish(action: "stopped", at: date)
     }
 
+    func openRecordings() {
+        let directory = PerformanceLogService.recordingsDirectoryURL
+        do {
+            try FileManager.default.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            NSWorkspace.shared.open(directory)
+        } catch {
+            DiagnosticLogService.record(
+                level: .error,
+                category: "performanceRecording",
+                action: "openDirectoryFailed",
+                fields: ["error": error.localizedDescription]
+            )
+        }
+    }
+
     /// Called from the existing system sampling loop. Returning nil keeps the process
     /// sampler entirely off the default path and enforces the one-minute cadence.
     func sessionIDForCapture(at date: Date = Date()) -> String? {
@@ -103,6 +123,10 @@ final class PerformanceRecordingManager: ObservableObject {
         if let endsAt {
             fields["session.endsAt"] = .privateValue(.double(endsAt.timeIntervalSince1970))
         }
-        DiagnosticLogService.recordPerformanceEvent(action: action, fields: fields)
+        PerformanceLogService.record(
+            action: action,
+            sessionID: sessionID,
+            fields: fields
+        )
     }
 }

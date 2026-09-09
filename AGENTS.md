@@ -34,6 +34,9 @@ Light Stats/
 │   └── ReleaseInfo.swift            # SemanticVersion + GitHub Release JSON
 ├── Services/                        # System data collection; no View/ViewModel imports
 │   ├── PowerService.swift           # IOKit battery + SMC sensors
+│   ├── DiagnosticLogService.swift   # Always-on structured fault journal (schema v3)
+│   ├── DiagnosticReportService.swift # User-exported support ZIP + fresh hardware probes
+│   ├── PerformanceLogService.swift  # Separate opt-in product resource recording
 │   ├── ProcessService.swift         # proc_listallpids + task_info
 │   ├── ExitNodeService.swift        # Geo-IP exit-node (actor)
 │   ├── DiskIOService.swift          # IOKit disk IO counters
@@ -338,6 +341,22 @@ Entry: `CleaningModeViewModel.shared.activate()`. Requires Accessibility permiss
 Safety: the countdown timer is decoupled from the `CGEventTap`. If the tap fails
 silently, the timer still fires and exits. The user can never get stuck. The "End"
 button is the only manual exit — keyboard is fully suppressed.
+
+## Diagnostics vs Performance Recording
+
+These are separate systems and must never share storage or exports:
+
+- `DiagnosticLogService` is the always-on fault journal. Events are never discarded by severity.
+  Continuous metrics are time-throttled; probe and capability records write on first observation,
+  every state change, and a sparse heartbeat. Collector absence must include a stable `reasonCode`,
+  source, stage/candidate evidence where applicable, and must not collapse silently into `nil`.
+- `DiagnosticReportService` creates a user-initiated ZIP containing environment context, fresh
+  hardware probes, relevant non-secret settings, and the bounded diagnostic journal. It excludes
+  product performance recordings and never includes serial numbers, credentials, usernames, or raw
+  home paths. Diagnostics retain 7 days with a 50 MB total cap.
+- `PerformanceLogService` records only this app's CPU, memory, wakeup, disk, and companion system
+  load metrics during the explicit 48-hour performance session. It writes under `Performance
+  Recordings`, uses its own schema/lifecycle, retains 14 days, and is not a user-behavior log.
 
 ## Auto-Update
 

@@ -153,7 +153,7 @@ struct SettingsView: View {
             GeneralDetail(
                 settings: settings,
                 updateManager: updateManager,
-                openDiagnosticLogs: settings.openDiagnosticLogs
+                exportDiagnosticReport: settings.exportDiagnosticReport
             )
         case .monitoring:
             MonitoringDetail(
@@ -316,7 +316,7 @@ struct SettingsRow<Control: View>: View {
     }
 }
 
-/// 分段选择器统一样式：各段等宽、固定高度，避免「关 / 仅错误 / 完整」这种长短不一的视觉抖动。
+/// 分段选择器统一样式：各段等宽、固定高度，避免长短不一的视觉抖动。
 struct SettingsSegmentedPicker<Selection: Hashable, Content: View>: View {
     @Binding var selection: Selection
     /// 单段最小宽度；语言 5 段用窄一些，日志 3 段用宽一些。

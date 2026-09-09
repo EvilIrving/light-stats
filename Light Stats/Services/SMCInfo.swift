@@ -70,7 +70,13 @@ enum SMCInfo {
         // inside the block—never the cachedTemperature property—to avoid reentrant deadlock (NSLock is non-reentrant).
         return temperatureLock.withLock {
             guard ensureConnection() else {
-                return readCachedTemperatureIfValid()
+                let cached = readCachedTemperatureIfValid()
+                Self.recordProbe(
+                    operation: "cpuTemperature",
+                    status: cached == nil ? .unavailable : .degraded,
+                    reasonCode: cached == nil ? "connectionUnavailable" : "usingCachedValue"
+                )
+                return cached
             }
 
             let cpuTempKeys = [
@@ -115,7 +121,13 @@ enum SMCInfo {
                 // Possible stale connection (e.g. after sleep); reconnect and retry once.
                 invalidateConnection()
                 guard ensureConnection() else {
-                    return readCachedTemperatureIfValid()
+                    let cached = readCachedTemperatureIfValid()
+                    Self.recordProbe(
+                        operation: "cpuTemperature",
+                        status: cached == nil ? .unavailable : .degraded,
+                        reasonCode: cached == nil ? "reconnectFailed" : "usingCachedAfterReconnectFailure"
+                    )
+                    return cached
                 }
                 for key in cpuTempKeys {
                     if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
@@ -123,7 +135,14 @@ enum SMCInfo {
                     }
                 }
                 guard !temperatures.isEmpty else {
-                    return readCachedTemperatureIfValid()
+                    let cached = readCachedTemperatureIfValid()
+                    Self.recordProbe(
+                        operation: "cpuTemperature",
+                        status: cached == nil ? .unavailable : .degraded,
+                        reasonCode: cached == nil ? "noValidTemperatureKeys" : "usingCachedAfterEmptyRead",
+                        fields: temperatureCandidateFields(cpuTempKeys)
+                    )
+                    return cached
                 }
             }
 
@@ -137,6 +156,12 @@ enum SMCInfo {
 
             _cachedTemperature = smoothedTemp
             _cacheTimestamp = Date()
+            Self.recordProbe(
+                operation: "cpuTemperature",
+                status: .success,
+                reasonCode: "keysRead",
+                fields: ["acceptedKeyCount": .privateValue(.integer(Int64(temperatures.count)))]
+            )
             return smoothedTemp
         }
     }
@@ -152,7 +177,14 @@ enum SMCInfo {
     }
 
     static func getFanSpeed() -> Int? {
-        guard ensureConnection() else { return nil }
+        guard ensureConnection() else {
+            Self.recordProbe(
+                operation: "fanSpeed",
+                status: .unavailable,
+                reasonCode: "connectionUnavailable"
+            )
+            return nil
+        }
 
         // Try to read fan count first
         var fanCount = 1
@@ -173,19 +205,28 @@ enum SMCInfo {
 
         // If we found valid fan data (even if 0 RPM), return it
         if let speed = maxSpeed {
+            Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "valueRead")
             return speed
         }
 
         // Fallback: try indices 0-3 directly
         for index in 0..<4 {
             if let speed = readFanSpeed(index: index) {
+                Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "fallbackIndexRead")
                 return speed
             }
         }
 
         // Possible stale connection (e.g. after sleep); reconnect and retry once.
         invalidateConnection()
-        guard ensureConnection() else { return nil }
+        guard ensureConnection() else {
+            Self.recordProbe(
+                operation: "fanSpeed",
+                status: .unavailable,
+                reasonCode: "reconnectFailed"
+            )
+            return nil
+        }
 
         fanCount = 1
         if let countData = readKey("FNum"), !countData.isEmpty {
@@ -204,11 +245,17 @@ enum SMCInfo {
         if retryMaxSpeed == nil {
             for index in 0..<4 {
                 if let speed = readFanSpeed(index: index) {
+                    Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "fallbackIndexRead")
                     return speed
                 }
             }
         }
 
+        Self.recordProbe(
+            operation: "fanSpeed",
+            status: retryMaxSpeed == nil ? .unavailable : .success,
+            reasonCode: retryMaxSpeed == nil ? "noValidFanKeys" : "valueReadAfterReconnect"
+        )
         return retryMaxSpeed
     }
 
@@ -247,18 +294,13 @@ enum SMCInfo {
     /// Close and reset the connection. Call this when an IOKit call fails
     /// (stale handle after sleep/wake) so the next `ensureConnection()` will
     /// open a fresh one.
-    private static func invalidateConnection() {
+    static func invalidateConnection() {
         connLock.lock()
         if conn != 0 {
             IOServiceClose(conn)
             conn = 0
         }
         connLock.unlock()
-    }
-
-    /// Gracefully tear down the SMC connection. Call at app termination.
-    static func shutdown() {
-        invalidateConnection()
     }
 
     // MARK: - Read Helpers

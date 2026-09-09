@@ -3,7 +3,7 @@
 //  Light Stats
 //
 //  Single logging entry point. Primary sink is the app-owned diagnostic journal
-//  (five-day JSONL under Application Support) for post-hoc investigation.
+//  (seven-day JSONL under Application Support) for post-hoc investigation.
 //  Messages are also handed to os.Logger with private privacy so they can show up
 //  in Console after a crash or support session — not for live developer streaming.
 //
@@ -29,12 +29,12 @@ nonisolated struct AppLogger {
 
     func debug(_ message: String) {
         logger.debug("\(message, privacy: .private)")
-        record(.debug, message)
+        recordRepeated(.debug, message)
     }
 
     func info(_ message: String) {
         logger.info("\(message, privacy: .private)")
-        record(.info, message)
+        recordRepeated(.info, message)
     }
 
     func notice(_ message: String) {
@@ -45,6 +45,11 @@ nonisolated struct AppLogger {
     func error(_ message: String) {
         logger.error("\(message, privacy: .private)")
         record(.error, message)
+    }
+
+    private func recordRepeated(_ level: DiagnosticLogService.Level, _ message: String) {
+        guard mirrorsToJournal else { return }
+        DiagnosticLogService.recordRepeatedMessage(level: level, category: category, message: message)
     }
 
     private func record(_ level: DiagnosticLogService.Level, _ message: String) {

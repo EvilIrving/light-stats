@@ -59,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         recordApplicationLaunch()
+        DiagnosticReportService.recordEnvironmentBaseline()
         // Create the monitoring item first: macOS parks each newly-created status item to the
         // left of the previous one, so creating the monitor first and the window-controls item
         // second places the split-screen icon to the RIGHT of the monitoring numbers by default.

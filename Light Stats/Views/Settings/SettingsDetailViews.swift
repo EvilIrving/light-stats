@@ -10,7 +10,7 @@ private func rowDivider() -> some View {
 struct GeneralDetail: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var updateManager: UpdateManager
-    let openDiagnosticLogs: () -> Void
+    let exportDiagnosticReport: () -> Void
 
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
@@ -59,18 +59,8 @@ struct GeneralDetail: View {
                         "settings.appLogs".localized,
                         subtitle: "settings.appLogs.hint".localized
                     ) {
-                        HStack(spacing: 8) {
-                            SettingsSegmentedPicker(
-                                selection: $settings.diagnosticLogLevel,
-                                segmentMinWidth: 52
-                            ) {
-                                ForEach(SettingsManager.DiagnosticLogLevel.allCases, id: \.self) { level in
-                                    SettingsSegmentLabel(title: level.displayName).tag(level)
-                                }
-                            }
-                            Button("settings.view".localized, action: openDiagnosticLogs)
-                                .controlSize(.regular)
-                        }
+                        Button("settings.diagnosticReport.export".localized, action: exportDiagnosticReport)
+                            .controlSize(.regular)
                     }
                     rowDivider()
                     PerformanceRecordingSettingsRow()

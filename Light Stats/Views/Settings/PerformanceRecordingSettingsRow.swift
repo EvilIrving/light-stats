@@ -13,14 +13,21 @@ struct PerformanceRecordingSettingsRow: View {
             "settings.performanceRecording".localized,
             subtitle: subtitle
         ) {
-            Button(buttonTitle) {
-                if recording.isRecording {
-                    recording.stop()
-                } else {
-                    recording.start()
+            HStack(spacing: 8) {
+                Button("settings.performanceRecording.view".localized) {
+                    recording.openRecordings()
                 }
+                .controlSize(.regular)
+
+                Button(buttonTitle) {
+                    if recording.isRecording {
+                        recording.stop()
+                    } else {
+                        recording.start()
+                    }
+                }
+                .controlSize(.regular)
             }
-            .controlSize(.regular)
         }
     }
 

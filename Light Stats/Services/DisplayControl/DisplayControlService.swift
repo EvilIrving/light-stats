@@ -96,6 +96,7 @@ actor DisplayControlService {
             isOrderedBefore($0, $1, screenMetadataByID: screenMetadataByID)
         }
         displaysByID = Dictionary(uniqueKeysWithValues: detected.map { ($0.id, $0) })
+        recordDiscoveryProbe(onlineCount: displayIDs.count, displays: detected)
         logger.info("Display discovery completed with \(detected.count) visible displays")
         return detected
     }
@@ -151,6 +152,36 @@ actor DisplayControlService {
     func stop() async {
         displaysByID.removeAll()
         await ddcController.stop()
+    }
+
+    private func recordDiscoveryProbe(onlineCount: Int, displays: [ControlledDisplay]) {
+        let unsupportedCount = displays.filter { $0.capability == .unsupported }.count
+        let status: DiagnosticLogService.ProbeStatus
+        let reasonCode: String
+        if displays.isEmpty {
+            status = .unavailable
+            reasonCode = onlineCount == 0 ? "noOnlineDisplays" : "noUsableDisplays"
+        } else if unsupportedCount > 0 {
+            status = .degraded
+            reasonCode = "someDisplaysUnsupported"
+        } else {
+            status = .success
+            reasonCode = "displaysDiscovered"
+        }
+        DiagnosticLogService.recordProbe(
+            component: "DisplayControlService",
+            operation: "displayDiscovery",
+            status: status,
+            reasonCode: reasonCode,
+            source: "CoreGraphics+IORegistry",
+            fields: [
+                "onlineCount": .privateValue(.integer(Int64(onlineCount))),
+                "visibleCount": .privateValue(.integer(Int64(displays.count))),
+                "nativeCount": .privateValue(.integer(Int64(displays.filter { $0.backend == .native }.count))),
+                "ddcCount": .privateValue(.integer(Int64(displays.filter { $0.backend == .ddc }.count))),
+                "unsupportedCount": .privateValue(.integer(Int64(unsupportedCount)))
+            ]
+        )
     }
 
     private func onlineDisplayIDs() -> [CGDirectDisplayID] {

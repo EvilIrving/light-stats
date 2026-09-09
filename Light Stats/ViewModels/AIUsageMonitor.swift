@@ -189,18 +189,29 @@ final class AIUsageMonitor: ObservableObject {
             let windows = snapshot.windows.map {
                 "\($0.label)|usedPercent=\($0.usedPercent)|resetsAt=\($0.resetsAt?.timeIntervalSince1970.description ?? "unavailable")"
             }.joined(separator: ";")
-            DiagnosticLogService.record(
+            DiagnosticLogService.recordSample(
                 category: "ai.usage",
                 action: "collected",
-                fields: ["provider": provider.rawValue, "windows": windows]
+                fields: ["provider": .privateValue(provider.rawValue), "windows": .privateValue(windows)]
+            )
+            DiagnosticLogService.recordProbe(
+                component: "AIUsageMonitor",
+                operation: "providerUsage",
+                identity: provider.rawValue,
+                status: .success,
+                reasonCode: "snapshotLoaded",
+                source: provider.rawValue,
+                fields: ["windowCount": .privateValue(.integer(Int64(snapshot.windows.count)))]
             )
             newState = .loaded(snapshot)
         case .failure(let error):
-            DiagnosticLogService.record(
-                level: .error,
-                category: "ai.usage",
-                action: "collectionFailed",
-                fields: ["provider": provider.rawValue, "error": error.logDescription]
+            DiagnosticLogService.recordProbe(
+                component: "AIUsageMonitor",
+                operation: "providerUsage",
+                identity: provider.rawValue,
+                status: .unavailable,
+                reasonCode: error.logDescription,
+                source: provider.rawValue
             )
             newState = .error(error)
         }

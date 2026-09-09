@@ -8,6 +8,7 @@
 import AppKit
 import Combine
 import Foundation
+import UniformTypeIdentifiers
 
 /// 标 `nonisolated`：纯常量，供采集 actor / 服务直接读取（如电池缓存 TTL）。
 nonisolated enum AppConfig {
@@ -337,41 +338,11 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         didSet { save(lastIgnoredVersion, for: .lastIgnoredVersion) }
     }
 
-    /// Local diagnostic JSONL verbosity: off / errors only / full (rate-limited samples).
-    @Published var diagnosticLogLevel: DiagnosticLogLevel {
-        didSet {
-            DiagnosticLogService.setJournalMode(diagnosticLogLevel.journalMode)
-            save(diagnosticLogLevel.rawValue, for: .diagnosticLogLevel)
-        }
-    }
-
     // MARK: - Singleton
 
     static let shared = SettingsManager()
 
     // MARK: - Enums
-
-    enum DiagnosticLogLevel: String, CaseIterable {
-        case off
-        case errorsOnly
-        case full
-
-        var journalMode: DiagnosticLogService.JournalMode {
-            switch self {
-            case .off: return .off
-            case .errorsOnly: return .errorsOnly
-            case .full: return .full
-            }
-        }
-
-        var displayName: String {
-            switch self {
-            case .off: return "settings.diagnosticLog.off".localized
-            case .errorsOnly: return "settings.diagnosticLog.errorsOnly".localized
-            case .full: return "settings.diagnosticLog.full".localized
-            }
-        }
-    }
 
     enum RefreshRate: String, CaseIterable {
         case low       // 5 seconds
@@ -496,7 +467,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case findMouseTriggerKey = "settings.findMouseTriggerKey"
         case activationCode = "settings.activationCode"
         case isGrandfathered = "settings.grandfathered"
-        case diagnosticLogLevel = "settings.diagnosticLogLevel"
     }
 
     // MARK: - Init
@@ -613,12 +583,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         activationCode = defaults.string(forKey: Key.activationCode.rawValue)
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""
 
-        // 诊断日志：默认完整（含限速 sample）；关 / 仅错误可在设置中收窄。
-        let logLevelStr = defaults.string(forKey: Key.diagnosticLogLevel.rawValue)
-            ?? DiagnosticLogLevel.full.rawValue
-        diagnosticLogLevel = DiagnosticLogLevel(rawValue: logLevelStr) ?? .full
-        DiagnosticLogService.setJournalMode(diagnosticLogLevel.journalMode)
-
         // 所有存储属性初始化完成后，把 Finder 菜单开关初值镜像进 App Group 容器，
         // 确保沙盒扩展冷启动即读到正确状态。
         FinderMenuShared.setEnabled(finderMenuEnabled)
@@ -638,11 +602,61 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
 
-    func openDiagnosticLogs() {
-        Task {
-            await DiagnosticLogService.shared.flush()
-            NSWorkspace.shared.open(DiagnosticLogService.diagnosticsDirectoryURL)
+    func exportDiagnosticReport() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = DiagnosticReportService.suggestedFilename()
+        panel.allowedContentTypes = [.zip]
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            let settings = self.diagnosticSettingsSnapshot()
+            Task { @MainActor in
+                do {
+                    let reportURL = try await DiagnosticReportService.shared.createReport(
+                        at: url,
+                        settings: settings
+                    )
+                    NSWorkspace.shared.activateFileViewerSelecting([reportURL])
+                } catch {
+                    let nsError = error as NSError
+                    DiagnosticLogService.record(
+                        level: .error,
+                        category: "diagnostics",
+                        action: "exportFailed",
+                        fields: [
+                            "errorDomain": nsError.domain,
+                            "errorCode": String(nsError.code)
+                        ]
+                    )
+                    let alert = NSAlert()
+                    alert.messageText = "settings.diagnosticReport.failed".localized
+                    alert.informativeText = error.localizedDescription
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "settings.ok".localized)
+                    alert.runModal()
+                }
+            }
         }
+    }
+
+    private func diagnosticSettingsSnapshot() -> [String: String] {
+        [
+            "theme": appTheme.rawValue,
+            "refreshRate": refreshRate.rawValue,
+            "temperatureUnit": temperatureUnit.rawValue,
+            "language": appLanguage.rawValue,
+            "exitNodeDetectionEnabled": String(exitNodeDetectionEnabled),
+            "aiClaudeEnabled": String(aiMonitorClaudeEnabled),
+            "aiCodexEnabled": String(aiMonitorCodexEnabled),
+            "aiGeminiEnabled": String(aiMonitorGeminiEnabled),
+            "windowManagementEnabled": String(windowManagementEnabled),
+            "displayBrightnessControlEnabled": String(displayBrightnessControlEnabled),
+            "finderMenuEnabled": String(finderMenuEnabled),
+            "scrollReverseEnabled": String(scrollReverseEnabled),
+            "keepAwakeEnabled": String(keepAwakeEnabled),
+            "findMouseEnabled": String(findMouseEnabled)
+        ]
     }
 
     // MARK: - Private

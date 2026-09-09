@@ -455,10 +455,66 @@ final class SystemMonitor: ObservableObject {
         fields["fan.rpm"] = optionalInteger(snapshot.fanSpeed)
         fields["battery.state"] = field(.string(String(describing: snapshot.battery.state)))
         fields["battery.percent"] = field(.double(snapshot.battery.percent))
+        fields["battery.cycleCount"] = optionalInteger(snapshot.battery.cycleCount)
+        fields["battery.healthPercent"] = optionalInteger(snapshot.battery.healthPercent)
+        fields["battery.conditionOK"] = field(snapshot.battery.conditionOK.map(Value.bool) ?? .null)
         fields["battery.powerWatts"] = optionalDouble(snapshot.battery.powerWatts)
+        fields["battery.temperatureCelsius"] = optionalDouble(snapshot.battery.temperature)
         fields["health.score"] = field(.integer(Int64(snapshot.health.score)))
         fields["health.breakdown"] = field(healthBreakdown)
+        recordCapabilityState(snapshot)
+        recordCoreCollectorProbes(snapshot)
         DiagnosticLogService.recordSample(category: "system", action: "collected", fields: fields)
+    }
+
+    private func recordCapabilityState(_ snapshot: SystemSnapshot) {
+        let battery = snapshot.battery
+        DiagnosticLogService.recordState(
+            category: "system",
+            action: "capabilitiesChanged",
+            fields: [
+                "battery.available": .privateValue(.bool(battery.state != .noBattery)),
+                "battery.cycleCount.available": .privateValue(.bool(battery.cycleCount != nil)),
+                "battery.health.available": .privateValue(.bool(battery.healthPercent != nil)),
+                "battery.power.available": .privateValue(.bool(battery.powerWatts != nil)),
+                "battery.temperature.available": .privateValue(.bool(battery.temperature != nil)),
+                "cpuTemperature.available": .privateValue(.bool(snapshot.cpuTemperature != nil)),
+                "fan.available": .privateValue(.bool(snapshot.fanSpeed != nil)),
+                "gpu.available": .privateValue(.bool(snapshot.gpuUsage != nil))
+            ]
+        )
+    }
+
+    private func recordCoreCollectorProbes(_ snapshot: SystemSnapshot) {
+        DiagnosticLogService.recordProbe(
+            component: "CPUInfo",
+            operation: "cpuStatistics",
+            status: snapshot.coreUsages.isEmpty ? .unavailable : .success,
+            reasonCode: snapshot.coreUsages.isEmpty ? "emptyPerCoreResult" : "hostStatisticsRead",
+            source: "Mach/host_statistics",
+            fields: ["coreCount": .privateValue(.integer(Int64(snapshot.coreUsages.count)))]
+        )
+        DiagnosticLogService.recordProbe(
+            component: "MemoryInfo",
+            operation: "memoryStatistics",
+            status: snapshot.memoryTotal == 0 ? .unavailable : .success,
+            reasonCode: snapshot.memoryTotal == 0 ? "zeroTotalMemory" : "hostStatisticsRead",
+            source: "Mach/host_statistics64"
+        )
+        DiagnosticLogService.recordProbe(
+            component: "DiskInfo",
+            operation: "diskCapacity",
+            status: snapshot.diskTotal == 0 ? .unavailable : .success,
+            reasonCode: snapshot.diskTotal == 0 ? "zeroVolumeCapacity" : "volumeValuesRead",
+            source: "Foundation/URLResourceValues"
+        )
+        DiagnosticLogService.recordProbe(
+            component: "NetworkInfo",
+            operation: "primaryInterface",
+            status: snapshot.primaryIP == nil ? .unavailable : .success,
+            reasonCode: snapshot.primaryIP == nil ? "noEligibleIPv4Interface" : "interfaceSelected",
+            source: "Darwin/getifaddrs"
+        )
     }
 
     private func recordSelfMonitoringSnapshot(_ snapshot: SystemSnapshot) {
@@ -508,7 +564,11 @@ final class SystemMonitor: ObservableObject {
         fields["system.temperature.thermalState"] = field(.string(snapshot.thermalState))
         fields["system.fan.rpm"] = optionalInteger(snapshot.fanSpeed)
         fields["system.health.score"] = field(.integer(Int64(snapshot.health.score)))
-        DiagnosticLogService.recordPerformanceSample(fields: fields)
+        PerformanceLogService.record(
+            action: "sampled",
+            sessionID: sessionID,
+            fields: fields
+        )
     }
 
     private func restoreTrendHistory() {

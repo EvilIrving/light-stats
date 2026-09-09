@@ -166,10 +166,6 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().scrollStepMultiplier, 1.0, accuracy: 0.0001)
     }
 
-    func testDiagnosticLogLevelDefaultsToFull() {
-        XCTAssertEqual(freshSettings().diagnosticLogLevel, .full)
-    }
-
     func testAppThemeDefaultsToNoir() {
         // Cold start is Ink Night (raw `.noir`); picker order remains unchanged.
         XCTAssertEqual(freshSettings().appTheme, .noir)
