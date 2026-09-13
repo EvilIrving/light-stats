@@ -8,24 +8,17 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Window Row
+// MARK: - Quota meter
 
-private struct WindowRow: View {
+/// Remaining-quota track + percent (or “No limit”) + reset countdown.
+/// Never synthesizes a bar from a balance.
+private struct QuotaMeter: View {
     @Environment(\.theme) private var theme
 
     let window: UsageWindow
 
     var body: some View {
         HStack(spacing: 8) {
-            // `label` is a `UsageWindowLabel` key, or a provider literal (`5h`, `Pro`).
-            // Unknown keys resolve to themselves, so both render the same way.
-            Text(window.label.localized)
-                .font(theme.chromeStyle.compactLabelFont)
-                .foregroundStyle(theme.inkMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(width: 28, alignment: .leading)
-
             if let remainingPercent {
                 progressTrack(remainingPercent)
                 Text(String(format: "%.0f%%", remainingPercent))
@@ -36,13 +29,15 @@ private struct WindowRow: View {
                 Text("aiUsage.noLimit".localized)
                     .font(theme.chromeStyle.compactValueFont)
                     .foregroundStyle(theme.inkMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
             Text(resetText)
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(theme.inkMuted)
-                .frame(width: 76, alignment: .trailing)
+                .frame(width: 56, alignment: .trailing)
                 .lineLimit(1)
         }
     }
@@ -94,9 +89,31 @@ private struct WindowRow: View {
     }
 }
 
+// MARK: - Expanded period row
+
+private struct WindowRow: View {
+    @Environment(\.theme) private var theme
+
+    let window: UsageWindow
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(window.label.localized)
+                .font(theme.chromeStyle.compactLabelFont)
+                .foregroundStyle(theme.inkMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: 36, alignment: .leading)
+            QuotaMeter(window: window)
+        }
+        .padding(.leading, 15)
+    }
+}
+
 // MARK: - Compact Provider Row
 
-/// A single provider's state as a compact row group (no card wrapper).
+/// A single provider as one compact header line; extra windows appear only
+/// after expand.
 struct AIProviderCompactRow: View {
     @Environment(\.theme) private var theme
     @State private var isExpanded = false
@@ -105,9 +122,9 @@ struct AIProviderCompactRow: View {
     let state: ProviderFetchState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            header
-            detail
+        VStack(alignment: .leading, spacing: 6) {
+            headerLine
+            expandedWindows
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: toggleExpanded)
@@ -116,17 +133,10 @@ struct AIProviderCompactRow: View {
         .accessibilityHint(expandHint)
     }
 
-    private var header: some View {
-        HStack(spacing: 4) {
-            providerIcon
-                .frame(width: 11, height: 11)
-            Text(providerName)
-                .font(theme.chromeStyle.compactLabelFont)
-                .foregroundStyle(theme.inkSecondary)
-            Spacer(minLength: 8)
-            if let balance = headerBalance {
-                BalanceRow(balance: balance)
-            }
+    private var headerLine: some View {
+        HStack(spacing: 8) {
+            identity
+            headerTrailing
             if canExpand {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 9, weight: .semibold))
@@ -136,24 +146,77 @@ struct AIProviderCompactRow: View {
         }
     }
 
+    private var identity: some View {
+        HStack(spacing: 4) {
+            providerIcon
+                .frame(width: 11, height: 11)
+            Text(providerName)
+                .font(theme.chromeStyle.compactLabelFont)
+                .foregroundStyle(theme.inkSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(minWidth: 56, maxWidth: 96, alignment: .leading)
+        .layoutPriority(1)
+    }
+
     @ViewBuilder
-    private var detail: some View {
+    private var headerTrailing: some View {
         switch state {
         case .idle:
-            Text("aiUsage.fetching".localized)
-                .font(.system(size: 11))
-                .foregroundStyle(theme.inkMuted)
-
-        case .loaded(let snapshot):
-            loadedWindows(snapshot)
+            statusText("aiUsage.fetching".localized)
 
         case .error(let error):
-            Text(errorText(error))
-                .font(.system(size: 11))
-                .foregroundStyle(theme.inkMuted)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            statusText(errorText(error))
+
+        case .loaded(let snapshot):
+            loadedHeaderTrailing(snapshot)
         }
+    }
+
+    @ViewBuilder
+    private func loadedHeaderTrailing(_ snapshot: ProviderUsageSnapshot) -> some View {
+        if isExpanded {
+            headerBalance(snapshot.balance)
+        } else if let primary = AIUsageWindowPicker.mostStrained(in: snapshot.windows) {
+            QuotaMeter(window: primary)
+        } else {
+            headerBalance(snapshot.balance)
+        }
+    }
+
+    @ViewBuilder
+    private func headerBalance(_ balance: UsageBalance?) -> some View {
+        Spacer(minLength: 8)
+        if let balance {
+            BalanceRow(balance: balance)
+        }
+    }
+
+    @ViewBuilder
+    private var expandedWindows: some View {
+        if let snapshot = loadedSnapshot {
+            let windows = AIUsageWindowPicker.detailWindows(
+                in: snapshot.windows,
+                expanded: isExpanded
+            )
+            if !windows.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(windows, id: \.label) { window in
+                        WindowRow(window: window)
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusText(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundStyle(theme.inkMuted)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var providerName: String {
@@ -172,31 +235,11 @@ struct AIProviderCompactRow: View {
         (loadedSnapshot?.windows.count ?? 0) > 1
     }
 
-    /// Amount text lives on the name row so balance-only providers match the
-    /// window list. Never derived from `usedPercent`.
-    private var headerBalance: UsageBalance? {
-        loadedSnapshot?.balance
-    }
-
     private var expandHint: String {
         guard canExpand else { return "" }
         return isExpanded
             ? "aiUsage.collapseWindows".localized
             : "aiUsage.expandWindows".localized
-    }
-
-    @ViewBuilder
-    private func loadedWindows(_ snapshot: ProviderUsageSnapshot) -> some View {
-        if !snapshot.windows.isEmpty {
-            VStack(spacing: 6) {
-                ForEach(
-                    AIUsageWindowPicker.visibleWindows(in: snapshot.windows, expanded: isExpanded),
-                    id: \.label
-                ) { window in
-                    WindowRow(window: window)
-                }
-            }
-        }
     }
 
     private func toggleExpanded() {

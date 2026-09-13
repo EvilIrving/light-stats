@@ -10,20 +10,15 @@ final class AIUsageWindowPickerTests: XCTestCase {
 
     func testEmptyWindowsHaveNoPrimary() {
         XCTAssertNil(AIUsageWindowPicker.mostStrained(in: []))
-        XCTAssertTrue(AIUsageWindowPicker.visibleWindows(in: [], expanded: false).isEmpty)
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: [], expanded: false).isEmpty)
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: [], expanded: true).isEmpty)
     }
 
-    func testSingleWindowIsUnchanged() {
+    func testSingleWindowStaysOnHeader() {
         let only = window("5h", used: 40)
         XCTAssertEqual(AIUsageWindowPicker.mostStrained(in: [only]), only)
-        XCTAssertEqual(
-            AIUsageWindowPicker.visibleWindows(in: [only], expanded: false),
-            [only]
-        )
-        XCTAssertEqual(
-            AIUsageWindowPicker.visibleWindows(in: [only], expanded: true),
-            [only]
-        )
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: [only], expanded: false).isEmpty)
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: [only], expanded: true).isEmpty)
     }
 
     func testHighestUsedPercentWins() {
@@ -33,10 +28,6 @@ final class AIUsageWindowPickerTests: XCTestCase {
             window(UsageWindowLabel.month.key, used: 9)
         ]
         XCTAssertEqual(AIUsageWindowPicker.mostStrained(in: windows)?.label, "5h")
-        XCTAssertEqual(
-            AIUsageWindowPicker.visibleWindows(in: windows, expanded: false).map(\.label),
-            ["5h"]
-        )
     }
 
     func testLowestRemainingIsMostStrained() {
@@ -73,14 +64,24 @@ final class AIUsageWindowPickerTests: XCTestCase {
         XCTAssertEqual(AIUsageWindowPicker.mostStrained(in: windows)?.label, "5h")
     }
 
-    func testExpandedKeepsProviderOrder() {
+    func testCollapsedMultiWindowHasNoDetailRows() {
+        let windows = [
+            window("5h", used: 10),
+            window("7d", used: 90),
+            window(UsageWindowLabel.month.key, used: 20)
+        ]
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: windows, expanded: false).isEmpty)
+        XCTAssertEqual(AIUsageWindowPicker.mostStrained(in: windows)?.label, "7d")
+    }
+
+    func testExpandedListsEveryWindowInProviderOrder() {
         let windows = [
             window("5h", used: 10),
             window("7d", used: 90),
             window(UsageWindowLabel.month.key, used: 20)
         ]
         XCTAssertEqual(
-            AIUsageWindowPicker.visibleWindows(in: windows, expanded: true).map(\.label),
+            AIUsageWindowPicker.detailWindows(in: windows, expanded: true).map(\.label),
             ["5h", "7d", UsageWindowLabel.month.key]
         )
     }
@@ -100,10 +101,7 @@ final class AIUsageWindowPickerTests: XCTestCase {
         )
         XCTAssertTrue(snapshot.windows.isEmpty)
         XCTAssertNil(AIUsageWindowPicker.mostStrained(in: snapshot.windows))
-        XCTAssertEqual(
-            AIUsageWindowPicker.visibleWindows(in: snapshot.windows, expanded: false),
-            []
-        )
+        XCTAssertTrue(AIUsageWindowPicker.detailWindows(in: snapshot.windows, expanded: false).isEmpty)
     }
 
     private func window(_ label: String, used: Double?) -> UsageWindow {

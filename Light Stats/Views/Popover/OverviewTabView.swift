@@ -241,7 +241,7 @@ struct OverviewTabView: View {
         }
         if !rows.isEmpty {
             PanelSection(title: "aiUsage.title".localized) {
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     ForEach(rows, id: \.0.id) { row, state in
                         AIProviderCompactRow(
                             provider: row.id,

@@ -2,7 +2,8 @@
 //  AIUsageWindowPicker.swift
 //  Light Stats
 //
-//  Chooses which quota windows a compact provider row should show.
+//  Chooses which quota window sits on the compact header, and which
+//  windows list under the title after expand.
 //
 
 import Foundation
@@ -17,13 +18,11 @@ enum AIUsageWindowPicker {
         }
     }
 
-    /// Collapsed multi-window rows show only the tightest window; expanded and
-    /// single-window rows keep the provider's original order.
-    static func visibleWindows(in windows: [UsageWindow], expanded: Bool) -> [UsageWindow] {
-        guard windows.count > 1, !expanded, let primary = mostStrained(in: windows) else {
-            return windows
-        }
-        return [primary]
+    /// Period rows under the title. Collapsed and single-window keep the
+    /// primary meter on the header, so this is empty until expand.
+    static func detailWindows(in windows: [UsageWindow], expanded: Bool) -> [UsageWindow] {
+        guard windows.count > 1, expanded else { return [] }
+        return windows
     }
 
     private static func strain(_ window: UsageWindow) -> Double {
