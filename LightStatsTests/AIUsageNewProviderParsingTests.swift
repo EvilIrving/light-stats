@@ -223,9 +223,9 @@ final class AIUsageNewProviderParsingTests: XCTestCase {
 
     func testCursorSummaryUsesDashboardPercentNotCentsRatio() throws {
         let snapshot = try CursorUsageService.parseSummaryJSON(fixture("cursor_usage_summary.json"))
-        XCTAssertEqual(snapshot.windows.map(\.label), [UsageWindowLabel.usage.key, "Auto"])
-        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 30.2, accuracy: 0.001)
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 33.22, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows.map(\.label), [UsageWindowLabel.usage.key, "API"])
+        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 33.22, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
         XCTAssertNotNil(snapshot.windows[0].resetsAt)
         XCTAssertNil(snapshot.balance)
     }

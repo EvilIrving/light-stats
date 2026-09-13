@@ -40,8 +40,10 @@ enum CursorUsageService: UsageProviding {
         let plan = summary.individualUsage?.plan
         var windows: [UsageWindow] = []
         let reset = parseISO8601(summary.billingCycleEnd)
-        if let total = plan?.totalPercentUsed {
-            windows.append(UsageWindow(label: .usage, usedPercent: clamp(total), resetsAt: reset))
+        // Cursor's page shows two categories: Cursor Models (auto) and Other Models (api).
+        // totalPercentUsed is a combined metric Cursor does not surface — use auto as primary.
+        if let auto = plan?.autoPercentUsed {
+            windows.append(UsageWindow(label: .usage, usedPercent: clamp(auto), resetsAt: reset))
         } else if let used = plan?.used, let limit = plan?.limit, limit > 0 {
             windows.append(UsageWindow(
                 label: .usage,
@@ -49,10 +51,7 @@ enum CursorUsageService: UsageProviding {
                 resetsAt: reset
             ))
         }
-        if let auto = plan?.autoPercentUsed {
-            windows.append(UsageWindow(label: "Auto", usedPercent: clamp(auto), resetsAt: reset))
-        }
-        if let api = plan?.apiPercentUsed, api > 0 {
+        if let api = plan?.apiPercentUsed {
             windows.append(UsageWindow(label: "API", usedPercent: clamp(api), resetsAt: reset))
         }
         if let onDemand = summary.individualUsage?.onDemand,
