@@ -30,7 +30,8 @@ import Foundation
 import os
 
 /// Codex (ChatGPT) subscription usage — see file header for full logic chain.
-enum CodexUsageService {
+enum CodexUsageService: UsageProviding {
+    static var id: AIProvider { .codex }
 
     private static let log = AppLogger(category: "CodexUsage")
 

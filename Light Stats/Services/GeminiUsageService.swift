@@ -33,7 +33,8 @@
 import Foundation
 
 /// Gemini CLI quota usage — see file header for full logic chain.
-nonisolated enum GeminiUsageService {
+nonisolated enum GeminiUsageService: UsageProviding {
+    static var id: AIProvider { .gemini }
 
     private static let quotaURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota")!
     private static let loadCodeAssistURL = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist")!

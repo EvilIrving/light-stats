@@ -1,0 +1,12 @@
+{
+  "data": {
+    "user": {
+      "requestLimitInfo": {
+        "isUnlimited": false,
+        "requestLimit": 1000,
+        "requestsUsedSinceLastRefresh": 250,
+        "nextRefreshTime": "2026-10-01T00:00:00Z"
+      }
+    }
+  }
+}

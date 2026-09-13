@@ -41,14 +41,13 @@ final class UsageWarmupManager: ObservableObject {
 
     func start() {
         // 开关或对应监控状态变化 → 重新评估（开 → 起循环；关 → 立即停）。
-        Publishers.CombineLatest4(
+        Publishers.CombineLatest3(
+            settings.$enabledAIProviders,
             settings.$autoRefreshClaudeEnabled,
-            settings.$autoRefreshCodexEnabled,
-            settings.$aiMonitorClaudeEnabled,
-            settings.$aiMonitorCodexEnabled
+            settings.$autoRefreshCodexEnabled
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in self?.syncAll() }
+        .sink { [weak self] _, _, _ in self?.syncAll() }
         .store(in: &cancellables)
 
         syncAll()
@@ -64,10 +63,15 @@ final class UsageWarmupManager: ObservableObject {
 
     /// warmup 需要该 provider 的监控也开着（开关只在监控开启时才出现）。
     private func isEnabled(_ provider: AIProvider) -> Bool {
+        guard AIUsageCatalog.row(for: provider)?.supportsWarmup == true else { return false }
+        return autoRefresh(provider) && settings.isAIProviderEnabled(provider)
+    }
+
+    private func autoRefresh(_ provider: AIProvider) -> Bool {
         switch provider {
-        case .claude: return settings.autoRefreshClaudeEnabled && settings.aiMonitorClaudeEnabled
-        case .codex: return settings.autoRefreshCodexEnabled && settings.aiMonitorCodexEnabled
-        case .gemini: return false
+        case .claude: return settings.autoRefreshClaudeEnabled
+        case .codex: return settings.autoRefreshCodexEnabled
+        default: return false
         }
     }
 
@@ -157,11 +161,10 @@ final class UsageWarmupManager: ObservableObject {
     }
 
     private func fetchUsage(_ provider: AIProvider) async throws -> ProviderUsageSnapshot {
-        switch provider {
-        case .claude: return try await ClaudeUsageService.fetch()
-        case .codex: return try await CodexUsageService.fetch()
-        case .gemini: throw AIUsageError.decoding
+        guard AIUsageCatalog.row(for: provider)?.supportsWarmup == true else {
+            throw AIUsageError.decoding
         }
+        return try await UsageProviderRegistry.fetch(provider)
     }
 
     private func sendWithRetries(_ provider: AIProvider) async -> Bool {

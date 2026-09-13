@@ -26,7 +26,10 @@ nonisolated enum UsageWarmupService {
     static let prompt = "ok"
 
     static func send(provider: AIProvider, timeout: TimeInterval = 30) async -> Bool {
-        guard provider != .gemini else { return false }   // 每日 quota，无滚动窗口可 anchor
+        switch provider {
+        case .claude, .codex: break
+        default: return false
+        }
         guard let binary = binary(for: provider) else {
             log.error("warmup: \(provider.rawValue) binary not found")
             DiagnosticLogService.record(
@@ -54,7 +57,7 @@ nonisolated enum UsageWarmupService {
         switch provider {
         case .claude: return CLIBinaryResolver.resolveClaudeBinary()
         case .codex: return CLIBinaryResolver.resolveCodexBinary()
-        case .gemini: return nil
+        default: return nil
         }
     }
 
@@ -68,7 +71,7 @@ nonisolated enum UsageWarmupService {
                 "exec", "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check", "--ephemeral",
                 "-s", "read-only", prompt
             ]
-        case .gemini: return []
+        default: return []
         }
     }
 

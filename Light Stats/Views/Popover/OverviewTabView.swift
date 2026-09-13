@@ -233,20 +233,37 @@ struct OverviewTabView: View {
 
     @ViewBuilder
     private var aiSection: some View {
-        let aiProviders: [(AIProvider, ProviderFetchState)] = [
-            settings.aiMonitorClaudeEnabled ? (.claude, aiMonitor.claudeState) : nil,
-            settings.aiMonitorCodexEnabled ? (.codex, aiMonitor.codexState) : nil,
-            settings.aiMonitorGeminiEnabled ? (.gemini, aiMonitor.geminiState) : nil,
-        ].compactMap { $0 }
+        let states = aiMonitor.states
+        let enabled = settings.enabledAIProviders
+        let rows = AIUsageCatalog.providers.compactMap { row -> (AIUsageProviderRow, ProviderFetchState)? in
+            guard enabled.contains(row.id) else { return nil }
+            return (row, states[row.id] ?? .idle)
+        }
+        let windowRows = rows.filter { row, state in
+            guard row.showsBalance else { return true }
+            if case .loaded(let snapshot) = state, !snapshot.windows.isEmpty { return true }
+            return false
+        }
+        let balanceRows = rows.filter { $0.0.showsBalance }
 
-        if !aiProviders.isEmpty {
+        if !rows.isEmpty {
             PanelSection(title: "aiUsage.title".localized) {
                 VStack(spacing: 10) {
-                    ForEach(aiProviders, id: \.0.rawValue) { provider, state in
+                    ForEach(windowRows, id: \.0.id) { row, state in
                         AIProviderCompactRow(
-                            provider: provider,
+                            provider: row.id,
                             state: state
                         )
+                    }
+                    if !balanceRows.isEmpty {
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4),
+                            spacing: 8
+                        ) {
+                            ForEach(balanceRows, id: \.0.id) { row, state in
+                                BalanceCell(provider: row.id, state: state)
+                            }
+                        }
                     }
                 }
             }

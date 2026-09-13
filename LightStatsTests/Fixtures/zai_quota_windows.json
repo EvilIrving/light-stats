@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "code": 200,
+  "data": {
+    "planName": "Pro",
+    "limits": [
+      {
+        "type": "TOKENS_LIMIT",
+        "unit": 3,
+        "number": 5,
+        "percentage": 42,
+        "nextResetTime": 1780000000000
+      },
+      {
+        "type": "CREDIT_LIMIT",
+        "currency": "USD",
+        "total": "12.5"
+      }
+    ]
+  }
+}

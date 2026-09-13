@@ -148,16 +148,48 @@
 
 // MARK: - AI Usage
 "settings.aiUsage" = "AI Usage";
-"settings.aiUsageInterval" = "Refresh Interval";
 "aiUsage.title" = "AI Usage";
+"aiUsage.window.quota" = "Quota";
+"aiUsage.window.usage" = "Usage";
+"aiUsage.window.overage" = "Over";
+"aiUsage.window.month" = "Month";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "Auto-refresh window";
+"aiUsage.autoRefresh.short" = "Renew";
 "aiUsage.fetching" = "Fetching...";
 "aiUsage.tokenExpired" = "Token expired — run %@ once to refresh";
 "aiUsage.credentialsMissing" = "No credentials — sign in with the %@ CLI first";
 "aiUsage.fetchFailed" = "Failed to fetch usage";
+"aiUsage.deepseek" = "DeepSeek";
+"aiUsage.grok" = "Grok";
+"aiUsage.zai" = "z.ai";
+"aiUsage.minimax" = "MiniMax";
+"aiUsage.openrouter" = "OpenRouter";
+"aiUsage.warp" = "Warp";
+"aiUsage.trae" = "Trae";
+"aiUsage.opencodego" = "OpenCode Go";
+"aiUsage.cursor" = "Cursor";
+"aiUsage.kimi" = "Kimi Code";
+"aiUsage.qoder" = "Qoder";
+"aiUsage.mimo" = "MiMo";
+"aiUsage.qoder.tokenHint" = "Paste the browser Cookie header";
+"aiUsage.mimo.tokenHint" = "Paste the browser Cookie header (with userId)";
+"aiUsage.credentialsMissing.app" = "Open %@ and sign in first";
+"aiUsage.tokenExpired.app" = "%@ session expired — sign in again";
+"aiUsage.token" = "API token";
+"aiUsage.token.hint" = "Used only to read usage. Never uploaded.";
+"aiUsage.group.local" = "This Mac";
+"aiUsage.group.token" = "API token";
+"aiUsage.token.placeholder" = "Paste, then Return";
+"aiUsage.token.saved" = "Token saved";
+"aiUsage.token.copy" = "Copy";
+"aiUsage.token.copied" = "Copied";
+"aiUsage.token.save" = "Save";
+"aiUsage.token.clear" = "Clear";
+"aiUsage.credentialsMissing.token" = "Paste an API token in Settings";
+"aiUsage.tokenExpired.token" = "Token expired or rejected";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "Color Indicator";

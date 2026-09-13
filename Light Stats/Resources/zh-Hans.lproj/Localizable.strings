@@ -150,16 +150,48 @@
 
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 用量";
-"settings.aiUsageInterval" = "刷新间隔";
 "aiUsage.title" = "AI 用量";
+"aiUsage.window.quota" = "额度";
+"aiUsage.window.usage" = "用量";
+"aiUsage.window.overage" = "超额";
+"aiUsage.window.month" = "月";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "自动续期窗口";
+"aiUsage.autoRefresh.short" = "续期";
 "aiUsage.fetching" = "获取中...";
 "aiUsage.tokenExpired" = "令牌已过期，运行一次 %@ 即可刷新";
 "aiUsage.credentialsMissing" = "未找到凭证，请先用 %@ CLI 登录";
 "aiUsage.fetchFailed" = "用量获取失败";
+"aiUsage.deepseek" = "DeepSeek";
+"aiUsage.grok" = "Grok";
+"aiUsage.zai" = "z.ai";
+"aiUsage.minimax" = "MiniMax";
+"aiUsage.openrouter" = "OpenRouter";
+"aiUsage.warp" = "Warp";
+"aiUsage.trae" = "Trae";
+"aiUsage.opencodego" = "OpenCode Go";
+"aiUsage.cursor" = "Cursor";
+"aiUsage.kimi" = "Kimi Code";
+"aiUsage.qoder" = "Qoder";
+"aiUsage.mimo" = "MiMo";
+"aiUsage.qoder.tokenHint" = "粘贴浏览器 Cookie 请求头";
+"aiUsage.mimo.tokenHint" = "粘贴浏览器 Cookie 请求头（含 userId）";
+"aiUsage.credentialsMissing.app" = "先打开 %@ 并登录";
+"aiUsage.tokenExpired.app" = "%@ 会话已过期，请重新登录";
+"aiUsage.token" = "API token";
+"aiUsage.token.hint" = "只用于读取用量，不会上传";
+"aiUsage.group.local" = "本机登录";
+"aiUsage.group.token" = "API token";
+"aiUsage.token.placeholder" = "粘贴后回车保存";
+"aiUsage.token.saved" = "已保存";
+"aiUsage.token.copy" = "复制";
+"aiUsage.token.copied" = "已复制";
+"aiUsage.token.save" = "保存";
+"aiUsage.token.clear" = "清除";
+"aiUsage.credentialsMissing.token" = "在设置里粘贴 API token";
+"aiUsage.tokenExpired.token" = "Token 失效或被拒绝";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";

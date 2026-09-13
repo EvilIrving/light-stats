@@ -1,0 +1,7 @@
+{
+  "config": {
+    "creditUsagePercent": 38.5,
+    "currentPeriod": { "end": "2026-09-20T00:00:00Z" },
+    "billingPeriodEnd": "2026-09-30T00:00:00Z"
+  }
+}

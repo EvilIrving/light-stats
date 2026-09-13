@@ -342,54 +342,6 @@ struct ScrollDetail: View {
     }
 }
 
-// MARK: - AI Usage
-
-struct AIUsageDetail: View {
-    @ObservedObject var settings: SettingsManager
-
-    private var anyEnabled: Bool {
-        settings.aiMonitorClaudeEnabled || settings.aiMonitorCodexEnabled || settings.aiMonitorGeminiEnabled
-    }
-
-    var body: some View {
-        SettingsDetailScaffold("settings.aiUsage".localized) {
-            SettingsGroup {
-                SettingsRow("aiUsage.claude".localized) {
-                    SettingsToggle(isOn: $settings.aiMonitorClaudeEnabled)
-                }
-                if settings.aiMonitorClaudeEnabled {
-                    rowDivider()
-                    SettingsRow("aiUsage.autoRefresh".localized) {
-                        SettingsToggle(isOn: $settings.autoRefreshClaudeEnabled)
-                    }
-                }
-                rowDivider()
-                SettingsRow("aiUsage.codex".localized) {
-                    SettingsToggle(isOn: $settings.aiMonitorCodexEnabled)
-                }
-                if settings.aiMonitorCodexEnabled {
-                    rowDivider()
-                    SettingsRow("aiUsage.autoRefresh".localized) {
-                        SettingsToggle(isOn: $settings.autoRefreshCodexEnabled)
-                    }
-                }
-                rowDivider()
-                SettingsRow("aiUsage.gemini".localized) {
-                    SettingsToggle(isOn: $settings.aiMonitorGeminiEnabled)
-                }
-                if anyEnabled {
-                    rowDivider()
-                    SettingsRow("settings.aiUsageInterval".localized) {
-                        Text(SettingsManager.AIRefreshInterval.m2.displayName)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Network (exit node)
 
 struct NetworkDetail: View {

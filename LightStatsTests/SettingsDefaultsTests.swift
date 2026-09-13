@@ -51,11 +51,24 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().exitNodeDetectionEnabled)
     }
 
-    func testAllThreeAIMonitorsDefaultOff() {
+    func testAllAIMonitorsDefaultOff() {
         let s = freshSettings()
-        XCTAssertFalse(s.aiMonitorClaudeEnabled)
-        XCTAssertFalse(s.aiMonitorCodexEnabled)
-        XCTAssertFalse(s.aiMonitorGeminiEnabled)
+        for id in AIProvider.allCases {
+            XCTAssertFalse(s.isAIProviderEnabled(id), id.rawValue)
+            XCTAssertNil(cleanDefaults.object(forKey: SettingsManager.aiMonitorEnabledKey(for: id)))
+        }
+        XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorClaude"))
+        XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorCodex"))
+        XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorGemini"))
+    }
+
+    func testLegacyClaudeMonitorKeyMigratesWhenNewKeyAbsent() {
+        cleanDefaults.set(true, forKey: "settings.aiMonitorClaude")
+        let s = freshSettings()
+        XCTAssertTrue(s.isAIProviderEnabled(.claude))
+        XCTAssertEqual(cleanDefaults.object(forKey: "settings.aiMonitor.claude.enabled") as? Bool, true)
+        XCTAssertFalse(s.isAIProviderEnabled(.codex))
+        XCTAssertFalse(s.isAIProviderEnabled(.deepseek))
     }
 
     func testScrollReversalDefaultsOff() {

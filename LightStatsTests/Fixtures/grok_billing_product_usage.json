@@ -1,0 +1,12 @@
+{
+  "config": {
+    "currentPeriod": {
+      "type": "USAGE_PERIOD_TYPE_WEEKLY",
+      "end": "2026-09-20T00:00:00Z"
+    },
+    "productUsage": [
+      { "product": "GrokChat" },
+      { "product": "Api", "usagePercent": 34.0 }
+    ]
+  }
+}

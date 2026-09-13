@@ -1,0 +1,10 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "balance": "86.50",
+    "cash_balance": "80.00",
+    "gift_balance": "6.50",
+    "currency": "CNY"
+  }
+}

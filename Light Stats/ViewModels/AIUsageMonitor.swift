@@ -22,20 +22,12 @@
 //  │  Dedup: skips providers already in-flight.               │
 //  └──────────────────────────────────────────────────────────┘
 //                           │
-//  ┌─ Manual retry (user taps ↻ in error card) ──────────────┐
-//  │  retry(provider) → resetCredentialCache() → refresh()   │
-//  │  Clears cached failure so keychain re-prompts if needed. │
+//  ┌─ Manual retry ───────────────────────────────────────────┐
+//  │  retry(provider) → resetCredentialCache() → refresh()    │
 //  └──────────────────────────────────────────────────────────┘
 //                           │
 //  ┌─ Provider dispatch ──────────────────────────────────────┐
-//  │  .claude → ClaudeUsageService.fetch()                    │
-//  │  .codex  → CodexUsageService.fetch()                     │
-//  │  .gemini → GeminiUsageService.fetch()                    │
-//  └──────────────────────────────────────────────────────────┘
-//                           │
-//  ┌─ Result handling ────────────────────────────────────────┐
-//  │  success      → .loaded(snapshot)                        │
-//  │  failure      → .error(error), retryable in the card     │
+//  │  UsageProviderRegistry.fetch(id)                         │
 //  └──────────────────────────────────────────────────────────┘
 //
 
@@ -43,21 +35,19 @@ import Foundation
 import Combine
 import os
 
-/// Polls AI subscription usage (Claude Code / Codex / Gemini) on its own timer,
-/// fully independent from SystemMonitor's 1-5s refresh cycle.
+/// Polls AI subscription usage on its own timer, independent from SystemMonitor.
 /// When all provider toggles are off, no timer exists and no requests are made.
 @MainActor
 final class AIUsageMonitor: ObservableObject {
 
     static let shared = AIUsageMonitor()
 
-    @Published private(set) var claudeState: ProviderFetchState = .idle
-    @Published private(set) var codexState: ProviderFetchState = .idle
-    @Published private(set) var geminiState: ProviderFetchState = .idle
+    @Published private(set) var states: [AIProvider: ProviderFetchState] = [:]
     @Published private(set) var refreshingProviders: Set<AIProvider> = []
 
     private var timer: Timer?
     private var cancellables = Set<AnyCancellable>()
+    private var requestIDs: [AIProvider: UUID] = [:]
     private var inFlight: Set<AIProvider> = []
     private var lastSuccessAt: [AIProvider: Date] = [:]
     private let settings = SettingsManager.shared
@@ -70,24 +60,16 @@ final class AIUsageMonitor: ObservableObject {
     // MARK: - Lifecycle
 
     func start() {
-        Publishers.CombineLatest4(
-            settings.$aiMonitorClaudeEnabled,
-            settings.$aiMonitorCodexEnabled,
-            settings.$aiMonitorGeminiEnabled,
-            settings.$aiUsageRefreshInterval
-        )
-        .dropFirst()
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] _ in
-            // A settings change (e.g. user just toggled a provider on) is
-            // user-initiated, so fetching immediately is expected.
-            self?.reconfigureTimer(fetchNow: true)
-        }
-        .store(in: &cancellables)
+        // A settings change (user just toggled a provider on) is user-initiated,
+        // so fetching immediately is expected.
+        settings.$enabledAIProviders
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.reconfigureTimer(fetchNow: true)
+            }
+            .store(in: &cancellables)
 
-        // At launch we only arm the timer — we do NOT fetch eagerly. The first
-        // fetch is deferred to the popover opening (refreshIfStale), so the app
-        // never triggers a Keychain authorization prompt just by launching.
         reconfigureTimer(fetchNow: false)
     }
 
@@ -111,22 +93,30 @@ final class AIUsageMonitor: ObservableObject {
 
     func retry(_ provider: AIProvider) {
         guard enabledProviders.contains(provider) else { return }
-        // A manual retry should re-read credentials from scratch — clear any
-        // cached failure so e.g. a previously denied Keychain prompt re-appears.
-        if provider == .claude {
-            ClaudeUsageService.resetCredentialCache()
-        }
+        UsageProviderRegistry.resetCredentialCache(provider)
         refresh(provider)
+    }
+
+    func credentialsChanged(for provider: AIProvider, hasToken: Bool) {
+        requestIDs[provider] = nil
+        inFlight.remove(provider)
+        refreshingProviders.remove(provider)
+        lastSuccessAt[provider] = nil
+        UsageProviderRegistry.resetCredentialCache(provider)
+        setState(hasToken ? .idle : .error(.credentialsMissing), for: provider)
+        if hasToken, enabledProviders.contains(provider) {
+            refresh(provider)
+        }
+    }
+
+    func state(for provider: AIProvider) -> ProviderFetchState {
+        states[provider] ?? .idle
     }
 
     // MARK: - Private
 
     private var enabledProviders: [AIProvider] {
-        var providers: [AIProvider] = []
-        if settings.aiMonitorClaudeEnabled { providers.append(.claude) }
-        if settings.aiMonitorCodexEnabled { providers.append(.codex) }
-        if settings.aiMonitorGeminiEnabled { providers.append(.gemini) }
-        return providers
+        AIUsageCatalog.providers.map(\.id).filter { settings.isAIProviderEnabled($0) }
     }
 
     private func reconfigureTimer(fetchNow: Bool) {
@@ -154,17 +144,16 @@ final class AIUsageMonitor: ObservableObject {
     private func refresh(_ provider: AIProvider) {
         guard !inFlight.contains(provider) else { return }
         inFlight.insert(provider)
-        refreshingProviders.insert(provider)
+        let requestID = UUID()
+        requestIDs[provider] = requestID
+        var nextRefreshing = refreshingProviders
+        nextRefreshing.insert(provider)
+        refreshingProviders = nextRefreshing
 
         Task { [weak self] in
             let result: Result<ProviderUsageSnapshot, AIUsageError>
             do {
-                let snapshot: ProviderUsageSnapshot
-                switch provider {
-                case .claude: snapshot = try await ClaudeUsageService.fetch()
-                case .codex: snapshot = try await CodexUsageService.fetch()
-                case .gemini: snapshot = try await GeminiUsageService.fetch()
-                }
+                let snapshot = try await UsageProviderRegistry.fetch(provider)
                 result = .success(snapshot)
             } catch let error as AIUsageError {
                 result = .failure(error)
@@ -173,14 +162,18 @@ final class AIUsageMonitor: ObservableObject {
             }
 
             await MainActor.run { [weak self] in
-                self?.handle(result, for: provider)
+                guard let self, self.requestIDs[provider] == requestID else { return }
+                self.requestIDs[provider] = nil
+                self.handle(result, for: provider)
             }
         }
     }
 
     private func handle(_ result: Result<ProviderUsageSnapshot, AIUsageError>, for provider: AIProvider) {
         inFlight.remove(provider)
-        refreshingProviders.remove(provider)
+        var nextRefreshing = refreshingProviders
+        nextRefreshing.remove(provider)
+        refreshingProviders = nextRefreshing
 
         let newState: ProviderFetchState
         switch result {
@@ -194,6 +187,13 @@ final class AIUsageMonitor: ObservableObject {
                 action: "collected",
                 fields: ["provider": .privateValue(provider.rawValue), "windows": .privateValue(windows)]
             )
+            var probeFields: [String: DiagnosticLogService.Field] = [
+                "windowCount": .privateValue(.integer(Int64(snapshot.windows.count)))
+            ]
+            if let balance = snapshot.balance {
+                probeFields["currency"] = .privateValue(balance.currency)
+                probeFields["total"] = .privateValue(balance.total)
+            }
             DiagnosticLogService.recordProbe(
                 component: "AIUsageMonitor",
                 operation: "providerUsage",
@@ -201,7 +201,7 @@ final class AIUsageMonitor: ObservableObject {
                 status: .success,
                 reasonCode: "snapshotLoaded",
                 source: provider.rawValue,
-                fields: ["windowCount": .privateValue(.integer(Int64(snapshot.windows.count)))]
+                fields: probeFields
             )
             newState = .loaded(snapshot)
         case .failure(let error):
@@ -219,20 +219,10 @@ final class AIUsageMonitor: ObservableObject {
         setState(newState, for: provider)
     }
 
-    private func state(for provider: AIProvider) -> ProviderFetchState {
-        switch provider {
-        case .claude: return claudeState
-        case .codex: return codexState
-        case .gemini: return geminiState
-        }
-    }
-
     private func setState(_ state: ProviderFetchState, for provider: AIProvider) {
-        switch provider {
-        case .claude: claudeState = state
-        case .codex: codexState = state
-        case .gemini: geminiState = state
-        }
+        var next = states
+        next[provider] = state
+        states = next
     }
 }
 

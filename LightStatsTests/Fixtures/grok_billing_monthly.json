@@ -1,0 +1,9 @@
+{
+  "config": {
+    "monthlyLimit": { "val": 100 },
+    "used": { "val": 17 },
+    "onDemandCap": { "val": 0 },
+    "billingPeriodStart": "2026-09-01T00:00:00+00:00",
+    "billingPeriodEnd": "2026-10-01T00:00:00+00:00"
+  }
+}

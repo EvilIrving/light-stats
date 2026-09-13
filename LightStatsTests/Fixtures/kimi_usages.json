@@ -1,0 +1,21 @@
+{
+  "usage": {
+    "limit": "1000",
+    "used": "250",
+    "remaining": "750",
+    "resetTime": "2026-09-20T00:00:00Z"
+  },
+  "limits": [
+    {
+      "window": "300",
+      "detail": {
+        "limit": "100",
+        "used": "12",
+        "remaining": "88",
+        "resetTime": "2026-09-13T06:00:00Z"
+      }
+    }
+  ],
+  "user": { "membership": { "level": "LEVEL_INTERMEDIATE" } },
+  "version": "GOODS_VERSION_V1"
+}

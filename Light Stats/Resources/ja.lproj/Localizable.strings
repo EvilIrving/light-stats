@@ -150,16 +150,48 @@
 
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 使用量";
-"settings.aiUsageInterval" = "更新間隔";
 "aiUsage.title" = "AI 使用量";
+"aiUsage.window.quota" = "枠";
+"aiUsage.window.usage" = "使用量";
+"aiUsage.window.overage" = "超過";
+"aiUsage.window.month" = "月";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "ウィンドウ自動更新";
+"aiUsage.autoRefresh.short" = "更新";
 "aiUsage.fetching" = "取得中...";
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
 "aiUsage.credentialsMissing" = "認証情報なし — %@ CLI でログインしてください";
 "aiUsage.fetchFailed" = "使用量の取得に失敗しました";
+"aiUsage.deepseek" = "DeepSeek";
+"aiUsage.grok" = "Grok";
+"aiUsage.zai" = "z.ai";
+"aiUsage.minimax" = "MiniMax";
+"aiUsage.openrouter" = "OpenRouter";
+"aiUsage.warp" = "Warp";
+"aiUsage.trae" = "Trae";
+"aiUsage.opencodego" = "OpenCode Go";
+"aiUsage.cursor" = "Cursor";
+"aiUsage.kimi" = "Kimi Code";
+"aiUsage.qoder" = "Qoder";
+"aiUsage.mimo" = "MiMo";
+"aiUsage.qoder.tokenHint" = "ブラウザの Cookie ヘッダーを貼り付け";
+"aiUsage.mimo.tokenHint" = "ブラウザの Cookie ヘッダーを貼り付け（userId を含む）";
+"aiUsage.credentialsMissing.app" = "先に %@ を開いてログインしてください";
+"aiUsage.tokenExpired.app" = "%@ のセッションが切れました。再ログインしてください";
+"aiUsage.token" = "API token";
+"aiUsage.token.hint" = "使用量の取得にのみ使用。送信しません。";
+"aiUsage.group.local" = "ローカルログイン";
+"aiUsage.group.token" = "API token";
+"aiUsage.token.placeholder" = "貼り付けて Return";
+"aiUsage.token.saved" = "保存済み";
+"aiUsage.token.copy" = "コピー";
+"aiUsage.token.copied" = "コピー済";
+"aiUsage.token.save" = "保存";
+"aiUsage.token.clear" = "削除";
+"aiUsage.credentialsMissing.token" = "設定で API token を貼り付けてください";
+"aiUsage.tokenExpired.token" = "トークンが無効です";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "カラーインジケーター";

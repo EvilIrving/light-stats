@@ -1,0 +1,9 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "used": 250000,
+    "limit": 1000000,
+    "used_percent": 25.0
+  }
+}

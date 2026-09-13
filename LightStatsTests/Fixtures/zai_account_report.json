@@ -1,0 +1,13 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "success": true,
+  "data": {
+    "balance": 27.28665631,
+    "rechargeAmount": 0.0,
+    "giveAmount": 51.84,
+    "totalSpendAmount": 24.55334369,
+    "availableBalance": 27.28665631,
+    "frozenBalance": 0.0
+  }
+}

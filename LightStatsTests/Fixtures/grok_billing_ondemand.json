@@ -1,0 +1,7 @@
+{
+  "config": {
+    "onDemandCap": { "val": 200 },
+    "onDemandUsed": { "val": 50 },
+    "billingPeriodEnd": "2026-09-30T00:00:00Z"
+  }
+}

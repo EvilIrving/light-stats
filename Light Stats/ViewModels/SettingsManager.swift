@@ -222,17 +222,19 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     // MARK: - AI Usage Settings
 
-    @Published var aiMonitorClaudeEnabled: Bool {
-        didSet { save(aiMonitorClaudeEnabled, for: .aiMonitorClaude) }
-    }
-    @Published var aiMonitorCodexEnabled: Bool {
-        didSet { save(aiMonitorCodexEnabled, for: .aiMonitorCodex) }
-    }
-    @Published var aiMonitorGeminiEnabled: Bool {
-        didSet { save(aiMonitorGeminiEnabled, for: .aiMonitorGemini) }
-    }
-    @Published var aiUsageRefreshInterval: AIRefreshInterval {
-        didSet { save(aiUsageRefreshInterval.rawValue, for: .aiUsageRefreshInterval) }
+    /// Keyed by `settings.aiMonitor.<id>.enabled`. Not a per-vendor `@Published` Bool.
+    @Published private(set) var enabledAIProviders: Set<AIProvider> = []
+
+    func isAIProviderEnabled(_ id: AIProvider) -> Bool { enabledAIProviders.contains(id) }
+
+    func setAIProviderEnabled(_ id: AIProvider, _ enabled: Bool) {
+        var next = enabledAIProviders
+        if enabled { next.insert(id) } else { next.remove(id) }
+        guard next != enabledAIProviders else { return }
+        enabledAIProviders = next
+        let key = Self.aiMonitorEnabledKey(for: id)
+        defaults.set(enabled, forKey: key)
+        DiagnosticLogService.record(category: "settings", action: "changed", fields: ["key": key, "value": String(enabled)])
     }
     /// 自动续期 5h 窗口（warmup）。默认关闭（opt-in），仅在对应 provider 监控开启时才有意义。
     /// 开 → `UsageWarmupManager` 定时发一条 headless 消息把窗口起点挪进工作时段；关 → 立即停。
@@ -400,31 +402,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         }
     }
 
-    enum AIRefreshInterval: String, CaseIterable {
-        case m1
-        case m2
-        case m5
-        case m15
-
-        var interval: TimeInterval {
-            switch self {
-            case .m1: return 60
-            case .m2: return 120
-            case .m5: return 300
-            case .m15: return 900
-            }
-        }
-
-        var displayName: String {
-            switch self {
-            case .m1: return "1 min"
-            case .m2: return "2 min"
-            case .m5: return "5 min"
-            case .m15: return "15 min"
-            }
-        }
-    }
-
     // MARK: - Keys
 
     private enum Key: String {
@@ -456,10 +433,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case appLanguage = "settings.appLanguage"
         case exitNodeDetectionEnabled = "settings.exitNodeDetectionEnabled"
         case exitNodeProvider = "settings.exitNodeProvider"
-        case aiMonitorClaude = "settings.aiMonitorClaude"
-        case aiMonitorCodex = "settings.aiMonitorCodex"
-        case aiMonitorGemini = "settings.aiMonitorGemini"
-        case aiUsageRefreshInterval = "settings.aiUsageRefreshInterval"
         case autoRefreshClaude = "settings.autoRefreshClaude"
         case autoRefreshCodex = "settings.autoRefreshCodex"
         case autoCheckUpdates = "settings.autoCheckUpdates"
@@ -555,12 +528,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         let providerStr = defaults.string(forKey: Key.exitNodeProvider.rawValue) ?? ExitNodeProvider.ipsb.rawValue
         exitNodeProvider = ExitNodeProvider(rawValue: providerStr) ?? .ipsb
 
-        // AI usage monitoring - opt-in, default off
-        aiMonitorClaudeEnabled = defaults.object(forKey: Key.aiMonitorClaude.rawValue) as? Bool ?? false
-        aiMonitorCodexEnabled = defaults.object(forKey: Key.aiMonitorCodex.rawValue) as? Bool ?? false
-        aiMonitorGeminiEnabled = defaults.object(forKey: Key.aiMonitorGemini.rawValue) as? Bool ?? false
-        let aiIntervalStr = defaults.string(forKey: Key.aiUsageRefreshInterval.rawValue) ?? AIRefreshInterval.m2.rawValue
-        aiUsageRefreshInterval = AIRefreshInterval(rawValue: aiIntervalStr) ?? .m2
+        // AI usage monitoring - opt-in, default off. Keyed by provider id.
+        enabledAIProviders = Self.migrateAndReadEnabledAIProviders(from: defaults)
         // 自动续期窗口：默认关闭（opt-in）。
         autoRefreshClaudeEnabled = defaults.object(forKey: Key.autoRefreshClaude.rawValue) as? Bool ?? false
         autoRefreshCodexEnabled = defaults.object(forKey: Key.autoRefreshCodex.rawValue) as? Bool ?? false
@@ -664,9 +633,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             "temperatureUnit": temperatureUnit.rawValue,
             "language": appLanguage.rawValue,
             "exitNodeDetectionEnabled": String(exitNodeDetectionEnabled),
-            "aiClaudeEnabled": String(aiMonitorClaudeEnabled),
-            "aiCodexEnabled": String(aiMonitorCodexEnabled),
-            "aiGeminiEnabled": String(aiMonitorGeminiEnabled),
+            "aiEnabled": enabledAIProviders.map(\.rawValue).sorted().joined(separator: ","),
             "windowManagementEnabled": String(windowManagementEnabled),
             "displayBrightnessControlEnabled": String(displayBrightnessControlEnabled),
             "finderMenuEnabled": String(finderMenuEnabled),

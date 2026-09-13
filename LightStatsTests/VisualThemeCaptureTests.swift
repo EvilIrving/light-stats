@@ -22,9 +22,7 @@ final class VisualThemeCaptureTests: XCTestCase {
         let originalNoirLightFlow = settings.noirLightFlow
         let originalExitNodeDetectionEnabled = settings.exitNodeDetectionEnabled
         let originalDisplayBrightnessControlEnabled = settings.displayBrightnessControlEnabled
-        let originalClaudeEnabled = settings.aiMonitorClaudeEnabled
-        let originalCodexEnabled = settings.aiMonitorCodexEnabled
-        let originalGeminiEnabled = settings.aiMonitorGeminiEnabled
+        let originalEnabledAI = settings.enabledAIProviders
         let appMemoryManager = AppMemoryManager.shared
         let originalRunningApps = appMemoryManager.runningApps
         let originalTotalMemoryUsed = appMemoryManager.totalMemoryUsed
@@ -42,9 +40,9 @@ final class VisualThemeCaptureTests: XCTestCase {
             settings.noirLightFlow = originalNoirLightFlow
             settings.exitNodeDetectionEnabled = originalExitNodeDetectionEnabled
             settings.displayBrightnessControlEnabled = originalDisplayBrightnessControlEnabled
-            settings.aiMonitorClaudeEnabled = originalClaudeEnabled
-            settings.aiMonitorCodexEnabled = originalCodexEnabled
-            settings.aiMonitorGeminiEnabled = originalGeminiEnabled
+            for id in AIProvider.allCases {
+                settings.setAIProviderEnabled(id, originalEnabledAI.contains(id))
+            }
             appMemoryManager.runningApps = originalRunningApps
             appMemoryManager.totalMemoryUsed = originalTotalMemoryUsed
             appMemoryManager.totalMemory = originalTotalMemory
@@ -63,9 +61,9 @@ final class VisualThemeCaptureTests: XCTestCase {
         settings.noirLightFlow = 0
         settings.exitNodeDetectionEnabled = false
         settings.displayBrightnessControlEnabled = false
-        settings.aiMonitorClaudeEnabled = false
-        settings.aiMonitorCodexEnabled = false
-        settings.aiMonitorGeminiEnabled = false
+        for id in AIProvider.allCases {
+            settings.setAIProviderEnabled(id, false)
+        }
         applySafeMemoryFixture(to: appMemoryManager)
         LocalizationManager.shared.setLanguage(.en)
         SystemMonitor.shared.setPopoverVisible(true)

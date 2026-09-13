@@ -35,10 +35,10 @@ final class AIUsageParsingTests: XCTestCase {
         let windows = try ClaudeUsageService.parseUsageJSON(fixture("claude_usage_full.json"))
         XCTAssertEqual(windows.count, 2)
         XCTAssertEqual(windows[0].label, "5h")
-        XCTAssertEqual(windows[0].usedPercent, 42.5, accuracy: 0.001)
+        XCTAssertEqual(windows[0].usedPercent ?? -1, 42.5, accuracy: 0.001)
         XCTAssertNotNil(windows[0].resetsAt)
         XCTAssertEqual(windows[1].label, "7d")
-        XCTAssertEqual(windows[1].usedPercent, 12.0, accuracy: 0.001)
+        XCTAssertEqual(windows[1].usedPercent ?? -1, 12.0, accuracy: 0.001)
         XCTAssertNotNil(windows[1].resetsAt, "fractional-seconds ISO timestamp should parse")
     }
 
@@ -46,7 +46,7 @@ final class AIUsageParsingTests: XCTestCase {
         let windows = try ClaudeUsageService.parseUsageJSON(fixture("claude_usage_partial.json"))
         XCTAssertEqual(windows.count, 1)
         XCTAssertEqual(windows[0].label, "5h")
-        XCTAssertEqual(windows[0].usedPercent, 88.0, accuracy: 0.001)
+        XCTAssertEqual(windows[0].usedPercent ?? -1, 88.0, accuracy: 0.001)
     }
 
     func testClaudeDropsWindowsWithoutUtilization() throws {
@@ -66,10 +66,10 @@ final class AIUsageParsingTests: XCTestCase {
         let windows = try CodexUsageService.parseUsageJSON(fixture("codex_usage_full.json"))
         XCTAssertEqual(windows.count, 2)
         XCTAssertEqual(windows[0].label, "5h")           // 18000s -> "5h"
-        XCTAssertEqual(windows[0].usedPercent, 37.0, accuracy: 0.001)
+        XCTAssertEqual(windows[0].usedPercent ?? -1, 37.0, accuracy: 0.001)
         XCTAssertNotNil(windows[0].resetsAt)
         XCTAssertEqual(windows[1].label, "7d")           // 604800s -> "7d"
-        XCTAssertEqual(windows[1].usedPercent, 9.5, accuracy: 0.001)
+        XCTAssertEqual(windows[1].usedPercent ?? -1, 9.5, accuracy: 0.001)
     }
 
     func testCodexParsesPrimaryOnly() throws {
@@ -95,9 +95,9 @@ final class AIUsageParsingTests: XCTestCase {
         XCTAssertEqual(snapshot.provider, .gemini)
         XCTAssertEqual(snapshot.windows.map(\.label), ["Pro", "Flash", "Lite"])
         // usedPercent = 100 - remainingFraction*100.
-        XCTAssertEqual(snapshot.windows[0].usedPercent, 20.0, accuracy: 0.001)  // pro 0.80 left
-        XCTAssertEqual(snapshot.windows[1].usedPercent, 50.0, accuracy: 0.001)  // flash 0.50 left
-        XCTAssertEqual(snapshot.windows[2].usedPercent, 5.0, accuracy: 0.001)   // lite 0.95 left
+        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 20.0, accuracy: 0.001)  // pro 0.80 left
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 50.0, accuracy: 0.001)  // flash 0.50 left
+        XCTAssertEqual(snapshot.windows[2].usedPercent ?? -1, 5.0, accuracy: 0.001)   // lite 0.95 left
         XCTAssertNotNil(snapshot.windows[0].resetsAt)
     }
 

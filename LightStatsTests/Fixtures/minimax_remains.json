@@ -1,0 +1,14 @@
+{
+  "model_remains": [
+    {
+      "model_type": "text",
+      "used_tokens": 250,
+      "total_tokens": 1000,
+      "end_time": "2026-09-14T12:00:00Z"
+    }
+  ],
+  "weekly": {
+    "used": 10,
+    "limit": 100
+  }
+}

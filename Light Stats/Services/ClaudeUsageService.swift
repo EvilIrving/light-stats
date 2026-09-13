@@ -123,7 +123,8 @@ private actor ClaudeTokenCache {
     }
 }
 
-enum ClaudeUsageService {
+enum ClaudeUsageService: UsageProviding {
+    static var id: AIProvider { .claude }
 
     private static let log = AppLogger(category: "ClaudeUsage")
 

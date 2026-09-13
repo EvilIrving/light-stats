@@ -1,0 +1,20 @@
+{
+  "total_quota": {
+    "quota_summary": {
+      "used_value": 1200,
+      "limit_value": 4000,
+      "remaining_value": 2800,
+      "usage_percentage": 30.0,
+      "unit": "Credits"
+    }
+  },
+  "shared_quota": {
+    "quota_summary": {
+      "used_value": 100,
+      "limit_value": 1000,
+      "remaining_value": 900,
+      "unit": "Credits"
+    }
+  },
+  "next_reset_at": "2026-10-01T00:00:00Z"
+}

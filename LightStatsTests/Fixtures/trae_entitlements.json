@@ -1,0 +1,12 @@
+{
+  "user_entitlement_pack_list": [
+    {
+      "entitlement_base_info": { "quota": { "credits_limit": 4000 } },
+      "usage": { "credits_amount": 512 }
+    },
+    {
+      "entitlement_base_info": { "quota": { "credits_limit": 1000 } },
+      "usage": { "credits_amount": 1200 }
+    }
+  ]
+}

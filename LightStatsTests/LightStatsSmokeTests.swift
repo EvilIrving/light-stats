@@ -32,8 +32,11 @@ final class LightStatsSmokeTests: XCTestCase {
         XCTAssertEqual(HealthScore.perfect.grade, .excellent)
     }
 
-    func testAIProviderHasThreeCases() {
-        XCTAssertEqual(Set(AIProvider.allCases), [.claude, .codex, .gemini])
+    func testAIProviderCasesMatchRegistry() {
+        XCTAssertEqual(
+            Set(AIProvider.allCases),
+            Set(UsageProviderRegistry.all.map(\.id))
+        )
     }
 
     // MARK: - Utilities
