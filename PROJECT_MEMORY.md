@@ -1,5 +1,15 @@
 # Project Memory
 
+## Grok 统一计费省略 0% 不是没数据 · 2026-09-13 · grok
+
+SuperGrok（`isUnifiedBillingUser: true`）走 `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`。周窗 `currentPeriod`（`USAGE_PERIOD_TYPE_WEEKLY`）和重置时间会返回，但用量为 0 时 protobuf JSON 会省略 `creditUsagePercent`（默认 0.0），`onDemandCap.val` 也是 0。旧解析把「有周期、无百分比」当成未知，卡片画空条和「—」，看起来像没拿到值。Grok 自己的计费 UI 把这个省略标量读成 0% 已用。
+
+不要用月度 `/v1/billing` 的 `used` 去填周条：本机实测 `monthlyLimit.val = 0` 且 `used.val` 仍可能是非零，那是遗留月池，不是周额度。顺序是：credits 已发布百分比（含 `productUsage`）→ 月度 `monthlyLimit > 0` 的 used/limit → 进行中的周/月周期才推断 0%。不做 grok.com cookie / gRPC。
+
+## 清理快捷键在指针处召唤面板，不走菜单栏 · 2026-09-13 · grok
+
+面板默认仍挂在菜单栏状态项下。用户可以打开「输入设备 → 清理快捷键」，用 Carbon `RegisterEventHotKey` 在指针位置打开同一块面板并切到清理页；再按一次关闭。点面板外任何地方也关：其他 App 靠失活，本进程其它窗口靠本地鼠标监听（全局监听在无辅助功能时经常收不到）。若面板已经在指针处，再点菜单栏图标是把它移回图标下方，不是关掉；已经在图标下方再点图标才关掉。默认 ⌃⌥⌘U，可录制，必须带修饰键。默认关闭。这条热键不需要辅助功能、不装 `CGEventTap`，和窗口吸附的 ⌃⌥C 错开。位置算法是 `PanelPointerPlacement`：顶边对齐指针、水平居中，再夹进当前屏 `visibleFrame`。
+
 ## 本地运行覆盖 /Applications 生产包，主题截图测试默认跳过 · 2026-09-13 · grok
 
 本机「跑一下」必须是 Developer ID 签过的 Release 包，覆盖 `/Applications/Light Stats.app`，再启动那一份。辅助功能、输入监控、Finder 扩展的 TCC 绑的是签名身份 + 路径，DerivedData 里的 Debug / `TEST_HOST` 注入包会被当成新 App，每次都要重新开权限。

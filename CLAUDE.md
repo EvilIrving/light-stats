@@ -16,6 +16,8 @@ Light Stats/
 ├── LightStatsApp.swift              # @main, Settings scene
 ├── AppDelegate.swift                # NSStatusItem + popover lifecycle
 ├── AppDelegate+WindowMenu.swift     # Menu-bar window-control status item
+├── AppDelegate+PanelDiagnostics.swift # Launch + popover-close journal records
+├── PanelAnchor.swift                # Popover attached under status item vs at pointer
 ├── AppDelegate+Termination.swift    # Instant-quit + update-replace handoff
 ├── Models/                          # Pure data structs; no logic, no imports
 │   ├── CPUInfo.swift
@@ -26,10 +28,15 @@ Light Stats/
 │   ├── ProxyInfo.swift
 │   ├── BatteryInfo.swift
 │   ├── ProcessStats.swift
-│   ├── AIUsageInfo.swift
+│   ├── AIProvider.swift             # Usage provider id; display names are localized keys
+│   ├── UsageWindow.swift            # 5h / weekly used-percent window
+│   ├── UsageWindowLabel.swift       # Language-neutral window label token
+│   ├── UsageBalance.swift           # Prepaid remaining amount (DeepSeek / OpenRouter)
+│   ├── CredentialSource.swift       # localDiscovered / apiToken / ideDatabase
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
 │   ├── FindMouseTriggerKey.swift    # User-recorded shortcut for Find My Mouse
+│   ├── PanelHotKey.swift            # Global shortcut that summons Cleanup at the pointer
 │   ├── InputSourceOption.swift      # Selectable input source id + display name
 │   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
 │   ├── WindowSnapAction.swift       # Snap action shared by hotkeys, gestures, menu bar
@@ -52,6 +59,18 @@ Light Stats/
 │   ├── ClaudeUsageService.swift     # Claude Code API usage
 │   ├── CodexUsageService.swift      # Codex CLI usage
 │   ├── GeminiUsageService.swift     # Gemini CLI usage (OAuth refresh flow)
+│   ├── DeepSeekUsageService.swift   # Official /user/balance
+│   ├── GrokUsageService.swift       # ~/.grok/auth.json + CLI billing
+│   ├── ZAIUsageService.swift        # GLM Coding Plan quota
+│   ├── MiniMaxUsageService.swift    # Token Plan remains
+│   ├── OpenRouterUsageService.swift # Prepaid credit balance
+│   ├── WarpUsageService.swift       # GraphQL request-limit credits
+│   ├── TraeUsageService.swift       # Trae CN credit pool
+│   ├── OpenCodeGoUsageService.swift # OpenCode Go zen usage API
+│   ├── CursorUsageService.swift     # Cursor.app state.vscdb + usage-summary
+│   ├── KimiUsageService.swift       # Kimi Code /coding/v1/usages (weekly + 5h)
+│   ├── QoderUsageService.swift      # qoder.com/.cn big-model credits (session cookie)
+│   ├── MiMoUsageService.swift       # Xiaomi MiMo console balance + Token Plan
 │   ├── UpdateService.swift          # R2 channel marker → download → verify → install (GitHub fallback)
 │   ├── LicenseCodec.swift           # Base32 + activation-code wire format (mirrored by script/license-tool)
 │   ├── LicenseValidator.swift       # Offline Ed25519 signature validation (embedded public key)
@@ -67,6 +86,7 @@ Light Stats/
 │   ├── SystemWindowTilingSetting.swift # Reads/writes macOS' own drag-to-edge tiling
 │   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
 │   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
+│   ├── PanelHotKeyService.swift     # Carbon hotkey: Cleanup panel at the pointer (opt-in, no AX)
 │   ├── TitlebarGestureService.swift # Titlebar swipe-to-snap (CGEventTap, opt-in)
 │   ├── AccessibilityPermission.swift # Shared AXIsProcessTrusted check + prompt
 │   ├── LaunchAtLoginService.swift   # SMAppService login-item registration
@@ -80,13 +100,21 @@ Light Stats/
 │   ├── FinderMenuTerminalService.swift # Open in terminal / configured app
 │   ├── DisplayControl/              # Opt-in DDC hardware brightness (Apple Silicon)
 │   └── AIUsage/                     # Shared AI-usage fetch helpers
+│       ├── UsageProviding.swift     # Compile-time provider protocol
+│       ├── UsageProviderRegistry.swift
+│       ├── UsageHTTPClient.swift
+│       ├── JSONValueReader.swift    # Loose number/date reads shared by providers
 │       ├── PTYProbe.swift           # Reusable PTY capture engine (Claude/Codex CLI scrape)
 │       ├── KeychainCredentialReader.swift # `security` CLI Keychain read (no auth dialog)
+│       ├── KeychainCredentialWriter.swift # `security -i` write; secret on stdin
+│       ├── LocalAuthFileReader.swift
 │       └── UsageWarmupService.swift # Headless CLI send to keep the usage window warm
 ├── ViewModels/                      # @Observable / ObservableObject; @MainActor for UI
 │   ├── SystemMonitor.swift          # Timer → collect → publish SystemSnapshot
 │   ├── SettingsManager.swift        # UserDefaults-backed preferences
-│   ├── AIUsageMonitor.swift         # Claude/Codex/Gemini polling coordinator
+│   ├── AIUsageMonitor.swift         # Provider-registry polling coordinator
+│   ├── AIUsageCatalog.swift         # View-facing provider rows
+│   ├── AIUsageCredentialStore.swift # API token Keychain facade
 │   ├── UsageWarmupManager.swift     # Opt-in fixed-interval keep-alive ping for Claude/Codex
 │   ├── AppMemoryManager.swift       # Process list + cleanup state
 │   ├── LocalizationManager.swift    # Language change broadcast
@@ -118,6 +146,7 @@ Light Stats/
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
 │   ├── Settings/FindMouseSettingsSection.swift
+│   ├── Settings/CleanupPanelHotKeySettingsSection.swift
 │   ├── Settings/WindowManagementSettingsSection.swift
 │   ├── Settings/DefaultInputSourceSettingsSection.swift
 │   ├── Settings/FinderMenuActionsSection.swift
@@ -133,6 +162,7 @@ Light Stats/
 │   └── Update/UpdateWindowView.swift
 ├── Utilities/
 │   ├── AXElementReader.swift        # Stateless reads over an AXUIElement
+│   ├── PanelPointerPlacement.swift  # Pointer → panel origin, clamped to visible frame
 │   ├── ByteFormatter.swift          # Stateless byte/rate formatting
 │   ├── MetricHistory.swift          # Ring buffer of recent samples (sparklines)
 │   ├── SVGIcon.swift                # Template-tinted bundle SVG
@@ -330,6 +360,8 @@ No blocking waits inside async contexts. No `DispatchQueue` for new code — use
 4. Add the UI control in SettingsView
 5. Add the key to all four Localizable.strings files
 ```
+
+AI usage provider enable flags are the one exception: they use `settings.aiMonitor.<id>.enabled` via `isAIProviderEnabled` / `setAIProviderEnabled`. Do not add a Key case per vendor. Tokens go to Keychain (`KeychainCredentialWriter`), never UserDefaults.
 
 Refresh rate is `RefreshRate` enum with raw `TimeInterval`: `low = 5s`, `medium = 2s`, `high = 1s`.
 
@@ -586,11 +618,14 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
 
 - `HealthScoreServiceTests` — every scoring-curve knee, weight renormalisation, the bottleneck
   cap (and that `power` is excluded from it), EMA smoothing, grade boundaries.
+- `PanelHotKeyTests` / `PanelPointerPlacementTests` — cleanup-shortcut serialization, Carbon
+  modifier mapping, and pointer-to-panel clamping (including a panel taller than the screen).
 - `SettingsDefaultsTests` — the "default off" contract on a clean `UserDefaults` suite, via
   `SettingsManager(defaults:)`. (Instances are retained for the process: a fresh
   `@MainActor`-isolated `SettingsManager` deinit trips a Swift Concurrency back-deploy
   double-free on macOS 14.x; the production singleton never deallocates, so this is test-only.)
 - `AIUsageParsingTests` — Claude/Codex/Gemini response parsers against sanitized JSON fixtures
+- `AIUsageNewProviderParsingTests` — DeepSeek / Grok / z.ai / MiniMax / Moonshot / OpenRouter / Warp / Trae / Kimi / Qoder / MiMo fixtures
   in `LightStatsTests/Fixtures/` (valid / partial / malformed). This is the P4 regression net;
   the parse seams (`ClaudeUsageService.parseUsageJSON`, `CodexUsageService.parseUsageJSON`,
   `GeminiUsageService.parseQuotaResponse`) are `internal` so `@testable` can reach them.
@@ -643,6 +678,9 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   (scroll reversal, window management, Find My Mouse, cleaning mode).
 - **No `CGEventTap`.** scroll / keyboard / window / find-mouse taps are all off by default;
   nothing is installed until the matching switch is turned on.
+- **No cleanup-panel Carbon hotkey.** `cleanupPanelHotKeyEnabled` is off, so
+  `PanelHotKeyService` never calls `RegisterEventHotKey` on a clean install. It does not
+  need Accessibility permission.
 - **No input-source observer.** `defaultInputSourceEnabled` is off, so `DefaultInputSourceService`
   never registers for app activation and never calls `TISSelectInputSource` on a clean install.
 - **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
