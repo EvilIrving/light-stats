@@ -15,16 +15,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var statusItem: NSStatusItem?
     // 菜单栏窗口控制图标及其菜单见 AppDelegate+WindowMenu.swift。
     var windowControlsStatusItem: NSStatusItem?
-    private var panel: NSPanel?
+    var panel: NSPanel?
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
     private var statusBarView: StatusBarView?
     // 面板因失去 key 焦点自动关闭的时刻，用于在点击图标关闭时避免立即重开
     private var panelAutoClosedAt: Date?
-    // 面板打开时监听面板外的全局点击（含别的菜单栏图标），点外部即关闭
+    // 面板打开时监听面板外点击：全局（其他 App）+ 本地（本进程其它窗口）。
     private var globalClickMonitor: Any?
+    private var localClickMonitor: Any?
     // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
-    private var lastGlobalMouseDownAt: Date?
+    var lastGlobalMouseDownAt: Date?
+    /// 刚关掉后仍保留，供点菜单栏时区分「关掉」还是「移回图标下方」。
+    private var panelAnchor: PanelAnchor?
     private var windowControlPermissionAlertShown = false
     // 用户原本所在的前台 App。原生分屏必须作用在它的窗口上，而打开我们自己的菜单会抢走前台。
     var lastExternalApplicationPID: pid_t?
@@ -94,6 +97,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             self,
             selector: #selector(handleAppDidBecomeActive),
             name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidResignActive),
+            name: NSApplication.didResignActiveNotification,
             object: nil
         )
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -315,21 +324,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     // MARK: - Actions
 
-    /// 统一关闭面板：隐藏、同步状态、停止采集、移除全局点击监听。
+    /// 统一关闭面板：隐藏、同步状态、停止采集、移除外部点击监听。
     private func dismissPanel(reason: PanelDismissReason) {
+        guard panel?.isVisible == true else { return }
         recordPanelClosed(reason: reason)
         panel?.orderOut(nil)
         if reason.isAutomatic { panelAutoClosedAt = Date() }
         monitor.setPopoverVisible(false)
         displayControlManager.setPanelVisible(false)
         appMemoryManager.stopMonitoring()
-        removeGlobalClickMonitor()
+        removeOutsideClickMonitors()
     }
 
-    /// 面板打开期间监听面板外的全局点击（点桌面、点别的菜单栏图标等）并关闭面板。
-    /// 自身状态栏按钮/面板内部的点击是本进程本地事件，不会被全局监听捕获，因此不受影响。
-    private func installGlobalClickMonitor() {
-        removeGlobalClickMonitor()
+    /// 点面板外任何地方关掉：其他 App（全局监听 / 本 App 失活）和本进程其它窗口（本地监听）。
+    /// 监控状态项的点击留给 `togglePanel`，不在这里关。
+    private func installOutsideClickMonitors() {
+        removeOutsideClickMonitors()
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
@@ -337,12 +347,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             self.lastGlobalMouseDownAt = Date()
             self.dismissPanel(reason: .globalMouseDown)
         }
+        localClickMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            self?.handleLocalMouseDown(event)
+            return event
+        }
     }
 
-    private func removeGlobalClickMonitor() {
-        if let monitor = globalClickMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalClickMonitor = nil
+    private func handleLocalMouseDown(_ event: NSEvent) {
+        guard let panel, panel.isVisible else { return }
+        if event.window === panel { return }
+        if event.window === statusItem?.button?.window { return }
+        lastGlobalMouseDownAt = Date()
+        dismissPanel(reason: .localMouseDown)
+    }
+
+    private func removeOutsideClickMonitors() {
+        if let globalClickMonitor {
+            NSEvent.removeMonitor(globalClickMonitor)
+            self.globalClickMonitor = nil
+        }
+        if let localClickMonitor {
+            NSEvent.removeMonitor(localClickMonitor)
+            self.localClickMonitor = nil
         }
     }
 
@@ -422,7 +450,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         // 面板一打开即预热进程内存扫描，用户从 Overview 切到 Cleanup 时数据已就绪。
         // Cleanup 页的 onAppear/onDisappear 仍会幂等地接管 start/stop。
         appMemoryManager.startMonitoring()
-        installGlobalClickMonitor()
+        installOutsideClickMonitors()
     }
 
     // MARK: - Scroll Direction
@@ -439,6 +467,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             return
         }
         // 权限已满足但 tap 创建仍失败（罕见：其他系统问题）→ 静默，开关保持 on
+    }
+
+    @objc private func handleAppDidResignActive() {
+        guard panel?.isVisible == true else { return }
+        dismissPanel(reason: .resignActive)
     }
 
     @objc private func handleAppDidBecomeActive() {
@@ -685,9 +718,9 @@ private extension AppDelegate {
     /// 面板关闭归类：区分「正常」（点外部 / 手动 / 目标应用弹框置前）与「异常」（无理由失焦）。
     private func classifyPanelClose(reason: PanelDismissReason, fields: [String: String]) -> String {
         switch reason {
-        case .globalMouseDown:
+        case .globalMouseDown, .localMouseDown, .resignActive:
             return "externalClick"
-        case .statusItemToggle, .externalRequest:
+        case .statusItemToggle, .hotkeyToggle, .externalRequest:
             return "manual"
         case .resignKey:
             if fields["terminationInFlight"] == "true" {
