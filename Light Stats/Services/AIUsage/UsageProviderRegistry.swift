@@ -40,17 +40,6 @@ enum UsageProviderRegistry {
             reset: { GeminiUsageService.resetCredentialCache() }
         ),
         descriptor(
-            id: .deepseek,
-            credential: .apiToken,
-            iconAssetName: "deepseekLogo",
-            symbolFallback: "yensign.circle",
-            cliName: nil,
-            supportsWarmup: false,
-            showsBalance: true,
-            fetch: { try await DeepSeekUsageService.fetch() },
-            reset: { DeepSeekUsageService.resetCredentialCache() }
-        ),
-        descriptor(
             id: .grok,
             credential: .localDiscovered,
             iconAssetName: "grokLogo",
@@ -59,39 +48,6 @@ enum UsageProviderRegistry {
             supportsWarmup: false,
             fetch: { try await GrokUsageService.fetch() },
             reset: { GrokUsageService.resetCredentialCache() }
-        ),
-        descriptor(
-            id: .zai,
-            credential: .apiToken,
-            iconAssetName: "zaiLogo",
-            symbolFallback: "cube",
-            cliName: nil,
-            supportsWarmup: false,
-            showsBalance: true,
-            fetch: { try await ZAIUsageService.fetch() },
-            reset: { ZAIUsageService.resetCredentialCache() }
-        ),
-        descriptor(
-            id: .minimax,
-            credential: .apiToken,
-            iconAssetName: "minimaxLogo",
-            symbolFallback: "square.grid.2x2",
-            cliName: nil,
-            supportsWarmup: false,
-            showsBalance: true,
-            fetch: { try await MiniMaxUsageService.fetch() },
-            reset: { MiniMaxUsageService.resetCredentialCache() }
-        ),
-        descriptor(
-            id: .openrouter,
-            credential: .apiToken,
-            iconAssetName: "openrouterLogo",
-            symbolFallback: "arrow.triangle.branch",
-            cliName: nil,
-            supportsWarmup: false,
-            showsBalance: true,
-            fetch: { try await OpenRouterUsageService.fetch() },
-            reset: { OpenRouterUsageService.resetCredentialCache() }
         ),
         descriptor(
             id: .warp,
@@ -153,6 +109,51 @@ enum UsageProviderRegistry {
             tokenHintKey: "aiUsage.qoder.tokenHint",
             fetch: { try await QoderUsageService.fetch() },
             reset: { QoderUsageService.resetCredentialCache() }
+        ),
+        // Balance-only providers stay together at the bottom of Overview.
+        descriptor(
+            id: .deepseek,
+            credential: .apiToken,
+            iconAssetName: "deepseekLogo",
+            symbolFallback: "yensign.circle",
+            cliName: nil,
+            supportsWarmup: false,
+            showsBalance: true,
+            fetch: { try await DeepSeekUsageService.fetch() },
+            reset: { DeepSeekUsageService.resetCredentialCache() }
+        ),
+        descriptor(
+            id: .zai,
+            credential: .apiToken,
+            iconAssetName: "zaiLogo",
+            symbolFallback: "cube",
+            cliName: nil,
+            supportsWarmup: false,
+            showsBalance: true,
+            fetch: { try await ZAIUsageService.fetch() },
+            reset: { ZAIUsageService.resetCredentialCache() }
+        ),
+        descriptor(
+            id: .minimax,
+            credential: .apiToken,
+            iconAssetName: "minimaxLogo",
+            symbolFallback: "square.grid.2x2",
+            cliName: nil,
+            supportsWarmup: false,
+            showsBalance: true,
+            fetch: { try await MiniMaxUsageService.fetch() },
+            reset: { MiniMaxUsageService.resetCredentialCache() }
+        ),
+        descriptor(
+            id: .openrouter,
+            credential: .apiToken,
+            iconAssetName: "openrouterLogo",
+            symbolFallback: "arrow.triangle.branch",
+            cliName: nil,
+            supportsWarmup: false,
+            showsBalance: true,
+            fetch: { try await OpenRouterUsageService.fetch() },
+            reset: { OpenRouterUsageService.resetCredentialCache() }
         ),
         descriptor(
             id: .mimo,

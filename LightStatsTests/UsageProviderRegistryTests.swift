@@ -24,4 +24,18 @@ final class UsageProviderRegistryTests: XCTestCase {
     func testResetCredentialCacheThroughRegistryCompiles() {
         UsageProviderRegistry.resetCredentialCache(.claude)
     }
+
+    func testBalanceProvidersAreGroupedAtEnd() {
+        let flags = UsageProviderRegistry.all.map(\.showsBalance)
+        guard let firstBalance = flags.firstIndex(of: true) else {
+            XCTFail("expected at least one balance provider")
+            return
+        }
+        XCTAssertFalse(flags[..<firstBalance].contains(true))
+        XCTAssertTrue(flags[firstBalance...].allSatisfy { $0 })
+        XCTAssertEqual(
+            UsageProviderRegistry.all.filter(\.showsBalance).map(\.id),
+            [.deepseek, .zai, .minimax, .openrouter, .mimo]
+        )
+    }
 }
