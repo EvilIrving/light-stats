@@ -6,6 +6,11 @@ import XCTest
 @MainActor
 final class VisualThemeCaptureTests: XCTestCase {
     func testCaptureThemesForVisualReview() throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["LIGHT_STATS_CAPTURE_THEMES"] == "1",
+            "Theme PNG dumps are opt-in; set LIGHT_STATS_CAPTURE_THEMES=1"
+        )
+
         let settings = SettingsManager.shared
         let originalTheme = settings.appTheme
         let originalLanguage = settings.appLanguage

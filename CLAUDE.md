@@ -535,30 +535,25 @@ views reload.
 ## Build
 
 ```bash
-# Debug — one-shot: pkill running instance → build → open.
+# Local run: Release + Developer ID → overwrite /Applications/Light Stats.app → open.
+# Same TCC identity as the installed production app (Accessibility, Finder Sync, etc.).
 # Run it when a change needs to be seen running: UI tweaks, anything needing visual
 # verification, or after finishing a complete feature. Skip it for pure logic,
 # refactors, copy/localization, or doc edits — those don't need a launch.
 ./script/debug-run.sh
 
-# Debug — manual equivalent. Always pass -derivedDataPath; without it, opening
-# build/DerivedData/… launches a stale previous build from ~/Library/Developer/Xcode/DerivedData.
-xcodebuild -project "Light Stats.xcodeproj" -scheme "Light Stats" \
-  -configuration Debug -derivedDataPath build/DerivedData build
-open "build/DerivedData/Build/Products/Debug/Light Stats.app"
-
-# Release DMG
+# Release DMG (no install)
 ./script/build.sh
 ```
 
-Force-quit before relaunching: `pkill -9 -f "Light Stats"` (`./script/debug-run.sh` does this for you when you do need to launch).
+Force-quit before relaunching: `pkill -9 -x "Light Stats"` (`./script/debug-run.sh` does this for you when you do need to launch).
 
 **Version number is tag-driven; the pbxproj value is not.** Release version is the git tag:
 `release.yml` parses `vX.Y.Z` → passes `VERSION` to `script/build.sh` → `MARKETING_VERSION=$VERSION` override →
 the DMG and the About page show the tag version. The hardcoded `MARKETING_VERSION = 1.0.2` in
-`project.pbxproj` is an **intentional local-Debug fallback only** (used by `script/debug-run.sh` / a plain
-`xcodebuild`). It deliberately does not track tags and does not affect releases — leave it as-is, it is
-not a stale-version bug.
+`project.pbxproj` is an **intentional fallback for a plain `xcodebuild` that does not go through
+`script/build.sh`**. It deliberately does not track tags and does not affect releases or
+`debug-run.sh` — leave it as-is, it is not a stale-version bug.
 
 ### CI
 

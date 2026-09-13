@@ -22,16 +22,14 @@ Select the **Light Stats** scheme, pick **My Mac** as destination, press ⌘R.
 ## Build
 
 ```bash
-# Debug (CLI)
-xcodebuild -project "Light Stats.xcodeproj" -scheme "Light Stats" \
-  -configuration Debug -derivedDataPath build/DerivedData build
-open "build/DerivedData/Build/Products/Debug/Light Stats.app"
+# Local run: production package → overwrite /Applications/Light Stats.app → open
+./script/debug-run.sh
 
-# Release DMG
+# Release DMG (no install)
 ./script/build.sh
 ```
 
-The app runs as a menu bar agent (`LSUIElement = YES`). After building, force-quit any running instance first: `pkill -9 -f "Light Stats"`.
+The app runs as a menu bar agent (`LSUIElement = YES`). After building, force-quit any running instance first: `pkill -9 -x "Light Stats"`.
 
 ## Before Submitting
 

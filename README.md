@@ -231,16 +231,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 ### Build
 
 ```bash
-# Debug build and launch the fresh app bundle
+# Production package → overwrite /Applications/Light Stats.app → open
 ./script/debug-run.sh
 
-# Manual Debug build
-xcodebuild -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" \
-  -configuration Debug \
-  -derivedDataPath build/DerivedData build
-
-# Release DMG
+# Release DMG (no install)
 ./script/build.sh
 ```
 

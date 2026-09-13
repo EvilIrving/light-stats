@@ -11,8 +11,9 @@ APP_NAME="Light Stats"
 # 版本号 —— 发布产物的唯一真源。
 # 优先级：外部 VERSION（release.yml 从 git tag `vX.Y.Z` 解析）> 本地 git tag > 1.0.0-dev。
 # 下方 xcodebuild 用 MARKETING_VERSION=$VERSION 覆盖，所以 DMG/About 显示的版本始终跟 tag 走。
-# 注意：pbxproj 里写死的 MARKETING_VERSION = 1.0.2 只对本地 Debug（debug-run.sh / 直接 xcodebuild）生效，
+# 注意：pbxproj 里写死的 MARKETING_VERSION = 1.0.2 只对直接 xcodebuild（不经本脚本）生效，
 # 是有意保留的 fallback，不跟 tag 同步、不影响发布，无需每次发版去改它。
+# debug-run.sh 走本脚本：Release + Developer ID，覆盖 /Applications。
 if [ -n "$VERSION" ]; then
     echo "📌 版本号: $VERSION"
 elif git describe --tags --exact-match 2>/dev/null; then
@@ -32,13 +33,18 @@ DMG_RW_FILE="$BUILD_DIR/Light-Stats-${VERSION}-rw.dmg"
 ENTITLEMENTS="Light Stats/LightStats.entitlements"
 FINDER_EXTENSION_ENTITLEMENTS="FinderMenuExtension/FinderMenuExtension.entitlements"
 SKIP_SIGNING="${SKIP_SIGNING:-0}"
+SKIP_DMG="${SKIP_DMG:-0}"
+SKIP_NOTARIZATION="${SKIP_NOTARIZATION:-0}"
+INSTALL_TO_APPLICATIONS="${INSTALL_TO_APPLICATIONS:-0}"
 NOTARIZATION_ENABLED=0
 if [ "$SKIP_SIGNING" != "1" ] \
+    && [ "$SKIP_NOTARIZATION" != "1" ] \
     && [ -n "${APPLE_API_KEY_ID:-}" ] \
     && [ -n "${APPLE_API_ISSUER_ID:-}" ] \
     && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
     NOTARIZATION_ENABLED=1
 fi
+INSTALL_PATH="/Applications/$APP_NAME.app"
 APP_PATH="$OUTPUT_DIR/$APP_NAME.app"
 MAIN_BINARY="$APP_PATH/Contents/MacOS/$APP_NAME"
 FINDER_EXTENSION_PATH="$APP_PATH/Contents/PlugIns/FinderMenuExtension.appex"
@@ -195,6 +201,33 @@ if [ "$NOTARIZATION_ENABLED" -eq 1 ]; then
     xcrun stapler validate "$APP_PATH"
     rm -f "$APP_NOTARY_ARCHIVE"
     echo "✅ App 公证完成"
+fi
+
+if [ "$INSTALL_TO_APPLICATIONS" = "1" ]; then
+    if [ -z "${DEVELOPER_ID:-}" ]; then
+        echo "❌ 覆盖 $INSTALL_PATH 需要 Developer ID Application 签名，否则辅助功能等权限对不上已授权的生产包。"
+        exit 1
+    fi
+    echo "📦 覆盖 $INSTALL_PATH..."
+    pkill -9 -x "$APP_NAME" 2>/dev/null || true
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        pgrep -x "$APP_NAME" >/dev/null || break
+        sleep 0.2
+    done
+    rm -rf "$INSTALL_PATH"
+    ditto "$APP_PATH" "$INSTALL_PATH"
+    echo "✅ 已安装 $INSTALL_PATH"
+fi
+
+if [ "$SKIP_DMG" = "1" ]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "📍 $APP_PATH"
+    if [ "$INSTALL_TO_APPLICATIONS" = "1" ]; then
+        echo "📍 $INSTALL_PATH"
+    fi
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    exit 0
 fi
 
 # 创建 DMG

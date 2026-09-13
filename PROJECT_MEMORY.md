@@ -1,5 +1,13 @@
 # Project Memory
 
+## 本地运行覆盖 /Applications 生产包，主题截图测试默认跳过 · 2026-09-13 · grok
+
+本机「跑一下」必须是 Developer ID 签过的 Release 包，覆盖 `/Applications/Light Stats.app`，再启动那一份。辅助功能、输入监控、Finder 扩展的 TCC 绑的是签名身份 + 路径，DerivedData 里的 Debug / `TEST_HOST` 注入包会被当成新 App，每次都要重新开权限。
+
+`./script/debug-run.sh` 因此改为：`SKIP_DMG=1 SKIP_NOTARIZATION=1 INSTALL_TO_APPLICATIONS=1 ./script/build.sh`，没有 Developer ID 证书就失败，不安装。CI 的 `build.sh` / `quality.yml` 仍不碰 `/Applications`。不要再 `open` `build/DerivedData/Build/Products/Debug/Light Stats.app`。
+
+`VisualThemeCaptureTests` 会在测试宿主里把每个主题的概览/清理面板 `orderFront` 后写到 `/tmp/*.png`。这不是回归断言，默认 `XCTSkip`；需要出图时设 `LIGHT_STATS_CAPTURE_THEMES=1`。营销图仍走 DEBUG 的 `DebugSnapshot`（⌥ 点菜单栏图标）。
+
 ## 默认输入法只纠正切换后的漂移，不是输入法管理器 · 2026-09-13 · grok
 
 产品边界：只在系统已有的输入源里选一个全局默认，切换 App 后把输入源拉回去。不是输入法，也不是输入法管理器——没有按 App、按网站的规则，没有菜单栏指示器，不读网页，不改系统输入法列表。

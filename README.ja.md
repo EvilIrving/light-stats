@@ -228,16 +228,10 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 ### ビルド
 
 ```bash
-# 最新の Debug app をビルドして起動
+# 本番パッケージを /Applications/Light Stats.app に上書きして起動
 ./script/debug-run.sh
 
-# 手動 Debug ビルド
-xcodebuild -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" \
-  -configuration Debug \
-  -derivedDataPath build/DerivedData build
-
-# Release DMG
+# Release DMG（インストールしない）
 ./script/build.sh
 ```
 

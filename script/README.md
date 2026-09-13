@@ -6,7 +6,7 @@
 | 脚本 | 作用 |
 |------|------|
 | `build.sh` | 发布 DMG 构建（版本号来自 git tag；CI 在 `build.yml` / `release.yml` 中调用） |
-| `debug-run.sh` | 一键构建 Debug 并启动：kill 旧实例 → xcodebuild → open |
+| `debug-run.sh` | 一键安装到本机：Release + Developer ID → 覆盖 `/Applications/Light Stats.app` → open。不打 DMG、不公证 |
 | `skillmesh.sh` | 把 `.agents/skills` 的 Skill 以软链同步到 Claude / Codex / Cursor / Pi / Grok |
 | `validate_localization.sh` | 校验 en / zh-Hans / ja / ko 四份 `Localizable.strings` key 一致（CI 在 `quality.yml` 中调用） |
 | `gen-changelog.sh` | 从 git 提交记录生成 CHANGELOG.md（CI 在 `release.yml` 中调用） |

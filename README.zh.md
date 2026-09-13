@@ -266,16 +266,10 @@ Light Stats 没有远程遥测。本地系统指标、本地代理检测、进�
 ### 从源码构建
 
 ```bash
-# 构建并启动最新 Debug app
+# 生产包覆盖 /Applications/Light Stats.app 并启动
 ./script/debug-run.sh
 
-# 手动 Debug 构建
-xcodebuild -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" \
-  -configuration Debug \
-  -derivedDataPath build/DerivedData build
-
-# Release DMG
+# Release DMG（不安装）
 ./script/build.sh
 ```
 

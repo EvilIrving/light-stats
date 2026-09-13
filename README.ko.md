@@ -229,16 +229,10 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 ### 빌드
 
 ```bash
-# 최신 Debug app을 빌드하고 실행
+# 프로덕션 패키지로 /Applications/Light Stats.app 을 덮어쓴 뒤 실행
 ./script/debug-run.sh
 
-# 수동 Debug 빌드
-xcodebuild -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" \
-  -configuration Debug \
-  -derivedDataPath build/DerivedData build
-
-# Release DMG
+# Release DMG (설치하지 않음)
 ./script/build.sh
 ```
 
