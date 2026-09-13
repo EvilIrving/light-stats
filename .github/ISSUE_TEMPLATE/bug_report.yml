@@ -48,7 +48,6 @@ body:
       label: Mac type
       options:
         - Apple Silicon (M1/M2/M3/M4)
-        - Intel
     validations:
       required: true
 

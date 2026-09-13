@@ -154,7 +154,7 @@ actor PowerService {
 
         // 健康度 = 当前最大容量 / 设计容量。
         // 优先 AppleRawMaxCapacity（电池控制器上报的真实最大容量），
-        // 缺失时回退到 NominalChargeCapacity 或 MaxCapacity（Intel，mAh）。
+        // 缺失时回退到 NominalChargeCapacity 或 MaxCapacity（后者在部分机型是百分比，>100 才当容量用）。
         // system_profiler 用 NominalChargeCapacity，偏乐观（偏高 2-3pp）；这里用真实值。
         if let design = (dict["DesignCapacity"] as? NSNumber)?.doubleValue, design > 0 {
             let rawMax = (dict["AppleRawMaxCapacity"] as? NSNumber)?.doubleValue

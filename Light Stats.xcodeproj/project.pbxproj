@@ -7,29 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0486DCFE37D701C1C1AECDB7 /* FinderMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 724D46D591D7723498E3E818 /* FinderMenuController.swift */; };
 		09A14F6E4C9CD42C70C426F0 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */; };
 		1BB7F9FBCB2AFE635C3204C9 /* FinderMenuConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */; };
 		1E10EB9A36E3BFC4782D71CB /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */; };
 		2BC46C156421B32DC420DC95 /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */; };
 		3BD59E124216473F6AE7B30C /* FinderMenuConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */; };
-		3D3BB2812BDA41750D6D53C4 /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E8CAD36B05096E438852D4C /* FinderMenuIPCClient.swift */; };
-		463D6E77AE281414DFA3D29A /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5CA0339A7753AE7823B7853 /* FinderMenuShared.swift */; };
 		4F087802BBF0A4E27CC88D15 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */; };
 		68D0974F836EFF98CDA2FAB3 /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039B1F798EA5628A55642C0E /* FinderMenuShared.swift */; };
-		6F7F5BC86AD9533A75C2EE13 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629BB24832C45E70B0A31F0E /* FinderMenuAction.swift */; };
-		763753E8F19FA01907205667 /* FinderMenuExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, CodeSignOnCopy, ); }; };
+		763753E8F19FA01907205667 /* FinderMenuExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7888CB5D4E32C318D7A9171B /* FinderMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */; };
-		8642EDACCBFF708F6E2E2163 /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF2CE180B826D6EC13EFAB91 /* FinderMenuPresets.swift */; };
 		8CFD3AF21250D63FC2150141 /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */; };
 		9839D88CF7B0D11A04F2031E /* FinderMenuIPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */; };
-		A1E12EAEC16CA1A40857A32B /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 708E7D6F3C88245D7E049305 /* FinderMenuCommand.swift */; };
 		A605D2851705B3719D4327DA /* FinderMenuShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039B1F798EA5628A55642C0E /* FinderMenuShared.swift */; };
 		B02725F33FEBF864A028064A /* FinderMenuPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */; };
 		BF8536D98CAB8199B3C80BE3 /* FinderMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 263BB1149F5E3084FCDAA28F /* FinderMenuAction.swift */; };
 		F24E8CA7BD77C5A06B851C33 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */; };
 		FD71052D19A898945F9D4557 /* FinderMenuCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */; };
-		FE5621022D1FCBCBE9889361 /* FinderMenuRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DF32BDFC092895A8EC0A53 /* FinderMenuRequest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,9 +63,8 @@
 		58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuIPCClient.swift; sourceTree = "<group>"; };
 		5C301770F4F27CA339E9D34D /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7063AD4296BA6D340790598F /* FinderMenuExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FinderMenuExtension.entitlements; sourceTree = "<group>"; };
-		724D46D591D7723498E3E818 /* FinderMenuController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuController.swift; sourceTree = "<group>"; };
 		744A8311E3367DA8CD33ABFE /* FinderMenuConfig.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuConfig.swift; sourceTree = "<group>"; };
-		7C473C581872387215E268E4 /* LightStatsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LightStatsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C473C581872387215E268E4 /* LightStatsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LightStatsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		812C61551406CDA1F4E86CA1 /* FinderMenuController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuController.swift; sourceTree = "<group>"; };
 		A4163D492EFBC3DB0013ED8C /* Light Stats.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Light Stats.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A475FD742F164E9000806CD9 /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
@@ -83,7 +75,7 @@
 		A4C321D92F16306D00BA764B /* Light Stats.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "Light Stats.xcodeproj"; sourceTree = "<group>"; };
 		BDE57CF58F7EB5E581EECBE6 /* FinderMenuCommand.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuCommand.swift; sourceTree = "<group>"; };
 		E247A934694AD55E5EA30F34 /* FinderMenuRequest.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinderMenuRequest.swift; sourceTree = "<group>"; };
-		E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = FinderMenuExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E8BE1BE00CCB791C97B1D03D /* FinderMenuExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinderMenuExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -99,8 +91,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		52AE2D5FF4FF9BC00274F6D1 /* LightStatsTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = LightStatsTests;
 			sourceTree = "<group>";
 		};
@@ -146,7 +136,6 @@
 				5C301770F4F27CA339E9D34D /* Info.plist */,
 				7063AD4296BA6D340790598F /* FinderMenuExtension.entitlements */,
 			);
-			name = FinderMenuExtension;
 			path = FinderMenuExtension;
 			sourceTree = "<group>";
 		};
@@ -224,7 +213,6 @@
 				43F6257CD44CC5832829D041 /* FinderMenuPresets.swift */,
 				58B32C3DF038750EE8EF105F /* FinderMenuIPCClient.swift */,
 			);
-			name = FinderMenu;
 			path = FinderMenu;
 			sourceTree = "<group>";
 		};
@@ -547,38 +535,11 @@
 			};
 			name = Debug;
 		};
-		9E505B20CFCC495C21ED80DA /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
-				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = QZZ878S3NS;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = macosx;
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		A4163D542EFBC3DC0013ED8C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -641,6 +602,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -694,18 +656,6 @@
 		A4163D572EFBC3DC0013ED8C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/System/Library/PrivateFrameworks,
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreDisplay,
-					"-framework",
-					DisplayServices,
-				);
-				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -728,6 +678,10 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Light Stats/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Light Stats";
@@ -748,6 +702,13 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0.2;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreDisplay,
+					"-framework",
+					DisplayServices,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -758,6 +719,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				XROS_DEPLOYMENT_TARGET = 26.2;
@@ -767,18 +729,6 @@
 		A4163D582EFBC3DC0013ED8C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/System/Library/PrivateFrameworks,
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-framework",
-					CoreDisplay,
-					"-framework",
-					DisplayServices,
-				);
-				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -801,6 +751,10 @@
 				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/System/Library/PrivateFrameworks,
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Light Stats/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Light Stats";
@@ -821,6 +775,13 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 1.0.2;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreDisplay,
+					"-framework",
+					DisplayServices,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -831,40 +792,12 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Light Stats/Services/DisplayControl/DisplayPrivateAPI.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;
-		};
-		AB20378ED70135E50788AA08 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = FinderMenuExtension/FinderMenuExtension.entitlements;
-				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = QZZ878S3NS;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FinderMenuExtension/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../../../../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 1.0.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "cain.com.light-stats.FinderMenuExtension";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SUPPORTED_PLATFORMS = macosx;
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 

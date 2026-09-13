@@ -534,7 +534,7 @@ enum SMCInfo {
         let byte0 = Int(data[0])
         let byte1 = Int(data[1])
 
-        // Intel/M1 use FPE2 format: unsigned fixed-point with 2 fractional bits
+        // FPE2 format: unsigned fixed-point with 2 fractional bits
         // Variant 1: (byte0 << 6) | (byte1 >> 2)
         let fpe2Variant1 = (byte0 << 6) | (byte1 >> 2)
         if fpe2Variant1 >= 0 && fpe2Variant1 < 10000 {

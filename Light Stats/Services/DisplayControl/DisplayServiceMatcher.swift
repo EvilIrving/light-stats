@@ -11,7 +11,6 @@ nonisolated final class DisplayServiceMatcher: Sendable {
     private let logger = AppLogger(category: "DisplayControl")
 
     func matchedServices(displayIDs: [CGDirectDisplayID]) -> [UInt32: DDCServiceRoute] {
-#if arch(arm64)
         let services = registryServices()
         var candidates: [MatchCandidate] = []
 
@@ -55,13 +54,8 @@ nonisolated final class DisplayServiceMatcher: Sendable {
 
         logger.info("Matched \(result.count) displays to \(services.count) DDC services")
         return result
-#else
-        _ = displayIDs
-        return [:]
-#endif
     }
 
-#if arch(arm64)
     private func registryServices() -> [RegistryService] {
         let framebuffers = ["AppleCLCD2", "IOMobileFramebufferShim"]
             .flatMap(framebufferServices(className:))
@@ -250,5 +244,4 @@ nonisolated final class DisplayServiceMatcher: Sendable {
         let score: Int
         let chipAddress: UInt8
     }
-#endif
 }

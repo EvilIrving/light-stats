@@ -29,7 +29,6 @@ actor DDCTransport {
         code: DDCVCPCode,
         retries: Int = 3
     ) async -> DDCPacketCodec.Reply? {
-#if arch(arm64)
         guard !skipHungBus() else { return nil }
         let packet = DDCPacketCodec.readRequest(vcpCode: code.rawValue)
         for _ in 0..<max(1, retries) {
@@ -55,11 +54,6 @@ actor DDCTransport {
             }
             return reply
         }
-#else
-        _ = route
-        _ = code
-        _ = retries
-#endif
         return nil
     }
 
@@ -69,7 +63,6 @@ actor DDCTransport {
         value: UInt16,
         retries: Int = 3
     ) async -> Bool {
-#if arch(arm64)
         guard !skipHungBus() else { return false }
         let packet = DDCPacketCodec.writeRequest(vcpCode: code.rawValue, value: value)
         for _ in 0..<max(1, retries) {
@@ -86,16 +79,9 @@ actor DDCTransport {
             }
             try? await Task.sleep(for: .milliseconds(20))
         }
-#else
-        _ = route
-        _ = code
-        _ = value
-        _ = retries
-#endif
         return false
     }
 
-#if arch(arm64)
     private func writePacket(_ source: [UInt8], route: DDCServiceRoute) async -> Bool {
         let result = await runKernelCall { [source, route] in
             var packet = source
@@ -185,10 +171,8 @@ actor DDCTransport {
         let status: IOReturn
         let bytes: [UInt8]
     }
-#endif
 }
 
-#if arch(arm64)
 nonisolated private final class DDCWatchdogBox<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Value?, Never>?
@@ -211,4 +195,3 @@ nonisolated private final class DDCWatchdogBox<Value: Sendable>: @unchecked Send
         continuation?.resume(returning: value)
     }
 }
-#endif
