@@ -88,7 +88,7 @@ struct AppCardView: View {
 
             Image(nsImage: app.icon)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
                 .frame(width: iconSize, height: iconSize)
                 .opacity(isTerminating ? 0.5 : 1.0)
         }

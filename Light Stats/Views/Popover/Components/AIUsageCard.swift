@@ -270,11 +270,11 @@ private struct ProviderIcon: View {
         if NSImage(named: name) != nil {
             Image(name)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
         } else {
             Image(systemName: catalogRow?.symbolFallback ?? "sparkles")
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
         }
     }
 }

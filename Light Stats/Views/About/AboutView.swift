@@ -28,12 +28,12 @@ struct AboutView: View {
             if let icon = appIcon {
                 Image(nsImage: icon)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 96, height: 96)
             } else {
                 Image(systemName: "app.fill")
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 96, height: 96)
                     .foregroundStyle(.secondary)
             }

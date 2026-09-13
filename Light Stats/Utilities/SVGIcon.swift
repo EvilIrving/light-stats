@@ -43,7 +43,7 @@ struct SVGIcon: View {
                     .resizable()
                     .renderingMode(.template)
                     .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
             } else {
                 Color.clear
             }

@@ -427,7 +427,7 @@ struct SettingsGridItem: View {
             Image(assetIcon)
                 .renderingMode(.template)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
                 .frame(width: 15, height: 15)
         } else {
             Image(systemName: icon)

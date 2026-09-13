@@ -42,7 +42,7 @@ struct PanelSection<Content: View>: View {
                     if let assetIcon {
                         Image(assetIcon)
                             .resizable()
-                            .aspectRatio(contentMode: .fit)
+                            .scaledToFit()
                             .frame(width: 11, height: 11)
                     } else if let svgIcon {
                         SVGIcon(svgIcon, size: 11)
