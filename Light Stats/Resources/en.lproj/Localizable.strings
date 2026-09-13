@@ -190,6 +190,9 @@
 "aiUsage.token.clear" = "Clear";
 "aiUsage.credentialsMissing.token" = "Paste an API token in Settings";
 "aiUsage.tokenExpired.token" = "Token expired or rejected";
+"aiUsage.noLimit" = "No limit";
+"aiUsage.expandWindows" = "Show all quota windows";
+"aiUsage.collapseWindows" = "Show the tightest window";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "Color Indicator";

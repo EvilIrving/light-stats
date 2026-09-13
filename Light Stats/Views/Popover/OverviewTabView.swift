@@ -239,31 +239,14 @@ struct OverviewTabView: View {
             guard enabled.contains(row.id) else { return nil }
             return (row, states[row.id] ?? .idle)
         }
-        let windowRows = rows.filter { row, state in
-            guard row.showsBalance else { return true }
-            if case .loaded(let snapshot) = state, !snapshot.windows.isEmpty { return true }
-            return false
-        }
-        let balanceRows = rows.filter { $0.0.showsBalance }
-
         if !rows.isEmpty {
             PanelSection(title: "aiUsage.title".localized) {
                 VStack(spacing: 10) {
-                    ForEach(windowRows, id: \.0.id) { row, state in
+                    ForEach(rows, id: \.0.id) { row, state in
                         AIProviderCompactRow(
                             provider: row.id,
                             state: state
                         )
-                    }
-                    if !balanceRows.isEmpty {
-                        LazyVGrid(
-                            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4),
-                            spacing: 8
-                        ) {
-                            ForEach(balanceRows, id: \.0.id) { row, state in
-                                BalanceCell(provider: row.id, state: state)
-                            }
-                        }
                     }
                 }
             }

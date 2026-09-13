@@ -192,6 +192,9 @@
 "aiUsage.token.clear" = "削除";
 "aiUsage.credentialsMissing.token" = "設定で API token を貼り付けてください";
 "aiUsage.tokenExpired.token" = "トークンが無効です";
+"aiUsage.noLimit" = "制限なし";
+"aiUsage.expandWindows" = "すべての枠を表示";
+"aiUsage.collapseWindows" = "最も逼迫した枠だけ表示";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "カラーインジケーター";

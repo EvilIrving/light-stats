@@ -192,6 +192,9 @@
 "aiUsage.token.clear" = "清除";
 "aiUsage.credentialsMissing.token" = "在设置里粘贴 API token";
 "aiUsage.tokenExpired.token" = "Token 失效或被拒绝";
+"aiUsage.noLimit" = "无上限";
+"aiUsage.expandWindows" = "展开全部额度";
+"aiUsage.collapseWindows" = "收起为最紧额度";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";

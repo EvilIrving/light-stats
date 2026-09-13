@@ -192,6 +192,9 @@
 "aiUsage.token.clear" = "삭제";
 "aiUsage.credentialsMissing.token" = "설정에 API token을 붙여넣으세요";
 "aiUsage.tokenExpired.token" = "토큰이 만료되었거나 거부됨";
+"aiUsage.noLimit" = "제한 없음";
+"aiUsage.expandWindows" = "모든 할당 표시";
+"aiUsage.collapseWindows" = "가장 부족한 할당만 표시";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "색상 표시";

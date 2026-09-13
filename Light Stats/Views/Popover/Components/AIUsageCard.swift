@@ -26,27 +26,18 @@ private struct WindowRow: View {
                 .minimumScaleFactor(0.75)
                 .frame(width: 28, alignment: .leading)
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(
-                        cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
-                    )
-                    .fill(theme.wellFill)
-                    if let remainingPercent {
-                        RoundedRectangle(
-                            cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
-                        )
-                        .fill(colorForRemaining(remainingPercent))
-                        .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
-                    }
-                }
+            if let remainingPercent {
+                progressTrack(remainingPercent)
+                Text(String(format: "%.0f%%", remainingPercent))
+                    .font(theme.chromeStyle.compactValueFont)
+                    .foregroundStyle(colorForRemaining(remainingPercent))
+                    .frame(width: 36, alignment: .trailing)
+            } else {
+                Text("aiUsage.noLimit".localized)
+                    .font(theme.chromeStyle.compactValueFont)
+                    .foregroundStyle(theme.inkMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: 5)
-
-            Text(remainingPercent.map { String(format: "%.0f%%", $0) } ?? "—")
-                .font(theme.chromeStyle.compactValueFont)
-                .foregroundStyle(remainingPercent.map(colorForRemaining) ?? theme.inkMuted)
-                .frame(width: 36, alignment: .trailing)
 
             Text(resetText)
                 .font(.system(size: 9, design: .monospaced))
@@ -54,6 +45,23 @@ private struct WindowRow: View {
                 .frame(width: 76, alignment: .trailing)
                 .lineLimit(1)
         }
+    }
+
+    private func progressTrack(_ remainingPercent: Double) -> some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(
+                    cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+                )
+                .fill(theme.wellFill)
+                RoundedRectangle(
+                    cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+                )
+                .fill(colorForRemaining(remainingPercent))
+                .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
+            }
+        }
+        .frame(height: 5)
     }
 
     private var resetText: String {
@@ -91,46 +99,111 @@ private struct WindowRow: View {
 /// A single provider's state as a compact row group (no card wrapper).
 struct AIProviderCompactRow: View {
     @Environment(\.theme) private var theme
+    @State private var isExpanded = false
 
     let provider: AIProvider
     let state: ProviderFetchState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                providerIcon
-                    .frame(width: 11, height: 11)
-                Text(catalogRow?.displayName ?? provider.rawValue)
-                    .font(theme.chromeStyle.compactLabelFont)
-                    .foregroundStyle(theme.inkSecondary)
-                Spacer()
+            header
+            detail
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: toggleExpanded)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(canExpand ? .isButton : [])
+        .accessibilityHint(expandHint)
+    }
+
+    private var header: some View {
+        HStack(spacing: 4) {
+            providerIcon
+                .frame(width: 11, height: 11)
+            Text(providerName)
+                .font(theme.chromeStyle.compactLabelFont)
+                .foregroundStyle(theme.inkSecondary)
+            Spacer(minLength: 8)
+            if let balance = headerBalance {
+                BalanceRow(balance: balance)
             }
-
-            switch state {
-            case .idle:
-                Text("aiUsage.fetching".localized)
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.inkMuted)
-
-            case .loaded(let snapshot):
-                VStack(spacing: 6) {
-                    ForEach(snapshot.windows, id: \.label) { window in
-                        WindowRow(window: window)
-                    }
-                }
-
-            case .error(let error):
-                Text(errorText(error))
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.inkMuted)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if canExpand {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(theme.inkSecondary)
+                    .frame(width: 10, height: 10)
             }
         }
     }
 
+    @ViewBuilder
+    private var detail: some View {
+        switch state {
+        case .idle:
+            Text("aiUsage.fetching".localized)
+                .font(.system(size: 11))
+                .foregroundStyle(theme.inkMuted)
+
+        case .loaded(let snapshot):
+            loadedWindows(snapshot)
+
+        case .error(let error):
+            Text(errorText(error))
+                .font(.system(size: 11))
+                .foregroundStyle(theme.inkMuted)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var providerName: String {
+        catalogRow?.displayName ?? provider.rawValue
+    }
+
     private var catalogRow: AIUsageProviderRow? {
         AIUsageCatalog.row(for: provider)
+    }
+
+    private var loadedSnapshot: ProviderUsageSnapshot? {
+        state.snapshot
+    }
+
+    private var canExpand: Bool {
+        (loadedSnapshot?.windows.count ?? 0) > 1
+    }
+
+    /// Amount text lives on the name row so balance-only providers match the
+    /// window list. Never derived from `usedPercent`.
+    private var headerBalance: UsageBalance? {
+        loadedSnapshot?.balance
+    }
+
+    private var expandHint: String {
+        guard canExpand else { return "" }
+        return isExpanded
+            ? "aiUsage.collapseWindows".localized
+            : "aiUsage.expandWindows".localized
+    }
+
+    @ViewBuilder
+    private func loadedWindows(_ snapshot: ProviderUsageSnapshot) -> some View {
+        if !snapshot.windows.isEmpty {
+            VStack(spacing: 6) {
+                ForEach(
+                    AIUsageWindowPicker.visibleWindows(in: snapshot.windows, expanded: isExpanded),
+                    id: \.label
+                ) { window in
+                    WindowRow(window: window)
+                }
+            }
+        }
+    }
+
+    private func toggleExpanded() {
+        guard canExpand else { return }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            isExpanded.toggle()
+        }
     }
 
     @ViewBuilder
@@ -172,61 +245,20 @@ struct AIProviderCompactRow: View {
     }
 }
 
-// MARK: - Balance Grid Cell
+// MARK: - Balance Row
 
-/// Prepaid-balance providers (DeepSeek / Z.ai / OpenRouter) as side-by-side cells:
-/// icon + name on top, the total balance below. No granted/topped-up breakdown.
-struct BalanceCell: View {
+/// Prepaid-balance amount only. Never reads `usedPercent` or draws a bar.
+struct BalanceRow: View {
     @Environment(\.theme) private var theme
 
-    let provider: AIProvider
-    let state: ProviderFetchState
+    let balance: UsageBalance
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 4) {
-                ProviderIcon(catalogRow: catalogRow)
-                    .frame(width: 11, height: 11)
-                Text(catalogRow?.displayName ?? provider.rawValue)
-                    .font(theme.chromeStyle.compactLabelFont)
-                    .foregroundStyle(theme.inkSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            Text(valueText)
-                .font(theme.chromeStyle.compactValueFont)
-                .foregroundStyle(valueColor)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-    }
-
-    private var catalogRow: AIUsageProviderRow? {
-        AIUsageCatalog.row(for: provider)
-    }
-
-    private var valueText: String {
-        switch state {
-        case .idle:
-            return "…"
-        case .loaded(let snapshot):
-            guard let balance = snapshot.balance else { return "—" }
-            return "\(balance.currency) \(balance.total)"
-        case .error:
-            return "aiUsage.fetchFailed".localized
-        }
-    }
-
-    private var valueColor: Color {
-        switch state {
-        case .idle, .error:
-            return theme.inkMuted
-        case .loaded(let snapshot):
-            guard let balance = snapshot.balance, balance.isAvailable else {
-                return theme.inkMuted
-            }
-            return theme.inkPrimary
-        }
+        Text("\(balance.currency) \(balance.total)")
+            .font(theme.chromeStyle.compactValueFont)
+            .foregroundStyle(balance.isAvailable ? theme.inkPrimary : theme.inkMuted)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
     }
 }
 
