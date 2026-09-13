@@ -4,7 +4,8 @@
 
 macOS menu bar system monitor. CPU, GPU, memory, disk, disk I/O, network, proxy, battery,
 temperature, fan, processes, AI subscription usage, cleaning mode, self-update, and a
-composite health score. Compact status item + detailed popover panel.
+composite health score. Compact status item + detailed popover panel. Optional extras
+(Finder menu, window snap, default input source, display brightness) stay off until enabled.
 
 macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · `LSUIElement = YES`
 
@@ -14,6 +15,8 @@ macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · 
 Light Stats/
 ├── LightStatsApp.swift              # @main, Settings scene
 ├── AppDelegate.swift                # NSStatusItem + popover lifecycle
+├── AppDelegate+WindowMenu.swift     # Menu-bar window-control status item
+├── AppDelegate+Termination.swift    # Instant-quit + update-replace handoff
 ├── Models/                          # Pure data structs; no logic, no imports
 │   ├── CPUInfo.swift
 │   ├── GPUInfo.swift
@@ -27,7 +30,11 @@ Light Stats/
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
 │   ├── FindMouseTriggerKey.swift    # User-recorded shortcut for Find My Mouse
+│   ├── InputSourceOption.swift      # Selectable input source id + display name
 │   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
+│   ├── WindowSnapAction.swift       # Snap action shared by hotkeys, gestures, menu bar
+│   ├── WindowSnapHotKey.swift       # Global shortcut: key code + modifiers → action
+│   ├── SnapGestureZone.swift        # Where a swipe must start (titlebar / pointer)
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -45,14 +52,19 @@ Light Stats/
 │   ├── ClaudeUsageService.swift     # Claude Code API usage
 │   ├── CodexUsageService.swift      # Codex CLI usage
 │   ├── GeminiUsageService.swift     # Gemini CLI usage (OAuth refresh flow)
-│   ├── UpdateService.swift          # GitHub Release → download → verify → install (actor)
+│   ├── UpdateService.swift          # R2 channel marker → download → verify → install (GitHub fallback)
 │   ├── LicenseCodec.swift           # Base32 + activation-code wire format (mirrored by script/license-tool)
 │   ├── LicenseValidator.swift       # Offline Ed25519 signature validation (embedded public key)
 │   ├── KeyboardLockService.swift    # CGEventTap key suppression (cleaning mode)
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
 │   ├── FindMouseService.swift       # Shared modifier tap: double=find mouse, triple=presentation pointer
+│   ├── DefaultInputSourceService.swift # Force one input source after each app activation (opt-in)
 │   ├── PresentationPointerService.swift # Click-through persistent cursor halo
-│   ├── WindowSnappingService.swift  # AX window move/resize snap engine
+│   ├── WindowSnappingService.swift  # Native-first snap engine; own placement as fallback
+│   ├── WindowSnapGeometry.swift     # Pure placement math + Accessibility ↔ Cocoa flip
+│   ├── WindowGestureTargeting.swift # Point → window/zone resolution + control guard
+│   ├── NativeWindowTilingService.swift # Presses macOS' own Window-menu tiling items
+│   ├── SystemWindowTilingSetting.swift # Reads/writes macOS' own drag-to-edge tiling
 │   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
 │   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
 │   ├── TitlebarGestureService.swift # Titlebar swipe-to-snap (CGEventTap, opt-in)
@@ -62,6 +74,11 @@ Light Stats/
 │   ├── PageRateService.swift        # vm_statistics64 swap page rate (nonisolated)
 │   ├── SMCInfo.swift                # SMC temperature + fan
 │   ├── CLIBinaryResolver.swift      # which/path for AI CLIs
+│   ├── FinderMenuHostService.swift  # Host-side FinderSync IPC + dispatch
+│   ├── FinderMenuFileService.swift  # New file, templates, copy/move
+│   ├── FinderMenuSystemService.swift # Hide items, reveal hidden files
+│   ├── FinderMenuTerminalService.swift # Open in terminal / configured app
+│   ├── DisplayControl/              # Opt-in DDC hardware brightness (Apple Silicon)
 │   └── AIUsage/                     # Shared AI-usage fetch helpers
 │       ├── PTYProbe.swift           # Reusable PTY capture engine (Claude/Codex CLI scrape)
 │       ├── KeychainCredentialReader.swift # `security` CLI Keychain read (no auth dialog)
@@ -76,6 +93,11 @@ Light Stats/
 │   ├── SystemAppFilter.swift        # Apple-signed app exclusion list
 │   ├── CleaningModeViewModel.swift  # 60s countdown + keyboard lock
 │   ├── FindMouseCoordinator.swift   # Settings → FindMouseService wiring (opt-in)
+│   ├── DefaultInputSourceCoordinator.swift # Settings → DefaultInputSourceService wiring (opt-in)
+│   ├── SystemWindowTilingSettings.swift # Observable facade over macOS' tiling switches
+│   ├── FinderMenuConfigStore.swift  # Finder menu prefs in the app group
+│   ├── DisplayControlManager.swift  # Opt-in brightness lifecycle
+│   ├── PerformanceRecordingManager.swift # 48h product-resource session
 │   ├── LicenseManager.swift         # License state: validate stored code, activate/deactivate
 │   └── UpdateManager.swift          # Update UI state machine
 ├── Views/                           # SwiftUI panels/settings; AppKit for menu bar
@@ -96,6 +118,10 @@ Light Stats/
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
 │   ├── Settings/FindMouseSettingsSection.swift
+│   ├── Settings/WindowManagementSettingsSection.swift
+│   ├── Settings/DefaultInputSourceSettingsSection.swift
+│   ├── Settings/FinderMenuActionsSection.swift
+│   ├── Settings/FinderMenuTemplatesSection.swift
 │   ├── Settings/ActivationSection.swift
 │   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
@@ -106,17 +132,21 @@ Light Stats/
 │   ├── Toast/ToastCenter.swift            # Transient toast notifications
 │   └── Update/UpdateWindowView.swift
 ├── Utilities/
+│   ├── AXElementReader.swift        # Stateless reads over an AXUIElement
 │   ├── ByteFormatter.swift          # Stateless byte/rate formatting
 │   ├── MetricHistory.swift          # Ring buffer of recent samples (sparklines)
 │   ├── SVGIcon.swift                # Template-tinted bundle SVG
 │   └── WindowSnapIconProvider.swift # SF Symbol icons for snap actions
 └── Resources/
     ├── Icons/                       # Metric SVG outlines
+    ├── FinderBlank.docx/.xlsx/.pptx # Minimal OOXML blanks (script/generate_finder_templates.py)
     ├── en.lproj/Localizable.strings
     ├── zh-Hans.lproj/Localizable.strings
     ├── ja.lproj/Localizable.strings
     └── ko.lproj/Localizable.strings
 ```
+
+Repo-root companions: `FinderMenu/` (shared models + IPC) and `FinderMenuExtension/` (FinderSync).
 
 Dependency direction:
 
@@ -190,6 +220,41 @@ the "default off" rule: AppDelegate creates the tap **only** when the owning swi
 calls `stop()` immediately when it turns off. `start()` returns `false` when Accessibility
 permission is missing — the caller keeps the switch on and retries on `didBecomeActive`.
 None of these run on a clean default install. See *Default form (zero-intrusion)* below.
+
+`DefaultInputSourceService` is the same shape minus the tap: a `@MainActor` `start()/stop()`
+service that owns an `NSWorkspace.didActivateApplicationNotification` observer instead of a
+`CGEventTap`, gated by `defaultInputSourceEnabled` (default off). It does not need Accessibility
+permission — `TISSelectInputSource` is unprivileged. Its only decision rule lives in the pure
+`DefaultInputSourcePolicy`: **correct drift only inside a 1.2 s window after an app activation**, so a
+deliberate `Ctrl+Space` outside that window (and any secure-input field) is left alone.
+
+**Window management delegates to the system.** `WindowSnappingService` tries the native path
+first: `NativeWindowTilingService` finds the tiling item macOS injects into the target app's
+Window menu — matched by `AXIdentifier` (`_zoomLeft:`, `_zoomFill:`, …), never by localized
+title — and presses it, so the frame, the animation, and the per-display visible-area rules are
+the system's own. Only what macOS has no command for (thirds, display moves, minimize) is placed
+by the engine through `WindowSnapGeometry`. Two measured facts shape this: the press reports
+success even when the app is not frontmost and then does nothing at all, and the system animates
+by really moving the window, so the outcome cannot be read back until ~600 ms later.
+`confirmNativePlacement` waits that long and falls back to the engine's own placement if the
+window never moved. Accessibility ↔ Cocoa conversion goes through `WindowSnapGeometry.flip`,
+whose reference height must be the **primary** display's `maxY` — the topmost display shifts
+every frame by its own height and breaks snapping on secondary displays only.
+
+**Titlebar swipes are a heuristic, and the code says so.** A window's titlebar is not an
+Accessibility concept — `AXTitlebar` and `AXTitleUIElement` are nil on AppKit and Electron
+windows alike — so `WindowGestureTargeting` measures the band from where the system placed the
+window's traffic lights and refuses a gesture that starts on a control the app itself reacts to
+(`AXButton`, `AXTabGroup`, …; `AXScrollArea`/`AXGroup` are deliberately not controls, since
+Electron reports its whole web content as those). Holding **Fn** switches the gesture to
+`SnapGestureZone.pointer`, which skips both tests and acts on the window under the cursor — the
+only way to reach apps that draw their own titlebar. Rationale, measurements, and the
+alternatives that were rejected are in `docs/window-titlebar-gesture-research.md`.
+
+**macOS' own drag-to-edge tiling is surfaced, not reimplemented.** `SystemWindowTilingSetting`
+reads and writes `com.apple.WindowManager` so `WindowManagementDetail` can show the two system
+switches; the first time window management is enabled the edge-drag switch is turned on once
+(tracked by a non-preference flag), and the user's later choice is never overridden.
 
 ### ViewModels
 
@@ -509,7 +574,8 @@ in parallel with quality/notarization, but the final GitHub Release depends on b
 secrets are scoped to the `notarize` job; `contents: write` is scoped to `publish` only.
 R2 permalinks stay on separate channels and must not end in `.dmg`: `https://download.onecat.dev/stable`
 (final) and `https://download.onecat.dev/beta` (prerelease). Each 302s to `Light-Stats-<version>.dmg`.
-A permalink that itself ends in `.dmg` is saved without a version. In-app updates still use GitHub Releases.
+A permalink that itself ends in `.dmg` is saved without a version. In-app updates read the R2
+channel marker first (`latest-stable.json` / `latest-beta.json`) and fall back to GitHub Releases.
 
 ### Tests
 
@@ -539,6 +605,24 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
 - `FindMouseTriggerTests` — shared modifier sequence: double-tap delay/commit, triple-tap
   cancellation and toggle action, cooldown, reset, and key-code mapping. CGEventTap stays out of XCTest.
 - `PresentationPointerServiceTests` — real 112×112 click-through overlay window lifecycle.
+- `WindowSnapGeometryTests` — placement math for halves/quarters/thirds, the center shrink, the
+  titlebar band measured from a window's traffic lights (32/34/46/52pt against a 44pt constant),
+  Accessibility ↔ Cocoa flip (including that a wrong reference height shifts a frame by exactly
+  the height of the display above the primary), display-to-display transfer clamping, and the
+  snap-action → native command mapping.
+- `WindowSnappingServiceTests` — drives the engine's own placement against a real window: halves,
+  quarters and thirds land on the computed frame, maximize/restore round-trips, and placing twice
+  is idempotent. Accessibility self-access needs no permission, so this runs in CI.
+- `DefaultInputSourceTests` — the drift-correction window (inside = correct, outside = the
+  user's `Ctrl+Space` wins, secure input = never), input-source dedup/sort, the unavailable-selection
+  placeholder, a live TIS enumeration guard that non-selectable parent modes stay out of the
+  picker, and a live switching test that posts `didActivateApplicationNotification` and asserts
+  the input source actually moved. **The integration tests briefly change the system input source**
+  (restored on exit) and skip unless both U.S. and WeType are enabled — CI runners have U.S. only.
+- `FinderMenuTemplateTests` — built-in OOXML blanks stay in sync with `script/generate_finder_templates.py`,
+  and custom templates store an independent file copy (name/format/contents), not UTF-8 text.
+- `FinderMenuFileServiceTests` — new-file names, copy/move destinations, and template instantiation
+  against a temporary directory (no live Finder).
 - `LicenseValidatorTests` — offline activation codes: golden fixture pins the wire format
   against `script/license-tool`, plus round-trip, tamper/wrong-key/malformed rejection,
   input normalization, unknown-feature tolerance, payload-version guard.
@@ -549,9 +633,10 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
 ## Default form (zero-intrusion)
 
 The product is "monitoring core + extra tools that are off by default". Every capability
-beyond read-only monitoring (window management, scroll reversal, AI usage, exit-node
-detection) ships **off**. A user who never opts in must not see an entry point, be asked
-for a permission, or pay any tap / collection / network cost.
+beyond read-only monitoring (window management, scroll reversal, Finder menu, default
+input source, display brightness, AI usage, exit-node detection) ships **off**. A user
+who never opts in must not see an entry point, be asked for a permission, or pay any
+tap / collection / network cost.
 
 Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
 
@@ -563,6 +648,8 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   (scroll reversal, window management, Find My Mouse, cleaning mode).
 - **No `CGEventTap`.** scroll / keyboard / window / find-mouse taps are all off by default;
   nothing is installed until the matching switch is turned on.
+- **No input-source observer.** `defaultInputSourceEnabled` is off, so `DefaultInputSourceService`
+  never registers for app activation and never calls `TISSelectInputSource` on a clean install.
 - **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
   alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
 - **No privileged helper.** The app bundle contains no privileged executable, LaunchDaemon,
@@ -584,5 +671,9 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
   reintroduce Bento-style plates as “reading boards”.
 - No plugin system — every metric is a built-in Service.
 - No privileged helper or battery charge-control feature.
+- Not an input method and not an input-source manager box — it only selects among input sources
+  macOS already has, and only for one global default. No per-app rules, no website rules, no indicator.
 - No remote telemetry — the app phones home only for user-initiated update checks and opt-in exit-node detection.
-- No Intel-only or pre-macOS-14 support — Apple Silicon is the primary target.
+- No Intel support — `ARCHS = arm64`, so this ships Apple Silicon only, and the private-API display
+  (DDC) code has no x86_64 fallback. Re-adding Intel is a documented multi-file operation, not a
+  one-line revert: read `docs/intel-support.md` before touching it.

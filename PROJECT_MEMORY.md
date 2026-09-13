@@ -1,5 +1,29 @@
 # Project Memory
 
+## 默认输入法只纠正切换后的漂移，不是输入法管理器 · 2026-09-13 · grok
+
+产品边界：只在系统已有的输入源里选一个全局默认，切换 App 后把输入源拉回去。不是输入法，也不是输入法管理器——没有按 App、按网站的规则，没有菜单栏指示器，不读网页，不改系统输入法列表。
+
+实现约束：`DefaultInputSourceService` 是 Shape C 减 tap（`start()`/`stop()` 管 `NSWorkspace.didActivateApplicationNotification`），`defaultInputSourceEnabled` 默认关。不需要辅助功能权限。唯一决策在纯 `DefaultInputSourcePolicy`：**只在 App 激活后 1.2 秒窗口内纠正漂移**，窗口外的 `Ctrl+Space` 和任何安全输入框都不碰。未选定 `defaultInputSourceID` 时开关开着也视为未运行，避免误切到用户没挑过的源。已选源被系统移除时，设置选择器要留占位项，不能显示空白。
+
+## 窗口吸附原生优先，标题栏手势是启发式 · 2026-09-13 · grok
+
+`WindowSnappingService` 先按 `AXIdentifier`（`_zoomLeft:`、`_zoomFill:` 等，从不看本地化标题）按下目标 App 窗口菜单里 macOS 注入的分屏项，只有系统没有的动作（三分之一、跨显示器、最小化）才走 `WindowSnapGeometry`。系统按键在非前台 App 上会报成功却什么都不做，动画是真的在挪窗口，所以 `confirmNativePlacement` 要等约 600 ms 再读回，没动就回退到自有放置。Accessibility ↔ Cocoa 翻转的参考高度必须是**主屏** `maxY`。
+
+标题栏在 AX 层不存在（`AXTitlebar` / `AXTitleUIElement` 在 AppKit 和 Electron 上都是 nil）。`WindowGestureTargeting` 从红绿灯位置现算顶带，并拒绝在应用自己会响应的控件上起手（`AXButton`、`AXTabGroup` 等；`AXScrollArea`/`AXGroup` 故意不算控件）。按住 **Fn** 切到 `SnapGestureZone.pointer`，跳过这两项测试，作用在指针下的窗口——这是覆盖自绘标题栏 App 的唯一通道。细节与否决方案见 `docs/window-titlebar-gesture-research.md`。
+
+设置页露出 macOS 自己的 `com.apple.WindowManager` 边缘拖拽开关，不重做一套。第一次打开窗口管理时把边缘拖拽打开一次（非偏好 flag 跟踪），之后不再覆盖用户选择。
+
+## 右键菜单以常用功能替代独立工具，不新增剪切 · 2026-09-12 12:12 · Codex
+
+用户明确的产品目标是：用少量高频功能覆盖独立右键菜单软件的大部分日常需求，让 Light Stats 用户不必再装一个同类工具。「20% 功能覆盖 80% 需求」是选功能的原则，不是已经测得的使用比例。不能把功能收缩成只面向开发者的三项快捷操作，也不能仅因为访达有其他操作途径，就砍掉移动到、复制到、常用目录或指定 App 打开。
+
+核心范围是新建文件（含 Word、Excel、PowerPoint 和用户自己的文件模板）、移动/复制到常用或临时位置、常用目录直达、拷贝路径/名称、指定终端或 App 打开、隐藏文件显示。菜单按选中项/空白处区分，并允许关闭不用的项目。用户明确排除「剪切」：macOS 已有 Command+C、Command+Option+V，无需在本功能里重做。翻译、二维码、换图标、重复文件清理等扩展不属于当前核心范围。
+
+自定义模板必须保存独立文件副本并保留原名、格式和内容，不能只把文件按 UTF-8 读成字符串。原文件移动/删除不应破坏模板；旧版 JSON 内联文本模板仍须兼容。内置办公模板为仓库内的最小 OOXML 文件，由 `python3 script/generate_finder_templates.py` 确定性生成，`--check` 可检查源与产物一致性，不新增运行时依赖。
+
+位置覆盖仍遵循 FinderSync 能力：注册主目录、外接卷和用户收藏的其他目录，去除嵌套根。不能将注册范围等同于所有云盘目录均可用；其他同步扩展的接管与系统注册状态仍需真实 Finder 验证。
+
 ## 故障诊断与性能记录永久分离 · 2026-09-08 17:38 · Codex
 
 产品决定：故障日志始终开启，不再提供「关 / 仅错误 / 完整」等级。减少数量只能依靠事件语义：连续指标按时间采样，能力与采集 probe 在首次观察、状态变化时立即写入，状态不变只保留稀疏心跳；任何缺失值都必须在数据源边界记录稳定 `reasonCode`、来源及必要的候选键/类型/拒绝原因，不能到 ViewModel 才把失败折叠成无语义的 `nil`。

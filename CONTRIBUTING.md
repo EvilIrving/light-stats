@@ -4,7 +4,7 @@
 
 | Dependency | Version | Check |
 |-----------|---------|-------|
-| macOS | 14+ | System Settings → About |
+| macOS | 14+ (Apple Silicon) | System Settings → About |
 | Xcode | 16+ | `xcodebuild -version` |
 | Swift | 5.9+ | `swift --version` |
 | SwiftLint | latest | `brew install swiftlint` |
@@ -40,9 +40,9 @@ The app runs as a menu bar agent (`LSUIElement = YES`). After building, force-qu
 Run through these before declaring a change done:
 
 1. No `print()` / `NSLog()` — use `import OSLog` + `let log = Logger(...)`
-2. Line ≤ 140 chars
-3. Function ≤ 80 lines — extract helpers if approaching
-4. File ≤ 500 lines — extract new types/files if approaching
+2. Line ≤ 140 chars (comments and URLs exempt)
+3. Function ≤ 90 lines — extract helpers if approaching
+4. File ≤ 800 lines — extract new types/files if approaching
 5. No force-unwrap (`!`) unless trivially provable + commented
 6. `var x: Type?` not `var x: Type? = nil`
 7. `for x in xs where cond {}` not `for x in xs { if cond {} }`

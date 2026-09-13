@@ -241,7 +241,7 @@
         "@type": "SoftwareApplication",
         "name": "Light Stats",
         "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "macOS 14.0 or later",
+        "operatingSystem": "macOS 14.0 or later, Apple Silicon",
         "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. No telemetry and zero outbound requests by default.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://download.onecat.dev/stable",
@@ -277,7 +277,7 @@
             "name": "Which macOS versions does Light Stats support?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Light Stats supports macOS 14 or later, with Apple Silicon as the primary target."
+              "text": "Light Stats supports macOS 14 or later on Apple Silicon. Intel Macs are not supported."
             }
           },
           {
@@ -285,7 +285,7 @@
             "name": "How do Find My Mouse and Presentation Pointer work?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "In the next release, enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled."
+              "text": "Enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled."
             }
           },
           {
@@ -347,7 +347,7 @@
         <section data-panel="landing">
           <div class="hero">
             <div>
-              <div class="eyebrow reveal">Free · Open source · macOS 14+</div>
+              <div class="eyebrow reveal">Free · Open source · macOS 14+ · Apple Silicon</div>
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
               <p class="lede reveal d2">Live pressure signals folded into one health score, with optional AI, network, and Finder context. No telemetry and no outbound requests unless you use or enable a network feature.</p>
               <div class="actions reveal d3">
@@ -362,7 +362,7 @@
                     View on GitHub
                   </a>
                 </div>
-                <span class="meta">MIT · macOS 14+ · no dependencies</span>
+                <span class="meta">MIT · macOS 14+ · Apple Silicon · no dependencies</span>
               </div>
             </div>
             <div class="hero-media reveal d2">
@@ -506,14 +506,13 @@
               <div class="idx">04 / Finder</div>
               <div>
                 <h3>Developer actions where the files are</h3>
-                <p>The optional Finder extension can copy paths and names, open a chosen terminal, create files from curated templates, move or copy selections, open them with configured apps, toggle hidden state, and start cmux windows or workspaces.</p>
+                <p>The optional Finder extension can copy paths and names, create text, code, Word, Excel, and PowerPoint files, import your own templates, move or copy to favorite folders, open a chosen terminal or app, hide or unhide items, and start cmux windows or workspaces.</p>
               </div>
             </div>
 
             <div class="feature">
               <div class="idx">05 / Pointer</div>
               <div>
-                <span class="tag">Next release</span>
                 <h3>Find the pointer, then keep it visible</h3>
                 <p>Record the trigger you prefer: keep the default left Control, choose a left or right modifier, use Fn or an F-key, press a regular key, or record a key combination. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through presentation halo.</p>
                 <p>Find My Mouse is off by default. Its Accessibility event tap starts only after you enable the feature and stops when you turn it off.</p>
@@ -524,7 +523,7 @@
               <div class="idx">06 / Defaults</div>
               <div>
                 <h3>Nothing extra runs until you ask</h3>
-                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, the Beta update channel, Finder actions, Find My Mouse, window and scroll event taps, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
+                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, the Beta update channel, Finder actions, Find My Mouse, window and scroll event taps, default input source, display brightness, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
               </div>
             </div>
 
@@ -541,6 +540,25 @@
         <!-- ══════════ CHANGELOG ══════════ -->
         <!-- Stable releases only. New official versions go at the top. Do not list betas. -->
         <section data-panel="changelog" class="prose col" hidden>
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.2</h2>
+              <span class="log-date">4 Sep 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.2.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>Find My Mouse: record your trigger; double-tap spotlights the pointer, triple-tap toggles a presentation halo.</li>
+              <li>Offline activation codes and a lifetime Pro gift for anyone who launched during the gift period.</li>
+              <li>In-app updates read the Cloudflare R2 channel marker, with GitHub Releases as fallback.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+              <li>Battery charge limiting and its privileged helper are gone; battery monitoring stays read-only.</li>
+              <li>Health score down-weights LoadAvg. Codex shows as ChatGPT.</li>
+            </ul>
+          </article>
+
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.1</h2>
@@ -822,13 +840,16 @@
           <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
 
           <h2>Update checks</h2>
-          <p>A manual update check, or the off-by-default automatic update setting, contacts GitHub Releases. The update channel can be Stable (final releases only) or Beta (also considers prereleases such as <code>v1.9.0-beta.N</code>); Beta is off by default. Downloaded updates must pass codesign, notarization, and Team ID verification before installation.</p>
+          <p>A manual update check, or the off-by-default automatic update setting, reads the Cloudflare R2 channel marker and falls back to GitHub Releases. The update channel can be Stable (final releases only) or Beta (also considers prereleases such as <code>v1.9.0-beta.N</code>); Beta is off by default. Downloaded updates must pass SHA-256 (R2), codesign, notarization, and Team ID verification before installation.</p>
 
-          <h2>Local diagnostic logs</h2>
-          <p>The app can write structured diagnostic logs to disk under its support directory (and to Unified Logging). Levels are Off, Errors only, or Full (default Full). Logs are rotated, retained for a limited window, redacted for sensitive fields, and never uploaded to the Light Stats developer.</p>
+          <h2>Local diagnostic journal</h2>
+          <p>A structured fault journal is always written locally under the app's support directory (and to Unified Logging). There is no Off / Errors / Full switch. Continuous metrics are time-throttled; capability and probe records write on first observation and on change. You can export a diagnostic ZIP (system context, hardware probes, 7 days of logs, 50 MB cap). Serial numbers, credentials, usernames, and home paths are redacted. Logs are never uploaded to the Light Stats developer.</p>
+
+          <h2>Performance recording</h2>
+          <p>A separate, off-by-default 48-hour session records this app's CPU, memory, wakeup, and disk plus companion system load. It uses its own schema and directory, is never mixed into the diagnostic journal, and is not included in the exported report.</p>
 
           <h2>Third parties</h2>
-          <p>No analytics, crash reporting, advertising, or third-party SDKs. Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
+          <p>No analytics, crash reporting, advertising, or third-party SDKs. Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, Cloudflare R2, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
 
           <h2>Open source</h2>
           <p>The full source is on <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">GitHub</a>. You can inspect exactly what the app does, including every network call.</p>
@@ -836,7 +857,7 @@
           <h2>Changes</h2>
           <p>Any change to this policy will appear here and in the app's release notes. Data handling will never change silently.</p>
 
-          <p class="updated">Last updated: August 18, 2026</p>
+          <p class="updated">Last updated: September 13, 2026</p>
         </section>
 
         <!-- ══════════ SUPPORT ══════════ -->
@@ -868,7 +889,7 @@
                 </div>
                 <div>
                   <dt>Which macOS versions does Light Stats support?</dt>
-                  <dd>Light Stats supports macOS 14 or later, with Apple Silicon as the primary target.</dd>
+                  <dd>Light Stats supports macOS 14 or later on Apple Silicon. Intel Macs are not supported.</dd>
                 </div>
                 <div>
                   <dt>Does Light Stats send system metrics anywhere?</dt>
@@ -876,7 +897,7 @@
                 </div>
                 <div>
                   <dt>How do Find My Mouse and Presentation Pointer work?</dt>
-                  <dd>In the next release, enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled.</dd>
+                  <dd>Enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled.</dd>
                 </div>
                 <div>
                   <dt>How do I change what shows in the menu bar?</dt>

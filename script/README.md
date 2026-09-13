@@ -14,6 +14,7 @@
 | `download-redirect/` | Cloudflare Worker：`/stable` 与 `/beta` 302 到带版本号的 DMG |
 | `add_test_target.rb` | pbxproj 重建后重新接线 XCTest target（`ruby script/add_test_target.rb`） |
 | `add_finder_extension_target.rb` | pbxproj 重建后重新接线 FinderSync extension target |
+| `generate_finder_templates.py` | 用 Python 标准库生成 Word / Excel / PowerPoint 空白模板；`python3 script/generate_finder_templates.py --check` 检查产物一致性 |
 | `stress-cpu.sh [秒数]` | 打满所有 CPU 核心（压测健康分） |
 | `stress-memory.sh [GB] [秒数]` | 分配并触碰大块内存（压测健康分） |
 | `license-tool/` | 离线激活码发码器（SwiftPM 包：`generate-keypair` / `issue` / `verify`），私钥不进 repo |

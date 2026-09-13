@@ -1,17 +1,17 @@
 # Growth Context
 
-*Last updated: 2026-08-30*
+*Last updated: 2026-09-13*
 
 ## Product
 - **Name:** Light Stats
 - **One-liner:** Native macOS menu bar instrument for live system pressure, with optional developer tools and four visual themes.
-- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates, window placement, Find My Mouse and a presentation pointer with a user-recorded trigger, mouse and trackpad scroll controls, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Classic, Golden Hour, Amber, Ink Night), with Ink Night selected on a clean install; Settings stays a system-white tool panel. Local privacy-aware diagnostic logging is optional. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
+- **What it does:** Light Stats keeps a 0-100 pressure score and live CPU, GPU, memory, disk, network, battery, thermal, process, and short-term trend signals in the menu bar and popover. Optional tools add Claude Code, Codex, and Gemini usage, proxy and exit-node context, Finder right-click actions and file templates (including Word / Excel / PowerPoint and user templates), native-first window placement, a default input source, hardware display brightness, Find My Mouse and a presentation pointer with a user-recorded trigger, mouse and trackpad scroll controls, display keep-awake, keyboard cleaning mode, launch at login, and verified self-update (Stable or Beta channel). The popover and related product surfaces support four themes (Classic, Golden Hour, Amber, Ink Night), with Ink Night selected on a clean install; Settings stays a system-white tool panel. A local diagnostic journal is always on and user-exportable; a 48-hour performance recording is a separate opt-in. It is a compact status instrument for developers and power users, not a full Activity Monitor replacement.
 - **Category:** macOS menu bar system and developer-workflow monitor
 
 ## Platform & distribution
-- **Platform / requirements:** macOS 14+, Swift 5.9+, Xcode 16+ recommended for development. Apple Silicon is the primary target.
-- **How it ships / installs:** GitHub Releases DMG (signed and notarized).
-- **Updates:** Manual checks and opt-in automatic checks use GitHub Releases. Channel choice: Stable (final only) or Beta (includes prereleases). Installation downloads the DMG, verifies codesign, notarization, and Team ID, then replaces the running app.
+- **Platform / requirements:** macOS 14+, Apple Silicon only. Swift 5.9+, Xcode 16+ recommended for development. Intel Macs are not supported.
+- **How it ships / installs:** Signed and notarized DMG from `https://download.onecat.dev/stable` (GitHub Releases as a secondary source).
+- **Updates:** Manual checks and opt-in automatic checks read the Cloudflare R2 channel marker, falling back to GitHub Releases. Channel choice: Stable (final only) or Beta (includes prereleases). Installation downloads the DMG, verifies SHA-256 (R2), codesign, notarization, and Team ID, then replaces the running app.
 - **Repo:** https://github.com/EvilIrving/light-stats
 - **Site:** https://evilirving.github.io/light-stats/
 
@@ -25,10 +25,10 @@
 ## Differentiators (ranked, all true)
 1. **Pressure score instead of raw capacity alerts:** The 0-100 health score focuses on responsiveness pressure using CPU, memory pressure and swap, load, temperature, GPU, and power or disk I/O.
 2. **Network truth beyond throughput:** Detects local proxy configuration and tunnel interfaces without external requests, with optional exit-node lookup for public IP, ASN, ISP, and location.
-3. **Developer context in one instrument:** Displays Claude Code, Codex, and Gemini subscription usage, and adds an opt-in Finder menu for terminal, type-aware file templates, copy, move, and open-with workflows.
+3. **Developer context in one instrument:** Displays Claude Code, Codex, and Gemini subscription usage, and adds an opt-in Finder menu for terminal, type-aware and user file templates, copy, move, and open-with workflows.
 4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, zero third-party runtime dependencies (including template-tinted SVG icons in-bundle).
-5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel are all disabled by default, so a clean install makes no outbound request. Diagnostic logs (default Full, switchable to Errors or Off) stay local with redaction and are never uploaded.
-6. **Opt-in Mac utilities:** Window placement, Find My Mouse and its presentation pointer, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
+5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel are all disabled by default, so a clean install makes no outbound request. The diagnostic journal stays local with redaction and is never uploaded; a 48-hour performance recording is a separate opt-in.
+6. **Opt-in Mac utilities:** Window placement, default input source, display brightness, Find My Mouse and its presentation pointer, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
 7. **Selectable instrument chrome:** Four themes (Classic, Golden Hour, Amber, Ink Night) on product surfaces; the three dynamic themes provide grain and light-dynamics controls; Settings remains a white tool panel.
 
 ## Competitors / alternatives
@@ -46,9 +46,9 @@
 ## Proof points (REAL only)
 - Public GitHub repository.
 - MIT License file exists in the repository.
-- Latest stable GitHub release observed on 2026-08-18: v1.9.0.
-- Latest tagged prerelease observed on 2026-08-18: v1.9.1-beta.2.
-- Unreleased working-tree changes observed on 2026-08-18: visible theme lineup is Classic / Golden Hour / Amber / Ink Night (raw keys glass/film/bar/noir), Ink Night remains the clean-install default, Bento and Ash Veil are removed, the popover uses one instrument layout, Settings has six direct destinations, Keep Awake moved to the popover toolbar, input controls add optional trackpad/Magic Mouse reversal and fixed-line wheel scrolling, and maximize/center gain global shortcuts.
+- Latest stable GitHub release observed on 2026-09-04: v1.9.2.
+- Latest tagged prerelease observed on 2026-09-04: v1.9.2-beta.7.
+- Unreleased working-tree changes observed on 2026-09-13: Apple Silicon only (`ARCHS = arm64`); Finder menu adds Word/Excel/PowerPoint blanks and user file templates, move/copy to favorites, and hide/show; window management prefers macOS' own tiling then falls back, surfaces system edge-drag, and uses a traffic-light titlebar heuristic with Fn pointer snap; optional default input source after app switch; diagnostic journal always on with user-exportable ZIP, performance recording kept separate.
 - GitHub Actions build and release workflows exist.
 - Screenshots under `docs/screenshots/{classic,golden-hour,amber,ink-night}/` (overview + cleanup each, PNG).
 - No adoption, testimonial, or benchmark claim is approved for marketing copy; any public count must be rechecked immediately before use.
