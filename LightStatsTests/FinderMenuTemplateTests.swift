@@ -14,6 +14,43 @@ import XCTest
 
 final class FinderMenuTemplateTests: XCTestCase {
 
+    func testHiddenActionsSurviveRoundTripWithoutAffectingOtherActions() throws {
+        let config = FinderMenuConfig(hiddenActionIDs: [FinderMenuAction.copyName.rawValue])
+        let restored = try JSONDecoder().decode(FinderMenuConfig.self, from: JSONEncoder().encode(config))
+        XCTAssertFalse(restored.isActionEnabled(.copyName))
+        XCTAssertTrue(restored.isActionEnabled(.copyTo))
+        XCTAssertTrue(restored.isActionEnabled(.openDirectory))
+    }
+
+    func testOldConfigKeepsActionsEnabled() throws {
+        let config = try JSONDecoder().decode(FinderMenuConfig.self, from: Data("{}".utf8))
+        XCTAssertTrue(FinderMenuAction.configurableActions.allSatisfy { config.isActionEnabled($0) })
+        XCTAssertFalse(FinderMenuAction.allCases.contains { $0.rawValue.lowercased().contains("cut") })
+    }
+
+    func testMonitoringRootsIncludeExternalVolumesAndFavoritesWithoutNesting() {
+        let roots = FinderMenuShared.monitoringRoots(
+            home: "/Users/example", favorites: ["/Users/example/code", "/opt/projects", "/opt/projects/sub", "/"],
+            volumes: ["/", "/Volumes/Work", "/Volumes/Work", "/System/Volumes/Data"]
+        )
+        XCTAssertEqual(Set(roots.map(\.path)), ["/Users/example", "/opt/projects", "/Volumes/Work"])
+    }
+
+    func testMonitoringRootPrefixDoesNotSwallowSibling() {
+        let roots = FinderMenuShared.monitoringRoots(home: "/Users/example", favorites: ["/Users/example-two"], volumes: [])
+        XCTAssertEqual(roots.count, 2)
+    }
+
+    func testRequestsKeepIdentityAcrossDeliveryRetriesAndDecodeOldRequests() throws {
+        let request = FinderMenuRequest(action: .copyTo, paths: ["/test"], container: "/")
+        let data = try XCTUnwrap(request.encoded())
+        XCTAssertEqual(FinderMenuRequest.decode(data)?.requestID, request.requestID)
+        let old = Data(#"{"action":"copyPath","paths":["/test"]}"#.utf8)
+        let decoded = try XCTUnwrap(FinderMenuRequest.decode(old))
+        XCTAssertNil(decoded.requestID)
+        XCTAssertEqual(decoded.action, .copyPath)
+    }
+
     func testNilEnabledUsesDefaultSubset() {
         let config = FinderMenuConfig()   // enabledTemplateIDs == nil
         let ids = config.resolvedTemplates().map(\.id)

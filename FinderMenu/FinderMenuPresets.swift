@@ -75,6 +75,12 @@ nonisolated enum FinderMenuPresets {
     /// `defaultBaseName` 按类型给合理起点名（重名时由宿主自增：main 2.py）。
     static let fileTemplates: [FileTemplate] = [
         // 文档与文本
+        FileTemplate(id: "docx", title: "Word (.docx)", fileExtension: "docx",
+                     defaultBaseName: "Document", content: "", category: .document),
+        FileTemplate(id: "xlsx", title: "Excel (.xlsx)", fileExtension: "xlsx",
+                     defaultBaseName: "Workbook", content: "", category: .document),
+        FileTemplate(id: "pptx", title: "PowerPoint (.pptx)", fileExtension: "pptx",
+                     defaultBaseName: "Presentation", content: "", category: .document),
         FileTemplate(id: "txt", title: "Text (.txt)", fileExtension: "txt",
                      defaultBaseName: "Document", content: "", category: .document),
         FileTemplate(id: "md", title: "Markdown (.md)", fileExtension: "md",
@@ -160,6 +166,17 @@ nonisolated enum FinderMenuPresets {
         FileTemplate(id: "sql", title: "SQL (.sql)", fileExtension: "sql",
                      defaultBaseName: "query", content: "", category: .code)
     ]
+
+    static func bundledFileName(for id: String) -> String? {
+        switch id {
+        case "docx", "xlsx", "pptx": return "FinderBlank.\(id)"
+        default: return nil
+        }
+    }
+
+    static func templateTitle(id: String, fallback: String) -> String {
+        FinderMenuShared.label(for: "template.\(id)") ?? fallback
+    }
 
     /// 自定义模板或未知扩展的兜底主文件名（按扩展名猜用途）。
     static func defaultBaseName(forExtension ext: String) -> String {

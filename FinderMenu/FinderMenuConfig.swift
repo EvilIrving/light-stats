@@ -23,19 +23,22 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
     /// `nil` = 未设置，沿用 `FinderMenuPresets.defaultEnabledTemplateIDs`；
     /// 非 nil（含空数组）= 用户显式选择，空数组即「一个内置类型都不显示」。
     var enabledTemplateIDs: [String]?
+    var hiddenActionIDs: [String]
 
     init(favoriteDirectories: [DirectoryEntry] = [],
          openWithApps: [AppEntry] = [],
          templates: [TemplateEntry] = [],
          terminalID: String = FinderMenuPresets.defaultTerminalID,
          showCmuxActions: Bool = false,
-         enabledTemplateIDs: [String]? = nil) {
+         enabledTemplateIDs: [String]? = nil,
+         hiddenActionIDs: [String] = []) {
         self.favoriteDirectories = favoriteDirectories
         self.openWithApps = openWithApps
         self.templates = templates
         self.terminalID = FinderMenuPresets.normalizeTerminalID(terminalID)
         self.showCmuxActions = showCmuxActions
         self.enabledTemplateIDs = enabledTemplateIDs
+        self.hiddenActionIDs = hiddenActionIDs
     }
 
     init(from decoder: Decoder) throws {
@@ -47,6 +50,7 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
         terminalID = FinderMenuPresets.normalizeTerminalID(decodedTerminalID)
         showCmuxActions = try container.decodeIfPresent(Bool.self, forKey: .showCmuxActions) ?? false
         enabledTemplateIDs = try container.decodeIfPresent([String].self, forKey: .enabledTemplateIDs)
+        hiddenActionIDs = try container.decodeIfPresent([String].self, forKey: .hiddenActionIDs) ?? []
     }
 
     struct DirectoryEntry: Codable, Sendable, Identifiable {
@@ -68,13 +72,16 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
         var content: String
         /// 新建时的默认主文件名（不含扩展名）。旧 JSON 缺失时按扩展名推断。
         var defaultBaseName: String
+        /// Imported files live in the host's template library, outside shared defaults.
+        var storedFileName: String?
 
         init(id: String, title: String, fileExtension: String, content: String,
-             defaultBaseName: String? = nil) {
+             defaultBaseName: String? = nil, storedFileName: String? = nil) {
             self.id = id
             self.title = title
             self.fileExtension = fileExtension
             self.content = content
+            self.storedFileName = storedFileName
             self.defaultBaseName = defaultBaseName
                 ?? FinderMenuPresets.defaultBaseName(forExtension: fileExtension)
         }
@@ -84,7 +91,8 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
             id = try container.decode(String.self, forKey: .id)
             title = try container.decode(String.self, forKey: .title)
             fileExtension = try container.decode(String.self, forKey: .fileExtension)
-            content = try container.decode(String.self, forKey: .content)
+            content = try container.decodeIfPresent(String.self, forKey: .content) ?? ""
+            storedFileName = try container.decodeIfPresent(String.self, forKey: .storedFileName)
             defaultBaseName = try container.decodeIfPresent(String.self, forKey: .defaultBaseName)
                 ?? FinderMenuPresets.defaultBaseName(forExtension: fileExtension)
         }
@@ -106,6 +114,10 @@ nonisolated struct FinderMenuConfig: Codable, Sendable {
                 )
             }
         return presetEntries + templates
+    }
+
+    func isActionEnabled(_ action: FinderMenuAction) -> Bool {
+        !hiddenActionIDs.contains(action.rawValue)
     }
 
     static let empty = FinderMenuConfig()

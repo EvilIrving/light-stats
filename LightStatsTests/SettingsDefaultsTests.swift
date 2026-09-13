@@ -70,6 +70,13 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(freshSettings().scrollLines, 3)
     }
 
+    func testFinderMenuDefaultsOff() {
+        let originalEnabled = FinderMenuShared.isEnabled()
+        defer { FinderMenuShared.setEnabled(originalEnabled) }
+        XCTAssertFalse(freshSettings().finderMenuEnabled)
+        XCTAssertFalse(FinderMenuShared.isEnabled())
+    }
+
     func testWindowManagementDefaultsOff() {
         XCTAssertFalse(freshSettings().windowManagementEnabled)
     }
@@ -90,6 +97,32 @@ final class SettingsDefaultsTests: XCTestCase {
 
     func testActivationCodeDefaultsNil() {
         XCTAssertNil(freshSettings().activationCode)
+    }
+
+    func testDefaultInputSourceDefaultsOff() {
+        let settings = freshSettings()
+        XCTAssertFalse(settings.defaultInputSourceEnabled)
+        // 未选定目标：开关即使被打开也不应该盲目切到一个用户没挑过的输入法。
+        XCTAssertNil(settings.defaultInputSourceID)
+    }
+
+    func testDefaultInputSourcePersistsSelection() {
+        cleanDefaults.set(true, forKey: "settings.defaultInputSourceEnabled")
+        cleanDefaults.set("com.tencent.inputmethod.wetype.pinyin", forKey: "settings.defaultInputSourceID")
+
+        let settings = freshSettings()
+        XCTAssertTrue(settings.defaultInputSourceEnabled)
+        XCTAssertEqual(settings.defaultInputSourceID, "com.tencent.inputmethod.wetype.pinyin")
+    }
+
+    /// 清空选择必须删除键而不是写入 NSNull（`set(_:forKey:)` 会抛 NSInvalidArgumentException）。
+    func testClearingDefaultInputSourceRemovesTheKey() {
+        let settings = freshSettings()
+        settings.defaultInputSourceID = "com.apple.keylayout.ABC"
+        XCTAssertEqual(cleanDefaults.string(forKey: "settings.defaultInputSourceID"), "com.apple.keylayout.ABC")
+
+        settings.defaultInputSourceID = nil
+        XCTAssertNil(cleanDefaults.string(forKey: "settings.defaultInputSourceID"))
     }
 
     // MARK: - Permanent Pro gift

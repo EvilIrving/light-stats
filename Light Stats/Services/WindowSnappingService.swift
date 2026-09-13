@@ -10,75 +10,202 @@ import AppKit
 import ApplicationServices
 import OSLog
 
-struct WindowSnapHotKey: Sendable {
-    var keyCode: UInt32
-    var modifiers: UInt32
-    var action: WindowSnapAction
-}
-
-enum WindowSnapAction: Sendable, Hashable {
-    case leftHalf
-    case rightHalf
-    case topHalf
-    case bottomHalf
-    case topLeft
-    case topRight
-    case bottomLeft
-    case bottomRight
-    case leftThird
-    case leftTwoThirds
-    case centerThird
-    case rightTwoThirds
-    case rightThird
-    case nextDisplay
-    case previousDisplay
-    case maximize
-    case center
-    case restore
-    case minimize
-}
-
+/// Placement engine for window snapping.
+///
+/// macOS ships its own tiling — the items the system adds to every app's Window menu — and that
+/// implementation always wins: it owns the per-display visible area, the animation, and the
+/// behavior macOS already documents to users. This engine drives the items that match our actions,
+/// and only places a window itself for what the system has no command for (thirds, display moves,
+/// minimize) or when the native item is unavailable.
 final class WindowSnappingService {
-    private struct WindowIdentity: Hashable {
+
+    /// What became of one placement attempt. Internal so tests can assert on the path taken.
+    enum SnapOutcome {
+        /// The window moved. The label names the path that produced it, for diagnostics.
+        case moved(String)
+        /// Nothing moved. The label is a stable reason code.
+        case refused(String)
+
+        var succeeded: Bool {
+            switch self {
+            case .moved: return true
+            case .refused: return false
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .moved(let path): return path
+            case .refused(let reason): return reason
+            }
+        }
+    }
+
+    /// Windows are remembered by their Accessibility element. `AXWindowNumber` would be the natural
+    /// key but most apps never expose it (it reads as 0), and collapsing to (pid, title) makes two
+    /// same-titled windows of one app share a single saved frame — which is how "restore" ends up
+    /// resizing the wrong window.
+    private struct WindowKey: Hashable {
         var processID: pid_t
-        var windowNumber: Int
-        var title: String
+        var element: AXUIElement
+
+        static func == (lhs: WindowKey, rhs: WindowKey) -> Bool {
+            lhs.processID == rhs.processID && CFEqual(lhs.element, rhs.element)
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(processID)
+            hasher.combine(CFHash(element))
+        }
     }
 
     private let logger = AppLogger(category: "WindowSnapping")
-    private var savedFrames: [WindowIdentity: CGRect] = [:]
+    private let nativeTiling = NativeWindowTilingService()
+    private let targeting = WindowGestureTargeting()
+    private let stateLock = NSLock()
+    private var savedFrames: [WindowKey: CGRect] = [:]
+
+    // MARK: - Entry points
 
     func checkPermission(promptIfNeeded: Bool) -> Bool {
         AccessibilityPermission.isTrusted(prompt: promptIfNeeded)
     }
 
+    /// Snaps the frontmost app's focused window, as the global shortcuts do.
     func perform(_ action: WindowSnapAction) {
         recordRequest(action)
-        guard checkPermission(promptIfNeeded: false) else { return recordResult(action, success: false, reason: "permission") }
-        guard let window = focusedWindow() else { return recordResult(action, success: false, reason: "focusedWindow") }
-        recordResult(action, success: perform(action, on: window))
+        guard checkPermission(promptIfNeeded: false) else {
+            return recordResult(action, success: false, reason: "permission")
+        }
+        guard let processID = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              let window = window(forApplication: processID) else {
+            return recordResult(action, success: false, reason: "focusedWindow")
+        }
+        perform(action, on: window, processID: processID)
     }
 
-    func perform(_ action: WindowSnapAction, at axPoint: CGPoint) {
+    /// Snaps the window under a titlebar point, as the swipe gestures do.
+    ///
+    /// `zone` decides what counts as a valid start: the window's titlebar band (default) or simply
+    /// the window under the pointer, which is the escape hatch for apps that draw their own titlebar.
+    func perform(_ action: WindowSnapAction, at axPoint: CGPoint, zone: SnapGestureZone) {
+        recordRequest(action, zone: zone)
+        guard checkPermission(promptIfNeeded: false) else {
+            return recordResult(action, success: false, reason: "permission")
+        }
+
+        let target = targeting.target(at: axPoint, zone: zone)
+        if let rejection = target.rejection {
+            return recordResult(action, success: false, reason: rejection)
+        }
+        guard let window = target.window, let processID = processIdentifier(of: window) else {
+            return recordResult(action, success: false, reason: "noWindow")
+        }
+        perform(action, on: window, processID: processID)
+    }
+
+    /// Snaps a window of `processID`, as the menu bar icon does.
+    ///
+    /// Opening our own status item menu already took frontmost status away from the app the user
+    /// was working in, so the caller passes the app it saw before the menu opened; frontmost status
+    /// is handed back before anything native runs.
+    func perform(_ action: WindowSnapAction, forApplication processID: pid_t) {
         recordRequest(action)
-        guard checkPermission(promptIfNeeded: false) else { return recordResult(action, success: false, reason: "permission") }
-        guard let window = titlebarWindow(at: axPoint) else { return recordResult(action, success: false, reason: "titlebarWindow") }
-        recordResult(action, success: perform(action, on: window))
+        guard checkPermission(promptIfNeeded: false) else {
+            return recordResult(action, success: false, reason: "permission")
+        }
+        guard let window = window(forApplication: processID) else {
+            return recordResult(action, success: false, reason: "focusedWindow")
+        }
+        _ = nativeTiling.activate(processID)
+        perform(action, on: window, processID: processID)
     }
 
     func canPerform(_ action: WindowSnapAction) -> Bool {
-        guard checkPermission(promptIfNeeded: false), let window = focusedWindow() else { return false }
-        return canPerform(action, on: window)
+        guard checkPermission(promptIfNeeded: false),
+              let processID = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return false }
+        return canPerform(action, forApplication: processID)
     }
 
-    func previewFrame(for action: WindowSnapAction, at axPoint: CGPoint) -> CGRect? {
-        guard checkPermission(promptIfNeeded: false), let window = titlebarWindow(at: axPoint) else { return nil }
-        guard canPerform(action, on: window) else { return nil }
+    func canPerform(_ action: WindowSnapAction, forApplication processID: pid_t) -> Bool {
+        guard checkPermission(promptIfNeeded: false),
+              let window = window(forApplication: processID) else { return false }
+        return canPerform(action, on: window, processID: processID)
+    }
+
+    func previewFrame(for action: WindowSnapAction, at axPoint: CGPoint, zone: SnapGestureZone) -> CGRect? {
+        guard checkPermission(promptIfNeeded: false) else { return nil }
+        let target = targeting.target(at: axPoint, zone: zone)
+        guard let window = target.window, target.rejection == nil else { return nil }
         return previewFrame(for: action, on: window)
     }
 
-    private func perform(_ action: WindowSnapAction, on window: AXUIElement) -> Bool {
-        guard canPerform(action, on: window) else { return false }
+    /// Why a gesture may not start here, or `nil` when it may.
+    ///
+    /// The gesture engine asks before it shows anything, so a swipe that begins on a control never
+    /// previews and never fires the threshold haptic — the app's own reaction to that swipe is left
+    /// alone instead of being doubled up with a snap.
+    func gestureRejection(at axPoint: CGPoint, zone: SnapGestureZone) -> String? {
+        guard checkPermission(promptIfNeeded: false) else { return "permission" }
+        return targeting.target(at: axPoint, zone: zone).rejection
+    }
+
+    // MARK: - Placement
+
+    private func perform(_ action: WindowSnapAction, on window: AXUIElement, processID: pid_t) {
+        guard canPerform(action, on: window, processID: processID) else {
+            return recordResult(action, success: false, reason: "unavailable")
+        }
+
+        let outcome = place(action, on: window, processID: processID)
+        recordResult(action, success: outcome.succeeded, reason: outcome.label, window: window)
+        if outcome.succeeded {
+            performHapticFeedback()
+        }
+    }
+
+    private func place(_ action: WindowSnapAction, on window: AXUIElement, processID: pid_t) -> SnapOutcome {
+        if let command = NativeTilingCommand.matching(action),
+           performNatively(command, action: action, on: window, processID: processID) {
+            return .moved("native")
+        }
+        return placeLocally(action, on: window)
+    }
+
+    private func canPerform(_ action: WindowSnapAction, on window: AXUIElement, processID: pid_t) -> Bool {
+        // A minimized window cannot be placed, and the system's own tiling items are disabled for
+        // one too, so the menu item stays honest instead of offering a no-op.
+        guard isFullScreen(window) != true, isMinimized(window) != true else { return false }
+
+        if let command = NativeTilingCommand.matching(action), nativeTiling.supports(command, processID: processID) {
+            return true
+        }
+
+        switch action {
+        case .restore:
+            return savedFrame(for: window) != nil
+        case .minimize:
+            return isMinimized(window) != true
+        case .nextDisplay, .previousDisplay:
+            return NSScreen.screens.count > 1 && frame(of: window) != nil
+        default:
+            return canPlace(window)
+        }
+    }
+
+    /// The window is movable at all. Which target it already sits on is deliberately not part of
+    /// this: a window that is already in the requested half keeps its menu item enabled and the
+    /// press is a no-op, exactly like the system's own tiling items.
+    private func canPlace(_ window: AXUIElement) -> Bool {
+        guard frame(of: window) != nil else { return false }
+        return isSettable(kAXPositionAttribute, of: window) || isSettable(kAXSizeAttribute, of: window)
+    }
+
+    /// Placing a window directly, without going through the system's tiling.
+    ///
+    /// Internal rather than private so tests can drive it against a real window; that is the only
+    /// way to prove a frame write actually lands, which is exactly what used to fail silently.
+    func placeLocally(_ action: WindowSnapAction, on window: AXUIElement) -> SnapOutcome {
         switch action {
         case .restore:
             return restore(window)
@@ -93,368 +220,327 @@ final class WindowSnappingService {
         }
     }
 
-    private func recordRequest(_ action: WindowSnapAction) {
-        DiagnosticLogService.record(
-            category: "windowManagement",
-            action: "requested",
-            fields: ["snapAction": String(describing: action)]
-        )
-    }
-
-    private func recordResult(_ action: WindowSnapAction, success: Bool, reason: String = "") {
-        DiagnosticLogService.record(
-            level: success ? .info : .error,
-            category: "windowManagement",
-            action: success ? "succeeded" : "failed",
-            fields: ["snapAction": String(describing: action), "reason": reason]
-        )
-    }
-
-    private func focusedWindow() -> AXUIElement? {
-        guard let application = NSWorkspace.shared.frontmostApplication else { return nil }
-        let appElement = AXUIElementCreateApplication(application.processIdentifier)
-
-        if let focused: AXUIElement = copyAttribute(kAXFocusedWindowAttribute, from: appElement) {
-            return focused
+    private func snap(_ window: AXUIElement, action: WindowSnapAction) -> SnapOutcome {
+        guard let currentFrame = frame(of: window),
+              let targetFrame = targetFrame(for: action, on: window) else {
+            return .refused("target")
         }
-        if let main: AXUIElement = copyAttribute(kAXMainWindowAttribute, from: appElement) {
-            return main
-        }
-        return nil
-    }
-
-    private func titlebarWindow(at axPoint: CGPoint) -> AXUIElement? {
-        let systemWide = AXUIElementCreateSystemWide()
-        var rawElement: AXUIElement?
-        let error = AXUIElementCopyElementAtPosition(systemWide, Float(axPoint.x), Float(axPoint.y), &rawElement)
-        guard error == .success, let element = rawElement else { return nil }
-
-        if let window = titlebarWindowFromAccessibilityTree(element) {
-            return window
-        }
-        return titlebarWindowFromGeometry(element, at: axPoint)
-    }
-
-    private func titlebarWindowFromAccessibilityTree(_ element: AXUIElement) -> AXUIElement? {
-        let titleElementName = "AXTitleUIElement"
-        var current: AXUIElement? = element
-        var nearestWindow: AXUIElement?
-
-        for _ in 0..<8 {
-            guard let candidate = current else { break }
-            let role: String? = copyAttribute(kAXRoleAttribute, from: candidate)
-            if role == kAXWindowRole as String {
-                nearestWindow = candidate
-            }
-            if role == "AXTitleBar" {
-                return nearestWindow ?? copyAttribute(kAXWindowAttribute, from: candidate)
-            }
-            if let window: AXUIElement = copyAttribute(kAXWindowAttribute, from: candidate),
-               let titleElement: AXUIElement = copyAttribute(titleElementName, from: window),
-               CFEqual(candidate, titleElement) {
-                return window
-            }
-            current = copyAttribute(kAXParentAttribute, from: candidate)
-        }
-        return nil
-    }
-
-    private func titlebarWindowFromGeometry(_ element: AXUIElement, at axPoint: CGPoint) -> AXUIElement? {
-        guard let window = nearestWindow(from: element), let frame = frame(of: window) else { return nil }
-        let titlebarHeight: CGFloat = 44
-        let tolerance: CGFloat = 2
-        let inHorizontalRange = axPoint.x >= frame.minX && axPoint.x <= frame.maxX
-        let inTitleBand = axPoint.y >= frame.minY - tolerance && axPoint.y <= frame.minY + titlebarHeight
-        return inHorizontalRange && inTitleBand ? window : nil
-    }
-
-    private func nearestWindow(from element: AXUIElement) -> AXUIElement? {
-        if let window: AXUIElement = copyAttribute(kAXWindowAttribute, from: element) {
-            return window
-        }
-
-        var current: AXUIElement? = element
-        for _ in 0..<8 {
-            guard let candidate = current else { break }
-            let role: String? = copyAttribute(kAXRoleAttribute, from: candidate)
-            if role == kAXWindowRole as String {
-                return candidate
-            }
-            current = copyAttribute(kAXParentAttribute, from: candidate)
-        }
-        return nil
-    }
-
-    private func canPerform(_ action: WindowSnapAction, on window: AXUIElement) -> Bool {
-        switch action {
-        case .restore:
-            return canRestore(window)
-        case .minimize:
-            return isMinimized(window) != true
-        case .nextDisplay, .previousDisplay:
-            return canMoveToAdjacentDisplay(window)
-        default:
-            return canSnap(window, action: action)
-        }
-    }
-
-    private func canSnap(_ window: AXUIElement, action: WindowSnapAction) -> Bool {
-        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else {
-            return false
-        }
-        return !framesApproximatelyEqual(currentFrame, targetFrame)
-    }
-
-    private func canMoveToAdjacentDisplay(_ window: AXUIElement) -> Bool {
-        guard let currentFrame = frame(of: window), screen(containingAXFrame: currentFrame) != nil else { return false }
-        return NSScreen.screens.count > 1
-    }
-
-    private func canRestore(_ window: AXUIElement) -> Bool {
-        guard let identity = identity(for: window) else { return false }
-        return savedFrames[identity] != nil
-    }
-
-    private func isMinimized(_ window: AXUIElement) -> Bool? {
-        copyAttribute(kAXMinimizedAttribute, from: window)
-    }
-
-    private func snap(_ window: AXUIElement, action: WindowSnapAction) -> Bool {
-        guard let currentFrame = frame(of: window), let targetFrame = snapTargetFrame(for: action, window: window) else { return false }
 
         saveFrameIfNeeded(currentFrame, for: window)
-        guard setFrame(targetFrame, for: window) else { return false }
-        performHapticFeedback()
+        guard let achieved = apply(targetFrame, to: window) else { return .refused("setFrame") }
+        if WindowSnapGeometry.framesApproximatelyEqual(achieved, targetFrame) {
+            return .moved("local")
+        }
+        if WindowSnapGeometry.framesApproximatelyEqual(achieved, currentFrame, tolerance: 1) {
+            return .refused("unmoved")
+        }
+        logger.debug("Window accepted a clamped frame \(achieved) for target \(targetFrame)")
+        return .moved("localClamped")
+    }
+
+    private func minimize(_ window: AXUIElement) -> SnapOutcome {
+        let minimized = kCFBooleanTrue as CFTypeRef
+        let result = AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, minimized)
+        return result == .success ? .moved("local") : .refused("minimize")
+    }
+
+    private func restore(_ window: AXUIElement) -> SnapOutcome {
+        guard let key = windowKey(for: window), let savedFrame = savedFrames[key] else {
+            return .refused("noSavedFrame")
+        }
+        guard let achieved = apply(savedFrame, to: window) else { return .refused("setFrame") }
+        removeSavedFrame(for: key)
+        guard WindowSnapGeometry.framesApproximatelyEqual(achieved, savedFrame) else {
+            return .refused("unmoved")
+        }
+        return .moved("local")
+    }
+
+    private func moveToAdjacentDisplay(_ window: AXUIElement, direction: Int) -> SnapOutcome {
+        guard let currentFrame = frame(of: window),
+              let currentScreen = screen(containingAXFrame: currentFrame) else {
+            return .refused("display")
+        }
+
+        let screens = orderedScreens()
+        guard screens.count > 1, let currentIndex = screens.firstIndex(of: currentScreen) else {
+            return .refused("display")
+        }
+
+        let targetIndex = (currentIndex + direction + screens.count) % screens.count
+        let targetFrame = WindowSnapGeometry.transferredFrame(
+            currentFrame,
+            from: axRect(fromCocoaRect: currentScreen.visibleFrame),
+            to: axRect(fromCocoaRect: screens[targetIndex].visibleFrame)
+        )
+
+        saveFrameIfNeeded(currentFrame, for: window)
+        guard let achieved = apply(targetFrame, to: window) else { return .refused("setFrame") }
+        guard !WindowSnapGeometry.framesApproximatelyEqual(achieved, currentFrame, tolerance: 1) else {
+            return .refused("unmoved")
+        }
+        return .moved("local")
+    }
+
+    // MARK: - Native tiling
+
+    /// Hands the action to the system and lets it place the window.
+    ///
+    /// macOS animates the move by actually moving the window, so its frame is still the old one when
+    /// the press returns; whether the system honoured the command can only be answered once the
+    /// animation settles, which is what `confirmNativePlacement` does asynchronously.
+    private func performNatively(
+        _ command: NativeTilingCommand,
+        action: WindowSnapAction,
+        on window: AXUIElement,
+        processID: pid_t
+    ) -> Bool {
+        guard let before = frame(of: window), nativeTiling.perform(command, processID: processID) else {
+            return false
+        }
+        confirmNativePlacement(action, window: window, before: before)
         return true
+    }
+
+    /// A press is accepted even when the item is disabled, and the system then does nothing. If the
+    /// window is still where it was once the animation is over, the engine places it itself.
+    private func confirmNativePlacement(_ action: WindowSnapAction, window: AXUIElement, before: CGRect) {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            guard let self, let after = self.frame(of: window) else { return }
+            guard WindowSnapGeometry.framesApproximatelyEqual(after, before, tolerance: 1) else { return }
+
+            self.logger.debug("Native tiling left the window in place; placing it directly")
+            let outcome = self.placeLocally(action, on: window)
+            self.recordResult(action, success: outcome.succeeded, reason: "native-\(outcome.label)", window: window)
+        }
+    }
+
+    // MARK: - Target resolution
+
+    private func window(forApplication processID: pid_t) -> AXUIElement? {
+        let application = AXUIElementCreateApplication(processID)
+        if let focused: AXUIElement = AXElementReader.attribute(kAXFocusedWindowAttribute, from: application) {
+            return focused
+        }
+        if let main: AXUIElement = AXElementReader.attribute(kAXMainWindowAttribute, from: application) {
+            return main
+        }
+        // The menu bar icon acts on an app that is not frontmost, where neither of the above is
+        // guaranteed to resolve.
+        let windows = AXElementReader.elements(kAXWindowsAttribute, from: application)
+        return windows.first { isMinimized($0) != true } ?? windows.first
+    }
+
+    // MARK: - Geometry
+
+    /// Frame `action` asks for on the screen holding `window`, in Accessibility space. Internal for
+    /// tests, which assert the placed frame against the same computation the engine uses.
+    func targetFrame(for action: WindowSnapAction, on window: AXUIElement) -> CGRect? {
+        guard let currentFrame = frame(of: window),
+              let screen = screen(containingAXFrame: currentFrame) else { return nil }
+        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
+
+        if action == .center {
+            let size = savedFrame(for: window)?.size ?? currentFrame.size
+            return WindowSnapGeometry.centeredFrame(size: size, in: visibleFrame)
+        }
+        if action == .minimize {
+            return WindowSnapGeometry.minimizePreviewFrame(in: visibleFrame)
+        }
+        return WindowSnapGeometry.targetFrame(
+            for: action,
+            visibleFrame: visibleFrame,
+            currentSize: currentFrame.size
+        )
     }
 
     private func previewFrame(for action: WindowSnapAction, on window: AXUIElement) -> CGRect? {
-        guard let targetFrame = snapTargetFrame(for: action, window: window) else { return nil }
+        guard let targetFrame = targetFrame(for: action, on: window) else { return nil }
         return cocoaRect(fromAXRect: targetFrame)
-    }
-
-    private func snapTargetFrame(for action: WindowSnapAction, window: AXUIElement) -> CGRect? {
-        guard let currentFrame = frame(of: window) else { return nil }
-        if action == .center {
-            return centeredFrame(for: window, currentFrame: currentFrame)
-        }
-        return targetFrame(for: action, currentFrame: currentFrame)
-    }
-
-    private func targetFrame(for action: WindowSnapAction, currentFrame: CGRect) -> CGRect? {
-        guard let screen = screen(containingAXFrame: currentFrame) else { return nil }
-        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
-        if action == .minimize {
-            return minimizePreviewFrame(in: visibleFrame)
-        }
-        return targetFrame(for: action, visibleFrame: visibleFrame, currentSize: currentFrame.size)
-    }
-
-    private func targetFrame(for action: WindowSnapAction, visibleFrame: CGRect, currentSize: CGSize) -> CGRect {
-        let halfWidth = visibleFrame.width / 2
-        let halfHeight = visibleFrame.height / 2
-        let thirdWidth = visibleFrame.width / 3
-
-        switch action {
-        case .leftHalf:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY, width: halfWidth, height: visibleFrame.height)
-        case .rightHalf:
-            return CGRect(x: visibleFrame.minX + halfWidth, y: visibleFrame.minY, width: halfWidth, height: visibleFrame.height)
-        case .topHalf:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY, width: visibleFrame.width, height: halfHeight)
-        case .bottomHalf:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY + halfHeight, width: visibleFrame.width, height: halfHeight)
-        case .topLeft:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY, width: halfWidth, height: halfHeight)
-        case .topRight:
-            return CGRect(x: visibleFrame.minX + halfWidth, y: visibleFrame.minY, width: halfWidth, height: halfHeight)
-        case .bottomLeft:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY + halfHeight, width: halfWidth, height: halfHeight)
-        case .bottomRight:
-            return CGRect(x: visibleFrame.minX + halfWidth, y: visibleFrame.minY + halfHeight, width: halfWidth, height: halfHeight)
-        case .leftThird:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY, width: thirdWidth, height: visibleFrame.height)
-        case .leftTwoThirds:
-            return CGRect(x: visibleFrame.minX, y: visibleFrame.minY, width: thirdWidth * 2, height: visibleFrame.height)
-        case .centerThird:
-            return CGRect(x: visibleFrame.minX + thirdWidth, y: visibleFrame.minY, width: thirdWidth, height: visibleFrame.height)
-        case .rightTwoThirds:
-            return CGRect(x: visibleFrame.minX + thirdWidth, y: visibleFrame.minY, width: thirdWidth * 2, height: visibleFrame.height)
-        case .rightThird:
-            return CGRect(x: visibleFrame.maxX - thirdWidth, y: visibleFrame.minY, width: thirdWidth, height: visibleFrame.height)
-        case .maximize:
-            return visibleFrame
-        case .center:
-            return centeredFrame(size: currentSize, in: visibleFrame)
-        case .nextDisplay, .previousDisplay, .restore, .minimize:
-            return visibleFrame
-        }
-    }
-
-    private func minimizePreviewFrame(in visibleFrame: CGRect) -> CGRect {
-        CGRect(
-            x: visibleFrame.midX - 80,
-            y: visibleFrame.maxY - 56,
-            width: 160,
-            height: 36
-        )
-    }
-
-    private func centeredFrame(size: CGSize, in visibleFrame: CGRect) -> CGRect {
-        let width = min(size.width, visibleFrame.width)
-        let height = min(size.height, visibleFrame.height)
-        return CGRect(
-            x: visibleFrame.midX - width / 2,
-            y: visibleFrame.midY - height / 2,
-            width: width,
-            height: height
-        )
-    }
-
-    private func centeredFrame(for window: AXUIElement, currentFrame: CGRect) -> CGRect? {
-        guard let screen = screen(containingAXFrame: currentFrame) else { return nil }
-        let visibleFrame = axRect(fromCocoaRect: screen.visibleFrame)
-        let size = savedFrame(for: window)?.size ?? currentFrame.size
-        return centeredFrame(size: size, in: visibleFrame)
-    }
-
-    private func moveToAdjacentDisplay(_ window: AXUIElement, direction: Int) -> Bool {
-        guard let currentFrame = frame(of: window), let currentScreen = screen(containingAXFrame: currentFrame) else { return false }
-        let sortedScreens = NSScreen.screens.sorted { $0.frame.minX < $1.frame.minX }
-        guard let currentIndex = sortedScreens.firstIndex(of: currentScreen), sortedScreens.count > 1 else { return false }
-
-        let targetIndex = (currentIndex + direction + sortedScreens.count) % sortedScreens.count
-        let sourceVisible = axRect(fromCocoaRect: currentScreen.visibleFrame)
-        let targetVisible = axRect(fromCocoaRect: sortedScreens[targetIndex].visibleFrame)
-        let relativeX = (currentFrame.minX - sourceVisible.minX) / max(sourceVisible.width, 1)
-        let relativeY = (currentFrame.minY - sourceVisible.minY) / max(sourceVisible.height, 1)
-        let widthRatio = currentFrame.width / max(sourceVisible.width, 1)
-        let heightRatio = currentFrame.height / max(sourceVisible.height, 1)
-        let targetFrame = CGRect(
-            x: targetVisible.minX + targetVisible.width * relativeX,
-            y: targetVisible.minY + targetVisible.height * relativeY,
-            width: targetVisible.width * widthRatio,
-            height: targetVisible.height * heightRatio
-        ).intersection(targetVisible)
-
-        saveFrameIfNeeded(currentFrame, for: window)
-        guard setFrame(targetFrame, for: window) else { return false }
-        performHapticFeedback()
-        return true
-    }
-
-    private func minimize(_ window: AXUIElement) -> Bool {
-        let minimized = kCFBooleanTrue as CFTypeRef
-        guard AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, minimized) == .success else { return false }
-        performHapticFeedback()
-        return true
-    }
-
-    private func restore(_ window: AXUIElement) -> Bool {
-        guard let identity = identity(for: window), let savedFrame = savedFrames[identity] else { return false }
-        guard setFrame(savedFrame, for: window) else { return false }
-        savedFrames.removeValue(forKey: identity)
-        performHapticFeedback()
-        return true
-    }
-
-    private func savedFrame(for window: AXUIElement) -> CGRect? {
-        guard let identity = identity(for: window) else { return nil }
-        return savedFrames[identity]
-    }
-
-    private func saveFrameIfNeeded(_ frame: CGRect, for window: AXUIElement) {
-        guard let identity = identity(for: window), savedFrames[identity] == nil else { return }
-        savedFrames[identity] = frame
-    }
-
-    private func identity(for window: AXUIElement) -> WindowIdentity? {
-        var processID: pid_t = 0
-        guard AXUIElementGetPid(window, &processID) == .success else { return nil }
-        let number: Int = copyAttribute("AXWindowNumber", from: window) ?? 0
-        let title: String = copyAttribute(kAXTitleAttribute, from: window) ?? ""
-        return WindowIdentity(processID: processID, windowNumber: number, title: title)
-    }
-
-    private func frame(of window: AXUIElement) -> CGRect? {
-        guard let position: CGPoint = valueAttribute(kAXPositionAttribute, from: window),
-              let size: CGSize = valueAttribute(kAXSizeAttribute, from: window) else {
-            return nil
-        }
-        return CGRect(origin: position, size: size)
-    }
-
-    private func setFrame(_ frame: CGRect, for window: AXUIElement) -> Bool {
-        var position = frame.origin
-        var size = frame.size
-        guard let positionValue = AXValueCreate(.cgPoint, &position),
-              let sizeValue = AXValueCreate(.cgSize, &size) else {
-            return false
-        }
-
-        let positionResult = AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, positionValue)
-        let sizeResult = AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, sizeValue)
-        if positionResult != .success || sizeResult != .success {
-            logger.debug("Failed to set window frame: position=\(positionResult.rawValue), size=\(sizeResult.rawValue)")
-            return false
-        }
-        return true
     }
 
     private func screen(containingAXFrame frame: CGRect) -> NSScreen? {
         let cocoaFrame = cocoaRect(fromAXRect: frame)
         let center = CGPoint(x: cocoaFrame.midX, y: cocoaFrame.midY)
-        return NSScreen.screens.first { $0.frame.contains(center) } ?? NSScreen.main
+        if let containing = NSScreen.screens.first(where: { $0.frame.contains(center) }) {
+            return containing
+        }
+
+        // A window straddling two displays has its center on neither; the one under most of it wins.
+        var bestScreen: NSScreen?
+        var bestArea: CGFloat = 0
+        for screen in NSScreen.screens {
+            let overlap = screen.frame.intersection(cocoaFrame)
+            guard !overlap.isNull else { continue }
+            let area = overlap.width * overlap.height
+            if area > bestArea {
+                bestArea = area
+                bestScreen = screen
+            }
+        }
+        return bestScreen ?? NSScreen.main ?? NSScreen.screens.first
+    }
+
+    /// Screens ordered top-to-bottom, then left-to-right, in Accessibility space — so "next
+    /// display" means the same thing on a vertical stack as on a horizontal row.
+    private func orderedScreens() -> [NSScreen] {
+        NSScreen.screens.sorted { lhs, rhs in
+            let left = axRect(fromCocoaRect: lhs.frame)
+            let right = axRect(fromCocoaRect: rhs.frame)
+            if abs(left.minY - right.minY) > 1 { return left.minY < right.minY }
+            return left.minX < right.minX
+        }
+    }
+
+    /// Reference height for the Accessibility ↔ Cocoa flip: the primary display, the one sitting at
+    /// the Cocoa origin and holding the menu bar.
+    ///
+    /// Using the highest `maxY` across all displays instead shifts every frame by the height of
+    /// whatever sits above the primary one, which is why snapping used to break as soon as an
+    /// external display was arranged above the built-in one.
+    private func flipReferenceMaxY() -> CGFloat {
+        let primary = NSScreen.screens.first { $0.frame.contains(CGPoint.zero) } ?? NSScreen.screens.first
+        return primary?.frame.maxY ?? 0
     }
 
     private func axRect(fromCocoaRect rect: CGRect) -> CGRect {
-        let maxY = desktopMaxY()
-        return CGRect(x: rect.minX, y: maxY - rect.maxY, width: rect.width, height: rect.height)
+        WindowSnapGeometry.flip(rect, aboutMaxY: flipReferenceMaxY())
     }
 
     private func cocoaRect(fromAXRect rect: CGRect) -> CGRect {
-        let maxY = desktopMaxY()
-        return CGRect(x: rect.minX, y: maxY - rect.maxY, width: rect.width, height: rect.height)
+        WindowSnapGeometry.flip(rect, aboutMaxY: flipReferenceMaxY())
     }
 
-    private func framesApproximatelyEqual(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
-        let tolerance: CGFloat = 1
-        return abs(lhs.minX - rhs.minX) <= tolerance
-            && abs(lhs.minY - rhs.minY) <= tolerance
-            && abs(lhs.width - rhs.width) <= tolerance
-            && abs(lhs.height - rhs.height) <= tolerance
+    // MARK: - Window attributes
+
+    /// Frame a window currently reports, in Accessibility space. Internal for tests.
+    func frame(of window: AXUIElement) -> CGRect? {
+        AXElementReader.frame(of: window)
     }
 
-    private func desktopMaxY() -> CGFloat {
-        NSScreen.screens.map { $0.frame.maxY }.max() ?? 0
+    /// Writes a frame and reports what the window actually ended up with.
+    ///
+    /// Size is written first and the pair twice: an app that re-clamps its origin after a resize —
+    /// which is most of them — otherwise leaves the window at the right size in the wrong place.
+    /// A window that cannot be resized still gets its position moved.
+    private func apply(_ frame: CGRect, to window: AXUIElement) -> CGRect? {
+        let resizable = isSettable(kAXSizeAttribute, of: window)
+        let movable = isSettable(kAXPositionAttribute, of: window)
+        guard resizable || movable else { return nil }
+
+        if resizable {
+            _ = setSize(frame.size, for: window)
+        }
+        if movable {
+            _ = setPosition(frame.origin, for: window)
+        }
+        if resizable {
+            _ = setSize(frame.size, for: window)
+        }
+        if movable {
+            _ = setPosition(frame.origin, for: window)
+        }
+        return self.frame(of: window)
     }
 
-    private func copyAttribute<T>(_ attribute: String, from element: AXUIElement) -> T? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
-        return value as? T
+    private func setPosition(_ position: CGPoint, for window: AXUIElement) -> Bool {
+        var mutablePosition = position
+        guard let value = AXValueCreate(.cgPoint, &mutablePosition) else { return false }
+        return AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, value) == .success
     }
 
-    private func valueAttribute<T>(_ attribute: String, from element: AXUIElement) -> T? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-              let value,
-              CFGetTypeID(value) == AXValueGetTypeID() else {
-            return nil
+    private func setSize(_ size: CGSize, for window: AXUIElement) -> Bool {
+        var mutableSize = size
+        guard let value = AXValueCreate(.cgSize, &mutableSize) else { return false }
+        return AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, value) == .success
+    }
+
+    private func isFullScreen(_ window: AXUIElement) -> Bool? {
+        AXElementReader.attribute(fullScreenAttribute, from: window)
+    }
+
+    private func isMinimized(_ window: AXUIElement) -> Bool? {
+        AXElementReader.attribute(kAXMinimizedAttribute, from: window)
+    }
+
+    private func isSettable(_ attribute: String, of window: AXUIElement) -> Bool {
+        AXElementReader.isSettable(attribute, of: window)
+    }
+
+    private func processIdentifier(of window: AXUIElement) -> pid_t? {
+        AXElementReader.processIdentifier(of: window)
+    }
+
+    private var fullScreenAttribute: String { "AXFullScreen" }
+
+    // MARK: - Saved frames
+
+    private func windowKey(for window: AXUIElement) -> WindowKey? {
+        guard let processID = AXElementReader.processIdentifier(of: window) else { return nil }
+        return WindowKey(processID: processID, element: window)
+    }
+
+    private func savedFrame(for window: AXUIElement) -> CGRect? {
+        guard let key = windowKey(for: window) else { return nil }
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return savedFrames[key]
+    }
+
+    private func saveFrameIfNeeded(_ frame: CGRect, for window: AXUIElement) {
+        guard let key = windowKey(for: window) else { return }
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        if savedFrames[key] == nil {
+            savedFrames[key] = frame
+        }
+    }
+
+    private func removeSavedFrame(for key: WindowKey) {
+        stateLock.lock()
+        savedFrames[key] = nil
+        stateLock.unlock()
+    }
+
+    // MARK: - Diagnostics and feedback
+
+    private func recordRequest(_ action: WindowSnapAction, zone: SnapGestureZone? = nil) {
+        var fields = ["snapAction": String(describing: action)]
+        if let zone {
+            fields["zone"] = zone.diagnosticName
+        }
+        DiagnosticLogService.record(
+            category: "windowManagement",
+            action: "requested",
+            fields: fields
+        )
+    }
+
+    /// Failures carry the layout evidence needed to explain them: which screen the engine believed
+    /// it was on, what the flip reference was, and where the window actually sat. Without these a
+    /// refused snap is indistinguishable from a rejected one after the fact.
+    private func recordResult(_ action: WindowSnapAction, success: Bool, reason: String = "", window: AXUIElement? = nil) {
+        var fields = ["snapAction": String(describing: action), "reason": reason]
+        if !success {
+            fields["screens"] = String(NSScreen.screens.count)
+            fields["primaryMaxY"] = String(format: "%.0f", flipReferenceMaxY())
+            if let window, let frame = frame(of: window) {
+                fields["windowFrame"] = describe(frame)
+                fields["windowScreen"] = describe(axRect(fromCocoaRect: screen(containingAXFrame: frame)?.frame ?? .zero))
+            }
         }
 
-        let axValue = unsafeBitCast(value, to: AXValue.self)
-        var output: T?
-        if T.self == CGPoint.self {
-            var point = CGPoint.zero
-            guard AXValueGetValue(axValue, .cgPoint, &point) else { return nil }
-            output = point as? T
-        } else if T.self == CGSize.self {
-            var size = CGSize.zero
-            guard AXValueGetValue(axValue, .cgSize, &size) else { return nil }
-            output = size as? T
-        }
-        return output
+        DiagnosticLogService.record(
+            level: success ? .info : .error,
+            category: "windowManagement",
+            action: success ? "succeeded" : "failed",
+            fields: fields
+        )
+    }
+
+    private func describe(_ rect: CGRect) -> String {
+        String(format: "%.0f,%.0f %.0fx%.0f", rect.minX, rect.minY, rect.width, rect.height)
     }
 
     private func performHapticFeedback() {

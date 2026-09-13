@@ -13,7 +13,8 @@ import Combine
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private var statusItem: NSStatusItem?
-    private var windowControlsStatusItem: NSStatusItem?
+    // 菜单栏窗口控制图标及其菜单见 AppDelegate+WindowMenu.swift。
+    var windowControlsStatusItem: NSStatusItem?
     private var panel: NSPanel?
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
@@ -25,17 +26,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 面板打开期间最近一次「面板外鼠标按下」时刻；用于区分 resignKey 是否由点外部引起
     private var lastGlobalMouseDownAt: Date?
     private var windowControlPermissionAlertShown = false
+    // 用户原本所在的前台 App。原生分屏必须作用在它的窗口上，而打开我们自己的菜单会抢走前台。
+    var lastExternalApplicationPID: pid_t?
 
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let displayControlManager: DisplayControlManager
     private let appMemoryManager: AppMemoryManager
     private let scrollService: ScrollReversing
-    private let windowSnappingService: WindowSnappingService
+    let windowSnappingService: WindowSnappingService
     private let windowSnapHotKeyService: WindowSnapHotKeyControlling
     private let titlebarGestureService: TitlebarGestureControlling
     private let findMouseCoordinator: FindMouseCoordinator
-    private static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
+    private let defaultInputSourceCoordinator: DefaultInputSourceCoordinator
+    static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
         (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf), (5, .topLeft), (6, .topRight),
         (7, .bottomLeft), (8, .bottomRight), (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
         (12, .rightTwoThirds), (13, .rightThird), (14, .previousDisplay), (15, .nextDisplay),
@@ -54,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
         let findMouseService = FindMouseService(presentationPointer: PresentationPointerService())
         self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: findMouseService)
+        self.defaultInputSourceCoordinator = DefaultInputSourceCoordinator.shared
         super.init()
     }
 
@@ -77,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         syncScrollService()
         syncWindowControlServices()
         findMouseCoordinator.start()
+        defaultInputSourceCoordinator.start()
         syncFinderMenuService()
         syncKeepAwakeService()
         displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
@@ -90,6 +96,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             name: NSApplication.didBecomeActiveNotification,
             object: nil
         )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleApplicationActivated(_:)),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+        if let frontmost = NSWorkspace.shared.frontmostApplication,
+           frontmost.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            lastExternalApplicationPID = frontmost.processIdentifier
+        }
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleShowAbout),
@@ -124,6 +140,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func handleShowAbout() {
         showAbout()
+    }
+
+    /// 记录最近一次外部前台 App（用于菜单栏窗口管理）；忽略自己。
+    @objc private func handleApplicationActivated(_ notification: Notification) {
+        guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              application.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+        lastExternalApplicationPID = application.processIdentifier
     }
 
     @objc private func handleFinderMenuActionFailed(_ notification: Notification) {
@@ -164,96 +187,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             button.action = #selector(togglePanel)
             button.target = self
         }
-    }
-
-    // MARK: - Window Controls Status Item
-
-    /// 仅当窗口管理开启时创建菜单栏图标；已存在则幂等返回。
-    private func ensureWindowControlsStatusItem() {
-        guard windowControlsStatusItem == nil else { return }
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let button = item.button {
-            button.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "settings.windowControls".localized)
-            button.image?.isTemplate = true
-        }
-        item.menu = makeWindowControlsMenu()
-        windowControlsStatusItem = item
-    }
-
-    /// 关闭窗口管理时彻底移除图标（而非仅隐藏），不留菜单栏占位。
-    private func removeWindowControlsStatusItem() {
-        guard let item = windowControlsStatusItem else { return }
-        NSStatusBar.system.removeStatusItem(item)
-        windowControlsStatusItem = nil
-    }
-
-    private func makeWindowControlsMenu() -> NSMenu {
-        let menu = NSMenu()
-        addWindowMenuItem("window.action.left".localized, action: .leftHalf, key: "←", to: menu)
-        addWindowMenuItem("window.action.right".localized, action: .rightHalf, key: "→", to: menu)
-        addWindowMenuItem("window.action.top".localized, action: .topHalf, key: "↑", to: menu)
-        addWindowMenuItem("window.action.bottom".localized, action: .bottomHalf, key: "↓", to: menu)
-        menu.addItem(.separator())
-        addWindowMenuItem("window.action.topLeft".localized, action: .topLeft, to: menu)
-        addWindowMenuItem("window.action.topRight".localized, action: .topRight, to: menu)
-        addWindowMenuItem("window.action.bottomLeft".localized, action: .bottomLeft, to: menu)
-        addWindowMenuItem("window.action.bottomRight".localized, action: .bottomRight, to: menu)
-        menu.addItem(.separator())
-        addWindowMenuItem("window.action.leftThird".localized, action: .leftThird, to: menu)
-        addWindowMenuItem("window.action.leftTwoThirds".localized, action: .leftTwoThirds, to: menu)
-        addWindowMenuItem("window.action.centerThird".localized, action: .centerThird, to: menu)
-        addWindowMenuItem("window.action.rightTwoThirds".localized, action: .rightTwoThirds, to: menu)
-        addWindowMenuItem("window.action.rightThird".localized, action: .rightThird, to: menu)
-        menu.addItem(.separator())
-        addWindowMenuItem(
-            "window.action.previousDisplay".localized,
-            action: .previousDisplay,
-            to: menu
-        )
-        addWindowMenuItem(
-            "window.action.nextDisplay".localized,
-            action: .nextDisplay,
-            to: menu
-        )
-        menu.addItem(.separator())
-        addWindowMenuItem("window.action.maximize".localized, action: .maximize, key: "\r", to: menu)
-        addWindowMenuItem("window.action.center".localized, action: .center, key: "c", to: menu)
-        addWindowMenuItem("window.action.restore".localized, action: .restore, to: menu)
-        return menu
-    }
-
-    private func addWindowMenuItem(
-        _ title: String,
-        action: WindowSnapAction,
-        key: String = "",
-        modifiers: NSEvent.ModifierFlags = [.control, .option],
-        to menu: NSMenu
-    ) {
-        let item = NSMenuItem(title: title, action: #selector(performWindowMenuAction(_:)), keyEquivalent: key)
-        item.target = self
-        item.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
-        item.tag = tag(for: action)
-        item.image = WindowSnapIconProvider.icon(for: action)
-        menu.addItem(item)
-    }
-
-    @objc private func performWindowMenuAction(_ sender: NSMenuItem) {
-        guard let action = action(for: sender.tag) else { return }
-        windowSnappingService.perform(action)
-    }
-
-    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        guard menuItem.action == #selector(performWindowMenuAction(_:)) else { return true }
-        guard let action = action(for: menuItem.tag) else { return false }
-        return windowSnappingService.canPerform(action)
-    }
-
-    private func tag(for action: WindowSnapAction) -> Int {
-        Self.windowMenuActions.first { $0.action == action }?.tag ?? 0
-    }
-
-    private func action(for tag: Int) -> WindowSnapAction? {
-        Self.windowMenuActions.first { $0.tag == tag }?.action
     }
 
     // MARK: - Panel Setup
@@ -539,6 +472,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             ensureWindowControlsStatusItem()
             startWindowSnapHotKeysOrPrompt()
             startTitlebarGesturesOrPrompt()
+            // 系统自带的边缘拖拽平铺不需要猜标题栏，是最稳的一条路，首次开启窗口管理时帮用户打开。
+            SystemWindowTilingSettings.applyDefaultEdgeDragIfNeeded()
         } else {
             windowSnapHotKeyService.stop()
             titlebarGestureService.stop()
@@ -627,6 +562,7 @@ extension AppDelegate {
         windowSnapHotKeyService.stop()
         titlebarGestureService.stop()
         findMouseCoordinator.stop()
+        defaultInputSourceCoordinator.stop()
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
         SMCInfo.shutdown()

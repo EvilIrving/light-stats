@@ -1,193 +1,148 @@
-//
-//  FinderMenuController.swift
-//  FinderMenuExtension
-//
-//  FinderSync 扩展主体：仅监控用户主目录，按总开关在 Finder 右键菜单注入 Light Stats
-//  动作。纯剪贴板动作在本进程内完成；需要文件操作的动作通过 CFMessagePort 委派给
-//  非沙盒宿主执行（见 FinderMenuIPCClient / FinderMenuHostService）。
-//
-
 import AppKit
 import FinderSync
 import os
 
+/// Finder owns menu presentation; the host executes actions and records their results.
 final class FinderMenuController: FIFinderSync {
-
-    // Extension process: use its own bundle id so Console filters match the process.
-    // Journal lives in the host app; this path only hits os.Logger for post-hoc triage.
     private let logger = Logger(subsystem: FinderMenuShared.extensionBundleID, category: "Extension")
-    private var commandsByTag: [Int: FinderMenuCommand] = [:]
+    private var menuConfig = FinderMenuConfig()
+    private var observingVolumes = false
 
     override init() {
         super.init()
-        // 决策：仅注册用户主目录，覆盖约 95% 场景，规避「一目录一扩展 / 嵌套」限制。
-        // 关键：扩展是沙盒进程，NSHomeDirectory() 返回沙盒容器路径而非真实主目录，
-        // 必须用 FinderMenuShared.realHomeDirectory()（getpwuid）绕过沙盒重定向。
-        let home = URL(fileURLWithPath: FinderMenuShared.realHomeDirectory())
-        FIFinderSyncController.default().directoryURLs = [home]
-        logger.info("FinderMenu extension initialised, monitoring \(home.path, privacy: .public)")
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(refreshDirectories), name: FinderMenuShared.configChanged, object: nil
+        )
+        refreshDirectories()
+    }
+
+    @objc private func refreshDirectories() {
+        let enabled = FinderMenuShared.isEnabled()
+        let workspace = NSWorkspace.shared.notificationCenter
+        if enabled && !observingVolumes {
+            workspace.addObserver(self, selector: #selector(refreshDirectories), name: NSWorkspace.didMountNotification, object: nil)
+            workspace.addObserver(self, selector: #selector(refreshDirectories), name: NSWorkspace.didUnmountNotification, object: nil)
+            observingVolumes = true
+        } else if !enabled && observingVolumes {
+            workspace.removeObserver(self)
+            observingVolumes = false
+        }
+        guard enabled else {
+            FIFinderSyncController.default().directoryURLs = []
+            return
+        }
+        let config = FinderMenuShared.loadConfig()
+        let volumes = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: .skipHiddenVolumes) ?? []
+        FIFinderSyncController.default().directoryURLs = FinderMenuShared.monitoringRoots(
+            home: FinderMenuShared.realHomeDirectory(), favorites: config.favoriteDirectories.map(\.path), volumes: volumes.map(\.path)
+        )
     }
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu(title: "")
-        // 总开关关闭时不出任何菜单项——干净安装上的零侵扰契约。
         guard FinderMenuShared.isEnabled() else { return menu }
-        commandsByTag.removeAll(keepingCapacity: true)
-
+        menuConfig = FinderMenuShared.loadConfig()
         let controller = FIFinderSyncController.default()
-        let paths = (controller.selectedItemURLs() ?? []).map(\.path)
         let container = controller.targetedURL()?.path
-
         switch menuKind {
         case .contextualMenuForItems:
+            let paths = (controller.selectedItemURLs() ?? []).map(\.path)
             buildItemsMenu(menu, paths: paths, container: container)
         case .contextualMenuForContainer, .contextualMenuForSidebar:
-            buildContainerMenu(menu, paths: paths, container: container)
+            // Finder may retain a previous selection when the user clicks blank space.
+            buildContainerMenu(menu, container: container)
         default:
             break
         }
         return menu
     }
 
-    // MARK: - Menu builders
-
-    /// 选中文件 / 文件夹时的菜单。
     private func buildItemsMenu(_ menu: NSMenu, paths: [String], container: String?) {
-        addItem(FinderMenuCommand(.copyPath, paths: paths, container: container), title: FinderMenuAction.copyPath.localizedTitle, to: menu)
-        addItem(FinderMenuCommand(.copyName, paths: paths, container: container), title: FinderMenuAction.copyName.localizedTitle, to: menu)
-        addItem(
-            FinderMenuCommand(.openTerminalHere, paths: paths, container: container),
-            title: FinderMenuAction.openTerminalHere.localizedTitle,
-            to: menu
-        )
-
-        let config = FinderMenuShared.loadConfig()
-        addCmuxItemsIfNeeded(config, paths: paths, container: container, to: menu)
-        let appItems = resolveApps(config).map { (title: $0.name, parameter: $0.bundleID) }
-        addSubmenu(.openWithApp, items: appItems, paths: paths, container: container, to: menu)
-
-        let dirItems = resolveDirectories(config).map { (title: $0.name, parameter: $0.path) }
-        addSubmenu(.moveTo, items: dirItems, paths: paths, container: container, to: menu)
-        addSubmenu(.copyTo, items: dirItems, paths: paths, container: container, to: menu)
-
-        addItem(
-            FinderMenuCommand(.toggleHidden, paths: paths, container: container),
-            title: FinderMenuAction.toggleHidden.localizedTitle,
-            to: menu
-        )
+        guard !paths.isEmpty else { return }
+        addItem(FinderMenuCommand(.copyPath, paths: paths, container: container), to: menu)
+        addItem(FinderMenuCommand(.copyName, paths: paths, container: container), to: menu)
+        addOpeningItems(menu, paths: paths, container: container)
+        let directories = resolveDirectories()
+        addSubmenu(.moveTo, items: directories, paths: paths, container: container, to: menu, chooseLocation: true)
+        addSubmenu(.copyTo, items: directories, paths: paths, container: container, to: menu, chooseLocation: true)
+        addSubmenu(.openDirectory, items: directories, paths: [], container: container, to: menu)
+        addItem(FinderMenuCommand(.toggleHidden, paths: paths, container: container), to: menu)
+        addItem(FinderMenuCommand(.toggleHiddenFiles), to: menu)
     }
 
-    /// 右键空白处 / 侧边栏目录时的菜单。
-    private func buildContainerMenu(_ menu: NSMenu, paths: [String], container: String?) {
-        let config = FinderMenuShared.loadConfig()
-        let templateItems = config.resolvedTemplates().map { (title: $0.title, parameter: $0.id) }
-        addSubmenu(.newFile, items: templateItems, paths: paths, container: container, to: menu)
-        addItem(
-            FinderMenuCommand(.openTerminalHere, paths: paths, container: container),
-            title: FinderMenuAction.openTerminalHere.localizedTitle,
-            to: menu
-        )
-        addCmuxItemsIfNeeded(config, paths: paths, container: container, to: menu)
+    private func buildContainerMenu(_ menu: NSMenu, container: String?) {
+        guard container != nil else { return }
+        let templates = menuConfig.resolvedTemplates().map {
+            (title: FinderMenuPresets.templateTitle(id: $0.id, fallback: $0.title), parameter: $0.id)
+        }
+        addSubmenu(.newFile, items: templates, paths: [], container: container, to: menu)
+        addItem(FinderMenuCommand(.copyPath, container: container), to: menu)
+        addOpeningItems(menu, paths: [], container: container)
+        addSubmenu(.openDirectory, items: resolveDirectories(), paths: [], container: container, to: menu)
+        addItem(FinderMenuCommand(.toggleHiddenFiles), to: menu)
     }
 
-    // MARK: - Item helpers
+    private func addOpeningItems(_ menu: NSMenu, paths: [String], container: String?) {
+        addItem(FinderMenuCommand(.openTerminalHere, paths: paths, container: container), to: menu)
+        if menuConfig.showCmuxActions && NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.cmuxterm.app") != nil {
+            addItem(FinderMenuCommand(.cmuxNewWindow, paths: paths, container: container), to: menu)
+            addItem(FinderMenuCommand(.cmuxNewWorkspace, paths: paths, container: container), to: menu)
+        }
+        addSubmenu(.openWithApp, items: resolveApps(), paths: paths, container: container, to: menu)
+    }
 
-    private func addItem(_ command: FinderMenuCommand, title: String, to menu: NSMenu) {
-        let item = NSMenuItem(title: title, action: #selector(runAction(_:)), keyEquivalent: "")
+    private func addItem(_ command: FinderMenuCommand, title: String? = nil, to menu: NSMenu) {
+        guard menuConfig.isActionEnabled(command.action) else { return }
+        let item = NSMenuItem(title: title ?? command.action.localizedTitle, action: #selector(runAction(_:)), keyEquivalent: "")
         item.target = self
-        let tag = commandsByTag.count + 1
-        commandsByTag[tag] = command
-        item.tag = tag
+        // Each menu item owns its context, even if Finder builds another menu before it is clicked.
+        item.representedObject = command
+        if command.action == .toggleHiddenFiles { item.state = FinderMenuShared.showsHiddenFiles ? .on : .off }
         menu.addItem(item)
-    }
-
-    private func addCmuxItemsIfNeeded(_ config: FinderMenuConfig, paths: [String], container: String?, to menu: NSMenu) {
-        guard config.showCmuxActions else { return }
-        addItem(
-            FinderMenuCommand(.cmuxNewWindow, paths: paths, container: container),
-            title: FinderMenuAction.cmuxNewWindow.localizedTitle,
-            to: menu
-        )
-        addItem(
-            FinderMenuCommand(.cmuxNewWorkspace, paths: paths, container: container),
-            title: FinderMenuAction.cmuxNewWorkspace.localizedTitle,
-            to: menu
-        )
     }
 
     private func addSubmenu(
         _ action: FinderMenuAction,
         items: [(title: String, parameter: String)],
-        paths: [String],
-        container: String?,
-        to menu: NSMenu
+        paths: [String], container: String?, to menu: NSMenu, chooseLocation: Bool = false
     ) {
-        guard !items.isEmpty else { return }
+        guard menuConfig.isActionEnabled(action), !items.isEmpty || chooseLocation else { return }
         let parent = NSMenuItem(title: action.localizedTitle, action: nil, keyEquivalent: "")
-        let sub = NSMenu(title: "")
+        let submenu = NSMenu(title: "")
         for entry in items {
-            addItem(
-                FinderMenuCommand(action, parameter: entry.parameter, paths: paths, container: container),
-                title: entry.title,
-                to: sub
-            )
+            addItem(FinderMenuCommand(action, parameter: entry.parameter, paths: paths, container: container),
+                    title: entry.title, to: submenu)
         }
-        parent.submenu = sub
+        if chooseLocation {
+            if !items.isEmpty { submenu.addItem(.separator()) }
+            addItem(FinderMenuCommand(action, paths: paths, container: container),
+                    title: FinderMenuShared.label(for: "otherLocation") ?? "Other Location…", to: submenu)
+        }
+        parent.submenu = submenu
         menu.addItem(parent)
     }
 
-    /// 常用目录：用户配置非空则用配置，否则用内置预设。
-    private func resolveDirectories(_ config: FinderMenuConfig) -> [(name: String, path: String)] {
-        if config.favoriteDirectories.isEmpty {
-            return FinderMenuPresets.favoriteDirectories().map { (name: $0.name, path: $0.path) }
+    private func resolveDirectories() -> [(title: String, parameter: String)] {
+        if menuConfig.favoriteDirectories.isEmpty {
+            return FinderMenuPresets.favoriteDirectories().map {
+                (title: FileManager.default.displayName(atPath: $0.path), parameter: $0.path)
+            }
         }
-        return config.favoriteDirectories.map { (name: $0.name, path: $0.path) }
+        return menuConfig.favoriteDirectories.map { (title: $0.name, parameter: $0.path) }
     }
 
-    /// 打开方式 App：用户配置非空则用配置，否则用内置候选；统一过滤掉未安装的。
-    private func resolveApps(_ config: FinderMenuConfig) -> [(name: String, bundleID: String)] {
-        let source: [(name: String, bundleID: String)] = config.openWithApps.isEmpty
-            ? FinderMenuPresets.appCandidates.map { (name: $0.name, bundleID: $0.bundleID) }
-            : config.openWithApps.map { (name: $0.name, bundleID: $0.bundleID) }
-        return source.filter {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.bundleID) != nil
-        }
+    private func resolveApps() -> [(title: String, parameter: String)] {
+        let source = menuConfig.openWithApps.isEmpty
+            ? FinderMenuPresets.appCandidates.map { (title: $0.name, parameter: $0.bundleID) }
+            : menuConfig.openWithApps.map { (title: $0.name, parameter: $0.bundleID) }
+        return source.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.parameter) != nil }
     }
-
-    // MARK: - Action dispatch
 
     @objc private func runAction(_ sender: NSMenuItem) {
-        guard let command = commandsByTag[sender.tag] else {
-            logger.error("Missing command for menu tag \(sender.tag, privacy: .public)")
-            return
-        }
-
-        if command.action.requiresHost {
-            let request = FinderMenuRequest(
-                action: command.action,
-                paths: command.paths,
-                container: command.container,
-                parameter: command.parameter
-            )
-            FinderMenuIPCClient.send(request, logger: logger)
-        } else {
-            handleLocally(command.action, paths: command.paths)
-        }
-    }
-
-    /// 扩展内直接处理的剪贴板动作（无文件 IO，无需委派宿主）。
-    private func handleLocally(_ action: FinderMenuAction, paths: [String]) {
-        let text: String
-        switch action {
-        case .copyPath:
-            text = paths.joined(separator: "\n")
-        case .copyName:
-            text = paths.map { ($0 as NSString).lastPathComponent }.joined(separator: "\n")
-        default:
-            return
-        }
-        guard !text.isEmpty else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        guard FinderMenuShared.isEnabled(), let command = sender.representedObject as? FinderMenuCommand else { return }
+        let request = FinderMenuRequest(action: command.action, paths: command.paths,
+                                        container: command.container, parameter: command.parameter)
+        let logger = logger
+        Task { await FinderMenuIPCClient.send(request, logger: logger) }
     }
 }

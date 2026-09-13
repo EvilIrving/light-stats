@@ -57,6 +57,8 @@ protocol SettingsManaging: ObservableObject {
     var autoCheckUpdates: Bool { get set }
     var includeBetaUpdates: Bool { get set }
     var windowManagementEnabled: Bool { get set }
+    var defaultInputSourceEnabled: Bool { get set }
+    var defaultInputSourceID: String? { get set }
     var findMouseEnabled: Bool { get set }
     var findMouseTriggerKey: FindMouseTriggerKey { get set }
     var activationCode: String? { get set }
@@ -283,6 +285,16 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var windowManagementEnabled: Bool {
         didSet { save(windowManagementEnabled, for: .windowManagementEnabled) }
     }
+    /// 默认输入法：默认关闭（opt-in）。开 → 每个 App 激活后把输入源拉回 `defaultInputSourceID`；
+    /// 关 → 立即移除激活观察者，不再触碰输入源。
+    @Published var defaultInputSourceEnabled: Bool {
+        didSet { save(defaultInputSourceEnabled, for: .defaultInputSourceEnabled) }
+    }
+    /// 默认输入法的 TIS input source ID（如 `com.tencent.inputmethod.wetype.pinyin`）。
+    /// 未选择时为 nil：开关开着也视为未运行，避免误切到用户没挑过的输入源。
+    @Published var defaultInputSourceID: String? {
+        didSet { save(defaultInputSourceID, for: .defaultInputSourceID) }
+    }
     /// 显示器硬件亮度控制：默认关闭。开启后才枚举显示器、注册拓扑观察并访问 DDC 总线。
     @Published var displayBrightnessControlEnabled: Bool {
         didSet { save(displayBrightnessControlEnabled, for: .displayBrightnessControlEnabled) }
@@ -455,6 +467,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
         case windowManagementEnabled = "settings.windowManagementEnabled"
+        case defaultInputSourceEnabled = "settings.defaultInputSourceEnabled"
+        case defaultInputSourceID = "settings.defaultInputSourceID"
         case displayBrightnessControlEnabled = "settings.displayBrightnessControlEnabled"
         case finderMenuEnabled = "settings.finderMenuEnabled"
         case scrollReverseHorizontalEnabled = "settings.scrollReverseHorizontalEnabled"
@@ -559,6 +573,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的快捷键/标题栏手势子开关。
         windowManagementEnabled = defaults.object(forKey: Key.windowManagementEnabled.rawValue) as? Bool ?? false
+        // 默认输入法：默认关闭（opt-in）。冷启动不注册 NSWorkspace 激活观察者、不读输入源。
+        defaultInputSourceEnabled = defaults.object(forKey: Key.defaultInputSourceEnabled.rawValue) as? Bool ?? false
+        defaultInputSourceID = defaults.string(forKey: Key.defaultInputSourceID.rawValue)
         // 显示器 DDC 硬件亮度：默认关闭（opt-in），冷启动不枚举、不探测、不访问 I²C。
         displayBrightnessControlEnabled =
             defaults.object(forKey: Key.displayBrightnessControlEnabled.rawValue) as? Bool ?? false

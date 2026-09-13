@@ -24,6 +24,10 @@ final class FinderMenuHostService {
     private var localPort: CFMessagePort?
     private var runLoopSource: CFRunLoopSource?
     private var activeAction: FinderMenuAction?
+    private var destinationPanel: NSOpenPanel?
+    private var visibilityHostWindow: NSWindow?
+    private var recentRequestIDs: [UUID] = []
+    private var deliveryObserver: NSObjectProtocol?
 
     private(set) var isRunning = false
 
@@ -60,7 +64,17 @@ final class FinderMenuHostService {
         isRunning = true
         logger.info("FinderMenu host service started")
 
-        // 检查扩展侧是否有挂起的 IPC 失败（宿主之前不在运行），有就 toast。
+        deliveryObserver = DistributedNotificationCenter.default().addObserver(
+            forName: FinderMenuShared.deliveryFailed, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in self.reportPendingFailure() }
+        }
+        reportPendingFailure()
+    }
+
+    private func reportPendingFailure() {
+        // Failure can arrive after startup; listen as well as checking once at start.
         if let failedAction = FinderMenuShared.consumePendingFailure() {
             DiagnosticLogService.record(
                 level: .error,
@@ -88,6 +102,15 @@ final class FinderMenuHostService {
         }
         runLoopSource = nil
         localPort = nil
+        destinationPanel?.cancel(nil)
+        if let deliveryObserver { DistributedNotificationCenter.default().removeObserver(deliveryObserver) }
+        deliveryObserver = nil
+        destinationPanel = nil
+        if let window = visibilityHostWindow, let sheet = window.attachedSheet {
+            window.endSheet(sheet, returnCode: .abort)
+        }
+        visibilityHostWindow?.close()
+        visibilityHostWindow = nil
         isRunning = false
         logger.info("FinderMenu host service stopped")
     }
@@ -101,7 +124,14 @@ final class FinderMenuHostService {
         for action in FinderMenuAction.allCases {
             labels[action.rawValue] = "findermenu.menu.\(action.rawValue)".localized
         }
+        for template in FinderMenuPresets.fileTemplates {
+            let key = "findermenu.template.\(template.id)"
+            let title = key.localized
+            labels["template.\(template.id)"] = title == key ? template.title : title
+        }
+        labels["otherLocation"] = "findermenu.menu.otherLocation".localized
         FinderMenuShared.setLabels(labels)
+        FinderMenuShared.setShowsHiddenFiles(FinderMenuSystemService.showsHiddenFiles)
     }
 
     // MARK: - Extension status
@@ -136,7 +166,23 @@ final class FinderMenuHostService {
 
     // MARK: - Action handling
 
+    private func accept(_ request: FinderMenuRequest) -> Bool {
+        guard isRunning, FinderMenuShared.isEnabled() else { return false }
+        let config = FinderMenuShared.loadConfig()
+        guard config.isActionEnabled(request.action) else { return false }
+        if request.action == .cmuxNewWindow || request.action == .cmuxNewWorkspace {
+            guard config.showCmuxActions else { return false }
+        }
+        if let id = request.requestID {
+            guard !recentRequestIDs.contains(id) else { return false }
+            recentRequestIDs.append(id)
+            if recentRequestIDs.count > 128 { recentRequestIDs.removeFirst() }
+        }
+        return true
+    }
+
     private func handle(_ request: FinderMenuRequest) {
+        guard accept(request) else { return }
         activeAction = request.action
         defer { activeAction = nil }
         DiagnosticLogService.record(
@@ -157,6 +203,10 @@ final class FinderMenuHostService {
             openWithApp(request)
         case .toggleHidden:
             toggleHidden(request)
+        case .openDirectory:
+            openDirectory(request)
+        case .toggleHiddenFiles:
+            toggleFinderVisibility()
         case .cmuxNewWindow:
             performCmuxService("New cmux Window Here", request: request)
         case .cmuxNewWorkspace:
@@ -167,15 +217,7 @@ final class FinderMenuHostService {
     }
 
     private func copyToPasteboard(_ request: FinderMenuRequest) {
-        let text: String
-        switch request.action {
-        case .copyPath:
-            text = request.paths.joined(separator: "\n")
-        case .copyName:
-            text = request.paths.map { ($0 as NSString).lastPathComponent }.joined(separator: "\n")
-        default:
-            return
-        }
+        let text = FinderMenuFileService.pasteboardText(for: request)
         guard !text.isEmpty else { return showFailure("findermenu.toast.noTarget") }
         NSPasteboard.general.clearContents()
         guard NSPasteboard.general.setString(text, forType: .string) else {
@@ -188,83 +230,17 @@ final class FinderMenuHostService {
 
     /// 在目标目录打开用户选择的终端。默认 Terminal，不根据安装情况替用户猜。
     private func openTerminal(_ request: FinderMenuRequest) {
-        guard let dir = directory(for: request) else {
-            showFailure("findermenu.toast.noTarget")
-            return
+        guard let directory = FinderMenuFileService.directory(for: request) else {
+            return showFailure("findermenu.toast.noTarget")
         }
         let terminalID = FinderMenuShared.loadConfig().terminalID
-        if !openTerminal(id: terminalID, at: URL(fileURLWithPath: dir, isDirectory: true)) {
-            showFailure("findermenu.toast.openTerminalFailed")
-        } else {
-            recordSuccess()
+        Task {
+            if await FinderMenuTerminalService.open(id: terminalID, at: directory) {
+                recordSuccess(action: request.action)
+            } else {
+                showFailure("findermenu.toast.openTerminalFailed", action: request.action)
+            }
         }
-    }
-
-    private func openTerminal(id: String, at directory: URL) -> Bool {
-        switch FinderMenuPresets.normalizeTerminalID(id) {
-        case "iterm2":
-            return openApplication(bundleIdentifier: "com.googlecode.iterm2", urls: [directory])
-                || runProcess("/usr/bin/open", arguments: ["-a", "iTerm", directory.path]) == 0
-                || openTerminalApp(at: directory)
-        case "ghostty":
-            return openTerminalWithArguments(
-                bundleIdentifier: "com.mitchellh.ghostty",
-                appName: "Ghostty",
-                arguments: ["--working-directory=\(directory.path)"]
-            ) || openTerminalApp(at: directory)
-        case "wezterm":
-            return openTerminalWithArguments(
-                bundleIdentifier: "com.github.wez.wezterm",
-                appName: "WezTerm",
-                arguments: ["start", "--cwd", directory.path]
-            ) || openTerminalApp(at: directory)
-        case "alacritty":
-            return openTerminalWithArguments(
-                bundleIdentifier: "org.alacritty",
-                appName: "Alacritty",
-                arguments: ["--working-directory", directory.path]
-            ) || openTerminalApp(at: directory)
-        case "kitty":
-            return openTerminalWithArguments(
-                bundleIdentifier: "net.kovidgoyal.kitty",
-                appName: "kitty",
-                arguments: ["--directory", directory.path]
-            ) || openTerminalApp(at: directory)
-        case "warp":
-            return runProcess("/usr/bin/open", arguments: ["-a", "Warp", directory.path]) == 0 || openTerminalApp(at: directory)
-        case "cmux":
-            return openApplication(bundleIdentifier: "com.cmuxterm.app", urls: [directory])
-        default:
-            return openTerminalApp(at: directory)
-        }
-    }
-
-    private func openTerminalApp(at directory: URL) -> Bool {
-        if openApplication(bundleIdentifier: "com.apple.Terminal", urls: [directory]) {
-            return true
-        }
-        if runProcess("/usr/bin/open", arguments: ["-a", "Terminal", directory.path]) == 0 {
-            return true
-        }
-        let command = "cd \(shellQuoted(directory.path))"
-        let script = """
-        tell application "Terminal"
-          activate
-          do script "\(appleScriptEscaped(command))"
-        end tell
-        """
-        return runProcess("/usr/bin/osascript", arguments: ["-e", script]) == 0
-    }
-
-    private func openTerminalWithArguments(bundleIdentifier: String, appName: String, arguments: [String]) -> Bool {
-        var bundleArguments = ["-n", "-b", bundleIdentifier, "--args"]
-        bundleArguments.append(contentsOf: arguments)
-        if runProcess("/usr/bin/open", arguments: bundleArguments) == 0 {
-            return true
-        }
-        var appArguments = ["-n", "-a", appName, "--args"]
-        appArguments.append(contentsOf: arguments)
-        return runProcess("/usr/bin/open", arguments: appArguments) == 0
     }
 
     // MARK: - New File
@@ -272,62 +248,117 @@ final class FinderMenuHostService {
     /// 在容器目录按模板新建文件，自增重名后写入内容并在 Finder 中选中。
     /// 模板取用户配置（resolvedTemplates 在无自定义时回退预设），与扩展菜单一致。
     private func newFile(_ request: FinderMenuRequest) {
-        guard let dir = directory(for: request), let id = request.parameter else {
-            showFailure("findermenu.toast.noTarget")
-            return
+        guard let directory = FinderMenuFileService.directory(for: request), let id = request.parameter else {
+            return showFailure("findermenu.toast.noTarget")
         }
         guard let template = FinderMenuShared.loadConfig().resolvedTemplates().first(where: { $0.id == id }) else {
-            showFailure("findermenu.toast.newFileFailed")
-            return
+            return showFailure("findermenu.toast.newFileFailed")
         }
-
-        // 按类型给起点名（index.html / main.py / notes.md…），重名时 uniqueURL 自增。
-        let baseName = template.defaultBaseName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let safeBase = baseName.isEmpty
-            ? FinderMenuPresets.defaultBaseName(forExtension: template.fileExtension)
-            : baseName
-        let dest = uniqueURL(inDirectory: dir, baseName: safeBase, fileExtension: template.fileExtension)
-        do {
-            try template.content.write(to: dest, atomically: true, encoding: .utf8)
-            NSWorkspace.shared.activateFileViewerSelecting([dest])
-            recordSuccess()
-        } catch {
-            logger.error("newFile failed: \(error.localizedDescription)")
-            showFailure("findermenu.toast.newFileFailed")
+        Task {
+            do {
+                let destination = try await FinderMenuFileService.shared.createFile(from: template, in: directory)
+                NSWorkspace.shared.activateFileViewerSelecting([destination])
+                recordSuccess(action: request.action)
+            } catch {
+                showFailure("findermenu.toast.newFileFailed", action: request.action)
+            }
         }
     }
 
     // MARK: - Move / Copy
 
-    /// 把选中项移动或复制到目标目录，逐个处理并对重名自增。
     private func transfer(_ request: FinderMenuRequest, move: Bool) {
-        guard let dest = request.parameter, !request.paths.isEmpty else {
-            showFailure("findermenu.toast.noTarget")
+        guard !request.paths.isEmpty else { return showFailure("findermenu.toast.noTarget") }
+        guard let path = request.parameter else {
+            chooseDestination(for: request, move: move)
             return
         }
-        let fileManager = FileManager.default
-        var failureCount = 0
-        for path in request.paths {
-            let source = URL(fileURLWithPath: path)
-            let name = source.deletingPathExtension().lastPathComponent
-            let ext = source.pathExtension
-            let target = uniqueURL(inDirectory: dest, baseName: name, fileExtension: ext)
+        let destination = URL(fileURLWithPath: path, isDirectory: true)
+        Task {
             do {
-                if move {
-                    try fileManager.moveItem(at: source, to: target)
+                let result = try await FinderMenuFileService.shared.transfer(paths: request.paths, to: destination, move: move)
+                if result.failed > 0 {
+                    let message = String(format: "findermenu.toast.transferPartial".localized, result.completed, result.failed)
+                    showFailure(move ? "findermenu.toast.moveFailed" : "findermenu.toast.copyFailed",
+                                action: request.action, message: message)
                 } else {
-                    try fileManager.copyItem(at: source, to: target)
+                    recordSuccess(action: request.action)
                 }
             } catch {
-                failureCount += 1
-                logger.error("\(move ? "move" : "copy") failed: \(error.localizedDescription)")
+                showFailure(move ? "findermenu.toast.moveFailed" : "findermenu.toast.copyFailed", action: request.action)
             }
         }
-        if failureCount > 0 {
-            showFailure(move ? "findermenu.toast.moveFailed" : "findermenu.toast.copyFailed")
-        } else {
-            recordSuccess()
+    }
+
+    private func chooseDestination(for request: FinderMenuRequest, move: Bool) {
+        guard destinationPanel == nil else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = (move ? "findermenu.choose.move" : "findermenu.choose.copy").localized
+        panel.message = "findermenu.choose.destination".localized
+        panel.directoryURL = FinderMenuFileService.directory(for: request)
+        destinationPanel = panel
+        NotificationCenter.default.post(name: .finderMenuFilePanelWillPresent, object: nil)
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { [weak self] response in
+            NotificationCenter.default.post(name: .finderMenuFilePanelDidDismiss, object: nil)
+            guard let self else { return }
+            self.destinationPanel = nil
+            guard response == .OK, let destination = panel.url,
+                  self.isRunning, FinderMenuShared.isEnabled() else { return }
+            let resolved = FinderMenuRequest(action: request.action, paths: request.paths,
+                                             container: request.container, parameter: destination.path)
+            self.transfer(resolved, move: move)
         }
+    }
+
+    private func openDirectory(_ request: FinderMenuRequest) {
+        guard let path = request.parameter,
+              (try? URL(fileURLWithPath: path).resolvingSymlinksInPath().resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true,
+              NSWorkspace.shared.open(URL(fileURLWithPath: path, isDirectory: true)) else {
+            return showFailure("findermenu.toast.openDirectoryFailed")
+        }
+        recordSuccess()
+    }
+
+    private func toggleFinderVisibility() {
+        guard visibilityHostWindow == nil else { return }
+        let show = !FinderMenuSystemService.showsHiddenFiles
+        let alert = NSAlert()
+        alert.messageText = (show ? "findermenu.visibility.show" : "findermenu.visibility.hide").localized
+        alert.informativeText = "findermenu.visibility.restartHint".localized
+        alert.addButton(withTitle: "findermenu.visibility.apply".localized)
+        alert.addButton(withTitle: "findermenu.visibility.cancel".localized)
+        NSApp.activate(ignoringOtherApps: true)
+        let window = visibilityWindow()
+        visibilityHostWindow = window
+        alert.beginSheetModal(for: window) { [weak self] response in
+            window.close()
+            self?.visibilityHostWindow = nil
+            guard response == .alertFirstButtonReturn, let self,
+                  self.isRunning, FinderMenuShared.isEnabled() else { return }
+            Task {
+                guard FinderMenuSystemService.setShowsHiddenFiles(show), await FinderMenuSystemService.restartFinder() else {
+                    self.showFailure("findermenu.toast.visibilityFailed", action: .toggleHiddenFiles)
+                    return
+                }
+                self.recordSuccess(action: .toggleHiddenFiles)
+            }
+        }
+    }
+
+    private func visibilityWindow() -> NSWindow {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 1),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        return window
     }
 
     // MARK: - Open With App
@@ -339,11 +370,17 @@ final class FinderMenuHostService {
             return
         }
         let targets = request.paths.isEmpty ? [request.container].compactMap { $0 } : request.paths
-        guard !targets.isEmpty, runProcess("/usr/bin/open", arguments: ["-b", bundleID] + targets) == 0 else {
-            showFailure("findermenu.toast.openWithFailed")
-            return
+        guard !targets.isEmpty else { return showFailure("findermenu.toast.noTarget") }
+        Task {
+            let opened = await FinderMenuTerminalService.openApplication(
+                bundleID: bundleID, urls: targets.map { URL(fileURLWithPath: $0) }
+            )
+            if opened {
+                recordSuccess(action: request.action)
+            } else {
+                showFailure("findermenu.toast.openWithFailed", action: request.action)
+            }
         }
-        recordSuccess()
     }
 
     // MARK: - Hide / Show
@@ -365,7 +402,7 @@ final class FinderMenuHostService {
                 try mutableURL.setResourceValues(values)
             } catch {
                 failureCount += 1
-            logger.error("toggleHidden failed: \(error.localizedDescription)")
+                logger.error("toggleHidden failed: \(error.localizedDescription)")
             }
         }
         if failureCount > 0 {
@@ -397,110 +434,38 @@ final class FinderMenuHostService {
     // MARK: - Helpers
 
     private func directory(for request: FinderMenuRequest) -> String? {
-        if let container = request.container {
-            var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: container, isDirectory: &isDir), isDir.boolValue {
-                return container
-            }
-            // container 不是目录（Finder 在某些上下文中可能返回文件路径），取父目录。
-            return (container as NSString).deletingLastPathComponent
-        }
-        guard let first = request.paths.first else { return nil }
-        var isDir: ObjCBool = false
-        FileManager.default.fileExists(atPath: first, isDirectory: &isDir)
-        return isDir.boolValue ? first : (first as NSString).deletingLastPathComponent
+        FinderMenuFileService.directory(for: request)?.path
     }
 
-    /// 在目录内生成不与现有文件冲突的 URL：`base.ext` → `base 2.ext` → `base 3.ext`。
-    private func uniqueURL(inDirectory dir: String, baseName: String, fileExtension: String) -> URL {
-        let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
-        let fileManager = FileManager.default
-        func make(_ name: String) -> URL {
-            fileExtension.isEmpty
-                ? dirURL.appendingPathComponent(name)
-                : dirURL.appendingPathComponent(name).appendingPathExtension(fileExtension)
-        }
-        var candidate = make(baseName)
-        var index = 2
-        while fileManager.fileExists(atPath: candidate.path) {
-            candidate = make("\(baseName) \(index)")
-            index += 1
-        }
-        return candidate
-    }
-
-    private func openApplication(bundleIdentifier: String, urls: [URL]) -> Bool {
-        guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
-            logger.error("application not found: \(bundleIdentifier)")
-            return false
-        }
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
-        NSWorkspace.shared.open(urls, withApplicationAt: applicationURL, configuration: configuration) { _, error in
-            if let error {
-                self.logger.error("open app failed: \(error.localizedDescription)")
-            }
-        }
-        return true
-    }
-
-    @discardableResult
-    private func runProcess(_ launchPath: String, arguments: [String]) -> Int32 {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: launchPath)
-        process.arguments = arguments
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let status = process.terminationStatus
-            if status != 0 {
-                logger.error("process failed: \(launchPath) status=\(status)")
-            }
-            return status
-        } catch {
-            logger.error("process failed: \(error.localizedDescription)")
-            return -1
-        }
-    }
-
-    private func showFailure(_ localizedKey: String) {
+    private func showFailure(_ localizedKey: String, action: FinderMenuAction? = nil, message: String? = nil) {
         DiagnosticLogService.record(
             level: .error,
             category: "finderMenu",
             action: "failed",
             fields: [
-                "finderAction": activeAction?.rawValue ?? "unknown",
+                "finderAction": (action ?? activeAction)?.rawValue ?? "unknown",
                 "reason": localizedKey
             ]
         )
         NotificationCenter.default.post(
             name: .finderMenuActionFailed,
             object: nil,
-            userInfo: ["message": localizedKey.localized]
+            userInfo: ["message": message ?? localizedKey.localized]
         )
     }
 
-    private func recordSuccess() {
+    private func recordSuccess(action: FinderMenuAction? = nil) {
         DiagnosticLogService.record(
             category: "finderMenu",
             action: "succeeded",
-            fields: ["finderAction": activeAction?.rawValue ?? "unknown"]
+            fields: ["finderAction": (action ?? activeAction)?.rawValue ?? "unknown"]
         )
     }
 
-    private func appleScriptEscaped(_ value: String) -> String {
-        value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-    }
-
-    private func shellQuoted(_ value: String) -> String {
-        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-_.:")
-        if value.unicodeScalars.allSatisfy({ allowed.contains($0) }) {
-            return value
-        }
-        return "'\(value.replacingOccurrences(of: "'", with: "'\"'\"'"))'"
-    }
 }
 
 extension Notification.Name {
     static let finderMenuActionFailed = Notification.Name("finderMenuActionFailed")
+    static let finderMenuFilePanelWillPresent = Notification.Name("finderMenuFilePanelWillPresent")
+    static let finderMenuFilePanelDidDismiss = Notification.Name("finderMenuFilePanelDidDismiss")
 }

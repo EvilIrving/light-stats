@@ -34,6 +34,8 @@ nonisolated enum FinderMenuShared {
 
     /// 共享配置的 UserDefaults suite 名（与 App Group 同名）。
     static let defaultsSuiteName = appGroupID
+    static let configChanged = Notification.Name("com.lightstats.findermenu.configChanged")
+    static let deliveryFailed = Notification.Name("com.lightstats.findermenu.deliveryFailed")
 
     private static let enabledKey = "findermenu.enabled"
     private static let configKey = "findermenu.config"
@@ -52,6 +54,17 @@ nonisolated enum FinderMenuShared {
     static func setEnabled(_ value: Bool) {
         sharedDefaults?.set(value, forKey: enabledKey)
         sharedDefaults?.synchronize()
+        notifyConfigurationChanged()
+    }
+
+    static func notifyConfigurationChanged() {
+        DistributedNotificationCenter.default().postNotificationName(configChanged, object: nil, userInfo: nil, deliverImmediately: true)
+    }
+
+    static var showsHiddenFiles: Bool { sharedDefaults?.bool(forKey: "findermenu.showsHiddenFiles") ?? false }
+
+    static func setShowsHiddenFiles(_ value: Bool) {
+        sharedDefaults?.set(value, forKey: "findermenu.showsHiddenFiles")
     }
 
     /// 读用户可编辑配置（常用目录 / 打开方式 App）。缺省 / 解码失败 → 空配置（沿用预设）。
@@ -68,6 +81,7 @@ nonisolated enum FinderMenuShared {
         guard let data = try? JSONEncoder().encode(config) else { return }
         sharedDefaults?.set(data, forKey: configKey)
         sharedDefaults?.synchronize()
+        notifyConfigurationChanged()
     }
 
     /// 本地化菜单标题字典（key = 动作 rawValue）。宿主用自身语言计算好写入，扩展读取——
@@ -94,6 +108,19 @@ nonisolated enum FinderMenuShared {
             return String(cString: dir)
         }
         return NSHomeDirectory()
+    }
+
+    /// Remove nested roots so one directory is never registered twice by this extension.
+    static func monitoringRoots(home: String, favorites: [String], volumes: [String]) -> Set<URL> {
+        let paths = ([home] + favorites + volumes.filter { $0.hasPrefix("/Volumes/") })
+            .filter { $0.hasPrefix("/") && $0 != "/" }
+            .map { URL(fileURLWithPath: $0, isDirectory: true).standardizedFileURL.path }
+            .sorted { $0.count < $1.count }
+        var roots: [String] = []
+        for path in paths where !roots.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) {
+            roots.append(path)
+        }
+        return Set(roots.map { URL(fileURLWithPath: $0, isDirectory: true) })
     }
 
     // MARK: - Pending failure (IPC delivery failed while host was down)

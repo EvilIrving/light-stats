@@ -10,6 +10,7 @@
 import Foundation
 
 nonisolated struct FinderMenuRequest: Codable, Sendable {
+    var requestID: UUID? = UUID()
     let action: FinderMenuAction
     let paths: [String]       // 选中项的文件系统路径
     let container: String?    // 右键所在目录（空白处 / 容器菜单时使用）

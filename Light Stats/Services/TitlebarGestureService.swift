@@ -23,9 +23,9 @@ protocol TitlebarGestureControlling: AnyObject {
 
 final class TitlebarGestureService: TitlebarGestureControlling {
     private enum GestureEvent {
-        case threshold(WindowSnapAction, CGPoint)
-        case ready(WindowSnapAction, CGPoint)
-        case commit(WindowSnapAction, CGPoint)
+        case threshold(WindowSnapAction, CGPoint, SnapGestureZone)
+        case ready(WindowSnapAction, CGPoint, SnapGestureZone)
+        case commit(WindowSnapAction, CGPoint, SnapGestureZone)
         case cancel
     }
 
@@ -43,6 +43,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         var lastPoint: CGPoint?
         var lastEventAt: TimeInterval = 0
         var lastTriggeredAt: TimeInterval = 0
+        var zone: SnapGestureZone = .titlebar
     }
 
     private let logger = AppLogger(category: "TitlebarGestures")
@@ -207,9 +208,14 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         switch releaseDisposition(for: event) {
         case .ended:
             handleGestureEvent(releaseGesture())
+            // Hard guarantee, independent of what the state machine decided: once the fingers are
+            // up no preview may survive. A preview that outlives its gesture is the one failure
+            // users actually notice.
+            endPreviewSession()
             return
         case .cancelled:
             handleGestureEvent(cancelGesture())
+            endPreviewSession()
             return
         case .none:
             break
@@ -220,7 +226,11 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         let deltaX = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
         guard deltaX != 0 || deltaY != 0 else { return }
 
-        let gestureEvent = registerGesture(deltaX: deltaX, deltaY: deltaY, point: point)
+        // Fn turns the swipe into a window-anywhere gesture, which is the only way to reach apps
+        // whose titlebar is custom-drawn (Electron and friends) — see
+        // docs/window-titlebar-gesture-research.md.
+        let zone: SnapGestureZone = event.flags.contains(.maskSecondaryFn) ? .pointer : .titlebar
+        let gestureEvent = registerGesture(deltaX: deltaX, deltaY: deltaY, point: point, zone: zone)
         if gestureEvent == nil && hasActivePreviewGesture() {
             schedulePreviewTimeout()
         }
@@ -229,17 +239,16 @@ final class TitlebarGestureService: TitlebarGestureControlling {
 
     private func handleGestureEvent(_ event: GestureEvent?) {
         switch event {
-        case .threshold(let action, let point):
+        case .threshold(let action, let point, let zone):
+            showPreview(for: action, at: point, zone: zone, feedback: true)
+        case .ready(let action, let point, let zone):
             schedulePreviewTimeout()
-            showPreview(for: action, at: point, feedback: true)
-        case .ready(let action, let point):
-            schedulePreviewTimeout()
-            showPreview(for: action, at: point)
-        case .commit(let action, let point):
+            showPreview(for: action, at: point, zone: zone)
+        case .commit(let action, let point, let zone):
             cancelPreviewTimeout()
             hidePreview()
             Task { [weak self] in
-                self?.snappingService.perform(action, at: point)
+                self?.snappingService.perform(action, at: point, zone: zone)
             }
         case .cancel:
             cancelPreviewTimeout()
@@ -249,7 +258,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         }
     }
 
-    private func registerGesture(deltaX: Double, deltaY: Double, point: CGPoint) -> GestureEvent? {
+    private func registerGesture(deltaX: Double, deltaY: Double, point: CGPoint, zone: SnapGestureZone) -> GestureEvent? {
         let now = ProcessInfo.processInfo.systemUptime
         stateLock.lock()
         defer { stateLock.unlock() }
@@ -266,6 +275,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         gestureState.deltaX += deltaX
         gestureState.deltaY += deltaY
         gestureState.lastPoint = point
+        gestureState.zone = zone
 
         guard let resistanceAction = dominantAction(
             deltaX: gestureState.deltaX,
@@ -290,7 +300,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         if let action = dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: hapticThreshold),
            gestureState.thresholdAction != action {
             gestureState.thresholdAction = action
-            return .threshold(action, point)
+            return .threshold(action, point, zone)
         }
 
         guard now - gestureState.lastTriggeredAt >= triggerCooldown else { return nil }
@@ -304,7 +314,7 @@ final class TitlebarGestureService: TitlebarGestureControlling {
 
         if gestureState.readyAction != action {
             gestureState.readyAction = action
-            return .ready(action, point)
+            return .ready(action, point, zone)
         }
         return nil
     }
@@ -320,10 +330,11 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         defer { stateLock.unlock() }
 
         guard let point = gestureState.lastPoint else { return nil }
+        let zone = gestureState.zone
         if let action = gestureState.readyAction {
             gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
             previewToken += 1
-            return .commit(action, point)
+            return .commit(action, point, zone)
         }
         if gestureState.thresholdAction != nil {
             gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
@@ -371,11 +382,21 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return nil
     }
 
-    private func showPreview(for action: WindowSnapAction, at point: CGPoint, feedback: Bool = false) {
+    private func showPreview(for action: WindowSnapAction, at point: CGPoint, zone: SnapGestureZone, feedback: Bool = false) {
         let token = currentPreviewToken()
         Task { @MainActor [weak self] in
             guard let self, isPreviewTokenCurrent(token) else { return }
-            guard let frame = snappingService.previewFrame(for: action, at: point) else {
+
+            // Refuse the whole gesture if it started on a control: the app is already reacting to
+            // that swipe, and the tap cannot swallow it. Clearing the state here also stops the
+            // release from committing, so nothing moves even if the finger keeps going.
+            if let rejection = snappingService.gestureRejection(at: point, zone: zone) {
+                rejectGesture(action, zone: zone, reason: rejection, token: token)
+                return
+            }
+
+            schedulePreviewTimeout()
+            guard let frame = snappingService.previewFrame(for: action, at: point, zone: zone) else {
                 if isPreviewTokenCurrent(token) {
                     previewService.hide()
                 }
@@ -387,6 +408,37 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             }
             previewService.show(frame: frame)
         }
+    }
+
+    /// Drops the in-flight gesture after its start point turned out to be unusable.
+    private func rejectGesture(_ action: WindowSnapAction, zone: SnapGestureZone, reason: String, token: UInt64) {
+        stateLock.lock()
+        guard previewToken == token else {
+            stateLock.unlock()
+            return
+        }
+        previewToken += 1
+        gestureState = GestureState(lastEventAt: ProcessInfo.processInfo.systemUptime)
+        stateLock.unlock()
+
+        cancelPreviewTimeout()
+        hidePreview()
+        DiagnosticLogService.record(
+            category: "windowManagement",
+            action: "gestureRejected",
+            fields: [
+                "snapAction": String(describing: action),
+                "zone": zone.diagnosticName,
+                "reason": reason
+            ]
+        )
+    }
+
+    /// Cancels the preview timer, invalidates pending preview work, and hides the overlay.
+    private func endPreviewSession() {
+        cancelPreviewTimeout()
+        invalidatePreviewToken()
+        hidePreview()
     }
 
     private func currentPreviewToken() -> UInt64 {

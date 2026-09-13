@@ -19,13 +19,14 @@ nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
     case moveTo            // 委派宿主：把选中项移动到目标目录（parameter = 目标目录路径）
     case copyTo            // 委派宿主：把选中项复制到目标目录（parameter = 目标目录路径）
     case openWithApp       // 委派宿主：用指定 App 打开选中项（parameter = App bundle id）
-    case toggleHidden      // 委派宿主：切换选中项的隐藏标志
+    case toggleHidden      // 切换选中项的隐藏标志
+    case openDirectory     // 打开常用目录（parameter = 目录路径）
+    case toggleHiddenFiles // 切换 Finder 对隐藏文件的显示
     case cmuxNewWindow     // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开窗口
     case cmuxNewWorkspace  // 委派宿主：调用 cmux 的 macOS Service 在当前目录新开工作区
 
-    /// 所有动作统一委派给宿主，确保执行结果可被诊断日志记录。
-    var requiresHost: Bool {
-        true
+    static var configurableActions: [Self] {
+        allCases.filter { $0 != .cmuxNewWindow && $0 != .cmuxNewWorkspace }
     }
 
     /// 本地化标题：优先读宿主发布到 App Group 的标签，未发布则回退英文字面量。
@@ -45,7 +46,9 @@ nonisolated enum FinderMenuAction: String, Sendable, Codable, CaseIterable {
         case .moveTo: return "Move To"
         case .copyTo: return "Copy To"
         case .openWithApp: return "Open With"
-        case .toggleHidden: return "Hide / Show"
+        case .toggleHidden: return "Hide / Unhide Selection"
+        case .openDirectory: return "Favorite Folders"
+        case .toggleHiddenFiles: return "Show Hidden Files"
         case .cmuxNewWindow: return "New cmux Window Here"
         case .cmuxNewWorkspace: return "New cmux Workspace Here"
         }

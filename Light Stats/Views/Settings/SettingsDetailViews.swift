@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// 组内行间分隔线，左侧内缩对齐标签。
-private func rowDivider() -> some View {
+/// 区块内发丝分隔线，供同模块的 Settings 分区共用。
+func rowDivider() -> some View {
     Divider().padding(.leading, 12)
 }
 
@@ -285,6 +286,7 @@ struct ScrollDetail: View {
     var body: some View {
         SettingsDetailScaffold("settings.inputDevices".localized) {
             FindMouseSettingsSection(settings: settings, onRequestActivation: onRequestActivation)
+            DefaultInputSourceSettingsSection(settings: settings)
             SettingsGroup {
                 SettingsRow("settings.scrollReverse".localized) {
                     SettingsToggle(isOn: $settings.scrollReverseEnabled)
@@ -337,25 +339,6 @@ struct ScrollDetail: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .disabled(!active).opacity(active ? 1 : 0.45)
-    }
-}
-
-// MARK: - Window Management
-
-struct WindowManagementDetail: View {
-    @ObservedObject var settings: SettingsManager
-
-    var body: some View {
-        SettingsDetailScaffold("settings.windowManagement".localized) {
-            SettingsGroup {
-                SettingsRow(
-                    "settings.windowManagement".localized,
-                    subtitle: "settings.windowManagement.description".localized
-                ) {
-                    SettingsToggle(isOn: $settings.windowManagementEnabled)
-                }
-            }
-        }
     }
 }
 
@@ -451,11 +434,11 @@ struct NetworkDetail: View {
 struct FinderMenuDetail: View {
     @Environment(\.theme) private var theme
     @ObservedObject var settings: SettingsManager
-    @ObservedObject private var store = FinderMenuConfigStore.shared
+    @ObservedObject var store = FinderMenuConfigStore.shared
     let openSettings: () -> Void
 
     /// 哪些文件类型分类当前展开（默认全部收起，保持页面简短）。
-    @State private var expandedCategories: Set<FinderMenuPresets.TemplateCategory> = []
+    @State var expandedCategories: Set<FinderMenuPresets.TemplateCategory> = []
 
     var body: some View {
         SettingsDetailScaffold("settings.finderMenu".localized) {
@@ -474,7 +457,11 @@ struct FinderMenuDetail: View {
                             set: { store.setTerminalID($0) }
                         )) {
                             ForEach(FinderMenuPresets.terminalPresets) { terminal in
-                                Text(terminal.name).tag(terminal.id)
+                                Text(store.isTerminalInstalled(terminal)
+                                     ? terminal.name
+                                     : String(format: "settings.finderMenu.notInstalled".localized, terminal.name))
+                                    .tag(terminal.id)
+                                    .disabled(!store.isTerminalInstalled(terminal))
                             }
                         }
                         .pickerStyle(.menu).labelsHidden().frame(width: 150).focusable(false)
@@ -489,6 +476,8 @@ struct FinderMenuDetail: View {
                 }
             }
             if settings.finderMenuEnabled {
+                extensionFooter
+                FinderMenuActionsSection(store: store)
                 EditableListView(
                     title: "settings.finderMenu.directories".localized,
                     rows: store.config.favoriteDirectories.map {
@@ -516,7 +505,7 @@ struct FinderMenuDetail: View {
                     }
                 )
                 templateChooser
-                extensionFooter
+                FinderMenuTemplatesSection(store: store)
             }
         }
         .onAppear { store.refreshExtensionStatus() }
@@ -616,7 +605,7 @@ struct FinderMenuDetail: View {
                     if expandedCategories.contains(category) {
                         ForEach(FinderMenuPresets.fileTemplates(in: category), id: \.id) { template in
                             rowDivider()
-                            SettingsRow(template.title) {
+                            SettingsRow(FinderMenuPresets.templateTitle(id: template.id, fallback: template.title)) {
                                 SettingsToggle(isOn: Binding(
                                     get: { store.isPresetTemplateEnabled(template.id) },
                                     set: { store.setPresetTemplate(template.id, enabled: $0) }
@@ -666,7 +655,7 @@ struct FinderMenuDetail: View {
 // MARK: - Editable List (custom +/- editor)
 
 /// 一行可编辑列表项。
-private struct EditableListRow: Identifiable {
+struct EditableListRow: Identifiable {
     let id: String
     let title: String
     let subtitle: String
@@ -674,7 +663,7 @@ private struct EditableListRow: Identifiable {
 
 /// 原生 macOS 风格的 +/- 列表编辑器：定高发丝边框区域（内部滚动）+ 底部 + / − 栏。
 /// 刻意不用 SwiftUI List（避免嵌套滚动与焦点环传播问题，见方案评审）。行支持悬停与选中高亮。
-private struct EditableListView: View {
+struct EditableListView: View {
     @Environment(\.theme) private var theme
 
     let title: String
@@ -782,6 +771,7 @@ private struct EditableListView: View {
                 .font(.system(size: 10, weight: .medium))
                 .frame(width: 22, height: 16)
                 .contentShape(Rectangle())
+            .accessibilityLabel(symbol == "plus" ? "settings.finderMenu.addItem".localized : "settings.finderMenu.removeItem".localized)
         }
         .buttonStyle(.plain)
         .foregroundStyle(enabled ? .secondary : .quaternary)

@@ -19,12 +19,14 @@ final class FinderMenuConfigStore: ObservableObject {
     static let shared = FinderMenuConfigStore()
 
     @Published private(set) var config: FinderMenuConfig
+    @Published private(set) var isImportingTemplate = false
+    @Published private(set) var templateError: String?
 
     /// 扩展在系统 pkd 里的真实状态，供设置页提示用户是否还需在系统设置中手动启用。
     @Published private(set) var extensionStatus: FinderExtensionStatus = .unknown
 
-    private init() {
-        config = FinderMenuShared.loadConfig()
+    init(config: FinderMenuConfig? = nil) {
+        self.config = config ?? FinderMenuShared.loadConfig()
     }
 
     /// 将文件面板作为设置窗口的 sheet 展示，避免应用级 modal 与 SwiftUI 设置页的
@@ -51,14 +53,14 @@ final class FinderMenuConfigStore: ObservableObject {
     }
 
     func restartFinder() {
-        Task.detached {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            process.arguments = ["Finder"]
-            try? process.run()
-            process.waitUntilExit()
+        Task {
+            let restarted = await FinderMenuSystemService.restartFinder()
+            ToastCenter.shared.show(
+                message: (restarted ? "settings.finderMenu.finderRefreshing" : "findermenu.toast.visibilityFailed").localized,
+                systemImage: restarted ? "arrow.clockwise" : "exclamationmark.triangle", tint: restarted ? .blue : .orange
+            )
+            refreshExtensionStatus()
         }
-        ToastCenter.shared.show(message: "settings.finderMenu.finderRefreshing".localized, systemImage: "arrow.clockwise", tint: .blue)
     }
 
     // MARK: - Directories
@@ -127,32 +129,55 @@ final class FinderMenuConfigStore: ObservableObject {
 
     // MARK: - Templates
 
-    /// 选一个文本文件作为「新建文件」模板：其内容即模板内容，扩展名沿用，文件名作标题。
-    /// 仅支持可按 UTF-8 读取的文本文件；二进制模板（Word/Excel 等）暂不支持。
-    /// 用 `begin(completionHandler:)` 而非同步 `runModal()`——后者在 SwiftUI 按钮回调
-    /// 内会阻塞主线程，与 SwiftUI 的事件循环形成死锁导致 UI 卡死。
+    func isTerminalInstalled(_ terminal: FinderMenuPresets.TerminalPreset) -> Bool {
+        guard let bundleID = terminal.bundleID else { return false }
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil
+    }
+
+    func setAction(_ action: FinderMenuAction, enabled: Bool) {
+        config.hiddenActionIDs.removeAll { $0 == action.rawValue }
+        if !enabled { config.hiddenActionIDs.append(action.rawValue) }
+        persist()
+    }
+
+    /// Store a private copy so moving or deleting the original never breaks the template.
     func addTemplate() {
+        guard !isImportingTemplate else { return }
+        templateError = nil
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
+        panel.treatsFilePackagesAsDirectories = false
+        panel.message = "settings.finderMenu.customTemplatesHint".localized
         present(panel) { [weak self] response in
-            guard let self, response == .OK, let url = panel.url,
-                  let content = try? String(contentsOf: url, encoding: .utf8) else { return }
-            let entry = FinderMenuConfig.TemplateEntry(
-                id: UUID().uuidString,
-                title: url.lastPathComponent,
-                fileExtension: url.pathExtension,
-                content: content
-            )
-            self.config.templates.append(entry)
-            self.persist()
+            guard let self, response == .OK, let url = panel.url else { return }
+            self.isImportingTemplate = true
+            Task {
+                defer { self.isImportingTemplate = false }
+                do {
+                    let entry = try await FinderMenuFileService.shared.importTemplate(from: url)
+                    self.config.templates.append(entry)
+                    self.persist()
+                } catch {
+                    self.templateError = "settings.finderMenu.templateImportFailed".localized
+                    DiagnosticLogService.record(level: .error, category: "finderMenu", action: "templateImportFailed",
+                                                fields: ["reason": String(describing: type(of: error))])
+                }
+            }
         }
     }
 
     func removeTemplate(_ entry: FinderMenuConfig.TemplateEntry) {
-        config.templates.removeAll { $0.id == entry.id }
-        persist()
+        templateError = nil
+        Task {
+            do {
+                try await FinderMenuFileService.shared.removeTemplate(entry)
+                config.templates.removeAll { $0.id == entry.id }
+                persist()
+            } catch {
+                templateError = "settings.finderMenu.templateRemoveFailed".localized
+            }
+        }
     }
 
     // MARK: - Preset template visibility
@@ -185,9 +210,4 @@ final class FinderMenuConfigStore: ObservableObject {
     private func persist() {
         FinderMenuShared.saveConfig(config)
     }
-}
-
-extension Notification.Name {
-    static let finderMenuFilePanelWillPresent = Notification.Name("finderMenuFilePanelWillPresent")
-    static let finderMenuFilePanelDidDismiss = Notification.Name("finderMenuFilePanelDidDismiss")
 }
