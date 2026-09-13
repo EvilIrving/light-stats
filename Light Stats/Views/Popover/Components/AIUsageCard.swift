@@ -202,7 +202,7 @@ struct AIProviderCompactRow: View {
             )
             if !windows.isEmpty {
                 VStack(spacing: 6) {
-                    ForEach(windows, id: \.label) { window in
+                    ForEach(windows, id: \.self) { window in
                         WindowRow(window: window)
                     }
                 }

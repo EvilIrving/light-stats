@@ -6,7 +6,7 @@
 import Foundation
 
 /// A single rate-limit window (e.g. 5h or weekly).
-struct UsageWindow: Codable, Equatable, Sendable {
+struct UsageWindow: Codable, Hashable, Sendable {
     /// A `UsageWindowLabel` key, or a provider-supplied literal (`5h`, `Pro`, …).
     let label: String
     /// `nil` when the provider reports a window but not a used percent.
