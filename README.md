@@ -57,7 +57,7 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - Optional hardware brightness for built-in and external displays (DDC; off by default)
 - Temperature, fan, thermal state, and disk status strip
 - System health score with dimension-level summary and toggles
-- Claude Code, Codex, and Gemini subscription usage when AI monitoring is enabled
+- AI subscription usage for 15 providers (quota windows and prepaid balances) when AI monitoring is enabled
 - Short-term sparklines for key metrics
 - Metric icons use template-tinted SVG outlines (CPU, GPU, memory, disk, network, proxy, temperature, processes)
 
@@ -168,7 +168,7 @@ Public exit-node detection is optional. When enabled, it can query a selected ge
 
 ### AI Subscription Usage
 
-When enabled, Light Stats reads credentials stored locally by Claude Code, Codex, and Gemini CLIs, then requests current subscription utilization from that provider. AI monitoring is disabled by default and never transmits credentials to another provider or to the Light Stats developer.
+When enabled, Light Stats reads credentials stored locally by each provider's CLI, or an API token you paste in Settings (stored in Keychain), then requests current subscription utilization from that provider. AI monitoring is disabled by default and never transmits credentials to another provider or to the Light Stats developer.
 
 Claude Code and Codex each have a separate, off-by-default usage-window warmup switch. After a rolling window resets, warmup sends the minimal headless prompt `ok` through that provider's CLI from a temporary empty directory, discards normal output, and verifies the new window. Gemini does not use warmup.
 
@@ -210,7 +210,7 @@ Requirements: macOS 14 or later on an Apple Silicon Mac. Intel Macs are not supp
 - Launch at login, automatic update checks, and Stable/Beta update channel; Keep Awake is a popover-toolbar quick toggle
 - Export a diagnostic report; optional 48-hour performance recording
 - Exit-node detection and provider selection
-- AI monitoring for Claude Code, Codex, and Gemini, plus separate Claude/Codex warmup switches
+- AI monitoring for 15 providers, plus separate Claude/Codex warmup switches
 - Vertical and horizontal reversal, optional trackpad and Magic Mouse inclusion, wheel-acceleration control, fixed line count, and step multiplier
 - Default input source after switching apps
 - Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures), plus macOS' own edge-tiling switches

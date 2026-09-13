@@ -31,6 +31,7 @@ Light Stats/
 │   ├── AIProvider.swift             # Usage provider id; display names are localized keys
 │   ├── UsageWindow.swift            # 5h / weekly used-percent window
 │   ├── UsageWindowLabel.swift       # Language-neutral window label token
+│   ├── AIUsageWindowPicker.swift      # mostStrained header + expanded detail windows
 │   ├── UsageBalance.swift           # Prepaid remaining amount (DeepSeek / OpenRouter)
 │   ├── CredentialSource.swift       # localDiscovered / apiToken / ideDatabase
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100

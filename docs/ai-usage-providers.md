@@ -1,6 +1,7 @@
 # AI 用量监控 · Provider 路线图与实现规格
 
-> 状态：路线图。已实现 3 个 provider（Claude Code / Codex / Gemini），本文定的是**接下来做哪些、怎么做**。
+> 状态：已落地（选型原则、A/B 档研究与排除名单仍有效；实现状态见本节末尾的「落地记录」）。
+> 已实现 15 个 provider（Claude Code / Codex / Gemini / Grok / Warp / Trae / OpenCode Go / Cursor / Kimi / Qoder / DeepSeek / Z.ai / MiniMax / OpenRouter / MiMo），详见 `Light Stats/Services/AIUsage/UsageProviderRegistry.swift`。
 > 取代已删除的 `docs/ai-usage-plan.md`（Phase 1 计划）与 `docs/ai-usage-providers-research.md`（2026-06-17 对标调研）。
 > 对应代码：`Light Stats/Services/{Claude,Codex,Gemini}UsageService.swift`、`Light Stats/Services/AIUsage/`、
 > `Light Stats/ViewModels/AIUsageMonitor.swift`、`Light Stats/Views/Popover/Components/AIUsageCard.swift`。
@@ -105,9 +106,9 @@ OpenCode 是全仓库 star 第一，实际下载量比 Codex **低一个数量�
 
 ---
 
-# 现状
+# 现状（2026-09-14：15 家已实现）
 
-已实现 3 家，全部走「自动读本地凭证」，无需用户输入任何东西：
+最初实现 3 家，全部走「自动读本地凭证」，无需用户输入任何东西：
 
 | Provider | 认证来源 | 端点 |
 |---|---|---|
@@ -117,7 +118,11 @@ OpenCode 是全仓库 star 第一，实际下载量比 Codex **低一个数量�
 
 外加 `UsageWarmupService`（自动续期窗口，opt-in）。
 
-## ⚠️ 一个必须先补的架构缺口
+后续扩到 15 家：Grok（`~/.grok/auth.json` + CLI billing）、Warp（GraphQL）、Trae CN（credit pool，session cookie）、OpenCode Go（usage API）、Cursor（`state.vscdb`，`ideDatabase`）、Kimi（`/coding/v1/usages`，周 + 5h）、Qoder（big-model credits，session cookie）、DeepSeek / Z.ai / MiniMax / OpenRouter（API token，余额型）、MiMo（console balance + Token Plan）。凭证分三类（`CredentialSource`）：`localDiscovered`、`apiToken`（设置页粘贴，经 `KeychainCredentialWriter` 走 `security -i` 存 Keychain）、`ideDatabase`。
+
+Overview 展示规则：多窗口 provider 折叠为一行，只显示最紧的窗口（`AIUsageWindowPicker.mostStrained`），点击展开全部；余额型 provider 沉底、无进度条（`BalanceRow` 只渲染金额）。
+
+## ⚠️ 一个必须先补的架构缺口（已补：随 DeepSeek 落地）
 
 **项目现在没有「用户粘贴 API key」的能力。** 三家都是自动读本地凭证，所以从来没做过输入与安全存储。
 
@@ -134,7 +139,9 @@ OpenCode 是全仓库 star 第一，实际下载量比 Codex **低一个数量�
 
 ---
 
-# A 档 —— 建议做
+# A 档 —— 建议做（除 Copilot 外均已实现）
+
+> 落地记录（2026-09-14）：z.ai / Trae（CN credit pool，session cookie 落地）/ Kimi（`/coding/v1/usages`）/ Grok（本地 CLI billing）/ MiniMax / DeepSeek / OpenRouter / Warp 均已实现。Trae 的 macOS token 落地走 session-cookie 方案。仅 Copilot（OAuth device flow）未做。
 
 都按「贴一个 token」或「读一个本地文件」即可拿到用量，预计单家 150–250 行。
 
@@ -226,7 +233,7 @@ Origin: https://www.trae.cn
 
 | Provider | 认证 | 说明 |
 |---|---|---|
-| **Cursor** | 浏览器 cookie | 用户量极大，但 cookie 脆弱；CodexBar 单文件量很大 |
+| **Cursor** | IDE 本地数据库（`state.vscdb`，`ideDatabase`） | 用户量极大；cookie 路径被否决，未采用 |
 | **OpenCode Go** | usage API + 本地 SQLite | **Go 版有 API 路径**，比 cookie 版好做；普通 OpenCode 是 cookie |
 | **Qwen Cloud / 阿里 Coding Plan** | web cookie 或 API key | 国产里量最大的之一，**先确认有没有 API key 路径** |
 | **Qoder CN** | cookie | 原「智能编码助手通义灵码」，2026-05-20 官方改名，是同一个产品。扩展装机 270 万，国内最大 |
@@ -262,7 +269,7 @@ Origin: https://www.trae.cn
 
 ---
 
-# 实施顺序
+# 实施顺序（已执行完毕，保留作记录）
 
 ```
 P0  前置：用户 API token 输入 + Keychain 写入（A 档全部依赖它）

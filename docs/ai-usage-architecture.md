@@ -2,12 +2,12 @@
 
 | 字段 | 值 |
 |---|---|
-| 状态 | Draft（评审修订） |
+| 状态 | Implemented（2026-09-14；正文为设计时的论证记录，现状以本节「As-built」为准） |
 | 作者 | Light Stats |
 | 日期 | 2026-09-13 |
 | 仓库 | `/Users/cain/Documents/code/swift-light-stats` |
 | 取代 | `docs/ai-usage-providers.md` 中「架构缺口」与 Cursor=cookie 的过时判断；该文档的选型原则、A/B 档研究与排除名单仍有效 |
-| 代码入口 | `Models/AIUsageInfo.swift`、`ViewModels/AIUsageMonitor.swift`、`ViewModels/SettingsManager.swift`、`Services/{Claude,Codex,Gemini}UsageService.swift`、`Views/Popover/Components/AIUsageCard.swift`、`Views/Settings/SettingsDetailViews.swift` |
+| 代码入口 | `Models/AIProvider.swift`、`Models/UsageWindow.swift`、`Models/AIUsageWindowPicker.swift`、`ViewModels/AIUsageMonitor.swift`、`ViewModels/AIUsageCatalog.swift`、`Services/AIUsage/UsageProviderRegistry.swift`、`Services/{15 家}UsageService.swift`、`Views/Popover/Components/AIUsageCard.swift`、`Views/Popover/OverviewTabView.swift` |
 
 ## Overview
 
@@ -29,6 +29,14 @@ PR1 只把现有三家迁到协议上，**用户可见行为与现网无法区�
 8. **默认关闭不变。** 干净 `UserDefaults` 下所有 provider 为 off；init **不**把 `false` 写进 suite；`AIUsageMonitor.start()` 只订阅、不 fetch。关掉 = 不轮询、不读凭证、零请求。现网关开关仍能看到上一份快照直到下次 fetch——PR1 保持这一点。
 9. **所有 `@Published` Set/Dictionary 禁止原地 mutation。** `enabledAIProviders`、`states`、`refreshingProviders`、`tokenPresent` 一律赋新值。
 10. **真凭证打一遍是 DeepSeek / Grok / z.ai 的合入门禁**，不是脚注。CI 无密钥，PR 描述必须记录本机实测。
+
+## As-built（2026-09-14，现状以本节为准）
+
+- **15 家 provider。** `AIProvider` 15 case；`UsageProviderRegistry` 登记全部；`KeychainCredentialWriter`、`UsageHTTPClient`、`BalanceRow`、`AIUsageCredentialStore` 均已落地。Key Decision 4 的「v1 无 Service、无 `AIProvider.cursor`」已过期：Cursor 走 `state.vscdb`（`ideDatabase`）。
+- **Overview 折叠。** 多窗口 provider 默认只显示最紧窗口（`AIUsageWindowPicker.mostStrained`：`usedPercent` 最高者，`nil` 视为最低），点击展开全部（`detailWindows`）。Header 为一行：icon + 名称 + bar + 百分比（或“无上限”）+ 重置倒计时。
+- **`UsageWindow: Hashable`。** 展开行 `ForEach(windows, id: \.self)`，重复 label 不会触发 duplicate-id 问题。
+- **余额型沉底。** `AIProvider` case 顺序与 registry 登记顺序均为 quota/window 型在前、balance-only（deepseek / zai / minimax / openrouter / mimo）在后；`BalanceRow` 只渲染金额，绝不合成进度条。
+- **Cursor 主窗口。** Primary 取 `autoPercentUsed`（Cursor 页面口径：Cursor Models），API 行为独立第二行（始终列出，可为 0）。
 
 ## Background & Motivation
 
@@ -300,6 +308,7 @@ Registry 里 id 没有 descriptor：**不是** `.decoding`。`preconditionFailur
 | `Services/AIUsage/KeychainCredentialWriter.swift` | `enum KeychainCredentialWriter` | Service | **DeepSeek PR** |
 | `ViewModels/AIUsageCredentialStore.swift` | token 门面 | ViewModel | **DeepSeek PR** |
 | `Services/AIUsage/LocalAuthFileReader.swift` | `enum LocalAuthFileReader` | Service | **Grok PR**（第一消费者） |
+| `Models/AIUsageWindowPicker.swift` | `enum AIUsageWindowPicker`（mostStrained + detailWindows） | Model | Overview 折叠 PR（事后追加） |
 
 `ClaudeUsageService` / `CodexUsageService` / `GeminiUsageService` 留在 `Services/` 根目录。新家同样放 `Services/` 根目录。工程是 synchronized folder，新 `.swift` 不必改 pbxproj。
 

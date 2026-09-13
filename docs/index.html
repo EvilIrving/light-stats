@@ -465,9 +465,8 @@
               <div class="spec">
                 <div class="grp">Intelligence</div>
                 <ul>
-                  <li>Claude Code <span class="note">5h / 7d</span></li>
-                  <li>Codex <span class="note">5h / 7d</span></li>
-                  <li>Gemini <span class="note">quota</span></li>
+                  <li>AI quotas <span class="note">15 providers</span></li>
+                  <li>AI balances <span class="note">prepaid</span></li>
                 </ul>
               </div>
             </div>
@@ -497,8 +496,8 @@
             <div class="feature">
               <div class="idx">03 / Agents</div>
               <div>
-                <h3>Claude Code, Codex, and Gemini usage</h3>
-                <p>When enabled, Light Stats uses credentials already stored by each provider's CLI to request current subscription windows from that provider. Optional Claude and Codex warmup can send a minimal headless message after a rolling window resets; it has a separate switch and is off by default.</p>
+                <h3>AI subscription usage for 15 providers</h3>
+                <p>When enabled, Light Stats reads credentials stored locally by each provider's CLI, or an API token you paste in Settings, to request current quota windows and prepaid balances from that provider. Multi-window rows collapse to the tightest quota; balances never render as progress bars. Optional Claude and Codex warmup can send a minimal headless message after a rolling window resets; it has a separate switch and is off by default.</p>
               </div>
             </div>
 
@@ -540,6 +539,29 @@
         <!-- ══════════ CHANGELOG ══════════ -->
         <!-- Stable releases only. New official versions go at the top. Do not list betas. -->
         <section data-panel="changelog" class="prose col" hidden>
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.3</h2>
+              <span class="log-date">14 Sep 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.3.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>AI usage for 15 providers with one switch each, all off by default; API-token providers paste a token in Settings.</li>
+              <li>Overview quota rows collapse to the tightest window, tap to expand; balance-only providers sink to the bottom with no bars.</li>
+              <li>Finder menu: Word, Excel, and PowerPoint blanks, custom templates, move/copy to favorites, hide/show items.</li>
+              <li>Default input source after app switches, a global Cleanup shortcut at the pointer, and user-exportable diagnostic reports.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+              <li>Window management prefers macOS' own tiling, then falls back. Cursor's primary window follows the auto percentage. Apple Silicon only.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Instant quit is back; Grok no longer shows "—" at the weekly reset edge.</li>
+            </ul>
+          </article>
+
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.2</h2>
@@ -826,7 +848,7 @@
             <li>Network up/down throughput and local proxy configuration</li>
             <li>Battery, temperature, and fan RPM (supported Macs)</li>
             <li>Running applications and their memory footprint (Memory tab)</li>
-            <li>Credentials and local state already stored by Claude Code, Codex, and Gemini CLI, only when the matching AI provider is enabled</li>
+            <li>Credentials and local state already stored by each AI provider's CLI, or an API token pasted in Settings, only when the matching AI provider is enabled</li>
             <li>Selected Finder paths and Finder-menu preferences, only when the Finder extension is enabled</li>
           </ul>
 
@@ -837,7 +859,7 @@
           <p>When enabled, this feature sends a request to a public geo-IP service and caches the result briefly to avoid repeated lookups. It transmits no personal data beyond the network request itself, which necessarily reveals your IP to that service, the same as visiting any website. Disable it and no such request is ever made.</p>
 
           <h2>AI usage and optional warmup</h2>
-          <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
+          <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI or an API token pasted in Settings. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
 
           <h2>Update checks</h2>
           <p>A manual update check, or the off-by-default automatic update setting, reads the Cloudflare R2 channel marker and falls back to GitHub Releases. The update channel can be Stable (final releases only) or Beta (also considers prereleases such as <code>v1.9.0-beta.N</code>); Beta is off by default. Downloaded updates must pass SHA-256 (R2), codesign, notarization, and Team ID verification before installation.</p>

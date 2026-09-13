@@ -37,7 +37,7 @@ Services/AIUsage/UsageWarmupService.swift  真正起 Process 发命令
   ├─ 临时空目录运行（避开项目 CLAUDE.md/AGENTS.md 上下文）；30s 硬超时；SIGTERM→SIGKILL
   └─ 二进制路径走 CLIBinaryResolver
 UI
-  SettingsDetailViews.swift（AIUsage 详情）
+  Views/Settings/AIUsageDetail.swift（AIUsage 详情，已从 SettingsDetailViews.swift 抽出）
   └─ provider 监控开启时各多一个「自动续期窗口」纯开关，绑定 SettingsManager
 ```
 
