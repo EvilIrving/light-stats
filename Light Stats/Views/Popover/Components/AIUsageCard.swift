@@ -8,23 +8,35 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Quota meter
+// MARK: - Headroom cabin
 
-/// Remaining-quota track + percent (or “No limit”) + reset countdown.
-/// Never synthesizes a bar from a balance.
-private struct QuotaMeter: View {
+/// Remaining-headroom meter + percent (or “No limit”) + reset countdown.
+/// Fill is space left, never a synthesized balance bar.
+private struct HeadroomCabin: View {
     @Environment(\.theme) private var theme
 
     let window: UsageWindow
+    var showsPeriodChip: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
+            Text(window.label.localized)
+                .font(theme.chromeStyle.compactLabelFont)
+                .foregroundStyle(theme.inkMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: showsPeriodChip ? 36 : 0, alignment: .leading)
+                .padding(.trailing, showsPeriodChip ? 8 : 0)
+                .opacity(showsPeriodChip ? 1 : 0)
+                .clipped()
+
             if let remainingPercent {
-                progressTrack(remainingPercent)
+                headroomTrack(remainingPercent)
                 Text(String(format: "%.0f%%", remainingPercent))
                     .font(theme.chromeStyle.compactValueFont)
                     .foregroundStyle(colorForRemaining(remainingPercent))
                     .frame(width: 36, alignment: .trailing)
+                    .padding(.leading, 8)
             } else {
                 Text("aiUsage.noLimit".localized)
                     .font(theme.chromeStyle.compactValueFont)
@@ -32,29 +44,29 @@ private struct QuotaMeter: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.leading, 8)
             }
 
             Text(resetText)
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(theme.inkMuted)
                 .frame(width: 56, alignment: .trailing)
+                .padding(.leading, 8)
                 .lineLimit(1)
         }
     }
 
-    private func progressTrack(_ remainingPercent: Double) -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(
-                    cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
-                )
-                .fill(theme.wellFill)
-                RoundedRectangle(
-                    cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
-                )
-                .fill(colorForRemaining(remainingPercent))
-                .frame(width: max(4, geo.size.width * min(remainingPercent, 100) / 100))
-            }
+    private func headroomTrack(_ remainingPercent: Double) -> some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(
+                cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+            )
+            .fill(theme.wellFill)
+            RoundedRectangle(
+                cornerRadius: theme.chromeStyle.usesNightBarTreatment ? 2.5 : 100
+            )
+            .fill(colorForRemaining(remainingPercent))
+            .scaleEffect(x: max(0.04, min(remainingPercent, 100) / 100), y: 1, anchor: .leading)
         }
         .frame(height: 5)
     }
@@ -89,33 +101,18 @@ private struct QuotaMeter: View {
     }
 }
 
-// MARK: - Expanded period row
-
-private struct WindowRow: View {
-    @Environment(\.theme) private var theme
-
-    let window: UsageWindow
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(window.label.localized)
-                .font(theme.chromeStyle.compactLabelFont)
-                .foregroundStyle(theme.inkMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(width: 36, alignment: .leading)
-            QuotaMeter(window: window)
-        }
-        .padding(.leading, 15)
-    }
-}
-
 // MARK: - Compact Provider Row
 
 /// A single provider as one compact header line; extra windows appear only
-/// after expand.
+/// after expand. The hero cabin uses matched geometry so it rides down/up.
 struct AIProviderCompactRow: View {
+    private static let cabinEffectID = "headroomCabin"
+    private static let identityWidth: CGFloat = 96
+    private static let cabinMotion = Animation.easeInOut(duration: 0.3)
+
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var cabinNamespace
     @State private var isExpanded = false
 
     let provider: AIProvider
@@ -124,7 +121,7 @@ struct AIProviderCompactRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             headerLine
-            expandedWindows
+            expandedCabins
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: toggleExpanded)
@@ -144,6 +141,7 @@ struct AIProviderCompactRow: View {
                     .frame(width: 10, height: 10)
             }
         }
+        .frame(minHeight: 14)
     }
 
     private var identity: some View {
@@ -156,8 +154,10 @@ struct AIProviderCompactRow: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
-        .frame(minWidth: 56, maxWidth: 96, alignment: .leading)
-        .layoutPriority(1)
+        .frame(width: Self.identityWidth, alignment: .leading)
+        .transaction { transaction in
+            transaction.animation = nil
+        }
     }
 
     @ViewBuilder
@@ -179,7 +179,7 @@ struct AIProviderCompactRow: View {
         if isExpanded {
             headerBalance(snapshot.balance)
         } else if let primary = AIUsageWindowPicker.mostStrained(in: snapshot.windows) {
-            QuotaMeter(window: primary)
+            heroCabin(primary, showsPeriodChip: false)
         } else {
             headerBalance(snapshot.balance)
         }
@@ -190,23 +190,47 @@ struct AIProviderCompactRow: View {
         Spacer(minLength: 8)
         if let balance {
             BalanceRow(balance: balance)
+                .transition(.opacity)
         }
     }
 
     @ViewBuilder
-    private var expandedWindows: some View {
-        if let snapshot = loadedSnapshot {
-            let windows = AIUsageWindowPicker.detailWindows(
-                in: snapshot.windows,
-                expanded: isExpanded
-            )
-            if !windows.isEmpty {
-                VStack(spacing: 6) {
-                    ForEach(windows, id: \.label) { window in
-                        WindowRow(window: window)
-                    }
-                }
+    private var expandedCabins: some View {
+        if isExpanded, let snapshot = loadedSnapshot {
+            expandedCabinList(snapshot)
+        }
+    }
+
+    @ViewBuilder
+    private func expandedCabinList(_ snapshot: ProviderUsageSnapshot) -> some View {
+        let hero = AIUsageWindowPicker.mostStrained(in: snapshot.windows)
+        let others = AIUsageWindowPicker.supportingWindows(in: snapshot.windows)
+        VStack(alignment: .leading, spacing: 6) {
+            if let hero {
+                heroCabin(hero, showsPeriodChip: true)
             }
+            ForEach(others, id: \.label) { window in
+                HeadroomCabin(window: window, showsPeriodChip: true)
+                    .transition(
+                        .opacity.combined(with: .offset(y: reduceMotion ? 0 : -8))
+                    )
+            }
+        }
+        .transition(.identity)
+    }
+
+    @ViewBuilder
+    private func heroCabin(_ window: UsageWindow, showsPeriodChip: Bool) -> some View {
+        let cabin = HeadroomCabin(window: window, showsPeriodChip: showsPeriodChip)
+        if reduceMotion {
+            cabin
+        } else {
+            cabin.matchedGeometryEffect(
+                id: Self.cabinEffectID,
+                in: cabinNamespace,
+                properties: .frame,
+                anchor: .topLeading
+            )
         }
     }
 
@@ -244,8 +268,12 @@ struct AIProviderCompactRow: View {
 
     private func toggleExpanded() {
         guard canExpand else { return }
-        withAnimation(.easeInOut(duration: 0.15)) {
+        if reduceMotion {
             isExpanded.toggle()
+        } else {
+            withAnimation(Self.cabinMotion) {
+                isExpanded.toggle()
+            }
         }
     }
 

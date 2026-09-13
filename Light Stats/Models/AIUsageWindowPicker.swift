@@ -19,10 +19,19 @@ enum AIUsageWindowPicker {
     }
 
     /// Period rows under the title. Collapsed and single-window keep the
-    /// primary meter on the header, so this is empty until expand.
+    /// primary cabin on the header, so this is empty until expand.
+    /// Expanded order is the hero cabin first, then the others in provider order.
     static func detailWindows(in windows: [UsageWindow], expanded: Bool) -> [UsageWindow] {
-        guard windows.count > 1, expanded else { return [] }
-        return windows
+        guard windows.count > 1, expanded, let hero = mostStrained(in: windows) else {
+            return []
+        }
+        return [hero] + supportingWindows(in: windows)
+    }
+
+    /// Every window except the most-strained hero, in the provider's order.
+    static func supportingWindows(in windows: [UsageWindow]) -> [UsageWindow] {
+        guard let hero = mostStrained(in: windows) else { return [] }
+        return windows.filter { $0.label != hero.label }
     }
 
     private static func strain(_ window: UsageWindow) -> Double {

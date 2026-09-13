@@ -74,7 +74,7 @@ final class AIUsageWindowPickerTests: XCTestCase {
         XCTAssertEqual(AIUsageWindowPicker.mostStrained(in: windows)?.label, "7d")
     }
 
-    func testExpandedListsEveryWindowInProviderOrder() {
+    func testExpandedListsHeroThenSupportingWindows() {
         let windows = [
             window("5h", used: 10),
             window("7d", used: 90),
@@ -82,7 +82,11 @@ final class AIUsageWindowPickerTests: XCTestCase {
         ]
         XCTAssertEqual(
             AIUsageWindowPicker.detailWindows(in: windows, expanded: true).map(\.label),
-            ["5h", "7d", UsageWindowLabel.month.key]
+            ["7d", "5h", UsageWindowLabel.month.key]
+        )
+        XCTAssertEqual(
+            AIUsageWindowPicker.supportingWindows(in: windows).map(\.label),
+            ["5h", UsageWindowLabel.month.key]
         )
     }
 
