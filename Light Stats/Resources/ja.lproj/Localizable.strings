@@ -262,6 +262,9 @@
 "settings.findMouseTriggerKey.recording" = "キーを入力";
 "settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
+"settings.cleanupHotKey" = "クリーンアップのショートカット";
+"settings.cleanupHotKey.hint" = "ポインタ位置にクリーンアップを開く";
+"settings.cleanupHotKey.registerFailed" = "ショートカットは使用中。別のキーを指定";
 "settings.activation" = "ライセンス認証";
 "settings.activation.owner" = "所有者";
 "settings.activation.features" = "有効な機能";

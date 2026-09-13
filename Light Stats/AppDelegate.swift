@@ -35,13 +35,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let settings: SettingsManager
     private let monitor: SystemMonitor
     private let displayControlManager: DisplayControlManager
-    private let appMemoryManager: AppMemoryManager
+    let appMemoryManager: AppMemoryManager
     private let scrollService: ScrollReversing
     let windowSnappingService: WindowSnappingService
     private let windowSnapHotKeyService: WindowSnapHotKeyControlling
     private let titlebarGestureService: TitlebarGestureControlling
     private let findMouseCoordinator: FindMouseCoordinator
     private let defaultInputSourceCoordinator: DefaultInputSourceCoordinator
+    private let panelHotKeyService: PanelHotKeyControlling
     static let windowMenuActions: [(tag: Int, action: WindowSnapAction)] = [
         (1, .leftHalf), (2, .rightHalf), (3, .topHalf), (4, .bottomHalf), (5, .topLeft), (6, .topRight),
         (7, .bottomLeft), (8, .bottomRight), (9, .leftThird), (10, .leftTwoThirds), (11, .centerThird),
@@ -62,7 +63,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         let findMouseService = FindMouseService(presentationPointer: PresentationPointerService())
         self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: findMouseService)
         self.defaultInputSourceCoordinator = DefaultInputSourceCoordinator.shared
+        let panelHotKeyService = PanelHotKeyService()
+        self.panelHotKeyService = panelHotKeyService
         super.init()
+        panelHotKeyService.onPressed = { [weak self] in
+            self?.presentCleanupPanelAtPointer()
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -86,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         syncWindowControlServices()
         findMouseCoordinator.start()
         defaultInputSourceCoordinator.start()
+        syncPanelHotKeyService()
         syncFinderMenuService()
         syncKeepAwakeService()
         displayControlManager.setEnabled(settings.displayBrightnessControlEnabled)
@@ -414,17 +421,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 #endif
 
         if panel.isVisible {
-            dismissPanel(reason: .statusItemToggle)
-            return
-        }
-
-        // 若面板刚因 resignKey 自动关闭（点击图标时会先失去 key 焦点），
-        // 则把这次点击视为"关闭"，不要立即重新打开。
-        if let closedAt = panelAutoClosedAt, Date().timeIntervalSince(closedAt) < 0.25 {
+            if panelAnchor != .pointer {
+                dismissPanel(reason: .statusItemToggle)
+                return
+            }
+            // 指针处已打开：点菜单栏把面板移回图标下方，而不是关掉。
+        } else if let closedAt = panelAutoClosedAt,
+                  Date().timeIntervalSince(closedAt) < 0.25,
+                  panelAnchor != .pointer {
+            // 图标下方的面板因点图标先 resignKey 再进这里，视为关闭，不要立刻重开。
             panelAutoClosedAt = nil
             return
         }
 
+        panelAutoClosedAt = nil
         guard let buttonWindow = button.window else { return }
 
         let buttonRectInWindow = button.convert(button.bounds, to: nil)
@@ -435,13 +445,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             x: buttonRectOnScreen.midX - (panelSize.width / 2),
             y: buttonRectOnScreen.minY - panelSize.height - 6
         )
+        showPanel(at: panelOrigin, source: "statusItem")
+    }
 
-        panel.setFrameOrigin(panelOrigin)
+    /// 全局热键：在指针处打开清理页。已打开则关闭。
+    func presentCleanupPanelAtPointer() {
+        guard let panel else { return }
+        if panel.isVisible {
+            dismissPanel(reason: .hotkeyToggle)
+            return
+        }
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
+        let visibleFrame = screen?.visibleFrame ?? NSRect(origin: mouse, size: panel.frame.size)
+        let origin = PanelPointerPlacement.origin(
+            size: panel.frame.size,
+            mouse: mouse,
+            visibleFrame: visibleFrame
+        )
+        NotificationCenter.default.post(
+            name: .popoverSelectTab,
+            object: nil,
+            userInfo: ["tab": 1]
+        )
+        showPanel(at: origin, source: "hotkey")
+    }
+
+    private func showPanel(at origin: NSPoint, source: String) {
+        guard let panel else { return }
+        panel.setFrameOrigin(origin)
+        var fields = panelDiagnosticFields()
+        fields["source"] = source
         DiagnosticLogService.record(
             category: "popover",
             action: "opened",
-            fields: panelDiagnosticFields()
+            fields: fields
         )
+        panelAnchor = source == "hotkey" ? .pointer : .statusItem
         AIUsageMonitor.shared.refreshIfStale()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -480,6 +520,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             _ = scrollService.start()
         }
         findMouseCoordinator.retryIfNeeded()
+        syncPanelHotKeyService()
         syncWindowControlServices()
         displayControlManager.applicationDidBecomeActive()
         if settings.finderMenuEnabled {
@@ -574,6 +615,21 @@ extension AppDelegate {
         }
     }
 
+    private func syncPanelHotKeyService(announceFailure: Bool = false) {
+        if settings.cleanupPanelHotKeyEnabled {
+            if panelHotKeyService.start(hotKey: settings.cleanupPanelHotKey) { return }
+            guard announceFailure else { return }
+            ToastCenter.shared.show(
+                message: "settings.cleanupHotKey.registerFailed".localized,
+                systemImage: "exclamationmark.triangle.fill",
+                tint: .orange,
+                duration: 3
+            )
+        } else {
+            panelHotKeyService.stop()
+        }
+    }
+
     private func syncFinderMenuService() {
         FinderMenuShared.setEnabled(settings.finderMenuEnabled)
         if settings.finderMenuEnabled {
@@ -595,6 +651,7 @@ extension AppDelegate {
         windowSnapHotKeyService.stop()
         titlebarGestureService.stop()
         findMouseCoordinator.stop()
+        panelHotKeyService.stop()
         defaultInputSourceCoordinator.stop()
         FinderMenuHostService.shared.stop()
         KeepAwakeService.shared.stop()
@@ -648,6 +705,14 @@ private extension AppDelegate {
                 self?.displayControlManager.setEnabled(enabled)
             }
             .store(in: &cancellables)
+
+        Publishers.Merge(
+            settings.$cleanupPanelHotKeyEnabled.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            settings.$cleanupPanelHotKey.dropFirst().map { _ in () }.eraseToAnyPublisher()
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] in self?.syncPanelHotKeyService(announceFailure: true) }
+        .store(in: &cancellables)
 
         // Finder 菜单本地化标题：语言变更时重新发布到 App Group 供扩展读取。
         settings.$appLanguage

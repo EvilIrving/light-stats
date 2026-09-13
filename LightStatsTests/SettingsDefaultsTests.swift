@@ -108,6 +108,12 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.findMouseTriggerKey, .leftControl)
     }
 
+    func testCleanupPanelHotKeyDefaultsOff() {
+        let settings = freshSettings()
+        XCTAssertFalse(settings.cleanupPanelHotKeyEnabled)
+        XCTAssertEqual(settings.cleanupPanelHotKey, .default)
+    }
+
     func testActivationCodeDefaultsNil() {
         XCTAssertNil(freshSettings().activationCode)
     }

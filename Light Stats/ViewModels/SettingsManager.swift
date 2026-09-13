@@ -61,6 +61,8 @@ protocol SettingsManaging: ObservableObject {
     var defaultInputSourceID: String? { get set }
     var findMouseEnabled: Bool { get set }
     var findMouseTriggerKey: FindMouseTriggerKey { get set }
+    var cleanupPanelHotKeyEnabled: Bool { get set }
+    var cleanupPanelHotKey: PanelHotKey { get set }
     var activationCode: String? { get set }
     /// 赠送期用户或收费前老用户享有的永久 Pro 资格。
     var isGrandfathered: Bool { get }
@@ -340,6 +342,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var findMouseTriggerKey: FindMouseTriggerKey {
         didSet { save(findMouseTriggerKey.rawValue, for: .findMouseTriggerKey) }
     }
+    /// 在指针处打开清理页：默认关闭（opt-in）。Carbon 全局热键，不需要辅助功能权限。
+    @Published var cleanupPanelHotKeyEnabled: Bool {
+        didSet { save(cleanupPanelHotKeyEnabled, for: .cleanupPanelHotKeyEnabled) }
+    }
+    @Published var cleanupPanelHotKey: PanelHotKey {
+        didSet { save(cleanupPanelHotKey.rawValue, for: .cleanupPanelHotKey) }
+    }
     /// 高级功能激活码（离线 Ed25519 签名载荷）。原始码落 UserDefaults，启动时由
     /// `LicenseManager` 重新校验；签名载荷非机密，与「不绑定机器」策略一致。
     @Published var activationCode: String? {
@@ -452,6 +461,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
         case findMouseEnabled = "settings.findMouseEnabled"
         case findMouseTriggerKey = "settings.findMouseTriggerKey"
+        case cleanupPanelHotKeyEnabled = "settings.cleanupPanelHotKeyEnabled"
+        case cleanupPanelHotKey = "settings.cleanupPanelHotKey"
         case activationCode = "settings.activationCode"
         case isGrandfathered = "settings.grandfathered"
     }
@@ -565,6 +576,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         findMouseEnabled = defaults.object(forKey: Key.findMouseEnabled.rawValue) as? Bool ?? false
         findMouseTriggerKey = defaults.string(forKey: Key.findMouseTriggerKey.rawValue)
             .flatMap(FindMouseTriggerKey.init(rawValue:)) ?? .leftControl
+        cleanupPanelHotKeyEnabled = defaults.object(forKey: Key.cleanupPanelHotKeyEnabled.rawValue) as? Bool ?? false
+        cleanupPanelHotKey = defaults.string(forKey: Key.cleanupPanelHotKey.rawValue)
+            .flatMap(PanelHotKey.init(rawValue:)) ?? .default
         // 激活码：冷启动默认未激活（无高级功能解锁）。
         activationCode = defaults.string(forKey: Key.activationCode.rawValue)
         lastIgnoredVersion = defaults.string(forKey: Key.lastIgnoredVersion.rawValue) ?? ""

@@ -126,6 +126,12 @@ The app uses native macOS APIs for routine sampling and has no third-party runti
 - No extra shortcut or separate setting; the listen-only event tap never intercepts or rewrites events, requires Accessibility permission, and is off by default
 - Pro features: anyone who launches the app during the current gift period keeps Pro for life. After the first paid release, new users unlock Pro with an activation code (Settings → General). The app stays MIT-licensed; codes are verified offline with Ed25519 and make no network call
 
+### Cleanup Shortcut
+
+- Optional global hotkey opens the Cleanup tab at the pointer, without clicking the menu bar
+- Off by default; Carbon hotkey, no Accessibility permission
+- Default ⌃⌥⌘U, and the combo can be recorded
+
 ### Cleaning Mode
 
 - 60-second keyboard lock for safe keyboard cleaning

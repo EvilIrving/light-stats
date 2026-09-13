@@ -260,6 +260,9 @@
 "settings.findMouseTriggerKey.recording" = "Press Shortcut";
 "settings.findMouse.permissionTitle" = "Accessibility Access Needed";
 "settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
+"settings.cleanupHotKey" = "Cleanup Shortcut";
+"settings.cleanupHotKey.hint" = "Opens Cleanup at the pointer";
+"settings.cleanupHotKey.registerFailed" = "Shortcut is in use. Choose another.";
 "settings.activation" = "Activation";
 "settings.activation.owner" = "Owner";
 "settings.activation.features" = "Unlocked Features";

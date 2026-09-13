@@ -286,6 +286,7 @@ struct ScrollDetail: View {
     var body: some View {
         SettingsDetailScaffold("settings.inputDevices".localized) {
             FindMouseSettingsSection(settings: settings, onRequestActivation: onRequestActivation)
+            CleanupPanelHotKeySettingsSection(settings: settings)
             DefaultInputSourceSettingsSection(settings: settings)
             SettingsGroup {
                 SettingsRow("settings.scrollReverse".localized) {

@@ -159,6 +159,10 @@ struct PopoverContentView: View {
         .id("\(localization.currentLanguage.rawValue)/\(settings.appTheme.rawValue)")
         .appThemed(settings.appTheme)
         .focusable(false)
+        .onReceive(NotificationCenter.default.publisher(for: .popoverSelectTab)) { notification in
+            guard let tab = notification.userInfo?["tab"] as? Int else { return }
+            selectedTab = tab
+        }
         .overlayPreferenceValue(ToolbarIconBoundsKey.self) { anchors in
             GeometryReader { proxy in
                 if let key = hoveredIcon,
@@ -278,6 +282,7 @@ private struct ToolbarIconBoundsKey: PreferenceKey {
 
 extension Notification.Name {
     static let showAbout = Notification.Name("showAbout")
+    static let popoverSelectTab = Notification.Name("LightStats.popoverSelectTab")
 }
 
 #if DEBUG

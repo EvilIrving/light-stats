@@ -262,6 +262,9 @@
 "settings.findMouseTriggerKey.recording" = "단축키 입력";
 "settings.findMouse.permissionTitle" = "접근성 권한 필요";
 "settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 접근성 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
+"settings.cleanupHotKey" = "정리 단축키";
+"settings.cleanupHotKey.hint" = "포인터 위치에 정리 화면 열기";
+"settings.cleanupHotKey.registerFailed" = "단축키가 사용 중입니다. 다른 키를 지정하세요.";
 "settings.activation" = "활성화";
 "settings.activation.owner" = "소유자";
 "settings.activation.features" = "잠금 해제된 기능";
