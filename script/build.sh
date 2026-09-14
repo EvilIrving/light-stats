@@ -163,6 +163,13 @@ cp -R "$BUILD_DIR/DerivedData/Build/Products/Release/$APP_NAME.app" "$OUTPUT_DIR
 chmod +x "$MAIN_BINARY"
 echo "✅ $APP_PATH"
 
+# 中间产物不能留在仓库里：pkd 会扫描 build/ 下的 .appex，未签名、未沙盒的版本
+# 带着同一个 bundle id 会被判为 "mis-configured plugin"（plug-ins must be sandboxed），
+# 从而牵连 /Applications 里那份正式包，Finder 扩展会静默不出菜单。
+# 只保留 $OUTPUT_DIR 下已签名的成品，中间 .app / .appex 一律删除。
+rm -rf "$BUILD_DIR/DerivedData/Build/Products/Release/$APP_NAME.app" \
+       "$BUILD_DIR/DerivedData/Build/Products/Release/FinderMenuExtension.appex"
+
 # 签名 App
 if [ -n "${DEVELOPER_ID:-}" ]; then
     echo "✍️  签名..."
