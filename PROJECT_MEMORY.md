@@ -16,7 +16,7 @@ SuperGrok（`isUnifiedBillingUser: true`）走 `GET https://cli-chat-proxy.grok.
 
 `./script/debug-run.sh` 因此改为：`SKIP_DMG=1 SKIP_NOTARIZATION=1 INSTALL_TO_APPLICATIONS=1 ./script/build.sh`，没有 Developer ID 证书就失败，不安装。CI 的 `build.sh` / `quality.yml` 仍不碰 `/Applications`。不要再 `open` `build/DerivedData/Build/Products/Debug/Light Stats.app`。
 
-`VisualThemeCaptureTests` 会在测试宿主里把每个主题的概览/清理面板 `orderFront` 后写到 `/tmp/*.png`。这不是回归断言，默认 `XCTSkip`；需要出图时设 `LIGHT_STATS_CAPTURE_THEMES=1`。营销图仍走 DEBUG 的 `DebugSnapshot`（⌥ 点菜单栏图标）。
+`VisualThemeCaptureTests`（把每个主题的概览/清理面板截到 `/tmp/*.png` 的非断言截图测试）已于 2026-09-14 删除。出图统一走 DEBUG 的 `DebugSnapshot`（⌥ 点菜单栏图标）。
 
 ## 默认输入法只纠正切换后的漂移，不是输入法管理器 · 2026-09-13 · grok
 

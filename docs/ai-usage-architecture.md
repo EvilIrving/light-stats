@@ -1118,7 +1118,6 @@ Claude CLI 的 `Claude Code-credentials` **不动**。
     - Monitor 表征：loaded → disable → 仍 loaded；all-off 不装 timer
     - `setAIProviderEnabled` 赋新 Set（前后 `enabledAIProviders` 含/不含 id）
     - `AIUsageParsingTests` 字节不变
-    - `VisualThemeCaptureTests` 改 `setAIProviderEnabled`
     - `UsageWarmupScheduleTests` 不改语义
 - **行为：** 与现网三家无法区分。无 token 行。无 BalanceRow。无 HTTP 客户端。
 - **非目标：** idle-on-disable。

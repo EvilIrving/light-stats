@@ -73,6 +73,5 @@ Views/Theme/Background/
 ## 验证
 
 - `DynamicThemeTests` 断言纯 Scene ID、固定产品组合及产品 appearance → Scene input 映射。
-- `VisualThemeCaptureTests` 覆盖当前四个用户可见主题，截图以测试实际报告的输出为准。
 - 新增无设置的新 Scene 只需：新 Scene 文件（可无 Timeline）、`BackgroundSceneID` case、
   Router 分支、`ThemeDefinition` 选用；不要求改旧 Scene 或扩大公共渲染配置。
