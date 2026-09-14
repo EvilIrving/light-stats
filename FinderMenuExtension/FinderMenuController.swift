@@ -7,13 +7,8 @@ final class FinderMenuController: FIFinderSync {
     private let logger = Logger(subsystem: FinderMenuShared.extensionBundleID, category: "Extension")
     private var menuConfig = FinderMenuConfig()
     private var observingVolumes = false
-    /// 菜单项 tag → 命令。FinderSync 会把菜单编组后交给 Finder 显示，点击回来时
-    /// **只有 `tag` 能穿过这道编组存活，`representedObject` 会是 nil**——所以必须按 tag
-    /// 派发。同时这个表不能像旧版那样在每次 menu(for:) 开头清空，否则 Finder 重建菜单
-    /// 之前点旧菜单的项就会查不到命令。tag 单调递增，超出上限时丢最旧的。
-    private var commandsByTag: [Int: FinderMenuCommand] = [:]
-    private var nextTag = 1
-    private static let maxRememberedCommands = 512
+    /// 菜单项 tag → 命令的寄存表。为什么按 tag、为什么不清空，见 `FinderMenuCommandRegistry`。
+    private let commands = FinderMenuCommandRegistry()
 
     override init() {
         super.init()
@@ -102,10 +97,7 @@ final class FinderMenuController: FIFinderSync {
         guard menuConfig.isActionEnabled(command.action) else { return }
         let item = NSMenuItem(title: title ?? command.action.localizedTitle, action: #selector(runAction(_:)), keyEquivalent: "")
         item.target = self
-        let tag = nextTag
-        nextTag += 1
-        remember(command, tag: tag)
-        item.tag = tag
+        item.tag = commands.register(command)
         if command.action == .toggleHiddenFiles { item.state = FinderMenuShared.showsHiddenFiles ? .on : .off }
         menu.addItem(item)
     }
@@ -147,18 +139,8 @@ final class FinderMenuController: FIFinderSync {
         return source.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.parameter) != nil }
     }
 
-    /// 记住 tag 对应的命令；超过上限时按 tag 从小到大丢最旧的几条。
-    private func remember(_ command: FinderMenuCommand, tag: Int) {
-        commandsByTag[tag] = command
-        let overflow = commandsByTag.count - Self.maxRememberedCommands
-        guard overflow > 0 else { return }
-        for key in commandsByTag.keys.sorted().prefix(overflow) {
-            commandsByTag.removeValue(forKey: key)
-        }
-    }
-
     @objc private func runAction(_ sender: NSMenuItem) {
-        guard FinderMenuShared.isEnabled(), let command = commandsByTag[sender.tag] else { return }
+        guard FinderMenuShared.isEnabled(), let command = commands.command(for: sender.tag) else { return }
         let request = FinderMenuRequest(action: command.action, paths: command.paths,
                                         container: command.container, parameter: command.parameter)
         let logger = logger
