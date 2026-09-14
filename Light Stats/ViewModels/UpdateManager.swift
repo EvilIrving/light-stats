@@ -98,10 +98,13 @@ final class UpdateManager: ObservableObject {
                 let dmg = try await service.download(release) { [weak self] fraction in
                     Task { @MainActor in self?.phase = .downloading(fraction) }
                 }
-                phase = .installing
                 let destination = Bundle.main.bundleURL
                 let staged = try await service.verifyAndStage(dmgURL: dmg)
                 try await service.installAndRelaunch(stagedApp: staged, destination: destination)
+                // 换包脚本已经脱离进程跑起来之后，才切到「安装中」。
+                // 这条界面变化会在 macOS 26 上抛 AppKit 异常把 App 打死（SIGABRT）；
+                // 顺序放反就是「点了更新 → App 崩了 → 包没换」。脚本先起，即使崩了也能装完。
+                phase = .installing
                 NSApp.terminate(nil)
             } catch {
                 phase = .error(error.localizedDescription)

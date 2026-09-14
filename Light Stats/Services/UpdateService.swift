@@ -258,6 +258,8 @@ actor UpdateService {
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
         task.arguments = [scriptURL.path, "\(pid)", stagedApp.path, destination.path]
         try task.run()
+        // 记一条：脚本已脱离进程。之后 App 即使崩溃，换包仍会完成——出问题时先看这条。
+        DiagnosticLogService.record(category: "update", action: "installerLaunched")
         logger.info("Installer launched; terminating to let it swap the bundle")
     }
 
