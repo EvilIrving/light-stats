@@ -625,9 +625,15 @@ channel marker first (`latest-stable.json` / `latest-beta.json`) and fall back t
 ### Tests
 
 ```bash
-xcodebuild test -project "Light Stats.xcodeproj" \
-  -scheme "Light Stats" -destination 'platform=macOS'
+./script/test.sh                                                     # 全部单元测试
+./script/test.sh -only-testing:LightStatsTests/HealthScoreServiceTests
 ```
+
+用这个脚本，不要裸跑 `xcodebuild test`。测试会把 Debug 版 App 构建到 DerivedData 当
+`TEST_HOST`，它内嵌的 `FinderMenuExtension.appex` 带着同一个 bundle id，会被 pkd 注册；
+而 Debug 版的版本号取的是 pbxproj 里写死的 fallback（`1.0.2`），比本地 Release 包的
+`1.0.0-dev` 还高——系统里于是同时存在多份同名插件，Finder 右键菜单可能落到错误的那一份
+（本项目实际被这个坑过）。脚本跑完会自动注销 `/Applications` 以外的同名注册。
 
 The `LightStatsTests` unit-test target is wired into the project on the shared `Light Stats`
 scheme (regenerate with `ruby script/add_test_target.rb` if the pbxproj is rebuilt). Tests host
