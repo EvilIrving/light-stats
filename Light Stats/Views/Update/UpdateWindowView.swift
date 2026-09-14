@@ -5,9 +5,8 @@
 //  更新窗口内容视图。由 UpdateManager.showUpdateWindow() 弹出,所有更新阶段
 //  (发现新版本,下载进度,安装,出错)在此窗口内闭环展示。
 //
-//  根视图固定宽度、高度随内容动态(配合 NSHostingController.sizingOptions =
-//  .preferredContentSize)。Release notes / 错误文案过长时在滚动区内裁切,
-//  操作按钮始终贴在底部可见区域,避免窗口超出屏幕后点不到「更新」。
+//  AppKit owns the window size; notes and errors scroll inside the stable frame.
+//  Content changes must not drive NSWindow constraint-based resizing on macOS 26.
 //
 
 import AppKit
@@ -49,6 +48,8 @@ struct UpdateWindowView: View {
             .multilineTextAlignment(.center)
             .frame(width: contentWidth)
             .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .focusable(false)
             .foregroundStyle(.primary)
             .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
             .id(localization.currentLanguage.rawValue)
@@ -125,6 +126,7 @@ struct UpdateWindowView: View {
             }
 
             availableButtons(release)
+                .disabled(manager.isInstalling)
                 .padding(.top, 2)
         }
     }
@@ -187,7 +189,7 @@ struct UpdateWindowView: View {
             .frame(height: scrollBodyHeight(for: message))
             HStack(spacing: 10) {
                 Button {
-                    if let url = URL(string: "https://github.com/EvilIrving/light-stats/releases/latest") {
+                    if let url = manager.downloadPage ?? URL(string: "https://github.com/EvilIrving/light-stats/releases/latest") {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {

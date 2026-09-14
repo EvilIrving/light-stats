@@ -472,13 +472,30 @@ UpdateManager (@MainActor, ObservableObject)
       │   ├── codesign --verify --deep          (signature valid)
       │   ├── spctl --assess --verbose           (notarised)
       │   └── codesign -dv → TeamIdentifier      (matches QZZ878S3NS)
-      └── install(): mount DMG → copy .app to staging → write replace.sh → exit(0)
+      └── install(): stage verified app → launch UpdateInstallerService → terminate app
 ```
 
-Any verification failure → reject update, surface error, offer manual download link.
-The replace script runs detached, waits for the old PID to exit, atomically swaps the
-app bundle, and relaunches. `UpdateManager` checks once at startup; can be triggered
-from the About view.
+Any verification failure → reject update, surface error, offer the target release's download page.
+Bundle ID and version must also match the running product and selected release. Reject read-only,
+translocated, or unwritable destinations before downloading. Only one install may run at a time.
+
+`UpdateInstallerService` waits for the old PID to exit; timeout aborts replacement. It copies to a
+unique hidden sibling, renames the old bundle to a backup, then moves the new bundle into place.
+Every move/open failure is checked and rollback is attempted. These are separate renames, not an
+atomic exchange. The backup survives until the new app confirms its version on launch.
+
+`UpdateAttemptService` stores the source/target versions, stage, and installer result locally under
+`Application Support/Light Stats/Updates`. Startup consumes this receipt even with automatic checks
+off: failures show a persistent recovery window; confirmed success shows the installed version.
+A file lock passes from the app to the installer's stdin and lives until the installer exits;
+recovery waits for this lock before consuming files, and a pending result blocks another install.
+A hidden recovery backup cannot be used as a new installation destination.
+Results enter the bounded diagnostic journal; local bundle/backup paths are never exported.
+
+The update window has an AppKit-owned stable frame and no `.preferredContentSize` sizing option:
+macOS 26 can abort during content-driven window layout. Existing clients that crash before launching
+the installer require a one-time manual installation; a new package cannot repair the running old updater.
+`UpdateManager` checks remotely at startup only when opted in; manual checks remain available.
 
 ## Style
 

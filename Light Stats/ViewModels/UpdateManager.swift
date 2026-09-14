@@ -4,7 +4,7 @@
 //
 //  更新协调层（@MainActor）。`check(userInitiated:)` 是统一、可复用的入口:
 //  先静默检查 → 仅当发现新版本时才弹出更新窗口;无新版/出错时(用户主动触发)
-//  只弹一个轻量提示框,不进窗口。检查中状态由 `isChecking` 暴露给入口处内联展示。
+//  主动检查失败时显示可恢复的错误窗口；检查中状态由 isChecking 暴露给入口。
 //
 
 import AppKit
@@ -33,8 +33,11 @@ final class UpdateManager: ObservableObject {
     @Published private(set) var availableRelease: ReleaseInfo?
 
     private let service = UpdateService()
+    private let attempts: UpdateAttemptService
+    @Published private(set) var isInstalling = false
+    private(set) var downloadPage: URL?
     private let logger = AppLogger(category: "UpdateManager")
-    private var window: NSWindow?
+    private(set) var window: NSWindow?
     private var windowDelegate: UpdateWindowDelegate?
 
     private var currentVersion: SemanticVersion? {
@@ -42,17 +45,76 @@ final class UpdateManager: ObservableObject {
         return raw.flatMap(SemanticVersion.init)
     }
 
-    private init() {}
+    init(attempts: UpdateAttemptService = UpdateAttemptService()) {
+        self.attempts = attempts
+    }
 
     // MARK: - 入口（可复用）
 
     func checkOnLaunch() {
-        guard SettingsManager.shared.autoCheckUpdates else { return }
         check(userInitiated: false)
     }
 
+    /// Read only local state even when automatic update checks are disabled.
+    func recoverInterruptedUpdate() async -> Bool {
+        guard !isInstalling else { return false }
+        do {
+            guard let attempt = try await previousAttempt() else { return false }
+            let result = try await attempts.result()
+            let version = currentVersion?.raw ?? "unknown"
+            let succeeded = UpdateAttemptService.succeeded(attempt: attempt, currentVersion: version, result: result)
+            DiagnosticLogService.record(
+                level: succeeded ? .info : .error,
+                category: "update", action: succeeded ? "installCompleted" : "installInterrupted",
+                fields: ["sourceVersion": attempt.sourceVersion, "targetVersion": attempt.targetVersion,
+                         "currentVersion": version, "stage": attempt.stage, "reasonCode": result ?? "interrupted"]
+            )
+            await DiagnosticLogService.shared.flush()
+            downloadPage = attempt.downloadPage
+            if succeeded {
+                ToastCenter.shared.show(message: "update.completed".localized(attempt.targetVersion),
+                                        systemImage: "checkmark.circle.fill", tint: .green)
+            } else {
+                phase = .error("update.error.interrupted".localized(attempt.targetVersion, version))
+                showUpdateWindow()
+            }
+            if Bundle.main.bundleURL.resolvingSymlinksInPath().path == attempt.bundlePath {
+                do {
+                    try await attempts.clear(removeBackup: succeeded)
+                } catch {
+                    // Cleanup cannot turn a confirmed successful installation into an update error.
+                    logger.error("Update cleanup deferred: \(error.localizedDescription)")
+                    await attempts.releaseOwnership()
+                }
+            } else {
+                // A failed rollback may have opened the hidden backup. Keep the original
+                // destination until manual recovery; this bundle cannot self-update in place.
+                await attempts.releaseOwnership()
+            }
+            return true
+        } catch {
+            await attempts.releaseOwnership()
+            logger.error("Update recovery failed: \(error.localizedDescription)")
+            phase = .error("update.error.install".localized)
+            showUpdateWindow()
+            return true
+        }
+    }
+
+    private func previousAttempt() async throws -> UpdateAttempt? {
+        while !Task.isCancelled {
+            do {
+                return try await attempts.pending(for: Bundle.main.bundleURL)
+            } catch UpdateAttemptService.AttemptError.busy {
+                // Another app process or the detached installer still owns the files.
+                try await Task.sleep(for: .milliseconds(250))
+            }
+        }
+        throw CancellationError()
+    }
+
     /// 统一的「检查更新」入口。任何想加检查入口的地方都复用它:
-    /// 先检查,发现新版才弹窗;无新版/出错仅在用户主动触发时弹轻量提示。
+    /// 先检查，发现新版或主动检查失败时显示窗口；已是最新版时显示轻量提示。
     func check(userInitiated: Bool) {
         DiagnosticLogService.record(
             category: "update",
@@ -68,6 +130,14 @@ final class UpdateManager: ObservableObject {
         guard !isChecking else { return }
         isChecking = true
         Task {
+            if await recoverInterruptedUpdate() {
+                isChecking = false
+                return
+            }
+            guard userInitiated || SettingsManager.shared.autoCheckUpdates else {
+                isChecking = false
+                return
+            }
             do {
                 // 通道由用户设置决定：开启「尝鲜 Beta」后自动/手动均纳入 prerelease；
                 // 默认只走稳定的 releases/latest。
@@ -79,49 +149,80 @@ final class UpdateManager: ObservableObject {
                 isChecking = false
                 logger.error("Update check failed: \(error.localizedDescription)")
                 guard userInitiated else { return }
-                ToastCenter.shared.show(message: "update.error.title".localized,
-                                        systemImage: "exclamationmark.triangle.fill", tint: .orange)
+                phase = .error(error.localizedDescription)
+                showUpdateWindow()
             }
         }
     }
 
     /// 用户点击「立即更新」。
     func startInstall(_ release: ReleaseInfo) {
-        DiagnosticLogService.record(
-            category: "update",
-            action: "installRequested",
-            fields: ["version": release.tagName]
-        )
-        phase = .downloading(0)
+        guard !isInstalling, !isChecking else { return }
+        isInstalling = true
+        downloadPage = release.htmlURL
         Task {
+            var attemptStarted = false
             do {
-                let dmg = try await service.download(release) { [weak self] fraction in
-                    Task { @MainActor in self?.phase = .downloading(fraction) }
-                }
                 let destination = Bundle.main.bundleURL
-                let staged = try await service.verifyAndStage(dmgURL: dmg)
-                try await service.installAndRelaunch(stagedApp: staged, destination: destination)
-                // 换包脚本已经脱离进程跑起来之后，才切到「安装中」。
-                // 这条界面变化会在 macOS 26 上抛 AppKit 异常把 App 打死（SIGABRT）；
-                // 顺序放反就是「点了更新 → App 崩了 → 包没换」。脚本先起，即使崩了也能装完。
+                try await service.validateDestination(destination)
+                try await attempts.begin(sourceVersion: currentVersion?.raw ?? "unknown", release: release, destination: destination)
+                attemptStarted = true
+                DiagnosticLogService.record(
+                    category: "update", action: "installRequested",
+                    fields: ["sourceVersion": currentVersion?.raw ?? "unknown", "targetVersion": release.tagName]
+                )
+                await DiagnosticLogService.shared.flush()
+                phase = .downloading(0)
+                let dmg = try await service.download(release) { [weak self] fraction in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        guard case .downloading = self.phase else { return }
+                        self.phase = .downloading(fraction)
+                    }
+                }
+                try await attempts.advance(to: "verifying")
                 phase = .installing
+                let staged = try await service.verifyAndStage(dmgURL: dmg, expectedVersion: release.version)
+                try await attempts.staged(staged)
+                let resultURL = await attempts.resultURL
+                let ownership = try await attempts.installerOwnership()
+                try await service.installAndRelaunch(
+                    stagedApp: staged, destination: destination, resultURL: resultURL, ownership: ownership
+                )
+                await attempts.releaseOwnership()
+                await DiagnosticLogService.shared.flush()
+                // Do not trigger another SwiftUI layout after handing off the installer.
                 NSApp.terminate(nil)
             } catch {
                 phase = .error(error.localizedDescription)
+                showUpdateWindow()
+                DiagnosticLogService.record(
+                    level: .error, category: "update", action: "installFailed",
+                    fields: ["targetVersion": release.tagName, "reasonCode": String(describing: error)]
+                )
+                await DiagnosticLogService.shared.flush()
+                if attemptStarted {
+                    do { try await attempts.clear() } catch {
+                        logger.error("Update receipt cleanup failed: \(error.localizedDescription)")
+                    }
+                }
+                await attempts.releaseOwnership()
                 logger.error("Update install failed: \(error.localizedDescription)")
+                isInstalling = false
             }
         }
     }
 
     /// 从设置页重新打开已发现版本的更新窗口。
     func presentAvailableRelease() {
-        guard let availableRelease else { return }
+        guard !isInstalling, let availableRelease else { return }
         phase = .available(availableRelease)
         showUpdateWindow()
     }
 
     /// 关闭更新窗口，重置状态。
     func dismissWindow() {
+        guard !isInstalling else { return }
         window?.orderOut(nil)
         window = nil
         windowDelegate = nil
@@ -130,6 +231,7 @@ final class UpdateManager: ObservableObject {
 
     /// 用户选择跳过此版本。
     func skipVersion(_ release: ReleaseInfo) {
+        guard !isInstalling else { return }
         SettingsManager.shared.lastIgnoredVersion = release.tagName
         availableRelease = nil
         dismissWindow()
@@ -137,7 +239,7 @@ final class UpdateManager: ObservableObject {
 
     // MARK: - 内部
 
-    private func handle(release: ReleaseInfo, userInitiated: Bool) {
+    func handle(release: ReleaseInfo, userInitiated: Bool) {
         guard let current = currentVersion, current < release.version else {
             availableRelease = nil
             guard userInitiated else { return }
@@ -149,6 +251,7 @@ final class UpdateManager: ObservableObject {
             return
         }
         availableRelease = release
+        downloadPage = release.htmlURL
         phase = .available(release)
         showUpdateWindow()
     }
@@ -160,21 +263,21 @@ final class UpdateManager: ObservableObject {
             window?.makeKeyAndOrderFront(nil)
             return
         }
+        let height = min(500, (NSScreen.main?.visibleFrame.height ?? 800) * 0.85)
         let w = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 240),
+            contentRect: NSRect(x: 0, y: 0, width: 408, height: height),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         w.title = "update.window.title".localized
         w.isReleasedWhenClosed = false
-        // 固定宽度、高度随内容动态:.preferredContentSize 让窗口跟随 SwiftUI 内容
-        // 尺寸变化(发现新版 → 下载 → 安装)自动收放。超长 release notes 在
-        // UpdateWindowView 内滚动,保证操作按钮始终在可见区域内。
+        // AppKit owns a stable frame. Content-driven resizing can recurse through
+        // safe-area invalidation and abort the process on macOS 26 during phase changes.
         let hosting = NSHostingController(rootView: UpdateWindowView().environmentObject(self))
-        hosting.sizingOptions = [.preferredContentSize]
+        hosting.sizingOptions = []
         w.contentViewController = hosting
-        let delegate = UpdateWindowDelegate { [weak self] in
+        let delegate = UpdateWindowDelegate(canClose: { [weak self] in self?.isInstalling != true }) { [weak self] in
             self?.phase = .idle
             self?.window = nil
             self?.windowDelegate = nil
@@ -196,7 +299,12 @@ final class UpdateManager: ObservableObject {
 // MARK: - Window Delegate
 
 private final class UpdateWindowDelegate: NSObject, NSWindowDelegate {
+    let canClose: () -> Bool
     let onClose: () -> Void
-    init(onClose: @escaping () -> Void) { self.onClose = onClose }
+    init(canClose: @escaping () -> Bool, onClose: @escaping () -> Void) {
+        self.canClose = canClose
+        self.onClose = onClose
+    }
+    func windowShouldClose(_ sender: NSWindow) -> Bool { canClose() }
     func windowWillClose(_ notification: Notification) { onClose() }
 }

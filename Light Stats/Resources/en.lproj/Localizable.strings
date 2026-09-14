@@ -239,10 +239,14 @@
 "update.progress.downloading" = "Downloading…";
 "update.progress.installing" = "Verifying…";
 "update.error.title" = "Update Failed";
-"update.error.network" = "Can't reach GitHub.";
+"update.error.network" = "Can't reach the update server. Check your connection.";
 "update.error.noRelease" = "No release found.";
 "update.error.download" = "Download failed.";
-"update.error.install" = "Install failed.";
+"update.error.install" = "Installation did not finish. Reinstall from the download page.";
+"update.error.location" = "The app can't be replaced here. Quit Light Stats, move it to Applications, and reopen it.";
+"update.error.interrupted" = "The last update to %@ was not confirmed. You're running %@. Install manually from the download page. To report the issue, export a diagnostic report in Settings.";
+"update.error.busy" = "Another update is running or awaiting confirmation. Reopen the app shortly, then check for updates.";
+"update.completed" = "Updated to %@";
 "update.error.verification" = "Verification failed.";
 
 // MARK: - Cleaning Mode

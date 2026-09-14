@@ -241,10 +241,14 @@
 "update.progress.downloading" = "正在下载…";
 "update.progress.installing" = "正在校验并安装…";
 "update.error.title" = "更新失败";
-"update.error.network" = "无法连接 GitHub，请检查网络。";
+"update.error.network" = "无法连接更新服务器，请检查网络。";
 "update.error.noRelease" = "未找到发布信息，请前往 GitHub Releases 手动下载。";
 "update.error.download" = "下载中断，请重试。";
-"update.error.install" = "安装未完成，当前版本未受影响。";
+"update.error.install" = "安装未完成，请从下载页面重新安装。";
+"update.error.location" = "当前位置无法替换应用。请退出应用，将 Light Stats 移到“应用程序”文件夹后重新打开。";
+"update.error.interrupted" = "上次更新至 %@ 未确认完成，当前运行 %@。请从下载页面手动安装；如需反馈，可在设置中导出诊断报告。";
+"update.error.busy" = "另一次更新尚未结束或等待确认。请稍后重新打开应用，再检查更新。";
+"update.completed" = "已更新至 %@";
 "update.error.verification" = "安全校验失败，更新已丢弃。";
 
 // MARK: - Cleaning Mode

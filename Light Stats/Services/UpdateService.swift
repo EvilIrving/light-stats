@@ -30,6 +30,7 @@ actor UpdateService {
         case download
         case mountFailed
         case appNotFound
+        case destinationNotWritable
         case verificationFailed(String)
 
         var errorDescription: String? {
@@ -37,6 +38,7 @@ actor UpdateService {
             case .network: return "update.error.network".localized
             case .noRelease: return "update.error.noRelease".localized
             case .download: return "update.error.download".localized
+            case .destinationNotWritable: return "update.error.location".localized
             case .mountFailed, .appNotFound: return "update.error.install".localized
             case .verificationFailed(let detail):
                 return "update.error.verification".localized + " (\(detail))"
@@ -105,6 +107,9 @@ actor UpdateService {
             .appendingPathComponent("LightStatsUpdate-\(UUID().uuidString).dmg")
         do {
             let (stream, response) = try await session.bytes(from: release.downloadURL)
+            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                throw UpdateError.download
+            }
             let total = response.expectedContentLength
             FileManager.default.createFile(atPath: destination.path, contents: nil)
             let handle = try FileHandle(forWritingTo: destination)
@@ -130,6 +135,7 @@ actor UpdateService {
             return destination
         } catch {
             try? FileManager.default.removeItem(at: destination)
+            if let updateError = error as? UpdateError { throw updateError }
             throw UpdateError.download
         }
     }
@@ -162,7 +168,7 @@ actor UpdateService {
 
     /// 挂载 DMG，定位 .app，做三重安全校验，把新 app ditto 到独立暂存目录后卸载 DMG。
     /// 返回暂存的 .app 路径，供 `installAndRelaunch` 使用。
-    func verifyAndStage(dmgURL: URL) async throws -> URL {
+    func verifyAndStage(dmgURL: URL, expectedVersion: SemanticVersion) async throws -> URL {
         let mountPoint = FileManager.default.temporaryDirectory
             .appendingPathComponent("LightStatsMount-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: mountPoint, withIntermediateDirectories: true)
@@ -179,6 +185,12 @@ actor UpdateService {
         do {
             guard let mountedApp = locateApp(in: mountPoint) else { throw UpdateError.appNotFound }
             try await verifySignature(of: mountedApp)
+            guard let bundle = Bundle(url: mountedApp),
+                  bundle.bundleIdentifier == Bundle.main.bundleIdentifier,
+                  let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                  SemanticVersion(version) == expectedVersion else {
+                throw UpdateError.verificationFailed("bundle-identity-or-version")
+            }
 
             let stagingDir = FileManager.default.temporaryDirectory
                 .appendingPathComponent("LightStatsStage-\(UUID().uuidString)")
@@ -229,36 +241,23 @@ actor UpdateService {
 
     // MARK: - 替换并重启
 
-    /// 写一个脱离进程的 shell 脚本：等当前进程退出 → ditto 覆盖 → 重启新版本。
-    /// 调用后由调用方立即 `NSApp.terminate`，剩下交给脱离的脚本。
-    func installAndRelaunch(stagedApp: URL, destination: URL) throws {
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let scriptURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("LightStatsInstall-\(UUID().uuidString).sh")
-        let script = """
-        #!/bin/sh
-        PID="$1"; SRC="$2"; DEST="$3"
-        i=0
-        while /bin/kill -0 "$PID" 2>/dev/null; do
-          /bin/sleep 0.2; i=$((i+1)); [ $i -gt 150 ] && break
-        done
-        /bin/sleep 0.3
-        if /usr/bin/ditto "$SRC" "$DEST.new"; then
-          /bin/rm -rf "$DEST"
-          /bin/mv "$DEST.new" "$DEST"
-          /usr/bin/xattr -dr com.apple.quarantine "$DEST" 2>/dev/null
-          /usr/bin/open "$DEST"
-        fi
-        /bin/rm -rf "$(/usr/bin/dirname "$SRC")"
-        /bin/rm -f "$0"
-        """
-        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+    /// Reject read-only DMGs, App Translocation and unwritable installations before downloading.
+    func validateDestination(_ destination: URL) throws {
+        let parent = destination.deletingLastPathComponent()
+        let values = try parent.resourceValues(forKeys: [.volumeIsReadOnlyKey])
+        guard values.volumeIsReadOnly != true,
+              !destination.pathComponents.contains("AppTranslocation"),
+              !destination.lastPathComponent.hasPrefix(".LightStatsUpdate."),
+              FileManager.default.isWritableFile(atPath: parent.path),
+              FileManager.default.isWritableFile(atPath: destination.path) else {
+            throw UpdateError.destinationNotWritable
+        }
+    }
 
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = [scriptURL.path, "\(pid)", stagedApp.path, destination.path]
-        try task.run()
-        // 记一条：脚本已脱离进程。之后 App 即使崩溃，换包仍会完成——出问题时先看这条。
+    /// The installer writes a durable outcome before reopening either the new or restored app.
+    func installAndRelaunch(stagedApp: URL, destination: URL, resultURL: URL, ownership: FileHandle) throws {
+        try validateDestination(destination)
+        try UpdateInstallerService.launch(stagedApp: stagedApp, destination: destination, resultURL: resultURL, ownership: ownership)
         DiagnosticLogService.record(category: "update", action: "installerLaunched")
         logger.info("Installer launched; terminating to let it swap the bundle")
     }

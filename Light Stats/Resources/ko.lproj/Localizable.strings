@@ -241,10 +241,14 @@
 "update.progress.downloading" = "다운로드 중…";
 "update.progress.installing" = "확인 중…";
 "update.error.title" = "업데이트 실패";
-"update.error.network" = "GitHub에 연결할 수 없습니다.";
+"update.error.network" = "업데이트 서버에 연결할 수 없습니다. 네트워크를 확인하세요.";
 "update.error.noRelease" = "릴리스를 찾을 수 없습니다.";
 "update.error.download" = "다운로드에 실패했습니다.";
-"update.error.install" = "설치에 실패했습니다.";
+"update.error.install" = "설치가 완료되지 않았습니다. 다운로드 페이지에서 다시 설치하세요.";
+"update.error.location" = "현재 위치에서는 앱을 교체할 수 없습니다. Light Stats를 종료하고 응용 프로그램 폴더로 옮긴 뒤 다시 여세요.";
+"update.error.interrupted" = "이전 %@ 업데이트의 완료를 확인하지 못했습니다. 현재 버전은 %@입니다. 다운로드 페이지에서 직접 설치하세요. 문제를 보고하려면 설정에서 진단 보고서를 내보내세요.";
+"update.error.busy" = "다른 업데이트가 진행 중이거나 완료 확인을 기다리고 있습니다. 잠시 후 앱을 다시 열고 업데이트를 확인하세요.";
+"update.completed" = "%@ 버전으로 업데이트됨";
 "update.error.verification" = "검증에 실패했습니다.";
 
 // MARK: - Cleaning Mode

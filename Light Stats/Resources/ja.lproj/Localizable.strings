@@ -241,10 +241,14 @@
 "update.progress.downloading" = "ダウンロード中…";
 "update.progress.installing" = "検証してインストール中…";
 "update.error.title" = "アップデート失敗";
-"update.error.network" = "GitHub に接続できません。";
+"update.error.network" = "更新サーバーに接続できません。ネットワークを確認してください。";
 "update.error.noRelease" = "リリース情報が見つかりません。GitHub からダウンロードしてください。";
 "update.error.download" = "ダウンロードが中断されました。再試行してください。";
-"update.error.install" = "インストールが完了しませんでした。現在のバージョンはそのままです。";
+"update.error.install" = "インストールが完了しませんでした。ダウンロードページから再インストールしてください。";
+"update.error.location" = "この場所ではアプリを置き換えられません。Light Stats を終了し、「アプリケーション」フォルダに移動してから開き直してください。";
+"update.error.interrupted" = "%@ への前回の更新は完了を確認できませんでした。現在のバージョンは %@ です。ダウンロードページから手動でインストールしてください。問題を報告する場合は、設定から診断レポートを書き出せます。";
+"update.error.busy" = "別の更新が実行中、または完了の確認待ちです。しばらくしてからアプリを開き直し、更新を確認してください。";
+"update.completed" = "%@ に更新しました";
 "update.error.verification" = "セキュリティ検証に失敗しました。更新は破棄されました。";
 
 // MARK: - Cleaning Mode
