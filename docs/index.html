@@ -541,6 +541,34 @@
         <section data-panel="changelog" class="prose col" hidden>
           <article class="log-item">
             <div class="log-head">
+              <h2>1.9.5</h2>
+              <span class="log-date">14 Sep 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.5.dmg">Get</a>
+            </div>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Updates that could crash on macOS 26 before the install finished, and the silent failure that followed. The window keeps a fixed size now.</li>
+              <li>Replacement no longer deletes the old bundle first: it keeps a backup, rolls back on failure, and aborts if the old app never exits.</li>
+              <li>One installer at a time across launches, no premature cleanup, and the actual version is verified after a restart with a clear failure message.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.4</h2>
+              <span class="log-date">14 Sep 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.4.dmg">Get</a>
+            </div>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Finder menu actions that appeared but did nothing, and saving an API token with no feedback.</li>
+              <li>An update install that could be lost when the window redrew before the replace script started.</li>
+              <li>Local builds that left an unsigned Finder extension behind.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
               <h2>1.9.3</h2>
               <span class="log-date">14 Sep 2026</span>
               <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.3.dmg">Get</a>
