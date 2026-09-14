@@ -270,6 +270,12 @@
 "settings.findMouseTriggerKey.recording" = "キーを入力";
 "settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
+"settings.presentationCursor.style" = "ポインタのスタイル";
+"settings.presentationCursor.style.holographicSilver" = "ホログラムシルバー";
+"settings.presentationCursor.style.iceCrystal" = "アイスクリスタル";
+"settings.presentationCursor.style.rosePink" = "ローズピンク";
+"settings.presentationCursor.style.aurora" = "オーロラ";
+"settings.presentationCursor.style.obsidian" = "オブシディアン";
 "settings.cleanupHotKey" = "クリーンアップのショートカット";
 "settings.cleanupHotKey.hint" = "ポインタ位置にクリーンアップを開く";
 "settings.cleanupHotKey.registerFailed" = "ショートカットは使用中。別のキーを指定";

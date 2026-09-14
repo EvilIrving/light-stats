@@ -1,0 +1,25 @@
+Presentation cursor artwork: 钻石动态光标素材包 (project-owner supplied asset pack).
+Bundled files are the pack's 逐帧图集 (frame atlases), one per colourway:
+
+    PresentationCursorHolographicSilver.png = 逐帧图集/全息银钻.png
+    PresentationCursorIceCrystal.png        = 逐帧图集/冰蓝水晶.png
+    PresentationCursorRosePink.png          = 逐帧图集/玫瑰粉钻.png
+    PresentationCursorAurora.png            = 逐帧图集/极光彩钻.png
+    PresentationCursorObsidian.png          = 逐帧图集/曜石黑钻.png
+
+Contract used by PresentationCursorAtlas / PresentationCursorStyle, taken from the
+pack's 动画参数.json and 校验报告.json:
+
+- sprite atlas 768x1024 = 6 columns x 8 rows of 128x128 cells, drawn row-major
+  (index -> column = index % 6, row = index / 6), 48 frames total
+- 50 ms per frame, 2.4 s per infinite loop
+- hotspot inside one 128px cell, measured from the cell's top-left corner
+  (the pack's 热点_128像素), per colourway:
+    全息银钻 (24.131, 4.109) · 冰蓝水晶 (23.191, 4.0) · 玫瑰粉钻 (23.826, 4.0)
+    极光彩钻 (21.224, 4.107) · 曜石黑钻 (20.893, 4.0)
+
+Every colourway's artwork sits inside x 18…109, y 3…124 of its cell, which is why
+the settings picker can crop all five to one shared preview box.
+
+The pack's Windows-only .ani/.cur variants and its GIF exports are not bundled: the
+atlas is what the app decodes, and the GIFs are ~12x the size for the same frames.

@@ -37,6 +37,7 @@ Light Stats/
 │   ├── HealthScore.swift            # Dimension sub-scores + final 0–100
 │   ├── AppTheme.swift               # Product preset ID (glass/film/bar/noir/dataPaper)
 │   ├── FindMouseTriggerKey.swift    # User-recorded shortcut for Find My Mouse
+│   ├── PresentationCursorStyle.swift # The five presentation-cursor colourways (atlas + hotspot)
 │   ├── PanelHotKey.swift            # Global shortcut that summons Cleanup at the pointer
 │   ├── InputSourceOption.swift      # Selectable input source id + display name
 │   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
@@ -79,7 +80,10 @@ Light Stats/
 │   ├── ScrollDirectionService.swift # CGEventTap scroll-direction reversal (opt-in)
 │   ├── FindMouseService.swift       # Shared modifier tap: double=find mouse, triple=presentation pointer
 │   ├── DefaultInputSourceService.swift # Force one input source after each app activation (opt-in)
-│   ├── PresentationPointerService.swift # Click-through persistent cursor halo
+│   ├── BackgroundCursorControl.swift # Private grant: lets a background app hide the cursor
+│   ├── PresentationCursorAtlas.swift # Sprite-atlas grid, key times, 48-frame decode, thumbnails
+│   ├── PresentationCursorGeometry.swift # Cell pixels → points, and the window origin on the hotspot
+│   ├── PresentationPointerService.swift # Animated diamond cursor overlay; hides the real pointer
 │   ├── WindowSnappingService.swift  # Native-first snap engine; own placement as fallback
 │   ├── WindowSnapGeometry.swift     # Pure placement math + Accessibility ↔ Cocoa flip
 │   ├── WindowGestureTargeting.swift # Point → window/zone resolution + control guard
@@ -147,6 +151,7 @@ Light Stats/
 │   │       └── ColorExtensions.swift
 │   ├── Settings/SettingsView.swift
 │   ├── Settings/FindMouseSettingsSection.swift
+│   ├── Settings/PresentationCursorStylePicker.swift # Colourway thumbnails, chosen by looking
 │   ├── Settings/CleanupPanelHotKeySettingsSection.swift
 │   ├── Settings/WindowManagementSettingsSection.swift
 │   ├── Settings/DefaultInputSourceSettingsSection.swift
@@ -170,6 +175,7 @@ Light Stats/
 │   └── WindowSnapIconProvider.swift # SF Symbol icons for snap actions
 └── Resources/
     ├── Icons/                       # Metric SVG outlines
+    ├── Cursors/                     # Presentation-cursor sprite atlas (+ its attribution)
     ├── FinderBlank.docx/.xlsx/.pptx # Minimal OOXML blanks (script/generate_finder_templates.py)
     ├── en.lproj/Localizable.strings
     ├── zh-Hans.lproj/Localizable.strings
@@ -258,6 +264,25 @@ service that owns an `NSWorkspace.didActivateApplicationNotification` observer i
 permission — `TISSelectInputSource` is unprivileged. Its only decision rule lives in the pure
 `DefaultInputSourcePolicy`: **correct drift only inside a 1.2 s window after an app activation**, so a
 deliberate `Ctrl+Space` outside that window (and any secure-input field) is left alone.
+
+`PresentationPointerService` is also the same shape without a tap, but it is the one opt-in tool
+with a **global** side effect: the window server draws the cursor above every window level, so the
+diamond can only *replace* the pointer while `CGDisplayHideCursor` hides the real one. That hide is
+a session-wide counter — every hide is paired with a show on every stop path, and the service also
+stops on session end (`sessionDidResignActive`, display sleep) so a hidden cursor never outlives the
+session that drew its replacement. Hiding also needs `BackgroundCursorControl`: a never-activating
+menu-bar app's `CGDisplayHideCursor` is a silent no-op (it still returns `.success`), so the
+`SetsCursorInBackground` connection property is the only thing that makes the real pointer disappear
+at all. When its symbols cannot be resolved the pointer degrades to "overlay rides on top of the
+system arrow" rather than breaking, which is the only reason the call is wrapped at all. The hidden
+state is also re-asserted as the pointer moves (a show/hide pair, so the count never drifts): the
+window server can hand cursor control to the Dock or to a window edge's resize cursor, and the arrow
+otherwise stays back long after that owner let go.
+
+The colourway is a real preference (`settings.presentationCursorStyle`, chosen in the settings row
+from five thumbnails, because picking a pointer by reading its name is the wrong control). Adding a
+colourway is an atlas under `Resources/Cursors/`, a `PresentationCursorStyle` case with that style's
+`热点_128像素`, and a name in all four `Localizable.strings`; nothing else hard-codes a style.
 
 **Window management delegates to the system.** `WindowSnappingService` tries the native path
 first: `NativeWindowTilingService` finds the tiling item macOS injects into the target app's
@@ -688,6 +713,15 @@ Suites:
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.
 - `FindMouseTriggerTests` — shared modifier sequence: double-tap delay/commit, triple-tap
   cancellation and toggle action, cooldown, reset, and key-code mapping. CGEventTap stays out of XCTest.
+- `PresentationCursorTests` — the presentation cursor's asset contract: 48 row-major atlas cells,
+  key times that leave the last frame to the loop, the 2.4 s loop, the 64pt render being exactly
+  half of the 128px artwork, that every colourway ships its own complete atlas with its hotspot
+  inside the cell and its artwork inside the picker's shared preview crop, that the bundled atlas
+  really decodes into 48 frames whose colour (not alpha — the pack holds coverage fixed) changes
+  over time, a wrong-sized atlas yielding no frames, the style wire format round-tripping, and that
+  the window origin puts the arrow tip on the pointer, on the primary display and on one arranged
+  above it. Also the background-cursor grant: installed once per process, never retried after a
+  failure (the fallback is the foreground-only behaviour, not a broken pointer).
 - `FinderMenuCommandRegistryTests` — the tag → command bookkeeping behind the Finder menu: a
   registered tag resolves back to the exact command, tags are unique and monotonic, tags issued
   before a menu rebuild stay resolvable, an unknown tag resolves to nil, and capacity evicts the

@@ -108,6 +108,25 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertEqual(settings.findMouseTriggerKey, .leftControl)
     }
 
+    func testPresentationCursorStyleDefaultsToHolographicSilver() {
+        let settings = freshSettings()
+        XCTAssertEqual(settings.presentationCursorStyle, .shippedDefault)
+        XCTAssertEqual(settings.presentationCursorStyle, .holographicSilver)
+        XCTAssertNil(cleanDefaults.object(forKey: "settings.presentationCursorStyle"))
+    }
+
+    func testEveryStoredPresentationCursorStyleIsRestored() {
+        for style in PresentationCursorStyle.allCases {
+            cleanDefaults.set(style.rawValue, forKey: "settings.presentationCursorStyle")
+            XCTAssertEqual(freshSettings().presentationCursorStyle, style, style.rawValue)
+        }
+    }
+
+    func testUnknownStoredPresentationCursorStyleFallsBackToHolographicSilver() {
+        cleanDefaults.set("mystery", forKey: "settings.presentationCursorStyle")
+        XCTAssertEqual(freshSettings().presentationCursorStyle, .shippedDefault)
+    }
+
     func testCleanupPanelHotKeyDefaultsOff() {
         let settings = freshSettings()
         XCTAssertFalse(settings.cleanupPanelHotKeyEnabled)

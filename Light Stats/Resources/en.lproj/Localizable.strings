@@ -268,6 +268,12 @@
 "settings.findMouseTriggerKey.recording" = "Press Shortcut";
 "settings.findMouse.permissionTitle" = "Accessibility Access Needed";
 "settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
+"settings.presentationCursor.style" = "Pointer Style";
+"settings.presentationCursor.style.holographicSilver" = "Holographic Silver";
+"settings.presentationCursor.style.iceCrystal" = "Ice Crystal";
+"settings.presentationCursor.style.rosePink" = "Rose Pink";
+"settings.presentationCursor.style.aurora" = "Aurora";
+"settings.presentationCursor.style.obsidian" = "Obsidian";
 "settings.cleanupHotKey" = "Cleanup Shortcut";
 "settings.cleanupHotKey.hint" = "Opens Cleanup at the pointer";
 "settings.cleanupHotKey.registerFailed" = "Shortcut is in use. Choose another.";

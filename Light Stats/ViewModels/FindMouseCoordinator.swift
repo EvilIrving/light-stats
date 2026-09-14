@@ -56,6 +56,14 @@ final class FindMouseCoordinator {
                 sync(isEnabled: settings.findMouseEnabled, payload: license.payload, triggerKey: key)
             }
             .store(in: &cancellables)
+
+        // 颜色直接转发收到的值：同样不能在 sink 里回读 `@Published`。
+        settings.$presentationCursorStyle
+            .dropFirst()
+            .sink { [weak self] style in
+                self?.service.updateCursorStyle(style)
+            }
+            .store(in: &cancellables)
     }
 
     private func sync() {
@@ -72,6 +80,7 @@ final class FindMouseCoordinator {
         let isUnlocked = license.isGrandfathered || payload?.features.contains(.findMouse) == true
         if isEnabled, isUnlocked {
             service.updateTriggerKey(triggerKey ?? settings.findMouseTriggerKey)
+            service.updateCursorStyle(settings.presentationCursorStyle)
             startOrPrompt()
         } else {
             service.stop()

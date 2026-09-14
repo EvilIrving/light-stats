@@ -22,6 +22,10 @@ struct FindMouseSettingsSection: View {
                         )
                     }
                 }
+                rowDivider()
+                SettingsRow("settings.presentationCursor.style".localized) {
+                    PresentationCursorStylePicker(selection: $settings.presentationCursorStyle)
+                }
             } else {
                 SettingsRow(
                     "settings.findMouse".localized,

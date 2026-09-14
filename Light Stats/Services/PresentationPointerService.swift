@@ -2,8 +2,11 @@
 //  PresentationPointerService.swift
 //  Light Stats
 //
-//  Persistent presentation pointer: a click-through soft halo follows the
-//  system cursor without installing an event tap or requesting permission.
+//  Persistent presentation pointer: the asset pack's animated diamond cursor
+//  follows the system pointer in a click-through overlay window, and the real
+//  pointer is hidden while it runs. No event tap and no permission — the overlay
+//  reads `NSEvent.mouseLocation`, and Core Animation plays the 48-frame atlas, so
+//  the steady state runs no per-frame Swift drawing.
 //
 
 import AppKit
@@ -14,36 +17,65 @@ protocol PresentationPointerControlling: AnyObject {
     var isRunning: Bool { get }
     func start()
     func stop()
+    func updateCursorStyle(_ style: PresentationCursorStyle)
 }
 
-/// Owns one small transparent window centered on `NSEvent.mouseLocation`.
-/// Core Animation renders the pulse; Swift only repositions the window when
-/// the cursor moves, so the steady-state effect avoids per-frame drawing.
+/// Owns one small transparent window whose arrow tip sits on the pointer hotspot.
 @MainActor
 final class PresentationPointerService: PresentationPointerControlling {
-    private static let windowSize = CGSize(width: 112, height: 112)
+    private static let frameAnimationKey = "presentationCursorFrames"
     private static let trackingIntervalNanoseconds: UInt64 = 16_666_667
+    /// How often the hidden state is re-asserted while the pointer moves. Two window-server
+    /// calls at this rate are nothing next to the 60 Hz tracking below.
+    private static let cursorReassertInterval: TimeInterval = 0.5
+
+    private let logger = AppLogger(category: "PresentationPointer")
+    private var style: PresentationCursorStyle = .shippedDefault
 
     private(set) var isRunning = false
     private var overlayWindow: NSWindow?
+    private var cursorLayer: CALayer?
     private var trackingTask: Task<Void, Never>?
     private var lastPointerLocation: CGPoint?
+    private var isSystemCursorHidden = false
+    private var nextCursorReassertAt: TimeInterval = 0
+    private var sessionObservers: [NSObjectProtocol] = []
+    private var cursorControl = BackgroundCursorControl()
 
     func start() {
         guard !isRunning else { return }
-        isRunning = true
+        guard let frames = PresentationCursorAtlas.loadFrames(for: style), !frames.isEmpty else {
+            logger.error("Presentation cursor atlas unavailable; presentation pointer stays off")
+            return
+        }
 
-        let window = makeOverlayWindow()
+        isRunning = true
+        let window = makeOverlayWindow(frames: frames)
         overlayWindow = window
         updatePointerLocation()
         window.orderFrontRegardless()
+        hideSystemCursor()
+        observeSessionEnd()
+        startTracking()
+        logger.info("Presentation pointer started: \(style.rawValue)")
+    }
 
-        trackingTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                self?.updatePointerLocation()
-                try? await Task.sleep(nanoseconds: Self.trackingIntervalNanoseconds)
-            }
+    /// Swap the colourway live. The window stays where it is; only the layer's contents
+    /// and the hotspot change, and a style whose art is missing leaves the current one
+    /// on screen rather than blanking the pointer.
+    func updateCursorStyle(_ style: PresentationCursorStyle) {
+        guard style != self.style else { return }
+        guard isRunning, let window = overlayWindow else {
+            self.style = style
+            return
         }
+        guard let frames = PresentationCursorAtlas.loadFrames(for: style), !frames.isEmpty else {
+            logger.error("Presentation cursor atlas missing for \(style.rawValue); keeping the current style")
+            return
+        }
+        self.style = style
+        lastPointerLocation = nil
+        replaceCursorLayer(frames: frames, in: window)
     }
 
     func stop() {
@@ -52,29 +84,23 @@ final class PresentationPointerService: PresentationPointerControlling {
         trackingTask?.cancel()
         trackingTask = nil
         lastPointerLocation = nil
+        removeSessionObservers()
+        showSystemCursor()
         overlayWindow?.orderOut(nil)
         overlayWindow = nil
+        cursorLayer = nil
+        logger.info("Presentation pointer stopped")
     }
 
-    private func updatePointerLocation() {
-        guard isRunning, let window = overlayWindow else { return }
-        let pointer = NSEvent.mouseLocation
-        if let lastPointerLocation,
-           abs(pointer.x - lastPointerLocation.x) < 0.25,
-           abs(pointer.y - lastPointerLocation.y) < 0.25 {
-            return
-        }
-        lastPointerLocation = pointer
-        window.setFrameOrigin(NSPoint(
-            x: pointer.x - Self.windowSize.width / 2,
-            y: pointer.y - Self.windowSize.height / 2
-        ))
-    }
+    // MARK: - Window
 
-    private func makeOverlayWindow() -> NSWindow {
-        let frame = CGRect(origin: .zero, size: Self.windowSize)
+    private func makeOverlayWindow(frames: [CGImage]) -> NSWindow {
+        let size = CGSize(
+            width: PresentationCursorGeometry.renderSize,
+            height: PresentationCursorGeometry.renderSize
+        )
         let window = NSWindow(
-            contentRect: frame,
+            contentRect: CGRect(origin: .zero, size: size),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -86,125 +112,166 @@ final class PresentationPointerService: PresentationPointerControlling {
         window.ignoresMouseEvents = true
         window.animationBehavior = .none
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
-        window.contentView = PresentationPointerHaloView(frame: frame)
+
+        let host = NSView(frame: CGRect(origin: .zero, size: size))
+        host.wantsLayer = true
+        window.contentView = host
+        let cursor = makeCursorLayer(frames: frames, size: size, contentsScale: window.backingScaleFactor)
+        host.layer?.addSublayer(cursor)
+        cursorLayer = cursor
         return window
     }
-}
 
-/// Fixed light body + dark keyline: the same halo remains legible over both
-/// light and dark content without inspecting the application underneath it.
-private final class PresentationPointerHaloView: NSView {
-    private let haloContainer = CALayer()
-    private let glowLayer = CAGradientLayer()
-    private let darkRingLayer = CAShapeLayer()
-    private let lightRingLayer = CAShapeLayer()
-    private let darkAnchorLayer = CAShapeLayer()
-    private let lightAnchorLayer = CAShapeLayer()
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.masksToBounds = false
-        configureLayers()
+    private func makeCursorLayer(frames: [CGImage], size: CGSize, contentsScale: CGFloat) -> CALayer {
+        let layer = CALayer()
+        layer.frame = CGRect(origin: .zero, size: size)
+        layer.contentsScale = contentsScale
+        layer.contentsGravity = .resizeAspect
+        layer.magnificationFilter = .linear
+        layer.minificationFilter = .linear
+        layer.contents = frames.first
+        layer.add(Self.frameAnimation(frames: frames), forKey: Self.frameAnimationKey)
+        return layer
     }
 
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("PresentationPointerHaloView is created in code only")
-    }
-
-    override func layout() {
-        super.layout()
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        updateLayerGeometry()
-        CATransaction.commit()
-    }
-
-    private func configureLayers() {
-        guard let rootLayer = layer else { return }
-
-        rootLayer.addSublayer(haloContainer)
-        haloContainer.addSublayer(glowLayer)
-        haloContainer.addSublayer(darkRingLayer)
-        haloContainer.addSublayer(lightRingLayer)
-        rootLayer.addSublayer(darkAnchorLayer)
-        rootLayer.addSublayer(lightAnchorLayer)
-
-        glowLayer.type = .radial
-        glowLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-        glowLayer.endPoint = CGPoint(x: 1, y: 1)
-        glowLayer.colors = [
-            NSColor.clear.cgColor,
-            NSColor(calibratedRed: 1, green: 0.83, blue: 0.32, alpha: 0.12).cgColor,
-            NSColor(calibratedRed: 1, green: 0.62, blue: 0.12, alpha: 0.25).cgColor,
-            NSColor(calibratedRed: 1, green: 0.56, blue: 0.08, alpha: 0).cgColor
-        ]
-        glowLayer.locations = [0, 0.28, 0.62, 1]
-
-        configureRing(
-            darkRingLayer,
-            color: NSColor(calibratedWhite: 0.02, alpha: 0.82),
-            width: 4
+    private func replaceCursorLayer(frames: [CGImage], in window: NSWindow) {
+        guard let host = window.contentView, let hostLayer = host.layer else { return }
+        let replacement = makeCursorLayer(
+            frames: frames,
+            size: host.bounds.size,
+            contentsScale: window.screen?.backingScaleFactor ?? window.backingScaleFactor
         )
-        configureRing(
-            lightRingLayer,
-            color: NSColor(calibratedRed: 1, green: 0.96, blue: 0.77, alpha: 0.96),
-            width: 1.35
-        )
-        lightRingLayer.shadowColor = NSColor(calibratedRed: 1, green: 0.55, blue: 0.08, alpha: 0.9).cgColor
-        lightRingLayer.shadowOpacity = 1
-        lightRingLayer.shadowRadius = 8
-        lightRingLayer.shadowOffset = .zero
-
-        configureRing(darkAnchorLayer, color: NSColor(calibratedWhite: 0.02, alpha: 0.94), width: 4)
-        configureRing(lightAnchorLayer, color: NSColor(calibratedWhite: 1, alpha: 0.98), width: 1.25)
-
-        let pulse = CABasicAnimation(keyPath: "transform.scale")
-        pulse.fromValue = 0.97
-        pulse.toValue = 1.04
-        pulse.duration = 1.35
-        pulse.autoreverses = true
-        pulse.repeatCount = .infinity
-        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        haloContainer.add(pulse, forKey: "presentationPointerPulse")
+        hostLayer.addSublayer(replacement)
+        cursorLayer?.removeFromSuperlayer()
+        cursorLayer = replacement
     }
 
-    private func configureRing(_ layer: CAShapeLayer, color: NSColor, width: CGFloat) {
-        layer.fillColor = NSColor.clear.cgColor
-        layer.strokeColor = color.cgColor
-        layer.lineWidth = width
+    /// One discrete keyframe sequence over `contents`: the render server plays all
+    /// 48 frames on its own clock, so nothing here runs per frame.
+    private static func frameAnimation(frames: [CGImage]) -> CAKeyframeAnimation {
+        let animation = CAKeyframeAnimation(keyPath: "contents")
+        animation.values = frames
+        animation.keyTimes = PresentationCursorAtlas.keyTimes(frameCount: frames.count)
+        animation.calculationMode = .discrete
+        animation.duration = PresentationCursorAtlas.loopDuration
+        animation.repeatCount = .infinity
+        animation.isRemovedOnCompletion = false
+        return animation
     }
 
-    private func updateLayerGeometry() {
-        let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        haloContainer.frame = bounds
-        haloContainer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        haloContainer.position = center
-        glowLayer.frame = bounds.insetBy(dx: 9, dy: 9)
+    // MARK: - Tracking
 
-        let ringRect = CGRect(
-            x: center.x - 27,
-            y: center.y - 27,
-            width: 54,
-            height: 54
-        )
-        let ringPath = CGPath(ellipseIn: ringRect, transform: nil)
-        darkRingLayer.frame = bounds
-        darkRingLayer.path = ringPath
-        lightRingLayer.frame = bounds
-        lightRingLayer.path = ringPath
+    private func startTracking() {
+        trackingTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                self?.updatePointerLocation()
+                try? await Task.sleep(nanoseconds: Self.trackingIntervalNanoseconds)
+            }
+        }
+    }
 
-        let anchorRect = CGRect(
-            x: center.x - 5.2,
-            y: center.y - 5.2,
-            width: 10.4,
-            height: 10.4
+    private func updatePointerLocation() {
+        guard isRunning, let window = overlayWindow else { return }
+        let pointer = NSEvent.mouseLocation
+        if let lastPointerLocation,
+           abs(pointer.x - lastPointerLocation.x) < 0.25,
+           abs(pointer.y - lastPointerLocation.y) < 0.25 {
+            return
+        }
+        lastPointerLocation = pointer
+        let hotspot = PresentationCursorGeometry.hotspot(cellHotspot: style.cellHotspot)
+        window.setFrameOrigin(
+            PresentationCursorGeometry.windowOrigin(pointer: pointer, hotspot: hotspot)
         )
-        let anchorPath = CGPath(ellipseIn: anchorRect, transform: nil)
-        darkAnchorLayer.frame = bounds
-        darkAnchorLayer.path = anchorPath
-        lightAnchorLayer.frame = bounds
-        lightAnchorLayer.path = anchorPath
+        syncCursorLayerScale(for: window)
+        reassertHiddenCursorIfNeeded(at: pointer)
+    }
+
+    /// Moving the window between displays with different backing scales re-renders the
+    /// 128px art at the new scale instead of resampling blur.
+    private func syncCursorLayerScale(for window: NSWindow) {
+        guard let cursorLayer, let scale = window.screen?.backingScaleFactor,
+              cursorLayer.contentsScale != scale else {
+            return
+        }
+        cursorLayer.contentsScale = scale
+    }
+
+    // MARK: - System cursor
+
+    /// No window can cover the system cursor — the window server draws it above every
+    /// window level — so the diamond only replaces the cursor while the real one is
+    /// hidden. That needs two things: the process-wide background grant (a never-active
+    /// menu-bar app's `CGDisplayHideCursor` is otherwise a silent no-op), and a show for
+    /// every hide on every stop path (toggle, switch off, license loss, tap death,
+    /// session end, app exit).
+    private func hideSystemCursor() {
+        guard !isSystemCursorHidden else { return }
+        let controlsCursor = cursorControl.enableOnce()
+        let error = CGDisplayHideCursor(CGMainDisplayID())
+        isSystemCursorHidden = error == .success
+        if !isSystemCursorHidden {
+            logger.error("CGDisplayHideCursor failed with error \(error.rawValue)")
+        }
+        if !controlsCursor {
+            logger.error("Without the background grant the system arrow stays over the presentation pointer")
+        }
+    }
+
+    private func showSystemCursor() {
+        guard isSystemCursorHidden else { return }
+        isSystemCursorHidden = false
+        let error = CGDisplayShowCursor(CGMainDisplayID())
+        if error != .success {
+            logger.error("CGDisplayShowCursor failed with error \(error.rawValue)")
+        }
+    }
+
+    /// The window server can hand cursor control to something else — the Dock, a window
+    /// edge's resize cursor, another owner — and because our hide is a count the window
+    /// server already consumed, the real arrow then comes back *and stays back* even once
+    /// that owner lets go. Nothing reports that, so re-assert on movement: a show/hide
+    /// pair leaves the count exactly where it was while forcing the window server to
+    /// re-decide which cursor to draw.
+    private func reassertHiddenCursorIfNeeded(at pointer: CGPoint) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard isSystemCursorHidden, now >= nextCursorReassertAt else { return }
+        nextCursorReassertAt = now + Self.cursorReassertInterval
+
+        let wasVisible = BackgroundCursorControl.isSystemCursorVisible() == true
+        let showError = CGDisplayShowCursor(CGMainDisplayID())
+        let hideError = CGDisplayHideCursor(CGMainDisplayID())
+        guard showError == .success, hideError == .success else {
+            logger.error(
+                "Re-asserting the hidden cursor failed (show \(showError.rawValue), hide \(hideError.rawValue))"
+            )
+            return
+        }
+        if wasVisible {
+            logger.info(
+                "Cursor had come back at \(Int(pointer.x)),\(Int(pointer.y)); re-asserted the hidden state"
+            )
+        }
+    }
+
+    /// A hidden system cursor must not outlive the session that drew its replacement:
+    /// the lock screen, a fast-user switch, and display sleep all end the pointer.
+    private func observeSessionEnd() {
+        guard sessionObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.sessionDidResignActiveNotification, NSWorkspace.screensDidSleepNotification] {
+            sessionObservers.append(
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.stop() }
+                }
+            )
+        }
+    }
+
+    private func removeSessionObservers() {
+        guard !sessionObservers.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        sessionObservers.forEach(center.removeObserver)
+        sessionObservers.removeAll()
     }
 }

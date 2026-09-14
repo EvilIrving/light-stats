@@ -145,4 +145,6 @@ private final class FindMouseServiceSpy: FindMouseControlling {
     }
 
     func updateTriggerKey(_ key: FindMouseTriggerKey) {}
+
+    func updateCursorStyle(_ style: PresentationCursorStyle) {}
 }

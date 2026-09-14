@@ -61,6 +61,7 @@ protocol SettingsManaging: ObservableObject {
     var defaultInputSourceID: String? { get set }
     var findMouseEnabled: Bool { get set }
     var findMouseTriggerKey: FindMouseTriggerKey { get set }
+    var presentationCursorStyle: PresentationCursorStyle { get set }
     var cleanupPanelHotKeyEnabled: Bool { get set }
     var cleanupPanelHotKey: PanelHotKey { get set }
     var activationCode: String? { get set }
@@ -342,6 +343,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var findMouseTriggerKey: FindMouseTriggerKey {
         didSet { save(findMouseTriggerKey.rawValue, for: .findMouseTriggerKey) }
     }
+    /// 演示指针配色：只换图集，不影响三按手势的开关语义。
+    @Published var presentationCursorStyle: PresentationCursorStyle {
+        didSet { save(presentationCursorStyle.rawValue, for: .presentationCursorStyle) }
+    }
     /// 在指针处打开清理页：默认关闭（opt-in）。Carbon 全局热键，不需要辅助功能权限。
     @Published var cleanupPanelHotKeyEnabled: Bool {
         didSet { save(cleanupPanelHotKeyEnabled, for: .cleanupPanelHotKeyEnabled) }
@@ -461,6 +466,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case keepAwakeEnabled = "settings.keepAwakeEnabled"
         case findMouseEnabled = "settings.findMouseEnabled"
         case findMouseTriggerKey = "settings.findMouseTriggerKey"
+        case presentationCursorStyle = "settings.presentationCursorStyle"
         case cleanupPanelHotKeyEnabled = "settings.cleanupPanelHotKeyEnabled"
         case cleanupPanelHotKey = "settings.cleanupPanelHotKey"
         case activationCode = "settings.activationCode"
@@ -576,6 +582,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         findMouseEnabled = defaults.object(forKey: Key.findMouseEnabled.rawValue) as? Bool ?? false
         findMouseTriggerKey = defaults.string(forKey: Key.findMouseTriggerKey.rawValue)
             .flatMap(FindMouseTriggerKey.init(rawValue:)) ?? .leftControl
+        // 演示指针配色：未知/缺失值回落到出厂配色。
+        presentationCursorStyle = defaults.string(forKey: Key.presentationCursorStyle.rawValue)
+            .flatMap(PresentationCursorStyle.init(rawValue:)) ?? .shippedDefault
         cleanupPanelHotKeyEnabled = defaults.object(forKey: Key.cleanupPanelHotKeyEnabled.rawValue) as? Bool ?? false
         cleanupPanelHotKey = defaults.string(forKey: Key.cleanupPanelHotKey.rawValue)
             .flatMap(PanelHotKey.init(rawValue:)) ?? .default
@@ -653,12 +662,23 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             "finderMenuEnabled": String(finderMenuEnabled),
             "scrollReverseEnabled": String(scrollReverseEnabled),
             "keepAwakeEnabled": String(keepAwakeEnabled),
-            "findMouseEnabled": String(findMouseEnabled)
+            "findMouseEnabled": String(findMouseEnabled),
+            "presentationCursorStyle": presentationCursorStyle.rawValue
         ]
     }
 
-    // MARK: - Private
+    /// True when `value` is an optional in its `.none` state.
+    static func isNilOptional<T>(_ value: T) -> Bool {
+        let mirror = Mirror(reflecting: value)
+        return mirror.displayStyle == .optional && mirror.children.isEmpty
+    }
+}
 
+// MARK: - Persistence
+
+/// Preference writes and their journal projection live in an extension so the class body
+/// stays under the lint ceiling. `private` members are visible to a same-file extension.
+private extension SettingsManager {
     private func save<T>(_ value: T, for key: Key) {
         // Optional values: set(_:forKey:) boxes a nil optional as NSNull, which is not a
         // property-list type and throws NSInvalidArgumentException — remove the key instead.
@@ -677,11 +697,5 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         Task { @MainActor in
             ensureAtLeastOneItem()
         }
-    }
-
-    /// True when `value` is an optional in its `.none` state.
-    static func isNilOptional<T>(_ value: T) -> Bool {
-        let mirror = Mirror(reflecting: value)
-        return mirror.displayStyle == .optional && mirror.children.isEmpty
     }
 }

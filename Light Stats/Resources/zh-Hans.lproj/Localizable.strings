@@ -270,6 +270,12 @@
 "settings.findMouseTriggerKey.recording" = "请按快捷键";
 "settings.findMouse.permissionTitle" = "需要辅助功能权限";
 "settings.findMouse.permissionMessage" = "「找到我的鼠标」需要辅助功能权限来监听触发键。请在系统设置中开启后使用。";
+"settings.presentationCursor.style" = "演示指针样式";
+"settings.presentationCursor.style.holographicSilver" = "全息银钻";
+"settings.presentationCursor.style.iceCrystal" = "冰蓝水晶";
+"settings.presentationCursor.style.rosePink" = "玫瑰粉钻";
+"settings.presentationCursor.style.aurora" = "极光彩钻";
+"settings.presentationCursor.style.obsidian" = "曜石黑钻";
 "settings.cleanupHotKey" = "清理快捷键";
 "settings.cleanupHotKey.hint" = "在指针处打开清理页";
 "settings.cleanupHotKey.registerFailed" = "快捷键被占用，换一组再试";

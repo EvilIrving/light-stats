@@ -94,6 +94,7 @@ protocol FindMouseControlling: AnyObject {
     func start() -> Bool
     func stop()
     func updateTriggerKey(_ key: FindMouseTriggerKey)
+    func updateCursorStyle(_ style: PresentationCursorStyle)
 }
 
 final class FindMouseService: FindMouseControlling {
@@ -194,6 +195,12 @@ final class FindMouseService: FindMouseControlling {
         triggerKey = key
         detector.reset()
         stateLock.unlock()
+    }
+
+    /// Forward the presentation pointer's colourway. The service owns the art, so this
+    /// is a pass-through; when the pointer is off it is remembered for the next start.
+    func updateCursorStyle(_ style: PresentationCursorStyle) {
+        presentationPointer.updateCursorStyle(style)
     }
 
     // MARK: - Event tap

@@ -1,5 +1,61 @@
 # Project Memory
 
+## 私有 API 不做全局禁用 · 2026-09-14 · pi
+
+产品规则：**私有 API 不是限制**。需要就用，按收益与稳定性单独评估，不设「尽量走公开 API」的隐含门槛。
+`docs/wins-window-management-teardown.md` §6.7 早已把「No private API as a shortcut」判为**删掉**，这里把它
+记为长期决定：AGENTS.md / CLAUDE.md 里不要再出现这类禁则，也不要为使用私有 API 写辩护式说明——注释和文档只写
+它做什么、为什么非它不可、失败时怎么退化。处理方式固定为：`dlsym` 惰性解析、不直接链接、失败可优雅退化。
+
+当前在用两处：Apple Silicon 的 DDC 显示器亮度（`Services/DisplayControl/`），演示指针的
+`SetsCursorInBackground`（`Services/BackgroundCursorControl.swift`）。
+
+## 演示指针改为钻石动态光标，系统光标必须隐藏 · 2026-09-14 · pi
+
+产品决定：常驻演示指针不再画「围绕光标的光圈 / 光晕」，改为直接替换光标本体。素材取仓库里的
+`钻石动态光标素材包/逐帧图集`（768×1024 = 6 列 × 8 行 × 128px 单元格，48 帧，50ms/帧，2.4s 循环），
+五款配色全部打包到 `Resources/Cursors/`（文件名 = `PresentationCursor<风格>.png`）。动画交给 `CALayer` +
+`CAKeyframeAnimation(keyPath: "contents")`（discrete，48 个 keyTimes）；Swift 侧只在指针移动时挪窗口，
+活动期间没有逐帧代码。触发语义不变：仍复用「找到我的鼠标」的开关与三按手势，不新增快捷键与独立开关
+（上一产品决定仍然有效）。
+
+配色改成可选（`settings.presentationCursorStyle`，`PresentationCursorStyle` 五个 case）：**设置页用缩略图
+选，不摆文案**——选指针本来就是看图的事，名字只留给 tooltip 和辅助功能标签。缩略图裁的是五款共用的
+`previewRect`（96×128，覆盖全部配色 artwork 的 x 18…109 / y 3…124），每款只在进程内解码一次。
+新增一款配色 = 加图集 + 加一个 case（含该款的 `热点_128像素`）+ 四个 `Localizable.strings` 的名字，别处
+不硬编码任何一款。
+
+非显然约束（改动前必读）：
+- **窗口盖不住系统光标**：WindowServer 把光标画在所有窗口层级之上，只画钻石无效，必须配
+  `CGDisplayHideCursor`。它是会话级计数，任何 stop 路径都要配对 `CGDisplayShowCursor`；服务还必须在
+  `sessionDidResignActive` 与显示器睡眠时停止，避免隐藏状态活过它所属的会话（锁屏上不该没有指针）。
+- **光调 `CGDisplayHideCursor` 不生效**：Apple 文档写明「多数情况下调用者必须是前台 App」，本 App 是
+  从不激活的 `LSUIElement`，所以 hide 返回 `.success` 但屏幕上什么都不发生——症状就是系统箭头和钻石
+  同时出现。必须先设私有连接属性 `SetsCursorInBackground`（`BackgroundCursorControl`，`dlsym` 解析
+  `CGSMainConnectionID` + `CGSSetConnectionProperty`，不直接链接、一次进程内只装一次），hide 才真生效。
+  本机实测：不设该属性 → 调 hide 后 `CGCursorIsVisible()` 仍 visible；设了之后 → hidden。dlsym 而非直接链接，
+  只是为了系统换掉符号时退化成「箭头留在钻石上」而不是启动失败，不是对私有 API 的态度。
+- **隐藏状态会被别人抢走，抢走之后不会自己回来**：WindowServer 可能把光标控制权交给 Dock、窗口边缘的缩放光标或
+  别的属主，而我们的 hide 是它已经消费掉的计数，于是箭头一直留着（用户实测：冒出来就不再消失）。没有任何 API 通知
+  这件事，也不可靠地查得到，所以按指针移动节流 0.5s 用「show + hide **成对**」重新宣示一次：成对调用使计数不变
+  （本机实测连续 3 次成对之后仍 hidden，stop 时一次 show 仍恢复 visible），既不累积也不会漏 show。不要改成
+  只调 hide——计数会无限增长，stop 时要补上千次 show。
+- 图集是行主序：索引 → 列 `i % 6`、行 `i / 6`；`CGImage.cropping(to:)` 用左上原点且越界返回 nil，
+  所以图集尺寸不符时宁可一帧都不给（`loadFrames` 返回 nil、不启动），也不要错位播放。
+- 热点是每款配色各自的 (x, y)（素材包 `动画参数.json` 的 `热点_128像素`，如全息银钻 (24.131, 4.109)），
+  在 128px 单元格内；渲染尺寸 64pt 正好是 128px 的 1/2，Retina 上像素级对齐。窗口原点 y 是
+  `pointer.y - renderSize + hotspot.y`（热点是「从图顶往下」的距离，必须翻转）。
+- 素材包每帧只改钻面高光，**透明通道逐帧不变**（`校验报告.json`）：验证「动画在动」要比较 RGB，
+  比较 alpha 会得到「48 帧全一样」的错误结论。
+- 素材包 `钻石动态光标素材包/`、`五款透明闪烁动图/` 留在仓库根且未纳入版本控制；没有采用 GIF
+  （单张 2.8–3.1MB，图集 246KB 且自带热点元数据）。
+- `SettingsManager` 的类体已经贴着 lint 上限（`type_body_length` warning 500，CI 跑 `--strict`
+  等于硬上限）。新增偏好属性时只加「协议声明 + `@Published` + Key case + init 读取」这类必要行，
+  不够就把私有实现挪进同文件 `private extension`：`save` / `loggedValue` 就是这样搬出去的，
+  别再把它们搬回类里，否则加任何一条偏好都会让 CI 挂。
+- 同步文件夹组的资源会**扁平**拷进 bundle 根：在那里再放一个 `ATTRIBUTION.txt` 会与
+  `Resources/Icons/ATTRIBUTION.txt` 撞名、直接让构建失败，故命名为 `ATTRIBUTION-PresentationCursor.txt`。
+
 ## Grok 统一计费省略 0% 不是没数据 · 2026-09-13 · grok
 
 SuperGrok（`isUnifiedBillingUser: true`）走 `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`。周窗 `currentPeriod`（`USAGE_PERIOD_TYPE_WEEKLY`）和重置时间会返回，但用量为 0 时 protobuf JSON 会省略 `creditUsagePercent`（默认 0.0），`onDemandCap.val` 也是 0。旧解析把「有周期、无百分比」当成未知，卡片画空条和「—」，看起来像没拿到值。Grok 自己的计费 UI 把这个省略标量读成 0% 已用。
