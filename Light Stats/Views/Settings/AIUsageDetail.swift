@@ -63,6 +63,8 @@ private struct ProviderUsageRow: View {
     @State private var edited = false
     @State private var copied = false
     @State private var copyGeneration = 0
+    @State private var saved = false
+    @State private var saveGeneration = 0
 
     private var enabled: Bool { settings.isAIProviderEnabled(row.id) }
     private var hasToken: Bool { credentials.tokenPresent.contains(row.id) }
@@ -89,8 +91,8 @@ private struct ProviderUsageRow: View {
                     copyButton
                     Button(action: commit) {
                         MaxContentLabel(
-                            candidates: ["aiUsage.token.save".localized],
-                            current: "aiUsage.token.save".localized
+                            candidates: ["aiUsage.token.save".localized, "aiUsage.token.saved".localized],
+                            current: saved ? "aiUsage.token.saved".localized : "aiUsage.token.save".localized
                         )
                     }
                     .controlSize(.small)
@@ -210,16 +212,47 @@ private struct ProviderUsageRow: View {
                 if await credentials.clear(id: row.id) {
                     draft = ""
                     edited = false
+                } else {
+                    showSaveFailure()
                 }
             }
             return
         }
+        let token = trimmed
         Task {
-            if await credentials.save(token: trimmed, for: row.id) {
-                draft = ""
-                edited = false
+            guard await credentials.save(token: token, for: row.id) else {
+                showSaveFailure()
+                return
             }
+            draft = ""
+            edited = false
+            confirmSaved()
         }
+    }
+
+    /// 保存成功：按钮短暂显示「已保存」并弹一条 toast，与复制按钮的「已复制」一致。
+    /// 之前这里两条路径都没有任何反馈，失败还静默 return，用户看到的就是「点了没反应」。
+    private func confirmSaved() {
+        saveGeneration += 1
+        let generation = saveGeneration
+        saved = true
+        ToastCenter.shared.show(
+            message: "aiUsage.token.saved".localized,
+            systemImage: "checkmark.circle.fill",
+            tint: .green
+        )
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if saveGeneration == generation { saved = false }
+        }
+    }
+
+    private func showSaveFailure() {
+        ToastCenter.shared.show(
+            message: "aiUsage.token.saveFailed".localized,
+            systemImage: "exclamationmark.triangle.fill",
+            tint: .orange
+        )
     }
 }
 

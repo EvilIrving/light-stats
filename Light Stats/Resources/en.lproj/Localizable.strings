@@ -187,6 +187,7 @@
 "aiUsage.token.copy" = "Copy";
 "aiUsage.token.copied" = "Copied";
 "aiUsage.token.save" = "Save";
+"aiUsage.token.saveFailed" = "Couldn't save";
 "aiUsage.token.clear" = "Clear";
 "aiUsage.credentialsMissing.token" = "Paste an API token in Settings";
 "aiUsage.tokenExpired.token" = "Token expired or rejected";

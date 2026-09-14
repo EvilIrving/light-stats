@@ -189,6 +189,7 @@
 "aiUsage.token.copy" = "复制";
 "aiUsage.token.copied" = "已复制";
 "aiUsage.token.save" = "保存";
+"aiUsage.token.saveFailed" = "保存失败";
 "aiUsage.token.clear" = "清除";
 "aiUsage.credentialsMissing.token" = "在设置里粘贴 API token";
 "aiUsage.tokenExpired.token" = "Token 失效或被拒绝";

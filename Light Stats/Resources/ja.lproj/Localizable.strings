@@ -189,6 +189,7 @@
 "aiUsage.token.copy" = "コピー";
 "aiUsage.token.copied" = "コピー済";
 "aiUsage.token.save" = "保存";
+"aiUsage.token.saveFailed" = "保存できませんでした";
 "aiUsage.token.clear" = "削除";
 "aiUsage.credentialsMissing.token" = "設定で API token を貼り付けてください";
 "aiUsage.tokenExpired.token" = "トークンが無効です";

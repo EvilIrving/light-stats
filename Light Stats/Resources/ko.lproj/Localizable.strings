@@ -189,6 +189,7 @@
 "aiUsage.token.copy" = "복사";
 "aiUsage.token.copied" = "복사됨";
 "aiUsage.token.save" = "저장";
+"aiUsage.token.saveFailed" = "저장하지 못했습니다";
 "aiUsage.token.clear" = "삭제";
 "aiUsage.credentialsMissing.token" = "설정에 API token을 붙여넣으세요";
 "aiUsage.tokenExpired.token" = "토큰이 만료되었거나 거부됨";
