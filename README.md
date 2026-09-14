@@ -238,7 +238,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
 
 ```bash
 # Production package → overwrite /Applications/Light Stats.app → open
-./script/debug-run.sh
+./script/local-run.sh
 
 # Release DMG (no install)
 ./script/build.sh

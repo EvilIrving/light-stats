@@ -14,7 +14,7 @@ SuperGrok（`isUnifiedBillingUser: true`）走 `GET https://cli-chat-proxy.grok.
 
 本机「跑一下」必须是 Developer ID 签过的 Release 包，覆盖 `/Applications/Light Stats.app`，再启动那一份。辅助功能、输入监控、Finder 扩展的 TCC 绑的是签名身份 + 路径，DerivedData 里的 Debug / `TEST_HOST` 注入包会被当成新 App，每次都要重新开权限。
 
-`./script/debug-run.sh` 因此改为：`SKIP_DMG=1 SKIP_NOTARIZATION=1 INSTALL_TO_APPLICATIONS=1 ./script/build.sh`，没有 Developer ID 证书就失败，不安装。CI 的 `build.sh` / `quality.yml` 仍不碰 `/Applications`。不要再 `open` `build/DerivedData/Build/Products/Debug/Light Stats.app`。
+`./script/local-run.sh` 因此改为：`SKIP_DMG=1 SKIP_NOTARIZATION=1 INSTALL_TO_APPLICATIONS=1 ./script/build.sh`，没有 Developer ID 证书就失败，不安装。CI 的 `build.sh` / `quality.yml` 仍不碰 `/Applications`。不要再 `open` `build/DerivedData/Build/Products/Debug/Light Stats.app`。
 
 `VisualThemeCaptureTests`（把每个主题的概览/清理面板截到 `/tmp/*.png` 的非断言截图测试）已于 2026-09-14 删除。出图统一走 DEBUG 的 `DebugSnapshot`（⌥ 点菜单栏图标）。
 

@@ -585,25 +585,29 @@ views reload.
 ## Build
 
 ```bash
-# Local run: Release + Developer ID → overwrite /Applications/Light Stats.app → open.
-# Same TCC identity as the installed production app (Accessibility, Finder Sync, etc.).
-# Run it when a change needs to be seen running: UI tweaks, anything needing visual
-# verification, or after finishing a complete feature. Skip it for pure logic,
-# refactors, copy/localization, or doc edits — those don't need a launch.
-./script/debug-run.sh
+# Local run: build the SAME signed Release that ships — same Developer ID, same
+# entitlements, same bundle id — and put it in /Applications, then open it. No DMG,
+# no notarization, no release. This is the local test install, not a debug build.
+# Same TCC identity as the installed production app (Accessibility, Finder Sync, etc.),
+# so permissions are never re-granted. Version comes from git like the release does:
+# off a tag it is <lastTag>-dev.<commitsAhead>.
+# Run it when a change needs to be seen running: UI tweaks, visual verification, or
+# after finishing a complete feature. Skip it for pure logic, refactors,
+# copy/localization, or doc edits — those don't need a launch.
+./script/local-run.sh
 
 # Release DMG (no install)
 ./script/build.sh
 ```
 
-Force-quit before relaunching: `pkill -9 -x "Light Stats"` (`./script/debug-run.sh` does this for you when you do need to launch).
+Force-quit before relaunching: `pkill -9 -x "Light Stats"` (`./script/local-run.sh` does this for you when you do need to launch).
 
 **Version number is tag-driven; the pbxproj value is not.** Release version is the git tag:
 `release.yml` parses `vX.Y.Z` → passes `VERSION` to `script/build.sh` → `MARKETING_VERSION=$VERSION` override →
 the DMG and the About page show the tag version. The hardcoded `MARKETING_VERSION = 1.0.2` in
 `project.pbxproj` is an **intentional fallback for a plain `xcodebuild` that does not go through
 `script/build.sh`**. It deliberately does not track tags and does not affect releases or
-`debug-run.sh` — leave it as-is, it is not a stale-version bug.
+`local-run.sh` — leave it as-is, it is not a stale-version bug.
 
 A local build that is *not* exactly on a tag is versioned `<lastTag>-dev.<commitsAhead>` — plus
 `.dirty` when the working tree is dirty — for example `1.9.4-dev.4`, taken from

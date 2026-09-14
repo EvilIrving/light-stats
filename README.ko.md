@@ -236,7 +236,7 @@ Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지�
 
 ```bash
 # 프로덕션 패키지로 /Applications/Light Stats.app 을 덮어쓴 뒤 실행
-./script/debug-run.sh
+./script/local-run.sh
 
 # Release DMG (설치하지 않음)
 ./script/build.sh

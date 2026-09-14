@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-# 本地「跑一下」= 生产包：Release + Developer ID，覆盖 /Applications 后启动。
-# 这样辅助功能、输入监控、Finder 扩展沿用已授权的那份身份，不再开一份 Debug / 测试宿主。
+# 本地跑一份**和线上发布同构**的签名 Release：同一个 Developer ID、同一套 entitlements、
+# 同一个 bundle id，只是不出 DMG、不公证，直接覆盖 /Applications 后启动。
+#
+# 所以辅助功能、输入监控、Finder 扩展沿用已授权的那份身份，不用重开权限；
+# 也不需要另开一个 Debug / 测试宿主。版本号跟线上同源，都是 git 推出来的：
+# 不在 tag 上就是 `<最近tag>-dev.<领先提交数>`。
 cd "$(dirname "$0")/.."
 
 APP_NAME="Light Stats"

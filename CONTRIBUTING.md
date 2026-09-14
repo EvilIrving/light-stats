@@ -23,7 +23,7 @@ Select the **Light Stats** scheme, pick **My Mac** as destination, press ⌘R.
 
 ```bash
 # Local run: production package → overwrite /Applications/Light Stats.app → open
-./script/debug-run.sh
+./script/local-run.sh
 
 # Release DMG (no install)
 ./script/build.sh

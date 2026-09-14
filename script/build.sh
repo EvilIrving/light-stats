@@ -15,7 +15,7 @@ APP_NAME="Light Stats"
 # 下方 xcodebuild 用 MARKETING_VERSION=$VERSION 覆盖，所以 DMG/About 显示的版本始终跟 git 走。
 # 注意：pbxproj 里写死的 MARKETING_VERSION = 1.0.2 只对直接 xcodebuild（不经本脚本）生效，
 # 是有意保留的 fallback，不跟 tag 同步、不影响发布，无需每次发版去改它。
-# debug-run.sh 走本脚本：Release + Developer ID，覆盖 /Applications。
+# local-run.sh 走本脚本：Release + Developer ID，覆盖 /Applications。
 if [ -n "${VERSION:-}" ]; then
     echo "📌 版本号: $VERSION（外部传入）"
 elif git describe --tags --exact-match >/dev/null 2>&1; then

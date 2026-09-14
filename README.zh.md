@@ -273,7 +273,7 @@ Light Stats 没有远程遥测。本地系统指标、本地代理检测、进�
 
 ```bash
 # 生产包覆盖 /Applications/Light Stats.app 并启动
-./script/debug-run.sh
+./script/local-run.sh
 
 # Release DMG（不安装）
 ./script/build.sh

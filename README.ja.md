@@ -235,7 +235,7 @@ Light Stats にはリモートテレメトリはありません。ローカル�
 
 ```bash
 # 本番パッケージを /Applications/Light Stats.app に上書きして起動
-./script/debug-run.sh
+./script/local-run.sh
 
 # Release DMG（インストールしない）
 ./script/build.sh

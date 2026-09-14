@@ -19,7 +19,7 @@ import Foundation
 nonisolated enum FinderMenuShared {
     /// App Group 标识。Developer ID（非 MAS）分发下用 Team ID 前缀形式，前缀须等于
     /// 实际签名团队。本项目签名团队是 QZZ878S3NS（Developer ID: TIANBAO DONG），
-    /// debug-run.sh 与发布流程都用它。
+    /// local-run.sh 与发布流程都用它。
     static let appGroupID = "QZZ878S3NS.com.light-stats.shared"
 
     /// 宿主注册的 CFMessagePort 本地端口名；扩展按此名做 remote 查找。前缀须落在
