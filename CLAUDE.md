@@ -605,6 +605,12 @@ the DMG and the About page show the tag version. The hardcoded `MARKETING_VERSIO
 `script/build.sh`**. It deliberately does not track tags and does not affect releases or
 `debug-run.sh` — leave it as-is, it is not a stale-version bug.
 
+A local build that is *not* exactly on a tag is versioned `<lastTag>-dev.<commitsAhead>` — plus
+`.dirty` when the working tree is dirty — for example `1.9.4-dev.4`, taken from
+`git describe --tags --long`. Never a fixed placeholder such as `1.0.0-dev`: that sorts below the
+pbxproj fallback (`1.0.2`) and below every released version, and both pkd and LaunchServices
+compare versions when they pick which copy of a bundle to use.
+
 ### CI
 
 | Workflow | Trigger | Action |

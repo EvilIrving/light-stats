@@ -9,19 +9,31 @@ SCHEME="Light Stats"
 APP_NAME="Light Stats"
 
 # 版本号 —— 发布产物的唯一真源。
-# 优先级：外部 VERSION（release.yml 从 git tag `vX.Y.Z` 解析）> 本地 git tag > 1.0.0-dev。
-# 下方 xcodebuild 用 MARKETING_VERSION=$VERSION 覆盖，所以 DMG/About 显示的版本始终跟 tag 走。
+# 优先级：外部 VERSION（release.yml 从 git tag `vX.Y.Z` 解析）> HEAD 正好在 tag 上 → 用 tag
+#        > HEAD 领先最近一个 tag → `<tag>-dev.<领先提交数>`（本地开发包）
+#        > 仓库一个 tag 都没有 → 1.0.0-dev。
+# 下方 xcodebuild 用 MARKETING_VERSION=$VERSION 覆盖，所以 DMG/About 显示的版本始终跟 git 走。
 # 注意：pbxproj 里写死的 MARKETING_VERSION = 1.0.2 只对直接 xcodebuild（不经本脚本）生效，
 # 是有意保留的 fallback，不跟 tag 同步、不影响发布，无需每次发版去改它。
 # debug-run.sh 走本脚本：Release + Developer ID，覆盖 /Applications。
-if [ -n "$VERSION" ]; then
-    echo "📌 版本号: $VERSION"
-elif git describe --tags --exact-match 2>/dev/null; then
+if [ -n "${VERSION:-}" ]; then
+    echo "📌 版本号: $VERSION（外部传入）"
+elif git describe --tags --exact-match >/dev/null 2>&1; then
     VERSION=$(git describe --tags --exact-match 2>/dev/null | sed 's/^v//')
     echo "📌 版本号: $VERSION (from git tag)"
+elif git describe --tags --long >/dev/null 2>&1; then
+    # 不在 tag 上：最近 tag + 领先提交数，例如 v1.9.4-4-g1abe5a2 → 1.9.4-dev.4。
+    # 不能写死一个占位版本：本地包会永远显示 1.0.0-dev，既比 pbxproj 的 fallback（1.0.2）低、
+    # 又和已发布版本完全脱节。版本号反着排，系统就会挑错副本（pkd / LaunchServices 都按版本比较）。
+    DESCRIBE="$(git describe --tags --long --dirty 2>/dev/null)"
+    BASE="$(printf '%s' "$DESCRIBE" | sed 's/^v//; s/-[0-9][0-9]*-g[0-9a-f]*.*$//')"
+    AHEAD="$(printf '%s' "$DESCRIBE" | sed -n 's/.*-\([0-9][0-9]*\)-g[0-9a-f].*/\1/p')"
+    VERSION="${BASE}-dev.${AHEAD:-0}"
+    case "$DESCRIBE" in *-dirty) VERSION="${VERSION}.dirty" ;; esac
+    echo "📌 版本号: $VERSION (领先 ${BASE} ${AHEAD:-0} 个提交)"
 else
     VERSION="1.0.0-dev"
-    echo "📌 版本号: $VERSION (default)"
+    echo "📌 版本号: $VERSION (仓库无 tag)"
 fi
 
 BUILD_DIR="build"
