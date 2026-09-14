@@ -10,13 +10,11 @@
 //  2. Secure input (password fields) is never touched; the system pins the input
 //     source there and a switch would fail anyway.
 //
-//  The TIS switching itself needs a real input source and a real frontmost app, so
-//  it is not exercised here; this suite covers the pure decision seam plus a cheap
-//  offscreen render guard for the settings row.
+//  The TIS switching itself needs a real input source, a real frontmost app, and it
+//  mutates the machine's input source, so it is not exercised here; this suite covers
+//  the pure decision seams (policy, option normalisation, picker merge) only.
 //
 
-import AppKit
-import Carbon
 import SwiftUI
 import XCTest
 @testable import Light_Stats
@@ -127,98 +125,12 @@ final class InputSourceOptionTests: XCTestCase {
     }
 }
 
-// MARK: - Live TIS integration
+// MARK: - Service guard
 
-/// Drives the real service end to end: observer registration → app-activation
-/// notification → settle assertion → `TISSelectInputSource`.
-///
-/// A real frontmost-app change can't be produced inside the test host, so these post
-/// `didActivateApplicationNotification` directly to the workspace notification centre;
-/// the observer asserts synchronously, so no waiting is needed. Probed separately: a
-/// genuine `open -a` switch does deliver that notification to a background app.
-///
-/// These briefly change the system input source and restore it on exit. They skip when
-/// the machine doesn't have both required sources (CI runners have U.S. only).
+/// `start()` 在没有选定目标源时必须拒绝启动，否则会误切到用户没挑过的源。
+/// 这里不注册 observer、不碰 TIS，纯状态判断，所以留在单元测试里。
 @MainActor
-final class DefaultInputSourceServiceIntegrationTests: XCTestCase {
-
-    private let us = "com.apple.keylayout.US"
-    private let weType = "com.tencent.inputmethod.wetype.pinyin"
-
-    private func requireBothSources() throws {
-        let enabledIDs = Set(DefaultInputSourceService.availableInputSources().map(\.id))
-        try XCTSkipUnless(
-            enabledIDs.contains(us) && enabledIDs.contains(weType),
-            "Needs both U.S. and WeType enabled in System Settings"
-        )
-    }
-
-    /// 测试宿主是完整 App，可能已经起了自己的默认输入法服务。先停掉它，否则它会和这组
-    /// 断言抢系统输入源。`stop()` 同时清空了订阅，因此测试期间它不会自己重启。
-    override func setUp() {
-        super.setUp()
-        DefaultInputSourceCoordinator.shared.stop()
-    }
-
-    private func select(_ id: String) {
-        guard let source = DefaultInputSourceService.inputSource(withID: id) else { return }
-        _ = TISSelectInputSource(source)
-    }
-
-    private func spinRunLoop(for interval: TimeInterval) {
-        RunLoop.current.run(until: Date().addingTimeInterval(interval))
-    }
-
-    func testActivationNotificationRestoresTheTargetSource() throws {
-        try requireBothSources()
-
-        let service = DefaultInputSourceService()
-        let original = try XCTUnwrap(service.currentInputSourceID())
-        defer {
-            service.stop()
-            select(original)
-        }
-
-        select(us)
-        XCTAssertEqual(service.currentInputSourceID(), us)
-
-        service.updateTarget(id: weType)
-        XCTAssertTrue(service.start())
-        XCTAssertEqual(service.currentInputSourceID(), weType, "start() 应立即断言一次")
-
-        // 模拟切到另一个 App：系统把输入源恢复成该 App 记住的那个，观察者必须拉回来。
-        select(us)
-        NSWorkspace.shared.notificationCenter.post(
-            name: NSWorkspace.didActivateApplicationNotification,
-            object: nil
-        )
-        XCTAssertEqual(service.currentInputSourceID(), weType)
-
-        // settle 窗口内的复查也要能纠正后来才发生的漂移。
-        select(us)
-        spinRunLoop(for: DefaultInputSourcePolicy.settleCheckInterval * 1.5)
-        XCTAssertEqual(service.currentInputSourceID(), weType)
-    }
-
-    /// settle 窗口结束后不再插手：用户按 Ctrl+Space 切到英文就该留在英文。
-    func testServiceLeavesDeliberateSwitchAloneAfterTheSettleWindow() throws {
-        try requireBothSources()
-
-        let service = DefaultInputSourceService()
-        let original = try XCTUnwrap(service.currentInputSourceID())
-        defer {
-            service.stop()
-            select(original)
-        }
-
-        service.updateTarget(id: weType)
-        XCTAssertTrue(service.start())
-        spinRunLoop(for: DefaultInputSourcePolicy.settleWindow + DefaultInputSourcePolicy.settleCheckInterval * 2)
-
-        select(us)
-        spinRunLoop(for: DefaultInputSourcePolicy.settleCheckInterval * 3)
-        XCTAssertEqual(service.currentInputSourceID(), us, "settle 窗口外的漂移是用户意图，不该被改回来")
-    }
+final class DefaultInputSourceServiceTests: XCTestCase {
 
     func testStartRefusesWithoutATarget() {
         let service = DefaultInputSourceService()
@@ -228,7 +140,7 @@ final class DefaultInputSourceServiceIntegrationTests: XCTestCase {
     }
 }
 
-// MARK: - Settings row render guard
+// MARK: - Settings section
 
 @MainActor
 final class DefaultInputSourceSettingsSectionTests: XCTestCase {
@@ -312,61 +224,5 @@ final class DefaultInputSourceSettingsSectionTests: XCTestCase {
         XCTAssertFalse(options.contains { $0.id == "com.tencent.inputmethod.wetype" })
         XCTAssertFalse(options.contains { $0.id == "com.apple.CharacterPaletteIM" })
         XCTAssertEqual(options.map(\.id).count, Set(options.map(\.id)).count)
-    }
-
-    /// Renders the row offscreen so a layout/composition regression (a Picker that
-    /// cannot resolve its tag, a missing localization key, a crash on the
-    /// `@ObservedObject` default) fails the suite instead of shipping.
-    func testSettingsRowRendersWithARealSelection() throws {
-        let settings = isolatedSettings()
-
-        DefaultInputSourceCoordinator.shared.refreshAvailableSources()
-        let options = DefaultInputSourceCoordinator.shared.availableSources
-        let target = options.first { $0.id == weType } ?? options[0]
-
-        settings.defaultInputSourceEnabled = true
-        settings.defaultInputSourceID = target.id
-
-        let content = VStack(spacing: 12) {
-            DefaultInputSourceSettingsSection(settings: settings)
-        }
-        .padding(16)
-        .frame(width: 620)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .appThemed(AppTheme.glass)
-
-        let hostingView = NSHostingView(rootView: content)
-        let size = hostingView.fittingSize
-        hostingView.frame = CGRect(origin: .zero, size: size)
-
-        let window = NSWindow(
-            contentRect: hostingView.frame,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentView = hostingView
-        window.orderFront(nil)
-        defer { window.orderOut(nil) }
-        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-        hostingView.layoutSubtreeIfNeeded()
-
-        let bitmap = try XCTUnwrap(NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: Int(size.width * 2),
-            pixelsHigh: Int(size.height * 2),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ))
-        bitmap.size = size
-        hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
-        let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-        XCTAssertGreaterThan(png.count, 0)
-        try png.write(to: URL(fileURLWithPath: "/tmp").appendingPathComponent("default-input-source-row.png"))
     }
 }

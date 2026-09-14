@@ -632,7 +632,27 @@ xcodebuild test -project "Light Stats.xcodeproj" \
 The `LightStatsTests` unit-test target is wired into the project on the shared `Light Stats`
 scheme (regenerate with `ruby script/add_test_target.rb` if the pbxproj is rebuilt). Tests host
 in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder group, so new
-`.swift` / fixture files are picked up automatically. Suites:
+`.swift` / fixture files are picked up automatically.
+
+#### Test policy — logic only, never UI
+
+- **No UI tests, ever.** Do not host windows, `NSHostingView`, panels, overlays, or layers in
+  XCTest; do not render offscreen and dump PNGs; do not drive live Finder, move a real window
+  through Accessibility, or switch the system input source. `XCUIApplication` is out too.
+- **Every piece of logic gets a unit test.** Parsers, scoring curves, policy/decision seams,
+  serialization, scheduling, capacity/eviction, plan tables, value-holding state — anything that
+  is a pure function, a value transform, or a value-holding type is testable and must be tested.
+  "It runs" is not the bar.
+- **After writing logic, write the test that proves it matches the requirement** — the one that
+  fails when the *behaviour* regresses, not merely when the code throws. The failure text should
+  name the product rule that broke, not just the symbol.
+- **Untestable logic is a design smell.** Extract the decision into a pure seam — a policy type,
+  a plan/step table, a value transform — as a `nonisolated` type the test target reaches through
+  `@testable import Light_Stats`. The thin shell that talks to AppKit may stay untested.
+  `FinderMenuCommandRegistry` exists for exactly this reason: it is the tag bookkeeping that used
+  to be buried in the extension, where it silently broke every Finder menu click.
+
+Suites:
 
 - `HealthScoreServiceTests` — every scoring-curve knee, weight renormalisation, the bottleneck
   cap (and that `power` is excluded from it), EMA smoothing, grade boundaries.
@@ -652,21 +672,21 @@ in the app target via `TEST_HOST`; `LightStatsTests/` is a synchronized folder g
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.
 - `FindMouseTriggerTests` — shared modifier sequence: double-tap delay/commit, triple-tap
   cancellation and toggle action, cooldown, reset, and key-code mapping. CGEventTap stays out of XCTest.
-- `PresentationPointerServiceTests` — real 112×112 click-through overlay window lifecycle.
+- `FinderMenuCommandRegistryTests` — the tag → command bookkeeping behind the Finder menu: a
+  registered tag resolves back to the exact command, tags are unique and monotonic, tags issued
+  before a menu rebuild stay resolvable, an unknown tag resolves to nil, and capacity evicts the
+  oldest while keeping the newest. Pure data structure — no Finder, no windows.
 - `WindowSnapGeometryTests` — placement math for halves/quarters/thirds, the center shrink, the
   titlebar band measured from a window's traffic lights (32/34/46/52pt against a 44pt constant),
   Accessibility ↔ Cocoa flip (including that a wrong reference height shifts a frame by exactly
   the height of the display above the primary), display-to-display transfer clamping, and the
   snap-action → native command mapping.
-- `WindowSnappingServiceTests` — drives the engine's own placement against a real window: halves,
-  quarters and thirds land on the computed frame, maximize/restore round-trips, and placing twice
-  is idempotent. Accessibility self-access needs no permission, so this runs in CI.
 - `DefaultInputSourceTests` — the drift-correction window (inside = correct, outside = the
-  user's `Ctrl+Space` wins, secure input = never), input-source dedup/sort, the unavailable-selection
-  placeholder, a live TIS enumeration guard that non-selectable parent modes stay out of the
-  picker, and a live switching test that posts `didActivateApplicationNotification` and asserts
-  the input source actually moved. **The integration tests briefly change the system input source**
-  (restored on exit) and skip unless both U.S. and WeType are enabled — CI runners have U.S. only.
+  user's `Ctrl+Space` wins, secure input = never), input-source dedup/sort, the
+  unavailable-selection placeholder, the picker merge rules, `start()` refusing without a
+  selected target, and a live TIS enumeration guard that non-selectable parent modes stay out of
+  the picker. The live switching path is deliberately **not** covered: it needs a real frontmost
+  app and it mutates the machine's input source.
 - `FinderMenuTemplateTests` — built-in OOXML blanks stay in sync with `script/generate_finder_templates.py`,
   and custom templates store an independent file copy (name/format/contents), not UTF-8 text.
 - `FinderMenuFileServiceTests` — new-file names, copy/move destinations, and template instantiation
