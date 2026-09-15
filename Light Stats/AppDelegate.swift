@@ -10,7 +10,7 @@ import SwiftUI
 import Combine
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
 
     private var statusItem: NSStatusItem?
     // 菜单栏窗口控制图标及其菜单见 AppDelegate+WindowMenu.swift。
@@ -32,14 +32,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     // 用户原本所在的前台 App。原生分屏必须作用在它的窗口上，而打开我们自己的菜单会抢走前台。
     var lastExternalApplicationPID: pid_t?
 
-    private let settings: SettingsManager
+    let settings: SettingsManager
     private let monitor: SystemMonitor
     private let displayControlManager: DisplayControlManager
     let appMemoryManager: AppMemoryManager
-    private let scrollService: ScrollReversing
+    let scrollService: ScrollReversing
     let windowSnappingService: WindowSnappingService
-    private let windowSnapHotKeyService: WindowSnapHotKeyControlling
-    private let titlebarGestureService: TitlebarGestureControlling
+    let windowSnapPreview: WindowSnapPreviewService
+    let windowDragMonitorService: WindowDragMonitoring
+    let snapIslandController: SnapIslandController
+    let windowThumbnailService: WindowThumbnailService
+    let windowPreviewIndex: WindowPreviewIndex
+    let dockHoverMonitor: DockHoverMonitoring
+    let dockPreviewController: DockPreviewController
+    let appSwitcherService: AppSwitcherControlling
+    let appSwitcherController: AppSwitcherController
+    let windowSnapHotKeyService: WindowSnapHotKeyControlling
+    let titlebarGestureService: TitlebarGestureControlling
     private let findMouseCoordinator: FindMouseCoordinator
     private let defaultInputSourceCoordinator: DefaultInputSourceCoordinator
     private let panelHotKeyService: PanelHotKeyControlling
@@ -58,8 +67,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.scrollService = ScrollDirectionService()
         let windowSnappingService = WindowSnappingService()
         self.windowSnappingService = windowSnappingService
+        let windowSnapPreview = WindowSnapPreviewService()
+        self.windowSnapPreview = windowSnapPreview
         self.windowSnapHotKeyService = WindowSnapHotKeyService(snappingService: windowSnappingService)
-        self.titlebarGestureService = TitlebarGestureService(snappingService: windowSnappingService)
+        self.titlebarGestureService = TitlebarGestureService(
+            snappingService: windowSnappingService,
+            previewService: windowSnapPreview
+        )
+        self.windowDragMonitorService = WindowDragMonitorService()
+        self.snapIslandController = SnapIslandController()
+        let windowThumbnailService = WindowThumbnailService()
+        self.windowThumbnailService = windowThumbnailService
+        self.windowPreviewIndex = WindowPreviewIndex.shared
+        self.dockHoverMonitor = DockHoverMonitorService()
+        self.dockPreviewController = DockPreviewController()
+        self.appSwitcherService = AppSwitcherService()
+        self.appSwitcherController = AppSwitcherController()
         let findMouseService = FindMouseService(presentationPointer: PresentationPointerService())
         self.findMouseCoordinator = FindMouseCoordinator(settings: settings, service: findMouseService)
         self.defaultInputSourceCoordinator = DefaultInputSourceCoordinator.shared
@@ -69,6 +92,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         panelHotKeyService.onPressed = { [weak self] in
             self?.presentCleanupPanelAtPointer()
         }
+        configureWindowSnapPipeline()
+        configureWindowPreviewPipeline()
+        ApplicationActivationTracker.shared.seed(from: NSWorkspace.shared.runningApplications)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -122,6 +148,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
            frontmost.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             lastExternalApplicationPID = frontmost.processIdentifier
         }
+        // A display change moves every visible frame, so the cached screen snapshot must not
+        // outlive it — snapping on the wrong display's geometry is exactly the multi-monitor bug
+        // the flip reference exists to prevent.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleScreenParametersChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleShowAbout),
@@ -156,28 +191,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc private func handleShowAbout() {
         showAbout()
-    }
-
-    /// 记录最近一次外部前台 App（用于菜单栏窗口管理）；忽略自己。
-    @objc private func handleApplicationActivated(_ notification: Notification) {
-        guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-              application.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
-        lastExternalApplicationPID = application.processIdentifier
-    }
-
-    @objc private func handleFinderMenuActionFailed(_ notification: Notification) {
-        let message = notification.userInfo?["message"] as? String ?? "findermenu.toast.actionFailed".localized
-        ToastCenter.shared.show(message: message, systemImage: "exclamationmark.triangle.fill", tint: .orange, duration: 3)
-    }
-
-    @objc private func handleFinderMenuFilePanelWillPresent() {
-        scrollService.setSuspended(true)
-        titlebarGestureService.setSuspended(true)
-    }
-
-    @objc private func handleFinderMenuFilePanelDidDismiss() {
-        scrollService.setSuspended(false)
-        titlebarGestureService.setSuspended(false)
     }
 
     // MARK: - Status Item Setup
@@ -520,6 +533,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             _ = scrollService.start()
         }
         findMouseCoordinator.retryIfNeeded()
+        refreshWindowThumbnailAuthorization()
         syncPanelHotKeyService()
         syncWindowControlServices()
         displayControlManager.applicationDidBecomeActive()
@@ -546,18 +560,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             ensureWindowControlsStatusItem()
             startWindowSnapHotKeysOrPrompt()
             startTitlebarGesturesOrPrompt()
-            // 系统自带的边缘拖拽平铺不需要猜标题栏，是最稳的一条路，首次开启窗口管理时帮用户打开。
-            SystemWindowTilingSettings.applyDefaultEdgeDragIfNeeded()
+            // 系统自带的边缘拖拽与我们自己的拖拽吸附是同一个手势，同时生效会互相打架。
+            // 首次开启窗口管理时按「谁拥有这个手势」settle 一次，之后不再覆盖用户的选择。
+            SystemWindowTilingSettings.applyInitialEdgeDragPolicy(
+                ownsEdgeSnapping: settings.windowSnap.isDragSnappingActive
+            )
         } else {
             windowSnapHotKeyService.stop()
             titlebarGestureService.stop()
             removeWindowControlsStatusItem()
         }
+        syncWindowSnapPipeline()
+        syncWindowPreviewPipeline(settings.windowSnap)
     }
 
     private func startWindowSnapHotKeysOrPrompt() {
-        guard !windowSnapHotKeyService.isRunning else { return }
-        if windowSnapHotKeyService.start() { return }
+        if windowSnapHotKeyService.start(shortcuts: settings.windowSnap.shortcuts) { return }
+        // Nothing bound is a legitimate configuration, not a failure — only prompt when a binding
+        // exists that could not be registered, which is the permission case.
+        guard settings.windowSnap.shortcuts.contains(where: \.isBound) else { return }
         if !windowSnappingService.checkPermission(promptIfNeeded: false) {
             presentWindowControlPermissionAlert()
         }
@@ -588,7 +609,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
     }
 
-    private func presentWindowControlPermissionAlert() {
+    func presentWindowControlPermissionAlert() {
         guard !windowControlPermissionAlertShown else { return }
         windowControlPermissionAlertShown = true
         presentAccessibilityAlert(
@@ -650,6 +671,13 @@ extension AppDelegate {
         scrollService.stop()
         windowSnapHotKeyService.stop()
         titlebarGestureService.stop()
+        windowDragMonitorService.stop()
+        snapIslandController.dismissImmediately()
+        windowSnapPreview.dismissImmediately()
+        dockHoverMonitor.stop()
+        dockPreviewController.dismissImmediately()
+        appSwitcherService.stop()
+        appSwitcherController.dismissImmediately()
         findMouseCoordinator.stop()
         panelHotKeyService.stop()
         defaultInputSourceCoordinator.stop()
@@ -681,6 +709,15 @@ private extension AppDelegate {
             .sink { [weak self] _ in
                 self?.windowControlPermissionAlertShown = false
                 self?.syncWindowControlServices()
+            }
+            .store(in: &cancellables)
+
+        // 窗口管理子配置：间距、触发区、悬浮岛、排除列表、快捷键。任一变更都重新下发。
+        settings.$windowSnap
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] configuration in
+                self?.applyWindowSnapConfiguration(configuration)
             }
             .store(in: &cancellables)
 
