@@ -48,7 +48,9 @@ final class TitlebarGestureService: TitlebarGestureControlling {
 
     private let logger = AppLogger(category: "TitlebarGestures")
     private let snappingService: WindowSnappingService
-    private let previewService = WindowSnapPreviewService()
+    /// Shared with the drag pipeline: one footprint overlay, so a swipe and a drag can never show
+    /// two rectangles at once.
+    private let previewService: WindowSnapPreviewService
     private let stateLock = NSLock()
     private var running = false
     private var suspended = false
@@ -74,8 +76,9 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return running
     }
 
-    init(snappingService: WindowSnappingService) {
+    init(snappingService: WindowSnappingService, previewService: WindowSnapPreviewService) {
         self.snappingService = snappingService
+        self.previewService = previewService
     }
 
     func start() -> Bool {

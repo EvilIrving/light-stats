@@ -14,7 +14,7 @@ import OSLog
 /// They are the system's own implementation: same target frames, same animation, same per-display
 /// visible-area rules. Reusing them is the only way to stay aligned with what the green zoom button
 /// and the system shortcuts do.
-enum NativeTilingCommand: Sendable, CaseIterable {
+nonisolated enum NativeTilingCommand: Sendable, CaseIterable {
     case left
     case right
     case top
@@ -65,7 +65,7 @@ enum NativeTilingCommand: Sendable, CaseIterable {
         case .center: return .center
         case .restore: return .untile
         case .leftThird, .leftTwoThirds, .centerThird, .rightTwoThirds, .rightThird,
-             .nextDisplay, .previousDisplay, .minimize:
+             .nextDisplay, .previousDisplay, .minimize, .closeWindow, .quitApplication:
             return nil
         }
     }
@@ -76,7 +76,7 @@ enum NativeTilingCommand: Sendable, CaseIterable {
 /// Native tiling acts on the app's own key window, so the app has to be frontmost: AX reports
 /// success for a press on an inactive app and then does nothing at all. That silent no-op is why
 /// `isActive` gates every press and why callers still verify the window moved.
-final class NativeWindowTilingService {
+nonisolated final class NativeWindowTilingService: @unchecked Sendable {
 
     private let logger = AppLogger(category: "NativeWindowTiling")
     private let stateLock = NSLock()

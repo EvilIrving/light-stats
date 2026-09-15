@@ -11,14 +11,23 @@ import OSLog
 
 protocol WindowSnapHotKeyControlling: AnyObject {
     var isRunning: Bool { get }
-    func start() -> Bool
+    /// Registers the given set. Idempotent for an unchanged set, so a settings change that does not
+    /// touch the shortcuts does not tear the registrations down and build them again.
+    @discardableResult
+    func start(shortcuts: [SnapShortcut]) -> Bool
     func stop()
 }
 
+/// Registers the user's snap shortcuts with Carbon.
+///
+/// The set is data (`SnapConfiguration.shortcuts`), not a `static let`. That is the whole point of
+/// the rewrite: the previous fixed six bindings meant 13 of the 19 actions could only be reached by
+/// clicking a menu bar item, and a user could not rebind even those six.
 final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
+
     private struct Registration {
         var reference: EventHotKeyRef
-        var action: WindowSnapAction
+        var target: SnapTarget
     }
 
     private let logger = AppLogger(category: "WindowSnapHotKeys")
@@ -26,6 +35,8 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
     private var registrations: [UInt32: Registration] = [:]
     private var eventHandler: EventHandlerRef?
     private var nextIdentifier: UInt32 = 1
+    /// The exact set that is currently registered, so a redundant restart can be skipped.
+    private var registeredShortcuts: [SnapShortcut] = []
 
     var isRunning: Bool { !registrations.isEmpty }
 
@@ -33,19 +44,35 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
         self.snappingService = snappingService
     }
 
-    func start() -> Bool {
-        guard !isRunning else { return true }
+    /// Registers every enabled shortcut in `shortcuts`. Returns `false` only when nothing could be
+    /// registered at all, so a single taken binding cannot take the whole feature down.
+    @discardableResult
+    func start(shortcuts: [SnapShortcut]) -> Bool {
+        if isRunning, registeredShortcuts == shortcuts { return true }
+        stop()
+
         guard snappingService.checkPermission(promptIfNeeded: false) else { return false }
         guard installHandler() else { return false }
 
-        for hotKey in Self.defaultHotKeys {
-            register(hotKey)
+        let enabled = shortcuts.filter(\.isBound)
+        for shortcut in enabled {
+            register(shortcut)
         }
+        registeredShortcuts = shortcuts
 
-        guard registrations.count == Self.defaultHotKeys.count else {
-            logger.error("Failed to register the complete window shortcut set")
-            stop()
+        if enabled.isEmpty {
+            logger.info("No snap shortcuts configured")
             return false
+        }
+        if registrations.count != enabled.count {
+            let failed = enabled.count - registrations.count
+            logger.error("Failed to register \(failed) of \(enabled.count) window shortcuts")
+            DiagnosticLogService.record(
+                level: .error,
+                category: "windowManagement",
+                action: "shortcutsPartial",
+                fields: ["registered": String(registrations.count), "requested": String(enabled.count)]
+            )
         }
         logger.info("Window snap hotkeys started with \(self.registrations.count) registrations")
         return true
@@ -56,6 +83,7 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
             UnregisterEventHotKey(registration.reference)
         }
         registrations.removeAll()
+        registeredShortcuts = []
         removeHandler()
         logger.info("Window snap hotkeys stopped")
     }
@@ -97,15 +125,15 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
         }
     }
 
-    private func register(_ hotKey: WindowSnapHotKey) {
+    private func register(_ shortcut: SnapShortcut) {
         let identifier = nextIdentifier
         nextIdentifier += 1
 
         var reference: EventHotKeyRef?
         let hotKeyID = EventHotKeyID(signature: Self.signature, id: identifier)
         let status = RegisterEventHotKey(
-            hotKey.keyCode,
-            hotKey.modifiers,
+            shortcut.keyCode,
+            shortcut.modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,
@@ -113,10 +141,10 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
         )
 
         guard status == noErr, let reference else {
-            logger.debug("Failed to register hotkey \(hotKey.keyCode), status=\(status)")
+            logger.debug("Failed to register hotkey \(shortcut.keyCode), status=\(status)")
             return
         }
-        registrations[identifier] = Registration(reference: reference, action: hotKey.action)
+        registrations[identifier] = Registration(reference: reference, target: shortcut.target)
     }
 
     private func handle(event: EventRef) {
@@ -131,22 +159,11 @@ final class WindowSnapHotKeyService: WindowSnapHotKeyControlling {
             &hotKeyID
         )
         guard status == noErr, hotKeyID.signature == Self.signature,
-              let action = registrations[hotKeyID.id]?.action else {
+              let target = registrations[hotKeyID.id]?.target else {
             return
         }
-        snappingService.perform(action)
+        snappingService.perform(target)
     }
 
     private static let signature: OSType = 0x4C53574B
-
-    private static let baseModifiers = UInt32(controlKey | optionKey)
-
-    static let defaultHotKeys: [WindowSnapHotKey] = [
-        WindowSnapHotKey(keyCode: UInt32(kVK_LeftArrow), modifiers: baseModifiers, action: .leftHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_RightArrow), modifiers: baseModifiers, action: .rightHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_UpArrow), modifiers: baseModifiers, action: .topHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_DownArrow), modifiers: baseModifiers, action: .bottomHalf),
-        WindowSnapHotKey(keyCode: UInt32(kVK_Return), modifiers: baseModifiers, action: .maximize),
-        WindowSnapHotKey(keyCode: UInt32(kVK_ANSI_C), modifiers: baseModifiers, action: .center)
-    ]
 }

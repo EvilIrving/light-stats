@@ -8,13 +8,14 @@
 import Foundation
 import OSLog
 
-/// macOS' own drag-to-edge tiling, surfaced instead of reimplemented.
+/// macOS' own drag-to-edge tiling, read and written through the domain macOS keeps it in.
 ///
-/// "Drag a window to a screen edge to tile it" is the one gesture model that cannot misfire — the
-/// drag *is* the intent, so there is no titlebar to identify and no control to mistake for one.
-/// Light Stats does not duplicate it; it reads and writes the switch macOS keeps in the
-/// `com.apple.WindowManager` domain so the capability stays reachable and can be turned on for the
-/// user once, without hunting through System Settings.
+/// Light Stats now implements the same gesture itself, because the system's version has no gaps, no
+/// custom layouts, and no island. Two implementations of one gesture cannot both be live: the
+/// system would tile the window at the same moment the engine places it, and the result would
+/// depend on which finished last. So the switch is surfaced here, the first time window management
+/// is enabled the system's copy is turned off once, and the user's later choice is never overridden
+/// again.
 enum SystemWindowTilingSetting {
 
     private static let domain = "com.apple.WindowManager"
