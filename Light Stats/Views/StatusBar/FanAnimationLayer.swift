@@ -11,13 +11,12 @@ import QuartzCore
 
 final class FanAnimationLayer: CALayer {
 
-    // MARK: - Constants
+    // MARK: - Configuration
 
-    static let maxRevPerSecond: Double = 3
-    static let rpmAtMaxSpeed: Double = 5_000
+    /// 图标绘制尺寸。状态栏槽位与弹窗行内图标宽度不同，故由宿主设置。
+    var iconPointSize: CGFloat = 14
 
     private static let iconName = "fanblades.fill"
-    private static let iconPointSize: CGFloat = 14
     private static let rotationAnimationKey = "status-bar-fan-rotation"
 
     // MARK: - Layers
@@ -25,6 +24,7 @@ final class FanAnimationLayer: CALayer {
     private var iconLayer = CALayer()
     private var iconMask: CALayer?
     private var iconMaskScale: CGFloat?
+    private var iconMaskPointSize: CGFloat?
 
     // MARK: - State
 
@@ -44,7 +44,9 @@ final class FanAnimationLayer: CALayer {
         guard let source = layer as? FanAnimationLayer else { return }
         phase = source.phase
         currentSpeed = source.currentSpeed
+        iconPointSize = source.iconPointSize
         iconMaskScale = source.iconMaskScale
+        iconMaskPointSize = source.iconMaskPointSize
         if let copiedIconLayer = sublayers?.first {
             iconLayer = copiedIconLayer
             iconMask = copiedIconLayer.mask
@@ -92,9 +94,9 @@ final class FanAnimationLayer: CALayer {
         isHidden = true
     }
 
+    /// 视觉角速度（圈/秒）。数值约定见 `FanRotationPolicy`。
     static func visualSpeed(for rpm: Int?) -> Double {
-        guard let rpm, rpm > 0 else { return 0 }
-        return min(Double(rpm) / rpmAtMaxSpeed, 1) * maxRevPerSecond
+        FanRotationPolicy.revolutionsPerSecond(rpm: rpm)
     }
 
     // MARK: - CALayer Layout
@@ -103,7 +105,7 @@ final class FanAnimationLayer: CALayer {
         super.layoutSublayers()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let iconSize = min(Self.iconPointSize, min(bounds.width, bounds.height))
+        let iconSize = min(iconPointSize, min(bounds.width, bounds.height))
         iconLayer.frame = CGRect(
             x: bounds.midX - iconSize / 2,
             y: bounds.midY - iconSize / 2,
@@ -167,8 +169,8 @@ final class FanAnimationLayer: CALayer {
     }
 
     private func ensureIconMask(contentsScale: CGFloat) {
-        guard iconMaskScale != contentsScale else { return }
-        guard let maskImage = Self.makeMaskImage(scale: contentsScale) else { return }
+        guard iconMaskScale != contentsScale || iconMaskPointSize != iconPointSize else { return }
+        guard let maskImage = makeMaskImage(scale: contentsScale) else { return }
 
         let mask = iconMask ?? CALayer()
         mask.contents = maskImage
@@ -178,12 +180,13 @@ final class FanAnimationLayer: CALayer {
         iconLayer.mask = mask
         iconMask = mask
         iconMaskScale = contentsScale
+        iconMaskPointSize = iconPointSize
         setNeedsLayout()
     }
 
-    private static func makeMaskImage(scale: CGFloat) -> CGImage? {
+    private func makeMaskImage(scale: CGFloat) -> CGImage? {
         guard let symbol = NSImage(
-            systemSymbolName: iconName,
+            systemSymbolName: FanAnimationLayer.iconName,
             accessibilityDescription: "Fan"
         ) else { return nil }
 

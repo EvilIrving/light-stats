@@ -7,56 +7,31 @@
 
 import SwiftUI
 
-/// 风扇图标：按当前转速持续旋转。转速越高转得越快，但封顶到 `maxRevPerSecond`，
-/// 避免高转速时「转的飞起」糊成一团。转速为 0 / 未知时静止。
+/// 风扇图标：按当前转速持续旋转。转速越高转得越快，封顶见 `FanRotationPolicy`。
+/// 转速为 0 / 未知时只显示静止图标。
 ///
-/// 用 `TimelineView(.animation)` 逐帧累积角度（而非 repeatForever 动画），
-/// 这样转速随 RPM 变化时平滑过渡、无跳变；面板隐藏时 timeline 自动停摆，不耗电。
+/// 旋转由 `FanIconLayerView` 在合成侧完成，不进 SwiftUI 图。之前的做法是用
+/// `TimelineView(.animation)` 逐帧累积角度，每帧都会让整个弹窗视图树变脏、
+/// 由 AppKit 重做整体 layout——而 `orderOut` 的窗口不会替我们暂停这类时间线，
+/// 面板关掉后它照样以显示刷新率空转。可见性因此必须显式传入。
 struct SpinningFanIcon: View {
     @Environment(\.theme) private var theme
 
     let rpm: Int?
+    /// 弹窗面板是否可见；`false` 时停止旋转。
+    var isPanelVisible: Bool = true
 
-    /// 视觉封顶：最快每秒 3 圈。
-    private let maxRevPerSecond: Double = 3.0
-    /// 达到该转速即封顶（典型笔记本满速约 5000–6000 RPM）。
-    private let rpmAtMaxSpeed: Double = 5000
-
-    @State private var angle: Double = 0
-    @State private var lastDate: Date = .now
+    /// 与相邻读数同一字号，避免行内基线跳动。
+    private let pointSize: CGFloat = 11
 
     var body: some View {
-        if degreesPerSecond > 0 {
-            TimelineView(.animation) { context in
-                fanImage
-                    .rotationEffect(.degrees(angle))
-                    .onChange(of: context.date) { _, now in
-                        advance(to: now)
-                    }
-            }
-            .onAppear { lastDate = .now }
-        } else {
-            fanImage
-        }
-    }
-
-    private var fanImage: some View {
-        Image(systemName: "fanblades.fill")
-            .foregroundStyle(theme.metricIcon)
-    }
-
-    /// 当前角速度（度/秒）：RPM 线性映射并封顶。
-    private var degreesPerSecond: Double {
-        guard let rpm, rpm > 0 else { return 0 }
-        let revPerSec = min(Double(rpm) / rpmAtMaxSpeed, 1.0) * maxRevPerSecond
-        return revPerSec * 360.0
-    }
-
-    /// 按帧间隔累积角度。跳过异常间隔（面板重新显示等）避免突跳。
-    private func advance(to now: Date) {
-        let dt = now.timeIntervalSince(lastDate)
-        lastDate = now
-        guard dt > 0, dt < 1 else { return }
-        angle = (angle + degreesPerSecond * dt).truncatingRemainder(dividingBy: 360)
+        FanIconLayerView(
+            rpm: rpm,
+            isPanelVisible: isPanelVisible,
+            tintColor: theme.metricIcon,
+            pointSize: pointSize
+        )
+        .frame(width: pointSize, height: pointSize)
+        .accessibilityHidden(true)
     }
 }

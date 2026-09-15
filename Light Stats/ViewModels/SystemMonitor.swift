@@ -300,8 +300,10 @@ final class SystemMonitor: ObservableObject {
     private var lastTrendWriteAt: Date?
     private var hasRestoredTrendHistory = false
 
-    /// 弹窗是否可见：进程榜只在弹窗内展示，关闭时不采集。
-    private var popoverVisible = false
+    /// 弹窗是否可见：进程榜只在弹窗内展示，关闭时不采集；
+    /// 同时也是弹窗内逐帧动画（主题场景、风扇）的开关——隐藏的 hosting view
+    /// 不会自动暂停 `TimelineView`，视图必须自己读这个标志。
+    @Published private(set) var popoverVisible = false
     /// 上次采集进程榜的时间，用于按 `topProcessRefreshInterval` 节流。
     private var lastTopProcessSampleAt: Date = .distantPast
 

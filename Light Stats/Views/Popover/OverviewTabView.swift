@@ -187,7 +187,7 @@ struct OverviewTabView: View {
             systemMetricColumn(
                 top: {
                     HStack(spacing: 4) {
-                        SpinningFanIcon(rpm: monitor.fanSpeed)
+                        SpinningFanIcon(rpm: monitor.fanSpeed, isPanelVisible: monitor.popoverVisible)
                         Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)

@@ -14,6 +14,7 @@ struct PopoverContentView: View {
     @ObservedObject private var localization = LocalizationManager.shared
     @ObservedObject private var settings = SettingsManager.shared
     @ObservedObject private var license = LicenseManager.shared
+    @EnvironmentObject var monitor: SystemMonitor
     @Environment(\.openSettings) private var openSettingsAction
     @State private var hoveredIcon: String?
 
@@ -144,11 +145,14 @@ struct PopoverContentView: View {
         }
         .ignoresSafeArea(.container, edges: .top)
         // Background pixels live entirely inside the selected scene.
+        // 场景逐帧动画只在弹窗可见时跑：面板是 orderOut 隐藏的，隐藏的 hosting view
+        // 不会自动暂停 timeline，继续跑会让 AppKit 每帧重做整棵视图树的 layout。
         .background(
             BackgroundHost(
                 sceneID: definition.background,
                 appearance: settings.themeAppearance(for: settings.appTheme),
-                cornerRadius: 12
+                cornerRadius: 12,
+                isVisible: monitor.popoverVisible
             )
             .ignoresSafeArea()
         )

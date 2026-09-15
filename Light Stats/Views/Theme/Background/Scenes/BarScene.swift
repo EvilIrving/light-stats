@@ -8,19 +8,27 @@ import SwiftUI
 struct BarScene: View {
     let input: BarSceneInput
     let configuration: BarSceneConfiguration
+    /// 场景所在窗口是否可见。隐藏时时间线必须停摆，见 `SceneAnimationPolicy`。
+    var isVisible: Bool = true
     @State private var phaseAnchorDate = Date()
     @State private var phaseAnchor: CGFloat = 0
 
     init(
         input: BarSceneInput,
-        configuration: BarSceneConfiguration = .defaults
+        configuration: BarSceneConfiguration = .defaults,
+        isVisible: Bool = true
     ) {
         self.input = input
         self.configuration = configuration
+        self.isVisible = isVisible
     }
 
     private var animationPaused: Bool {
-        input.lightFlow < configuration.flow.pauseThreshold
+        SceneAnimationPolicy.isPaused(
+            lightFlow: input.lightFlow,
+            pauseThreshold: configuration.flow.pauseThreshold,
+            isVisible: isVisible
+        )
     }
 
     var body: some View {

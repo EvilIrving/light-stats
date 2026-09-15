@@ -12,6 +12,8 @@ struct BackgroundSceneRouter: View {
     let cornerRadius: CGFloat
     let configuresWindow: Bool
     let fallbackMaterial: NSVisualEffectView.Material
+    /// 宿主窗口是否可见。动态场景在隐藏时停摆：隐藏的 hosting view 不会自动暂停 timeline。
+    var isVisible: Bool = true
 
     @ViewBuilder
     var body: some View {
@@ -23,17 +25,17 @@ struct BackgroundSceneRouter: View {
                 configuresWindow: configuresWindow
             )
         case let (.sunGold, .film(configuration)):
-            SunGoldScene(input: SunGoldSceneInput(configuration))
+            SunGoldScene(input: SunGoldSceneInput(configuration), isVisible: isVisible)
         case let (.bar, .bar(configuration)):
-            BarScene(input: BarSceneInput(configuration))
+            BarScene(input: BarSceneInput(configuration), isVisible: isVisible)
         case let (.inkNight, .noir(configuration)):
-            InkNightScene(input: InkNightSceneInput(configuration))
+            InkNightScene(input: InkNightSceneInput(configuration), isVisible: isVisible)
         case (.sunGold, _):
-            SunGoldScene(input: .defaults)
+            SunGoldScene(input: .defaults, isVisible: isVisible)
         case (.bar, _):
-            BarScene(input: .defaults)
+            BarScene(input: .defaults, isVisible: isVisible)
         case (.inkNight, _):
-            InkNightScene(input: .defaults)
+            InkNightScene(input: .defaults, isVisible: isVisible)
         case (.technicalPaper, _):
             TechnicalPaperScene()
         }
