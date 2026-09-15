@@ -158,7 +158,7 @@
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
 "aiUsage.gemini" = "Gemini";
-"aiUsage.autoRefresh" = "ウィンドウ自動更新";
+"aiUsage.autoRefresh" = "枠の自動更新";
 "aiUsage.autoRefresh.short" = "更新";
 "aiUsage.fetching" = "取得中...";
 "aiUsage.tokenExpired" = "トークン期限切れ — %@ を一度実行してください";
@@ -184,7 +184,7 @@
 "aiUsage.token.hint" = "使用量の取得にのみ使用。送信しません。";
 "aiUsage.group.local" = "ローカルログイン";
 "aiUsage.group.token" = "API token";
-"aiUsage.token.placeholder" = "貼り付けて Return";
+"aiUsage.token.placeholder" = "貼り付けて Enter";
 "aiUsage.token.saved" = "保存済み";
 "aiUsage.token.copy" = "コピー";
 "aiUsage.token.copied" = "コピー済";
@@ -284,7 +284,7 @@
 "settings.activation.features" = "有効な機能";
 "settings.activation.issuedAt" = "発行日";
 "settings.activation.enterCode" = "アクティベーションコードを貼り付け";
-"settings.activation.activate" = "今すぐ使う";
+"settings.activation.activate" = "ロック解除";
 "settings.activation.invalid" = "コードが一致しません。もう一度ご確認ください";
 "settings.activation.hint" = "コードを貼り付けると、すべてのプレミアム機能が使えます";
 "settings.activation.grandfathered" = "ともに歩んで";
@@ -293,7 +293,7 @@
 "settings.activation.feature.findMouse" = "マウスを探す";
 "settings.activation.successToast" = "認証完了！プレミアム機能が使えるようになりました";
 "settings.findMouse.lockedHint" = "認証後、2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
-"settings.defaultInputSource" = "既定の入力ソース";
+"settings.defaultInputSource" = "デフォルトの入力ソース";
 "settings.defaultInputSource.hint" = "アプリを切り替えたらこの入力ソースに戻す";
 "settings.defaultInputSource.none" = "未選択";
 "settings.defaultInputSource.unavailable" = "利用できません";
@@ -307,13 +307,13 @@
 "settings.scrollReverse.off" = "スクロール反転：オフ";
 "settings.scrollReverse.permissionTitle" = "アクセシビリティ権限が必要です";
 "settings.scrollReverse.permissionMessage" = "スクロール方向と加速の制御にはアクセシビリティ権限が必要です。システム設定で許可してください。";
-"settings.windowControls" = "ウィンドウ操作";
-"settings.windowManagement" = "ウィンドウ管理";
-"settings.windowManagement.description" = "ウィンドウ分割ショートカット、タイトルバーのスワイプ分割、メニューバーアイコンを有効にします。";
+"settings.windowControls" = "ウインドウ操作";
+"settings.windowManagement" = "ウインドウ管理";
+"settings.windowManagement.description" = "スナップショートカット、画面端へのドラッグ吸着、レイアウトアイランド、メニューバーのウインドウ一覧。";
 "settings.systemTiling" = "システムの端タイル";
 "settings.systemTiling.edgeDrag" = "画面端へドラッグでタイル表示";
 "settings.systemTiling.topEdgeDrag" = "メニューバーへドラッグで全体表示";
-"settings.systemTiling.description" = "macOS 標準機能です。ウインドウを画面端へドラッグするとタイル表示されます。タイトルバーを推測するより確実で、ウインドウ管理を初めてオンにしたときに自動で有効になります。";
+"settings.systemTiling.description" = "macOS 標準。左右・四分割のみで、余白やレイアウトはありません。ウインドウ管理を初めて有効にしたとき一度だけオフにします。";
 "settings.finderMenu" = "右クリックメニュー";
 "settings.finderMenu.description" = "Finder でファイルを作成・整理・オープン。ホームフォルダ、外付けドライブ、追加したよく使うフォルダで利用できます。";
 "settings.finderMenu.openSettings" = "システム設定で有効にする…";
@@ -323,7 +323,7 @@
 "settings.finderMenu.status.disabled" = "システム設定で拡張機能がまだ有効になっていません。下のボタンから有効にしてください（再起動不要）。";
 "settings.finderMenu.status.notRegistered" = "システムが拡張機能をまだ登録していません。「アプリケーション」にあることを確認し、アプリを開き直してください。";
 "settings.finderMenu.status.unknown" = "拡張機能の状態を確認できません。Finder を更新してみてください。";
-"settings.finderMenu.defaultTerminal" = "既定のターミナル";
+"settings.finderMenu.defaultTerminal" = "デフォルトのターミナル";
 "settings.finderMenu.cmuxActions" = "cmux アクションを表示";
 "settings.finderMenu.directories" = "よく使うフォルダ";
 "settings.finderMenu.apps" = "このアプリで開く";
@@ -371,7 +371,7 @@
 "settings.finderMenu.removeItem" = "削除";
 "findermenu.choose.move" = "ここに移動";
 "findermenu.choose.copy" = "ここにコピー";
-"findermenu.choose.destination" = "移動先・コピー先のフォルダを選択";
+"findermenu.choose.destination" = "保存先を選択";
 "findermenu.toast.transferPartial" = "%ld 件完了、%ld 件失敗。保存先とファイルのアクセス権を確認してください。";
 "findermenu.toast.openDirectoryFailed" = "フォルダを開けませんでした。ドライブの接続とフォルダの場所を確認してください。";
 "findermenu.toast.visibilityFailed" = "Finder の表示設定を適用できませんでした。Finder を再起動してお試しください。";
@@ -385,7 +385,7 @@
 "settings.section.general" = "一般";
 "settings.section.monitoring" = "モニタリング";
 "settings.windowControl.permissionTitle" = "アクセシビリティ権限が必要です";
-"settings.windowControl.permissionMessage" = "ウィンドウ操作には、他のアプリのウィンドウを移動・サイズ変更するためのアクセシビリティ権限が必要です。システム設定で許可してください。";
+"settings.windowControl.permissionMessage" = "ウインドウ操作には、他のアプリのウインドウを移動・サイズ変更するためのアクセシビリティ権限が必要です。システム設定で許可してください。";
 "window.action.left" = "左";
 "window.action.right" = "右";
 "window.action.top" = "上";
@@ -414,3 +414,135 @@
 "settings.displayControl.hint" = "KVM / ドックは DDC を遮断しやすく、輝度は変えられません。";
 "display.role.builtIn" = "内蔵";
 "display.role.external" = "外部";
+
+// MARK: - Window management
+
+"window.action.minimize" = "最小化";
+"window.layout.halves" = "左右分割";
+"window.layout.thirds" = "3等分";
+"window.layout.twoThirds" = "2/3";
+"window.layout.quadrants" = "4分割";
+"window.layout.sixths" = "6分割";
+"window.layout.ninths" = "9分割";
+"window.layout.rightStack" = "右スタック";
+"window.layout.leftStack" = "左スタック";
+"window.segment.left" = "左";
+"window.segment.right" = "右";
+"window.segment.firstThird" = "前 1/3";
+"window.segment.middleThird" = "中 1/3";
+"window.segment.lastThird" = "後 1/3";
+"window.segment.twoThirds" = "2/3";
+"window.segment.oneThird" = "1/3";
+"window.segment.topLeft" = "左上";
+"window.segment.topRight" = "右上";
+"window.segment.bottomLeft" = "左下";
+"window.segment.bottomRight" = "右下";
+"window.segment.cell" = "セル";
+"window.list.untitled" = "タイトルなし";
+"window.menu.windows" = "ウインドウ";
+"window.menu.noApp" = "対象アプリがありません";
+"window.menu.noWindows" = "ウインドウがありません";
+"window.menu.minimizedTitle" = "%@（最小化）";
+"window.menu.bringToFront" = "最前面へ";
+"window.menu.deminimize" = "復元";
+"window.menu.minimize" = "最小化";
+"window.menu.close" = "閉じる";
+"window.menu.layouts" = "レイアウト";
+"window.menu.openSettings" = "ウインドウ管理…";
+"settings.shortcut.none" = "未設定";
+"settings.shortcut.clear" = "ショートカットを消去";
+"settings.snap.behaviour" = "ドラッグ";
+"settings.snap.edgeSnap" = "画面端へドラッグ";
+"settings.snap.edgeSnap.hint" = "ウインドウを画面端へドラッグすると、その側に吸着します。";
+"settings.snap.cornerSnap" = "画面の角へドラッグ";
+"settings.snap.topEdge" = "画面上端";
+"settings.snap.topEdge.hint" = "ウインドウを画面上端へドラッグしたときの動作。";
+"settings.snap.topEdge.island" = "アイランド";
+"settings.snap.topEdge.maximize" = "最大化";
+"settings.snap.topEdge.off" = "オフ";
+"settings.snap.preview" = "配置プレビューを表示";
+"settings.snap.nativeTiling" = "macOS に配置を任せる";
+"settings.snap.nativeTiling.hint" = "システム側にコマンドがある場合はそちらを使います。滑らかですが左右・四分割のみで、確認も遅れます。";
+"settings.snap.gapInner" = "ウインドウ間隔";
+"settings.snap.gapOuter" = "画面端の余白";
+"settings.snap.island" = "レイアウトアイランド";
+"settings.snap.island.palette" = "タイルの配色";
+"settings.snap.island.paletteHint" = "変わるのは強調色だけです。パネルは暗いままなので、どのウインドウの上でも読めます。";
+"settings.snap.island.palette.neutral" = "グレー";
+"settings.snap.island.palette.accent" = "アクセント";
+"settings.snap.island.palette.vivid" = "白";
+"settings.snap.conflict" = "macOS の分割も同じ操作を使います。両方が有効だと、どちらが勝つかは終わる順で変わります。";
+"settings.snap.conflict.resolve" = "システム分割をオフ";
+"settings.snap.shortcuts.hint" = "ショートカットをクリックして記録します。修飾キーが 1 つ以上必要で、Esc で取り消せます。";
+"settings.snap.layouts.create" = "レイアウトを作成";
+"settings.snap.layouts.createHint" = "グリッド上でドラッグして範囲を描き、名前を付けると下の一覧に加わり、アイランドとショートカットから使えます。";
+"settings.snap.layouts.title" = "レイアウト";
+"settings.snap.layouts.segments" = "%ld 分割";
+"settings.snap.layouts.delete" = "レイアウトを削除";
+"settings.snap.layouts.createAction" = "作成";
+"settings.snap.placements.title" = "保存した位置";
+"settings.snap.placements.shorten" = "ショートカットを追加";
+"settings.snap.placements.delete" = "位置を削除";
+"settings.snap.newLayoutName" = "名前";
+"settings.snap.grid.hint" = "ドラッグして選択";
+"settings.snap.grid.clear" = "クリア";
+"settings.snap.editor.title" = "レイアウト編集";
+"settings.snap.editor.add" = "領域を追加";
+"settings.snap.editor.undo" = "元に戻す";
+"settings.snap.editor.remove" = "領域を削除";
+"settings.snap.editor.resize" = "領域のサイズ変更";
+"settings.snap.editor.savePosition" = "位置を保存";
+"settings.snap.editor.save" = "保存";
+"settings.snap.editor.cancel" = "編集をキャンセル";
+"settings.snap.editor.edit" = "レイアウトを編集";
+"settings.snap.editor.pin" = "アイランドに表示";
+"settings.snap.editor.moveUp" = "上へ移動";
+"settings.snap.editor.resetOrder" = "標準の並び順に戻す";
+"settings.snap.editor.demoWindow" = "ウインドウをドラッグ";
+"settings.snap.editor.resetDemo" = "プレビューをリセット";
+"settings.snap.shortcuts.title" = "キーボードショートカット";
+"window.action.closeWindow" = "ウインドウを閉じる";
+"window.action.quitApplication" = "アプリを終了";
+"settings.snap.defaultLayoutName" = "レイアウト %ld";
+"settings.snap.exclusions.restricted" = "内蔵の除外リストを使う";
+"settings.snap.exclusions.restrictedHint" = "再生アプリ、ゲーム、リモートデスクトップ、Wine のウインドウは動かしません。";
+"settings.snap.exclusions.hint" = "除外したアプリでもショートカットは使えますが、ウインドウは動きません。";
+"settings.snap.exclusions.title" = "除外するアプリ";
+"settings.snap.exclusions.addRecommended" = "推奨リストを追加";
+"settings.snap.exclusions.empty" = "除外したアプリはありません。";
+
+// MARK: - Window management (extended)
+
+"settings.snap.conflict.otherApp" = "別のウインドウ管理アプリが動作しています（%@）。同じドラッグを両方が監視すると結果が競合します。";
+
+// MARK: - Window management (permission)
+
+"settings.snap.permission.title" = "アクセシビリティ権限が必要です";
+"settings.snap.permission.message" = "他アプリのウインドウを動かすにはアクセシビリティ権限が必要です。許可するとショートカット、ドラッグ吸着、アイランドが使えます。";
+
+// MARK: - Window management (visibility)
+
+"window.visibility.hideOthers" = "ほかを隠す";
+"window.visibility.hideAll" = "すべて隠す";
+"window.visibility.restore" = "隠したアプリを戻す";
+"settings.snap.shakeToHide" = "振ってほかを隠す";
+"settings.snap.shakeToHide.hint" = "ウインドウをドラッグ中に左右へ振ると、ほかのアプリをすべて隠します。";
+
+// MARK: - Window previews
+
+"settings.snap.previews" = "ウインドウプレビュー";
+"settings.snap.thumbnails" = "ウインドウのサムネイル";
+"settings.snap.thumbnails.hint" = "各ウインドウの画像を表示します。画面収録の権限が必要で、未許可のときはタイトルとアイコンを表示します。";
+"settings.snap.dockPreview" = "Dock ホバープレビュー";
+"settings.snap.dockPreview.hint" = "Dock のアイコンにポインタを合わせると、そのアプリのウインドウを表示します。";
+"settings.snap.commandTab" = "Cmd-Tab Plus";
+"settings.snap.commandTab.hint" = "システムのアプリ切替を、ウインドウ単位の切替に置き換えます。";
+"settings.snap.commandTab.warning" = "オンの間は ⌘Tab を Light Stats が扱い、システムの切替は表示されません。オフにすると元に戻ります。";
+"settings.snap.screenRecording.needed" = "画面収録の権限が必要です";
+"settings.snap.screenRecording.denied" = "使うのは Light Stats 自身のサムネイルだけです。録画や送信は行いません。";
+"settings.snap.screenRecording.requiresRestart" = "システム設定ではオンですが、このプロセスにはまだ反映されていません。Light Stats を再起動すると取得を始めます。";
+"settings.snap.screenRecording.relaunch" = "今すぐ再起動";
+"settings.permission.relaunchFailed" = "自動で再起動できませんでした。Light Stats を終了して開き直してください。";
+"window.preview.minimized" = "最小化";
+"window.preview.count" = "%ld 個のウインドウ";
+"window.preview.more" = "ほか";

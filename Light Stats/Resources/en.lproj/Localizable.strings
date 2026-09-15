@@ -307,11 +307,11 @@
 "settings.scrollReverse.permissionMessage" = "Scroll direction and acceleration controls need Accessibility permission to intercept scroll events. Enable it in System Settings to use these features.";
 "settings.windowControls" = "Window Controls";
 "settings.windowManagement" = "Window Management";
-"settings.windowManagement.description" = "Enable window snap shortcuts, titlebar swipe snapping, and the menu bar icon.";
+"settings.windowManagement.description" = "Snap shortcuts, drag-to-edge snapping, the layout island, and the menu bar window list.";
 "settings.systemTiling" = "System Edge Tiling";
 "settings.systemTiling.edgeDrag" = "Drag to Screen Edge to Tile";
 "settings.systemTiling.topEdgeDrag" = "Drag to Menu Bar to Fill";
-"settings.systemTiling.description" = "Built into macOS: drag a window to a screen edge to tile it. More reliable than guessing where a titlebar is, and switched on the first time window management is enabled.";
+"settings.systemTiling.description" = "Built into macOS. Halves and quarters only, with no gaps or layouts — turned off once when window management is first enabled.";
 "settings.finderMenu" = "Right-Click Menu";
 "settings.finderMenu.description" = "Create, organize, and open files in Finder. Available in your home folder, on external drives, and in added favorite folders.";
 "settings.finderMenu.openSettings" = "Enable in System Settings…";
@@ -369,7 +369,7 @@
 "settings.finderMenu.removeItem" = "Remove";
 "findermenu.choose.move" = "Move Here";
 "findermenu.choose.copy" = "Copy Here";
-"findermenu.choose.destination" = "Choose a destination folder";
+"findermenu.choose.destination" = "Choose Destination";
 "findermenu.toast.transferPartial" = "%ld completed, %ld failed. Check the destination and file permissions.";
 "findermenu.toast.openDirectoryFailed" = "Couldn’t open this folder. Check that the drive is connected and the folder still exists.";
 "findermenu.toast.visibilityFailed" = "Couldn’t apply Finder’s display setting. Relaunch Finder and try again.";
@@ -412,3 +412,135 @@
 "settings.displayControl.hint" = "KVM/docks often block DDC; hardware brightness unavailable.";
 "display.role.builtIn" = "Built-in";
 "display.role.external" = "External";
+
+// MARK: - Window management
+
+"window.action.minimize" = "Minimize";
+"window.layout.halves" = "Halves";
+"window.layout.thirds" = "Thirds";
+"window.layout.twoThirds" = "Two Thirds";
+"window.layout.quadrants" = "Quadrants";
+"window.layout.sixths" = "Sixths";
+"window.layout.ninths" = "Ninths";
+"window.layout.rightStack" = "Right Stack";
+"window.layout.leftStack" = "Left Stack";
+"window.segment.left" = "Left";
+"window.segment.right" = "Right";
+"window.segment.firstThird" = "First 1/3";
+"window.segment.middleThird" = "Middle 1/3";
+"window.segment.lastThird" = "Last 1/3";
+"window.segment.twoThirds" = "Two Thirds";
+"window.segment.oneThird" = "One Third";
+"window.segment.topLeft" = "Top Left";
+"window.segment.topRight" = "Top Right";
+"window.segment.bottomLeft" = "Bottom Left";
+"window.segment.bottomRight" = "Bottom Right";
+"window.segment.cell" = "Tile";
+"window.list.untitled" = "Untitled";
+"window.menu.windows" = "Windows";
+"window.menu.noApp" = "No Target App";
+"window.menu.noWindows" = "No Windows";
+"window.menu.minimizedTitle" = "%@ (minimized)";
+"window.menu.bringToFront" = "Bring to Front";
+"window.menu.deminimize" = "Restore";
+"window.menu.minimize" = "Minimize";
+"window.menu.close" = "Close";
+"window.menu.layouts" = "Layouts";
+"window.menu.openSettings" = "Window Management…";
+"settings.shortcut.none" = "Not Set";
+"settings.shortcut.clear" = "Clear Shortcut";
+"settings.snap.behaviour" = "Dragging";
+"settings.snap.edgeSnap" = "Drag to Screen Edge";
+"settings.snap.edgeSnap.hint" = "Drag a window against a screen edge to tile it there.";
+"settings.snap.cornerSnap" = "Drag to Screen Corner";
+"settings.snap.topEdge" = "Top Edge";
+"settings.snap.topEdge.hint" = "What dragging a window to the top of the screen does.";
+"settings.snap.topEdge.island" = "Island";
+"settings.snap.topEdge.maximize" = "Fill";
+"settings.snap.topEdge.off" = "Off";
+"settings.snap.preview" = "Show Placement Preview";
+"settings.snap.nativeTiling" = "Let macOS Place the Window";
+"settings.snap.nativeTiling.hint" = "Use macOS' own tiling when it has a command. Smoother, but halves and quarters only, and slower to confirm.";
+"settings.snap.gapInner" = "Gap Between Windows";
+"settings.snap.gapOuter" = "Screen Edge Margin";
+"settings.snap.island" = "Layout Island";
+"settings.snap.island.palette" = "Tile Colour";
+"settings.snap.island.paletteHint" = "Only the highlight changes; the panel stays dark so it reads over any window.";
+"settings.snap.island.palette.neutral" = "Grey";
+"settings.snap.island.palette.accent" = "Accent";
+"settings.snap.island.palette.vivid" = "White";
+"settings.snap.conflict" = "macOS tiles to the same edges. With both on, which one wins depends on which finishes last.";
+"settings.snap.conflict.resolve" = "Turn Off System Tiling";
+"settings.snap.shortcuts.hint" = "Click a shortcut to record it. The recording must include a modifier; Escape cancels.";
+"settings.snap.layouts.create" = "Create a Layout";
+"settings.snap.layouts.createHint" = "Drag on the grid to draw the tile, name it, and it joins the list below — ready for the island and for a shortcut.";
+"settings.snap.layouts.title" = "Layouts";
+"settings.snap.layouts.segments" = "%ld tiles";
+"settings.snap.layouts.delete" = "Delete Layout";
+"settings.snap.layouts.createAction" = "Create";
+"settings.snap.placements.title" = "Saved Positions";
+"settings.snap.placements.shorten" = "Add Shortcut";
+"settings.snap.placements.delete" = "Delete Position";
+"settings.snap.newLayoutName" = "Name";
+"settings.snap.grid.hint" = "Drag to select";
+"settings.snap.grid.clear" = "Clear";
+"settings.snap.editor.title" = "Layout Editor";
+"settings.snap.editor.add" = "Add Region";
+"settings.snap.editor.undo" = "Undo";
+"settings.snap.editor.remove" = "Delete Region";
+"settings.snap.editor.resize" = "Resize Region";
+"settings.snap.editor.savePosition" = "Save Position";
+"settings.snap.editor.save" = "Save";
+"settings.snap.editor.cancel" = "Cancel Editing";
+"settings.snap.editor.edit" = "Edit Layout";
+"settings.snap.editor.pin" = "Show in Island";
+"settings.snap.editor.moveUp" = "Move Up";
+"settings.snap.editor.resetOrder" = "Restore Default Order";
+"settings.snap.editor.demoWindow" = "Drag Window";
+"settings.snap.editor.resetDemo" = "Reset Preview";
+"settings.snap.shortcuts.title" = "Keyboard Shortcuts";
+"window.action.closeWindow" = "Close Window";
+"window.action.quitApplication" = "Quit App";
+"settings.snap.defaultLayoutName" = "Layout %ld";
+"settings.snap.exclusions.restricted" = "Respect the Built-in List";
+"settings.snap.exclusions.restrictedHint" = "Never move windows of media players, games, remote desktops, or Wine apps.";
+"settings.snap.exclusions.hint" = "Excluded apps keep their shortcuts, but their windows are never moved.";
+"settings.snap.exclusions.title" = "Excluded Apps";
+"settings.snap.exclusions.addRecommended" = "Add Recommended";
+"settings.snap.exclusions.empty" = "No apps excluded.";
+
+// MARK: - Window management (extended)
+
+"settings.snap.conflict.otherApp" = "Another window manager is running (%@). Two of them listening for the same drag will fight over the result.";
+
+// MARK: - Window management (permission)
+
+"settings.snap.permission.title" = "Accessibility Access Needed";
+"settings.snap.permission.message" = "Moving another app's window needs Accessibility permission. Grant it and the shortcuts, drag snapping, and the island all start working.";
+
+// MARK: - Window management (visibility)
+
+"window.visibility.hideOthers" = "Hide Others";
+"window.visibility.hideAll" = "Hide All";
+"window.visibility.restore" = "Restore Hidden";
+"settings.snap.shakeToHide" = "Shake to Hide Others";
+"settings.snap.shakeToHide.hint" = "Shake a window sideways while dragging it to hide every other app.";
+
+// MARK: - Window previews
+
+"settings.snap.previews" = "Window Previews";
+"settings.snap.thumbnails" = "Window Thumbnails";
+"settings.snap.thumbnails.hint" = "Show each window's picture. Needs the Screen Recording permission; without it previews show titles and icons.";
+"settings.snap.dockPreview" = "Dock Hover Preview";
+"settings.snap.dockPreview.hint" = "Hover a Dock icon to see that app's windows.";
+"settings.snap.commandTab" = "Cmd-Tab Plus";
+"settings.snap.commandTab.hint" = "Replace the system app switcher with a window-level one.";
+"settings.snap.commandTab.warning" = "While this is on, Light Stats handles ⌘Tab and the system switcher no longer appears. Turning it off restores the system behaviour immediately.";
+"settings.snap.screenRecording.needed" = "Screen Recording Access Needed";
+"settings.snap.screenRecording.denied" = "Only Light Stats' own thumbnails use it; nothing is recorded or uploaded.";
+"settings.snap.screenRecording.requiresRestart" = "The permission is on in System Settings, but this process has not picked it up yet. Restart Light Stats to start capturing.";
+"settings.snap.screenRecording.relaunch" = "Restart Now";
+"settings.permission.relaunchFailed" = "Couldn't restart automatically. Quit and reopen Light Stats.";
+"window.preview.minimized" = "Minimized";
+"window.preview.count" = "%ld windows";
+"window.preview.more" = "more";

@@ -161,7 +161,7 @@
 "aiUsage.autoRefresh" = "윈도우 자동 갱신";
 "aiUsage.autoRefresh.short" = "갱신";
 "aiUsage.fetching" = "가져오는 중...";
-"aiUsage.tokenExpired" = "토큰 만료 — %@ 을(를) 한 번 실행해 갱신하세요";
+"aiUsage.tokenExpired" = "토큰 만료 — %@ 실행 후 다시 시도하세요";
 "aiUsage.credentialsMissing" = "인증 정보 없음 — 먼저 %@ CLI로 로그인하세요";
 "aiUsage.fetchFailed" = "사용량을 가져오지 못했습니다";
 "aiUsage.deepseek" = "DeepSeek";
@@ -268,8 +268,8 @@
 "settings.findMouseTriggerKey.left" = "왼쪽";
 "settings.findMouseTriggerKey.right" = "오른쪽";
 "settings.findMouseTriggerKey.recording" = "단축키 입력";
-"settings.findMouse.permissionTitle" = "접근성 권한 필요";
-"settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 접근성 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
+"settings.findMouse.permissionTitle" = "손쉬운 사용 권한 필요";
+"settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
 "settings.presentationCursor.style" = "포인터 스타일";
 "settings.presentationCursor.style.holographicSilver" = "홀로그램 실버";
 "settings.presentationCursor.style.iceCrystal" = "아이스 크리스탈";
@@ -284,7 +284,7 @@
 "settings.activation.features" = "잠금 해제된 기능";
 "settings.activation.issuedAt" = "발급일";
 "settings.activation.enterCode" = "활성화 코드를 붙여넣으세요";
-"settings.activation.activate" = "지금 바로 잠금 해제";
+"settings.activation.activate" = "잠금 해제";
 "settings.activation.invalid" = "코드가 맞지 않아요. 다시 확인해 주세요";
 "settings.activation.hint" = "코드를 붙여넣으면 모든 프리미엄 기능을 이용할 수 있어요";
 "settings.activation.grandfathered" = "함께한 시간";
@@ -309,11 +309,11 @@
 "settings.scrollReverse.permissionMessage" = "스크롤 방향 및 가속 제어에는 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용해 주세요.";
 "settings.windowControls" = "윈도우 제어";
 "settings.windowManagement" = "윈도우 관리";
-"settings.windowManagement.description" = "윈도우 분할 단축키, 제목 막대 스와이프 분할, 메뉴 막대 아이콘을 활성화합니다.";
+"settings.windowManagement.description" = "스냅 단축키, 가장자리로 끌어 붙이기, 레이아웃 아일랜드, 메뉴 막대 윈도우 목록.";
 "settings.systemTiling" = "시스템 가장자리 타일링";
 "settings.systemTiling.edgeDrag" = "화면 가장자리로 끌어 타일링";
 "settings.systemTiling.topEdgeDrag" = "메뉴 막대로 끌어 채우기";
-"settings.systemTiling.description" = "macOS 기본 기능입니다. 윈도우를 화면 가장자리로 끌면 타일링됩니다. 제목 막대를 추측하는 것보다 확실하며, 윈도우 관리를 처음 켤 때 자동으로 켜집니다.";
+"settings.systemTiling.description" = "macOS 기본 기능. 반쪽과 사분면만 지원하고 여백이나 레이아웃이 없습니다. 윈도우 관리를 처음 켤 때 한 번 꺼집니다.";
 "settings.finderMenu" = "우클릭 메뉴";
 "settings.finderMenu.description" = "Finder에서 파일을 만들고 정리하고 여세요. 홈 폴더, 외장 드라이브, 추가한 자주 쓰는 폴더에서 사용할 수 있습니다.";
 "settings.finderMenu.openSettings" = "시스템 설정에서 활성화…";
@@ -414,3 +414,135 @@
 "settings.displayControl.hint" = "KVM/독은 DDC를 막는 경우가 많아 밝기를 조절할 수 없습니다.";
 "display.role.builtIn" = "내장";
 "display.role.external" = "외장";
+
+// MARK: - Window management
+
+"window.action.minimize" = "최소화";
+"window.layout.halves" = "좌우 분할";
+"window.layout.thirds" = "3등분";
+"window.layout.twoThirds" = "2/3";
+"window.layout.quadrants" = "4분할";
+"window.layout.sixths" = "6분할";
+"window.layout.ninths" = "9분할";
+"window.layout.rightStack" = "오른쪽 스택";
+"window.layout.leftStack" = "왼쪽 스택";
+"window.segment.left" = "왼쪽";
+"window.segment.right" = "오른쪽";
+"window.segment.firstThird" = "앞 1/3";
+"window.segment.middleThird" = "가운데 1/3";
+"window.segment.lastThird" = "뒤 1/3";
+"window.segment.twoThirds" = "2/3";
+"window.segment.oneThird" = "1/3";
+"window.segment.topLeft" = "왼쪽 위";
+"window.segment.topRight" = "오른쪽 위";
+"window.segment.bottomLeft" = "왼쪽 아래";
+"window.segment.bottomRight" = "오른쪽 아래";
+"window.segment.cell" = "칸";
+"window.list.untitled" = "제목 없음";
+"window.menu.windows" = "윈도우";
+"window.menu.noApp" = "대상 앱 없음";
+"window.menu.noWindows" = "윈도우 없음";
+"window.menu.minimizedTitle" = "%@ (최소화됨)";
+"window.menu.bringToFront" = "맨 앞으로";
+"window.menu.deminimize" = "복원";
+"window.menu.minimize" = "최소화";
+"window.menu.close" = "닫기";
+"window.menu.layouts" = "레이아웃";
+"window.menu.openSettings" = "윈도우 관리…";
+"settings.shortcut.none" = "설정 안 됨";
+"settings.shortcut.clear" = "단축키 지우기";
+"settings.snap.behaviour" = "드래그";
+"settings.snap.edgeSnap" = "화면 가장자리로 드래그";
+"settings.snap.edgeSnap.hint" = "창을 화면 가장자리로 끌면 그쪽에 붙습니다.";
+"settings.snap.cornerSnap" = "화면 모서리로 드래그";
+"settings.snap.topEdge" = "화면 위쪽";
+"settings.snap.topEdge.hint" = "창을 화면 위쪽으로 끌었을 때의 동작입니다.";
+"settings.snap.topEdge.island" = "아일랜드";
+"settings.snap.topEdge.maximize" = "최대화";
+"settings.snap.topEdge.off" = "끔";
+"settings.snap.preview" = "배치 미리보기 표시";
+"settings.snap.nativeTiling" = "macOS가 배치하도록";
+"settings.snap.nativeTiling.hint" = "시스템 명령이 있으면 macOS 타일링을 씁니다. 더 부드럽지만 반쪽·사분면만 되고 확인이 느립니다.";
+"settings.snap.gapInner" = "창 사이 간격";
+"settings.snap.gapOuter" = "화면 가장자리 여백";
+"settings.snap.island" = "레이아웃 아일랜드";
+"settings.snap.island.palette" = "타일 색상";
+"settings.snap.island.paletteHint" = "강조 색만 바뀝니다. 패널은 어두운 상태로 유지되어 어떤 창 위에서도 잘 보입니다.";
+"settings.snap.island.palette.neutral" = "회색";
+"settings.snap.island.palette.accent" = "강조";
+"settings.snap.island.palette.vivid" = "흰색";
+"settings.snap.conflict" = "macOS 타일링도 같은 동작을 씁니다. 둘 다 켜면 어느 쪽이 이기는지는 끝나는 순서에 달렸습니다.";
+"settings.snap.conflict.resolve" = "시스템 타일링 끄기";
+"settings.snap.shortcuts.hint" = "단축키를 클릭해 기록합니다. 수정 키가 하나 이상 필요하며 Esc로 취소합니다.";
+"settings.snap.layouts.create" = "레이아웃 만들기";
+"settings.snap.layouts.createHint" = "그리드에서 끌어 영역을 그린 뒤 이름을 붙이면 아래 목록에 추가되어 아일랜드와 단축키에서 쓸 수 있습니다.";
+"settings.snap.layouts.title" = "레이아웃";
+"settings.snap.layouts.segments" = "%ld개 영역";
+"settings.snap.layouts.delete" = "레이아웃 삭제";
+"settings.snap.layouts.createAction" = "만들기";
+"settings.snap.placements.title" = "저장한 위치";
+"settings.snap.placements.shorten" = "단축키 추가";
+"settings.snap.placements.delete" = "위치 삭제";
+"settings.snap.newLayoutName" = "이름";
+"settings.snap.grid.hint" = "끌어서 선택";
+"settings.snap.grid.clear" = "지우기";
+"settings.snap.editor.title" = "레이아웃 편집";
+"settings.snap.editor.add" = "영역 추가";
+"settings.snap.editor.undo" = "실행 취소";
+"settings.snap.editor.remove" = "영역 삭제";
+"settings.snap.editor.resize" = "영역 크기 조절";
+"settings.snap.editor.savePosition" = "위치 저장";
+"settings.snap.editor.save" = "저장";
+"settings.snap.editor.cancel" = "편집 취소";
+"settings.snap.editor.edit" = "레이아웃 편집";
+"settings.snap.editor.pin" = "아일랜드에 표시";
+"settings.snap.editor.moveUp" = "위로 이동";
+"settings.snap.editor.resetOrder" = "기본 순서로 복원";
+"settings.snap.editor.demoWindow" = "윈도우 드래그";
+"settings.snap.editor.resetDemo" = "미리보기 초기화";
+"settings.snap.shortcuts.title" = "키보드 단축키";
+"window.action.closeWindow" = "윈도우 닫기";
+"window.action.quitApplication" = "앱 종료";
+"settings.snap.defaultLayoutName" = "레이아웃 %ld";
+"settings.snap.exclusions.restricted" = "내장 제외 목록 사용";
+"settings.snap.exclusions.restrictedHint" = "재생 앱, 게임, 원격 데스크톱, Wine 창은 움직이지 않습니다.";
+"settings.snap.exclusions.hint" = "제외한 앱도 단축키는 쓸 수 있지만 창은 움직이지 않습니다.";
+"settings.snap.exclusions.title" = "제외할 앱";
+"settings.snap.exclusions.addRecommended" = "권장 목록 추가";
+"settings.snap.exclusions.empty" = "제외한 앱이 없습니다.";
+
+// MARK: - Window management (extended)
+
+"settings.snap.conflict.otherApp" = "다른 윈도우 관리 앱이 실행 중입니다(%@). 같은 드래그를 둘 다 감시하면 결과가 충돌합니다.";
+
+// MARK: - Window management (permission)
+
+"settings.snap.permission.title" = "손쉬운 사용 권한 필요";
+"settings.snap.permission.message" = "다른 앱의 창을 움직이려면 손쉬운 사용 권한이 필요합니다. 허용하면 단축키, 드래그 스냅, 아일랜드가 작동합니다.";
+
+// MARK: - Window management (visibility)
+
+"window.visibility.hideOthers" = "다른 앱 가리기";
+"window.visibility.hideAll" = "모두 가리기";
+"window.visibility.restore" = "가린 앱 복원";
+"settings.snap.shakeToHide" = "흔들어 다른 앱 가리기";
+"settings.snap.shakeToHide.hint" = "창을 끄는 중에 좌우로 흔들면 다른 모든 앱을 가립니다.";
+
+// MARK: - Window previews
+
+"settings.snap.previews" = "윈도우 미리보기";
+"settings.snap.thumbnails" = "윈도우 썸네일";
+"settings.snap.thumbnails.hint" = "각 윈도우의 화면을 표시합니다. 화면 기록 권한이 필요하며, 없으면 제목과 아이콘만 표시합니다.";
+"settings.snap.dockPreview" = "Dock 호버 미리보기";
+"settings.snap.dockPreview.hint" = "Dock 아이콘에 포인터를 올리면 그 앱의 윈도우를 보여줍니다.";
+"settings.snap.commandTab" = "Cmd-Tab Plus";
+"settings.snap.commandTab.hint" = "시스템 앱 전환기를 윈도우 단위 전환기로 바꿉니다.";
+"settings.snap.commandTab.warning" = "켜져 있는 동안 ⌘Tab은 Light Stats가 처리하며 시스템 전환기는 나타나지 않습니다. 끄면 즉시 원래대로 돌아갑니다.";
+"settings.snap.screenRecording.needed" = "화면 기록 권한 필요";
+"settings.snap.screenRecording.denied" = "Light Stats 자체 썸네일에만 사용합니다. 녹화하거나 전송하지 않습니다.";
+"settings.snap.screenRecording.requiresRestart" = "시스템 설정에서는 켜져 있지만 이 프로세스에는 아직 반영되지 않았습니다. Light Stats를 재시작하면 캡처를 시작합니다.";
+"settings.snap.screenRecording.relaunch" = "지금 재시작";
+"settings.permission.relaunchFailed" = "자동으로 재시작하지 못했습니다. Light Stats를 종료한 뒤 다시 열어 주세요.";
+"window.preview.minimized" = "최소화됨";
+"window.preview.count" = "윈도우 %ld개";
+"window.preview.more" = "더 보기";

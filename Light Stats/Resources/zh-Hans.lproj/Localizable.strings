@@ -309,11 +309,11 @@
 "settings.scrollReverse.permissionMessage" = "滚动方向与加速度控制需要辅助功能权限来拦截滚动事件。请前往系统设置开启后使用。";
 "settings.windowControls" = "窗口控制";
 "settings.windowManagement" = "窗口管理";
-"settings.windowManagement.description" = "启用窗口贴靠快捷键、标题栏滑动贴靠与菜单栏图标。";
+"settings.windowManagement.description" = "吸附快捷键、拖到边缘吸附、悬浮布局岛，以及菜单栏窗口列表。";
 "settings.systemTiling" = "系统边缘平铺";
 "settings.systemTiling.edgeDrag" = "拖到屏幕边缘平铺";
 "settings.systemTiling.topEdgeDrag" = "拖到菜单栏填充";
-"settings.systemTiling.description" = "macOS 自带能力：把窗口拖到屏幕边缘即可平铺。比自己识别标题栏更可靠，首次开启窗口管理时会自动打开。";
+"settings.systemTiling.description" = "macOS 自带。只覆盖对半与四角，没有间距和自定义布局；窗口管理首次开启时会被关闭一次。";
 "settings.finderMenu" = "右键菜单";
 "settings.finderMenu.description" = "在访达中快速新建、整理和打开文件。支持用户主目录、外接磁盘及添加的常用目录。";
 "settings.finderMenu.openSettings" = "在系统设置中启用…";
@@ -414,3 +414,135 @@
 "settings.displayControl.hint" = "KVM / 扩展坞常拦截 DDC，无法调硬件亮度。";
 "display.role.builtIn" = "内建屏";
 "display.role.external" = "外接屏";
+
+// MARK: - Window management
+
+"window.action.minimize" = "最小化";
+"window.layout.halves" = "左右两半";
+"window.layout.thirds" = "三等分";
+"window.layout.twoThirds" = "三分之二";
+"window.layout.quadrants" = "四宫格";
+"window.layout.sixths" = "六宫格";
+"window.layout.ninths" = "九宫格";
+"window.layout.rightStack" = "右侧堆叠";
+"window.layout.leftStack" = "左侧堆叠";
+"window.segment.left" = "左";
+"window.segment.right" = "右";
+"window.segment.firstThird" = "前 1/3";
+"window.segment.middleThird" = "中 1/3";
+"window.segment.lastThird" = "后 1/3";
+"window.segment.twoThirds" = "三分之二";
+"window.segment.oneThird" = "三分之一";
+"window.segment.topLeft" = "左上";
+"window.segment.topRight" = "右上";
+"window.segment.bottomLeft" = "左下";
+"window.segment.bottomRight" = "右下";
+"window.segment.cell" = "格子";
+"window.list.untitled" = "无标题";
+"window.menu.windows" = "窗口";
+"window.menu.noApp" = "没有目标 App";
+"window.menu.noWindows" = "没有窗口";
+"window.menu.minimizedTitle" = "%@（已最小化）";
+"window.menu.bringToFront" = "移到最前";
+"window.menu.deminimize" = "还原";
+"window.menu.minimize" = "最小化";
+"window.menu.close" = "关闭";
+"window.menu.layouts" = "布局";
+"window.menu.openSettings" = "窗口管理…";
+"settings.shortcut.none" = "未设置";
+"settings.shortcut.clear" = "清除快捷键";
+"settings.snap.behaviour" = "拖动";
+"settings.snap.edgeSnap" = "拖到屏幕边缘";
+"settings.snap.edgeSnap.hint" = "把窗口拖到屏幕边缘即可吸附到该侧。";
+"settings.snap.cornerSnap" = "拖到屏幕角落";
+"settings.snap.topEdge" = "屏幕顶部";
+"settings.snap.topEdge.hint" = "把窗口拖到屏幕顶部时执行的操作。";
+"settings.snap.topEdge.island" = "悬浮岛";
+"settings.snap.topEdge.maximize" = "最大化";
+"settings.snap.topEdge.off" = "关闭";
+"settings.snap.preview" = "显示落位预览";
+"settings.snap.nativeTiling" = "交由 macOS 摆放";
+"settings.snap.nativeTiling.hint" = "有系统命令时交给 macOS 自己的分屏。动画更顺，但只覆盖对半与四角，且确认更慢。";
+"settings.snap.gapInner" = "窗口间距";
+"settings.snap.gapOuter" = "屏幕边缘留白";
+"settings.snap.island" = "悬浮布局岛";
+"settings.snap.island.palette" = "卡片配色";
+"settings.snap.island.paletteHint" = "只改变高亮色，面板保持深色，以便压在任何窗口之上。";
+"settings.snap.island.palette.neutral" = "灰";
+"settings.snap.island.palette.accent" = "强调色";
+"settings.snap.island.palette.vivid" = "白";
+"settings.snap.conflict" = "macOS 自带分屏使用同一个手势。两者同时开启时，结果取决于谁最后完成。";
+"settings.snap.conflict.resolve" = "关闭系统分屏";
+"settings.snap.shortcuts.hint" = "点按快捷键即可录制，必须包含至少一个修饰键；Esc 取消。";
+"settings.snap.layouts.create" = "创建布局";
+"settings.snap.layouts.createHint" = "在网格上拖出区域并命名，就会加入下面的列表，供悬浮岛和快捷键使用。";
+"settings.snap.layouts.title" = "布局";
+"settings.snap.layouts.segments" = "%ld 个区域";
+"settings.snap.layouts.delete" = "删除布局";
+"settings.snap.layouts.createAction" = "创建";
+"settings.snap.placements.title" = "已保存位置";
+"settings.snap.placements.shorten" = "添加快捷键";
+"settings.snap.placements.delete" = "删除位置";
+"settings.snap.newLayoutName" = "名称";
+"settings.snap.grid.hint" = "拖拽以选择";
+"settings.snap.grid.clear" = "清除";
+"settings.snap.editor.title" = "布局编辑";
+"settings.snap.editor.add" = "添加区域";
+"settings.snap.editor.undo" = "撤销";
+"settings.snap.editor.remove" = "删除区域";
+"settings.snap.editor.resize" = "调整区域大小";
+"settings.snap.editor.savePosition" = "保存位置";
+"settings.snap.editor.save" = "保存";
+"settings.snap.editor.cancel" = "取消编辑";
+"settings.snap.editor.edit" = "编辑布局";
+"settings.snap.editor.pin" = "显示在悬浮岛";
+"settings.snap.editor.moveUp" = "上移";
+"settings.snap.editor.resetOrder" = "恢复默认排列";
+"settings.snap.editor.demoWindow" = "拖动窗口";
+"settings.snap.editor.resetDemo" = "重置预览";
+"settings.snap.shortcuts.title" = "快捷键";
+"window.action.closeWindow" = "关闭窗口";
+"window.action.quitApplication" = "退出应用";
+"settings.snap.defaultLayoutName" = "布局 %ld";
+"settings.snap.exclusions.restricted" = "遵循内置风险清单";
+"settings.snap.exclusions.restrictedHint" = "不移动播放器、游戏、远程桌面和 Wine 应用的窗口。";
+"settings.snap.exclusions.hint" = "被排除的 App 仍可使用快捷键，但其窗口不会被移动。";
+"settings.snap.exclusions.title" = "排除的 App";
+"settings.snap.exclusions.addRecommended" = "添加推荐清单";
+"settings.snap.exclusions.empty" = "尚未排除任何 App。";
+
+// MARK: - Window management (extended)
+
+"settings.snap.conflict.otherApp" = "检测到另一个窗口管理工具正在运行（%@）。两个工具同时监听同一个拖拽手势会互相抢夺结果。";
+
+// MARK: - Window management (permission)
+
+"settings.snap.permission.title" = "需要辅助功能权限";
+"settings.snap.permission.message" = "移动其他 App 的窗口需要辅助功能权限。授权后快捷键、拖拽吸附和悬浮岛都会开始生效。";
+
+// MARK: - Window management (visibility)
+
+"window.visibility.hideOthers" = "隐藏其他 App";
+"window.visibility.hideAll" = "隐藏全部";
+"window.visibility.restore" = "恢复隐藏";
+"settings.snap.shakeToHide" = "摇动窗口隐藏其他";
+"settings.snap.shakeToHide.hint" = "拖动窗口时左右摇动，即可隐藏其他所有 App。";
+
+// MARK: - Window previews
+
+"settings.snap.previews" = "窗口预览";
+"settings.snap.thumbnails" = "窗口缩略图";
+"settings.snap.thumbnails.hint" = "显示每个窗口的画面。需要屏幕录制权限；未授权时预览显示标题和图标。";
+"settings.snap.dockPreview" = "Dock 悬停预览";
+"settings.snap.dockPreview.hint" = "鼠标停在 Dock 图标上，显示该 App 的窗口。";
+"settings.snap.commandTab" = "Cmd-Tab Plus";
+"settings.snap.commandTab.hint" = "用窗口级切换器替换系统切换器。";
+"settings.snap.commandTab.warning" = "开启期间 ⌘Tab 由 Light Stats 接管，系统切换器不再出现。关闭后立即恢复系统行为。";
+"settings.snap.screenRecording.needed" = "需要屏幕录制权限";
+"settings.snap.screenRecording.denied" = "只有 Light Stats 自己的缩略图会用到它，不会录制或上传任何内容。";
+"settings.snap.screenRecording.requiresRestart" = "系统设置里已打开，但当前进程还没生效。重启 Light Stats 后即可开始截取。";
+"settings.snap.screenRecording.relaunch" = "立即重启";
+"settings.permission.relaunchFailed" = "无法自动重启，请手动退出并重新打开 Light Stats。";
+"window.preview.minimized" = "已最小化";
+"window.preview.count" = "%ld 个窗口";
+"window.preview.more" = "更多";
