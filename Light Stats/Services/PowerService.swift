@@ -2,7 +2,7 @@
 //  PowerService.swift
 //  Light Stats
 //
-//  电池/功耗采集：原生 IOKit，零外发。
+//  电池/功耗采集：原生 IOKit。
 //  - 电量/状态/剩余时间：IOPowerSources（IOPSCopyPowerSourcesInfo），每周期读，便宜。
 //  - 循环/健康/功耗/温度：AppleSmartBattery（IORegistry），慢变量，缓存 30s。
 //

@@ -3,7 +3,7 @@
 //  Light Stats
 //
 //  磁盘 IO 读/写速率：遍历 IOBlockStorageDriver 的 Statistics 字典取累计读写字节，
-//  差值法算速率（参考 NetworkInfo 的 previousBytes 模式）。原生 IOKit，零外发。
+//  差值法算速率（参考 NetworkInfo 的 previousBytes 模式）。原生 IOKit。
 //
 
 import Foundation

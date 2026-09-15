@@ -2,7 +2,7 @@
 //  HealthScoreServiceTests.swift
 //  Light Stats Tests
 //
-//  Regression net for the pure, zero-dependency health-score computation.
+//  Regression net for the pure health-score computation.
 //  Asserts the documented piecewise-linear knees, weight renormalization,
 //  the bottleneck cap, EMA smoothing, and grade boundaries — against the
 //  CODE's real thresholds (which the CLAUDE.md table summarizes loosely).

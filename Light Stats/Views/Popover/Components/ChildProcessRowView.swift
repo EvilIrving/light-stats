@@ -12,7 +12,7 @@ struct ChildProcessRowView: View {
     @Environment(\.theme) private var theme
 
     let command: String
-    let memoryBytes: UInt64
+    let memoryBytes: UInt64?
     let indentation: CGFloat
     /// Instrument readout: tighter type, fainter ink.
     var compact: Bool = false
@@ -47,7 +47,8 @@ struct ChildProcessRowView: View {
     }
 
     private var memoryFormatted: String {
-        ByteFormatter.format(memoryBytes)
+        guard let memoryBytes else { return "—" }
+        return ByteFormatter.format(memoryBytes)
     }
 }
 
