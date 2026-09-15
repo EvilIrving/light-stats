@@ -2,7 +2,7 @@
 //  UpdateService.swift
 //  Light Stats
 //
-//  零依赖自研更新器的执行层（actor 隔离）：检查 GitHub 最新发布、下载 DMG、
+//  自研更新器的执行层（actor 隔离）：检查 GitHub 最新发布、下载 DMG、
 //  三重安全校验（codesign 验签 + spctl 验公证 + 校验 Team ID），再把新 .app
 //  暂存并写一个脱离进程的替换脚本——主进程退出后由脚本完成替换并重启。
 //

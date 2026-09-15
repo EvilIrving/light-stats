@@ -2,7 +2,7 @@
 //  ProxyDetector.swift
 //  Light Stats
 //
-//  本地代理探测：环境变量 / 系统代理 / 活跃隧道。零外发，纯本地原生 API。
+//  本地代理探测：环境变量 / 系统代理 / 活跃隧道。纯本地原生 API。
 //
 
 import Foundation

@@ -7,7 +7,7 @@
 //  绕开扩展沙盒的文件写入限制。
 //
 //  总开关关闭时 stop()：端口注销，扩展即便发请求也连不上；且扩展自身也会因
-//  FinderMenuShared.isEnabled() == false 而不出菜单。两道门都默认关，符合零侵扰契约。
+//  FinderMenuShared.isEnabled() == false 而不出菜单。两道门都默认关。
 //
 
 import AppKit
