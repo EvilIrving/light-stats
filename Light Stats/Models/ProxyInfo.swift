@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// 本地代理配置：系统/环境变量/活跃隧道是否配了代理（零外发探测的结果）。
+/// 本地代理配置：系统/环境变量/活跃隧道是否配了代理（本地探测的结果）。
 /// 纯数据模型标 `nonisolated`，computed/static 成员可在非主线程的采集 actor 上访问。
 nonisolated struct ProxyConfig: Sendable, Equatable {
     enum Kind: Sendable {

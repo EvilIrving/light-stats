@@ -10,15 +10,18 @@ import AppKit
 
 // MARK: - Top Process Info
 
-/// Process info parsed from top command output
-struct TopProcessInfo {
+/// One identity-checked native process sample. Unavailable footprint is not RSS or zero.
+nonisolated struct TopProcessInfo: Sendable {
     let pid: pid_t
     let parentPid: pid_t
     let command: String
-    let memoryBytes: UInt64
+    let memoryBytes: UInt64?
+    let identity: ProcessIdentity
+    let bundleInfo: ProcessBundleInfo
+    let responsiblePid: pid_t
 }
 
-enum ProcessAttributionSource {
+nonisolated enum ProcessAttributionSource: Sendable {
     case owningApp
     case responsibility
     case bundle
@@ -37,7 +40,7 @@ enum ProcessAttributionSource {
 // MARK: - Process Bundle Info
 
 /// Bundle information extracted from process path
-struct ProcessBundleInfo {
+nonisolated struct ProcessBundleInfo: Sendable {
     let execPath: String?       // 可执行文件完整路径
     let bundlePath: String?     // .app bundle 路径
     let bundleId: String?       // Bundle Identifier
@@ -92,6 +95,8 @@ struct AppGroup: Identifiable {
     let bundleIdentifier: String?
     let bundlePath: String?       // .app bundle 路径
     let execPath: String?         // 可执行文件路径
+    var processIdentities: [pid_t: ProcessIdentity] = [:]
+    var unavailableMemoryCount: Int = 0
 
     /// Display name: shows process count if multiple processes
     var displayName: String {
@@ -99,7 +104,9 @@ struct AppGroup: Identifiable {
     }
 
     var memoryFormatted: String {
-        ByteFormatter.format(totalMemoryBytes)
+        guard unavailableMemoryCount < processCount else { return "—" }
+        let prefix = unavailableMemoryCount > 0 ? "≥ " : ""
+        return prefix + ByteFormatter.format(totalMemoryBytes)
     }
 
     /// 是否为 Apple 应用
