@@ -26,8 +26,8 @@
 1. **Pressure score instead of raw capacity alerts:** The 0-100 health score focuses on responsiveness pressure using CPU, memory pressure and swap, load, temperature, GPU, and power or disk I/O.
 2. **Network truth beyond throughput:** Detects local proxy configuration and tunnel interfaces without external requests, with optional exit-node lookup for public IP, ASN, ISP, and location.
 3. **Developer context in one instrument:** Displays AI subscription usage for 15 providers (quota windows collapse to the tightest one, balances stay bar-free), and adds an opt-in Finder menu for terminal, type-aware and user file templates, copy, move, and open-with workflows.
-4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, zero third-party runtime dependencies (including template-tinted SVG icons in-bundle).
-5. **Privacy-forward defaults:** No remote telemetry. Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel are all disabled by default, so a clean install makes no outbound request. The diagnostic journal stays local with redaction and is never uploaded; a 48-hour performance recording is a separate opt-in.
+4. **Native macOS implementation:** SwiftUI and AppKit, menu bar agent and FinderSync extension, with template-tinted SVG icons in-bundle.
+5. **Local-first defaults:** Exit-node lookup, AI usage requests, Claude/Codex window warmup, automatic update checks, and the Beta update channel stay off until you enable them. The diagnostic journal is written locally with redaction; a 48-hour performance recording is a separate opt-in.
 6. **Opt-in Mac utilities:** Window placement, default input source, display brightness, Find My Mouse and its presentation pointer, mouse and trackpad scroll controls, display keep-awake, cleaning mode, and Finder actions remain dormant until the user enables them.
 7. **Selectable instrument chrome:** Four themes (Classic, Golden Hour, Amber, Ink Night) on product surfaces; the three dynamic themes provide grain and light-dynamics controls; Settings remains a white tool panel.
 

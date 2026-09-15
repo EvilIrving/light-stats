@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Light Stats | Native macOS Pressure and Workflow Monitor</title>
-  <meta name="description" content="Free, open-source macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
+  <meta name="description" content="Free, open-source macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. Native Swift and AppKit.">
   <link rel="canonical" href="https://evilirving.github.io/light-stats/">
   <meta name="theme-color" content="#007AFF">
   <meta name="keywords" content="macOS menu bar, system monitor, mac cpu monitor, memory pressure, gpu usage, health score, AI CLI usage, Finder menu, open source, swiftui, apple silicon">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Light Stats">
   <meta property="og:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
-  <meta property="og:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows in the menu bar. Native, no telemetry, zero outbound requests by default.">
+  <meta property="og:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows in the menu bar. Native Swift and AppKit.">
   <meta property="og:url" content="https://evilirving.github.io/light-stats/">
   <meta property="og:image" content="https://evilirving.github.io/light-stats/social-preview.png">
   <meta property="og:image:width" content="1200">
@@ -25,7 +25,7 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Light Stats | Native macOS Pressure and Workflow Monitor">
-  <meta name="twitter:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows. Native, no telemetry, zero outbound requests by default.">
+  <meta name="twitter:description" content="Live system pressure, AI CLI usage, network context, and optional Finder workflows. Native Swift and AppKit.">
   <meta name="twitter:image" content="https://evilirving.github.io/light-stats/social-preview.png">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23007AFF'/%3E%3Cstop offset='100%25' stop-color='%235AC8FA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='115' fill='url(%23g)'/%3E%3Crect x='140' y='226' width='60' height='120' rx='10' fill='white' opacity='.9'/%3E%3Crect x='226' y='166' width='60' height='180' rx='10' fill='white' opacity='.9'/%3E%3Crect x='312' y='196' width='60' height='150' rx='10' fill='white' opacity='.9'/%3E%3C/svg%3E">
@@ -242,7 +242,7 @@
         "name": "Light Stats",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "macOS 14.0 or later, Apple Silicon",
-        "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows. No telemetry and zero outbound requests by default.",
+        "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://download.onecat.dev/stable",
         "softwareVersion": "1.9.1",
@@ -349,7 +349,7 @@
             <div>
               <div class="eyebrow reveal">Free · Open source · macOS 14+ · Apple Silicon</div>
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
-              <p class="lede reveal d2">Live pressure signals folded into one health score, with optional AI, network, and Finder context. No telemetry and no outbound requests unless you use or enable a network feature.</p>
+              <p class="lede reveal d2">Live pressure signals folded into one health score, with optional AI, network, and Finder context.</p>
               <div class="actions reveal d3">
                 <div class="seg">
                   <a href="https://download.onecat.dev/stable">
@@ -384,7 +384,7 @@
                 <figcaption>Overview · Ink Night</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/ink-night/popover-cleanup.png" width="385" height="816" alt="Light Stats Memory tab in the Ink Night theme, showing a privacy-safe sample app list sorted by memory footprint.">
+                <img src="screenshots/ink-night/popover-cleanup.png" width="385" height="816" alt="Light Stats Memory tab in the Ink Night theme, showing a sample app list sorted by memory footprint.">
                 <figcaption>Memory · Ink Night</figcaption>
               </figure>
             </div>
@@ -522,7 +522,7 @@
               <div class="idx">06 / Defaults</div>
               <div>
                 <h3>Nothing extra runs until you ask</h3>
-                <p>Monitoring stays read-only. AI requests, exit-node lookup, automatic update checks, the Beta update channel, Finder actions, Find My Mouse, window and scroll event taps, default input source, display brightness, and display keep-awake are all opt-in. A clean install makes no outbound request and asks for no Accessibility permission.</p>
+                <p>Monitoring stays read-only. AI requests, exit-node lookup, update checks, the Beta update channel, Finder actions, Find My Mouse, window and scroll event taps, default input source, display brightness, and display keep-awake are all opt-in.</p>
               </div>
             </div>
 
@@ -859,12 +859,7 @@
 
         <!-- ══════════ PRIVACY ══════════ -->
         <section data-panel="privacy" class="prose col" hidden>
-          <p>Light Stats is local by default. It has no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. Optional features contact only the service needed to perform the action described below.</p>
-
-          <div class="callout">
-            <div class="k">Zero outbound by default</div>
-            <p>Exit-node lookup, AI usage requests, Claude/Codex usage-window warmup, automatic update checks, and the Beta update channel are all <strong>off by default</strong>. A clean install reads local system metrics only and makes no network request.</p>
-          </div>
+          <p>Light Stats reads system data locally and shows it on your device. Optional features contact only the service needed to perform the action described below.</p>
 
           <h2>Data collection</h2>
           <p>Light Stats does not collect or send data to the developer. System metrics are read locally and shown on your device. The app reads, for display or user-requested actions:</p>
@@ -899,7 +894,7 @@
           <p>A separate, off-by-default 48-hour session records this app's CPU, memory, wakeup, and disk plus companion system load. It uses its own schema and directory, is never mixed into the diagnostic journal, and is not included in the exported report.</p>
 
           <h2>Third parties</h2>
-          <p>No analytics, crash reporting, advertising, or third-party SDKs. Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, Cloudflare R2, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
+          <p>Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, Cloudflare R2, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
 
           <h2>Open source</h2>
           <p>The full source is on <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">GitHub</a>. You can inspect exactly what the app does, including every network call.</p>

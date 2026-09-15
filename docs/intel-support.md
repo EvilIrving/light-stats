@@ -217,7 +217,7 @@ Intel 用户被更新后会变成：**App 消失、启动不起来、没有退�
 只能靠**能启动的客户端**去拦，也就是必须**先发一个桥接版**：
 
 1. **桥接版（universal + 闸门）**：保持 universal，在 `UpdateManager.check(userInitiated:)` 开头
-   短路掉 Intel（`checkOnLaunch` 一并短路 → 不请求、零外发，符合项目「默认不外发」原则），
+   短路掉 Intel（`checkOnLaunch` 一并短路 → 不请求），
    About 页给一行说明 + 4 语言文案。这一版是 Intel 的终点站，功能照旧但不再收更新。
 2. **再下一版起 arm64-only。**
 

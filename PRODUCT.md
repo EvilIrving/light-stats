@@ -6,13 +6,13 @@ brand
 
 ## Users
 
-macOS power users and developers. They keep a terminal open, run local AI coding agents, move through Finder, and care whether their machine is fast *right now*. They want system pressure, AI limits, and network truth without leaving the menu bar, and they distrust tools that phone home without being asked.
+macOS power users and developers. They keep a terminal open, run local AI coding agents, move through Finder, and care whether their machine is fast *right now*. They want system pressure, AI limits, and network truth without leaving the menu bar.
 
 ## Product Purpose
 
 Light Stats is a native macOS menu bar instrument. It reads CPU, GPU, memory pressure, disk, disk I/O, network throughput, proxy state and exit node, battery, temperature, fan, processes, and AI-agent usage (15 providers: quota windows and prepaid balances), then folds the live pressure signals into a single 0–100 health score. A compact menu bar widget shows the essentials; a click opens a detailed panel with short-term trends and process context. Product surfaces (popover, About, toast, update, permission prompts) can wear Classic, Golden Hour, Amber, or Ink Night; Ink Night is selected on a clean install, and Settings stays a system-white tool panel.
 
-Monitoring is the core, and it stays read-only. Around it Light Stats has optional developer and system tools: AI usage, proxy exit-node lookup, Finder right-click actions and file templates, native-first window snapping, a default input source, hardware display brightness, mouse and trackpad scroll controls, display keep-awake, and a keyboard cleaning lock. Every network request and persistent system interaction ships off. A user who only wants the readout sees no extra icon, receives no Accessibility prompt, runs no event tap, and makes no outbound request. Restraint here is not "fewer features"; it is "nothing you didn't ask for runs." Apple Silicon only.
+Monitoring is the core, and it stays read-only. Around it Light Stats has optional developer and system tools: AI usage, proxy exit-node lookup, Finder right-click actions and file templates, native-first window snapping, a default input source, hardware display brightness, mouse and trackpad scroll controls, display keep-awake, and a keyboard cleaning lock. Apple Silicon only.
 
 This web page is its external presence: a landing page that shows the real instrument, a privacy policy that names every opt-in network behavior, and a support hub.
 

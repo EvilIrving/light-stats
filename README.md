@@ -33,7 +33,7 @@ Themes (Overview):
 
 Light Stats keeps the Mac's live pressure signals visible in the menu bar and opens a detailed floating panel when you need more context. It is designed for power users and developers who want quick status checks without keeping Activity Monitor open, plus optional workflow context for AI coding agents, networks, and Finder.
 
-The app uses native macOS APIs for routine sampling and has no third-party runtime dependencies. Monitoring is the read-only core; network requests and persistent system interactions are **off by default**. On a clean install you get only the menu bar readout: no extra icon, no Accessibility prompt, no event tap, no input-source observer, no privileged helper, and no outbound request.
+The app uses native macOS APIs for routine sampling. Monitoring is the read-only core; the developer and system tools are enabled from Settings.
 
 ---
 
@@ -180,16 +180,15 @@ The health score summarizes CPU, memory pressure and swap, load average, tempera
 
 ## Privacy
 
-Light Stats has no remote telemetry. Local system metrics, local proxy detection, process lists, scroll behavior, and window control stay on the Mac.
+Local system metrics, local proxy detection, process lists, scroll behavior, and window control stay on the Mac. What each optional network feature sends is listed below.
 
-- A clean install makes no outbound request. Exit-node lookup, AI usage monitoring, Claude/Codex warmup, and automatic update checks are all disabled by default. The Beta update channel is also off by default.
 - Exit-node detection contacts the selected geo-IP provider to identify the public IP, location, ASN, and ISP, then caches the result for 60 seconds.
 - AI monitoring contacts only the enabled provider's own usage endpoint using credentials already stored by that provider's CLI.
 - Optional Claude/Codex warmup sends the headless prompt described above through the selected provider's CLI.
 - Manual update checks and opt-in automatic checks contact Cloudflare R2, falling back to GitHub Releases; downloaded updates are verified before installation.
 - The diagnostic journal stays on disk under the app's support directory. Exporting a report is user-initiated; performance recordings are a separate opt-in session. Neither is sent to the Light Stats developer.
 
-There is no analytics, crash reporting, advertising, account system, or developer-operated telemetry endpoint. See the full [privacy policy](https://evilirving.github.io/light-stats/#privacy).
+See the full [privacy policy](https://evilirving.github.io/light-stats/#privacy).
 
 ---
 
@@ -274,7 +273,6 @@ xcodebuild test \
 - AppKit for menu bar integration, popovers, overlays, and custom views
 - Combine and Swift Concurrency
 - Mach API, IOKit, Accessibility, Core Graphics event taps, CFNetwork, Network, SMC, and getifaddrs
-- Zero third-party runtime dependencies
 
 ### Architecture
 

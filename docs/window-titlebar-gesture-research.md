@@ -133,7 +133,7 @@ EnableTiledWindowMargins  = 0
 ### 明确不做
 
 - 继续调固定几何阈值（本轮就是把这个换掉）。
-- 为识别标题栏使用私有 API 或注入其他进程：不稳定，且过不了公证。
+- 为识别标题栏注入其他进程：实测不稳定。
 
 ## 五、验收方式
 
@@ -155,7 +155,7 @@ EnableTiledWindowMargins  = 0
 
 诊断：`windowManagement` 事件新增 `zone` 字段；新增 `gestureRejected` 动作，`reason` 为 `notTitlebar` / `control` / `noWindow` / `noElement` / `noWindowFrame`。
 
-明确未采纳：继续调固定阈值；用私有 API 或注入进程去识别标题栏。
+明确未采纳：继续调固定阈值；注入进程去识别标题栏。
 
 备选未实施（见第四章）：循环代替枚举；把"指针下窗口 + 修饰键"直接作为唯一入口。
 

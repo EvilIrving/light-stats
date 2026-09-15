@@ -35,11 +35,10 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 - **给的是压力分,不是占用率。** 0-100 健康分综合了 CPU、内存压力与交换、负载、温度、GPU,还有电源或磁盘 I/O。内存压力正常时分数接近满分,一旦开始 swap 抖动就明显往下掉。磁盘占用百分比没有计入,那是慢慢变化的容量提醒,跟当下卡不卡没关系。
 - **代理和出口节点看得见。** 不发任何外部请求,就能从环境变量、系统代理设置和活跃隧道接口判断你现在走没走代理。想知道公网出口,可以开出口节点查询,拿到公网 IP、位置、ASN 和 ISP。
 - **AI CLI 用量也在里面。** 开启后概览面板会显示 15 家 AI 订阅用量（额度窗口与预付余额）,凭据只用来查各家自己的接口。
-- **原生写的,没有第三方依赖。** SwiftUI 加 AppKit,直接调 Mach、IOKit、SMC、Network,没有任何运行时依赖。
+- **原生写的。** SwiftUI 加 AppKit,直接调 Mach、IOKit、SMC、Network。
 - **开发工作流上下文集中在一处。** AI 用量、代理和出口节点与系统压力并列显示;可选 Finder 菜单支持终端、文件模板、复制、移动和打开方式等高频操作。
 - **多主题读数面板。** 可选「经典」「黄金时刻」「琥珀」「墨夜」;黄金时刻、琥珀与墨夜均可调颗粒与光影动态。设置窗固定白底,不跟随展示主题。
-- **默认零外联。** 没有遥测;出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认都关闭。诊断日志只写本机。
-- **监控是核心,附加工具按需启用。** Finder 菜单、清洁模式、窗口管理、默认输入法、显示器亮度、滚动方向反转和保持唤醒都默认关闭。只用监控时,菜单栏只有读数:不多一个图标、不弹辅助功能授权、不创建 event tap、不观察输入法、不发任何网络请求。
+- **监控是核心,附加工具按需启用。** Finder 菜单、清洁模式、窗口管理、默认输入法、显示器亮度、滚动方向反转和保持唤醒都在设置里按需开启。
 
 ---
 
@@ -62,7 +61,7 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
                          │ 定时采样
                          ▼
    原生 macOS API:Mach · IOKit · SMC · Network · getifaddrs
-   零第三方运行时依赖 · 默认零遥测 · LSUIElement 菜单栏 agent
+   LSUIElement 菜单栏 agent
 ```
 
 ---
@@ -235,16 +234,15 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 ## 隐私
 
-Light Stats 没有远程遥测。本地系统指标、本地代理检测、进程列表、滚动行为和窗口控制都留在本机。
+Light Stats 本地系统指标、本地代理检测、进程列表、滚动行为和窗口控制都留在本机。各网络功能具体发送什么,见下。
 
-- **干净安装零外联。** 出口节点探测、AI 用量、Claude/Codex 用量窗口保活和自动更新检查默认全部关闭;Beta 更新通道也默认关闭。
 - **出口节点探测。** 开启后向所选 geo-IP provider 查询当前公网 IP、位置、ASN 和 ISP,结果缓存 60 秒。
 - **AI 用量监控。** 开启后只请求对应 provider 自己的用量接口,使用该 provider CLI 已保存在本机的凭据,不会发送给其他 provider 或 Light Stats 开发者。
 - **用量窗口保活。** 单独开启后,会在 Claude Code 或 Codex 滚动窗口重置后通过对应 CLI 发送最小提示词 `ok`;Gemini 不参与。
 - **更新检查。** 手动检查或选择开启的自动检查会访问 Cloudflare R2,GitHub Releases 作为回退;下载后仍需通过 SHA-256(R2)、签名、公证和 Team ID 校验。
 - **诊断日志。** 故障日志始终写在本机,可由用户导出诊断报告;性能记录是另一套可选的 48 小时会话。两者都不会发送给 Light Stats 开发者。
 
-应用没有分析、崩溃上报、广告、账户系统或由开发者运营的遥测接口。完整说明见[官网隐私页](https://evilirving.github.io/light-stats/#privacy)。
+完整说明见[官网隐私页](https://evilirving.github.io/light-stats/#privacy)。
 
 ---
 
@@ -328,7 +326,7 @@ GitHub Actions 会运行 SwiftLint、本地化覆盖检查、Release 构建、�
 
 XCTest 套件位于 `LightStatsTests/`,已接入 Xcode 工程(共享 `Light Stats` scheme 下的
 `LightStatsTests` 单元测试 target),CI 与下面的命令都会运行它。覆盖重点放在易回归的纯逻辑:
-`HealthScoreService` 评分曲线、"默认关闭"设置契约,以及三家 AI 用量 JSON 解析器
+`HealthScoreService` 评分曲线、设置默认值,以及三家 AI 用量 JSON 解析器
 (fixture 位于 `LightStatsTests/Fixtures/`)。
 
 ```bash
@@ -344,7 +342,6 @@ xcodebuild test \
 - AppKit 用于菜单栏集成、弹出面板、遮罩和自定义视图
 - Combine 与 Swift Concurrency
 - Mach API、IOKit、Accessibility、Core Graphics event tap、CFNetwork、Network、SMC、getifaddrs
-- 零第三方运行时依赖
 
 ### 分层
 

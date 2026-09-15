@@ -1,0 +1,226 @@
+{
+  "main": {
+    "FloatingActiveColor": {
+      "any": {
+        "components": [
+          0.5249999761581421,
+          0.5249999761581421,
+          0.5249999761581421,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.5249999761581421,
+          0.5249999761581421,
+          0.5249999761581421,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": null
+      }
+    },
+    "FloatingBlueColor": {
+      "any": {
+        "components": [
+          0,
+          0.5333333333333333,
+          1,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": "systemBlueColor"
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0,
+          0.5686274509803921,
+          1,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": "systemBlueColor"
+      }
+    },
+    "FloatingGreyColor": {
+      "any": {
+        "components": [
+          0.5249999761581421,
+          0.5249999761581421,
+          0.5249999761581421,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.5249999761581421,
+          0.5249999761581421,
+          0.5249999761581421,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": null
+      }
+    },
+    "xMarkForgredBackground": {
+      "any": {
+        "components": [
+          0.5568627450980392,
+          0.5568627450980392,
+          0.5764705882352941,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": "systemGrayColor"
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.5569999814033508,
+          0.5569999814033508,
+          0.5759999752044678,
+          1
+        ],
+        "colorspace": "srgb",
+        "systemColor": null
+      }
+    }
+  },
+  "prefPane": {
+    "PanelControlBackground": {
+      "any": {
+        "components": [
+          0.9700000286102295,
+          0.9700000286102295,
+          0.9700000286102295,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.14399999380111694,
+          0.15399999916553497,
+          0.1940000057220459,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    },
+    "PanelControlBackgroundHover": {
+      "any": {
+        "components": [
+          0.9409999847412109,
+          0.9409999847412109,
+          0.9409999847412109,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.18700000643730164,
+          0.19599999487400055,
+          0.23399999737739563,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    },
+    "PanelControlBorder": {
+      "any": {
+        "components": [
+          0.9700000286102295,
+          0.9700000286102295,
+          0.9700000286102295,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.1850000023841858,
+          0.1940000057220459,
+          0.23199999332427979,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    },
+    "SpacerLineColor": {
+      "any": {
+        "components": [
+          0.9409999847412109,
+          0.9409999847412109,
+          0.9409999847412109,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.20000000298023224,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    },
+    "layoutWallpaperBorder": {
+      "any": {
+        "components": [
+          0.9409999847412109,
+          0.9409999847412109,
+          0.9409999847412109,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.1899999976158142,
+          0.19900000095367432,
+          0.23899999260902405,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    },
+    "testColor": {
+      "any": {
+        "components": [
+          1,
+          0.10000000149011612,
+          0.041999999433755875,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      },
+      "NSAppearanceNameDarkAqua": {
+        "components": [
+          0.14499999582767487,
+          0.1770000010728836,
+          1,
+          1
+        ],
+        "colorspace": "p3",
+        "systemColor": null
+      }
+    }
+  }
+}

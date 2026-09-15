@@ -19,7 +19,7 @@ Last updated: 2026-08-23
 - [x] Configure the main target for the private display APIs without affecting Intel builds.
 - [x] Add regression tests for packet/checksum, raw-percent conversion, capability state, gate behavior, debounce behavior, and matcher scoring.
 - [x] Run formatting/lint, localization validation, unit tests, and a debug build/launch; fix all failures.
-- [x] Review the final diff for architecture, zero-intrusion defaults, lifecycle shutdown, and documentation consistency.
+- [x] Review the final diff for architecture, lifecycle shutdown, and documentation consistency.
 
 ## Display identity refinement
 

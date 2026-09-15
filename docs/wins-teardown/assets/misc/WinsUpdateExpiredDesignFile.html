@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Wins — Software Update (Subscription Expired)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #15161a; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #15161a; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect x="180" y="160" width="840" height="480" rx="28" fill="#2b2c30" stroke="rgba(255,255,255,0.08)"></rect>
+    <rect x="180" y="160" width="840" height="56" rx="28" fill="#36373b"></rect>
+    <rect x="180" y="200" width="840" height="16" fill="#36373b"></rect>
+    <circle cx="220" cy="188" r="10" fill="#ff5f57"></circle>
+    <circle cx="252" cy="188" r="10" fill="#febc2e"></circle>
+    <circle cx="284" cy="188" r="10" fill="#28c840"></circle>
+    <rect x="220" y="260" width="80" height="80" rx="18" fill="#ffffff"></rect>
+    <text x="260" y="320" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="800" font-size="44" fill="#1e1f22">W</text>
+    <rect x="220" y="380" width="760" height="180" rx="10" fill="rgba(255,69,58,0.14)" stroke="rgba(255,69,58,0.38)"></rect>
+    <circle cx="260" cy="420" r="14" fill="#ff453a"></circle>
+    <rect x="290" y="412" width="300" height="14" rx="4" fill="#ff8a80"></rect>
+    <rect x="290" y="436" width="460" height="10" rx="4" fill="#b9babd" opacity="0.6"></rect>
+    <rect x="800" y="590" width="180" height="44" rx="8" fill="#0a74e8"></rect>
+    <text x="890" y="620" text-anchor="middle" font-family="-apple-system,sans-serif" font-weight="600" font-size="18" fill="#ffffff">Renew License</text>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    const blobUrls = {};
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        blobUrls[uuid] = URL.createObjectURL(new Blob([finalBytes], { type: entry.mime }));
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        blobUrls[uuid] = URL.createObjectURL(new Blob([], { type: entry.mime }));
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    setStatus('Rendering...');
+    for (const uuid of uuids) template = template.split(uuid).join(blobUrls[uuid]);
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).split('</' + 'script>').join('<\\/' + 'script>') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: fetch and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const r = await fetch(s.src);
+        s.textContent = await r.text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"en\"><head>\n<meta charset=\"utf-8\">\n<title>Wins — Software Update (Subscription Expired)<\u002Ftitle>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\n<style>\n  :root {\n    --bg-desktop: #1d1f24;\n    --win-bg: #2b2c30;\n    --win-bg-2: #28292d;\n    --win-border: rgba(255,255,255,0.08);\n    --title-bar: #36373b;\n    --text: #ebebeb;\n    --text-dim: #b9babd;\n    --text-subtle: #8a8b8f;\n    --notes-bg: #1f2024;\n    --notes-border: rgba(255,255,255,0.06);\n    --accent: #0a84ff;\n    --accent-hover: #1a90ff;\n    --link: #4ea1ff;\n    --warn: #ff9f0a;\n    --warn-soft: rgba(255,159,10,0.14);\n    --warn-border: rgba(255,159,10,0.35);\n    --danger: #ff453a;\n    --btn-bg: #4a4b4f;\n    --btn-bg-hover: #555659;\n    --btn-border: rgba(255,255,255,0.08);\n    --check: #0a84ff;\n    font-family: -apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"SF Pro\", \"Helvetica Neue\", \"PingFang SC\", sans-serif;\n  }\n  html, body {\n    margin: 0; padding: 0; height: 100%;\n    background:\n      radial-gradient(1200px 700px at 20% 10%, #3d3a52 0%, transparent 55%),\n      radial-gradient(1000px 800px at 85% 90%, #2a3b4d 0%, transparent 60%),\n      #15161a;\n    color: var(--text);\n    -webkit-font-smoothing: antialiased;\n    overflow: hidden;\n  }\n  .stage {\n    width: 100%; height: 100%;\n    display: flex; align-items: center; justify-content: center;\n    padding: 24px; box-sizing: border-box;\n  }\n\n  /* ───────── Window ───────── */\n  .window {\n    width: 820px;\n    border-radius: 12px;\n    background: var(--win-bg);\n    box-shadow:\n      0 0 0 0.5px rgba(255,255,255,0.08),\n      0 1px 0 rgba(255,255,255,0.05) inset,\n      0 30px 80px rgba(0,0,0,0.55),\n      0 10px 30px rgba(0,0,0,0.4);\n    overflow: hidden;\n    display: flex; flex-direction: column;\n    font-size: 13px;\n  }\n\n  .titlebar {\n    height: 38px;\n    background: linear-gradient(#3a3b3f, #313236);\n    border-bottom: 0.5px solid rgba(0,0,0,0.4);\n    display: flex; align-items: center;\n    padding: 0 12px;\n    position: relative;\n    flex-shrink: 0;\n  }\n  .traffic { display: flex; gap: 8px; }\n  .traffic .dot {\n    width: 12px; height: 12px; border-radius: 50%;\n    border: 0.5px solid rgba(0,0,0,0.25);\n  }\n  .traffic .close { background: #ff5f57; }\n  .traffic .min   { background: #febc2e; }\n  .traffic .max   { background: #28c840; }\n  .titlebar .title {\n    position: absolute; left: 0; right: 0;\n    text-align: center;\n    font-size: 13px; font-weight: 600;\n    color: #d8d9dc;\n    pointer-events: none;\n  }\n\n  /* ───────── Body ───────── */\n  .body {\n    padding: 18px 20px 14px;\n    display: grid;\n    grid-template-columns: 72px 1fr;\n    column-gap: 18px;\n    row-gap: 10px;\n  }\n  .app-icon {\n    width: 64px; height: 64px;\n    border-radius: 14px;\n    background: #ffffff;\n    display: flex; align-items: center; justify-content: center;\n    box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 0 0 0.5px rgba(0,0,0,0.05);\n    overflow: hidden;\n    position: relative;\n  }\n  .app-icon .w {\n    font-family: \"SF Pro Rounded\", -apple-system, sans-serif;\n    font-weight: 800;\n    font-size: 34px;\n    letter-spacing: -2px;\n    color: #1e1f22;\n    line-height: 1;\n  }\n  .app-icon .w sup {\n    font-size: 16px; color: #7a7c82; font-weight: 700; margin-left: 1px;\n    vertical-align: super;\n  }\n  .app-icon .dots {\n    position: absolute; top: 8px; left: 8px;\n    display: flex; gap: 3px;\n  }\n  .app-icon .dots span {\n    width: 5px; height: 5px; border-radius: 50%;\n  }\n  .app-icon .dots span:nth-child(1){background:#ff5f57;}\n  .app-icon .dots span:nth-child(2){background:#febc2e;}\n  .app-icon .dots span:nth-child(3){background:#28c840;}\n\n  .head h1 {\n    margin: 0 0 4px;\n    font-size: 13px;\n    font-weight: 700;\n    color: var(--text);\n  }\n  .head p {\n    margin: 0;\n    font-size: 12px;\n    color: var(--text-dim);\n    line-height: 1.45;\n  }\n  .head .rn {\n    margin-top: 10px;\n    font-size: 12px;\n    font-weight: 700;\n    color: var(--text);\n  }\n\n  /* ───────── Expired banner ───────── */\n  .expired {\n    grid-column: 1 / -1;\n    display: flex; align-items: flex-start; gap: 10px;\n    padding: 10px 12px;\n    background: var(--warn-soft);\n    border: 0.5px solid var(--warn-border);\n    border-radius: 8px;\n    margin-top: 2px;\n  }\n  .expired .ico {\n    width: 22px; height: 22px; flex-shrink: 0;\n    display: flex; align-items: center; justify-content: center;\n    margin-top: 1px;\n  }\n  .expired .ico svg { display: block; }\n  .expired .txt { font-size: 12px; line-height: 1.5; color: var(--text); }\n  .expired .txt b { color: #ffb84d; font-weight: 700; }\n  .expired .txt .sub { color: var(--text-dim); margin-top: 2px; display: block; }\n  .expired .txt a.inline-renew {\n    color: #ffb84d;\n    text-decoration: none;\n    font-weight: 600;\n    border-bottom: 1px solid rgba(255,184,77,0.4);\n    padding-bottom: 0.5px;\n    margin-left: 2px;\n    white-space: nowrap;\n    transition: border-color 0.15s, color 0.15s;\n  }\n  .expired .txt a.inline-renew:hover {\n    color: #ffca6b;\n    border-bottom-color: rgba(255,202,107,0.9);\n  }\n  .expired .pill {\n    margin-left: auto;\n    flex-shrink: 0;\n    align-self: center;\n    font-size: 11px; font-weight: 600;\n    color: #ffb84d;\n    padding: 3px 8px;\n    border-radius: 999px;\n    background: rgba(255,159,10,0.12);\n    border: 0.5px solid rgba(255,159,10,0.35);\n    letter-spacing: 0.2px;\n    white-space: nowrap;\n  }\n\n  /* ───────── Release notes card ───────── */\n  .notes {\n    grid-column: 1 / -1;\n    background: var(--notes-bg);\n    border: 0.5px solid var(--notes-border);\n    border-radius: 8px;\n    padding: 18px 22px 22px;\n    max-height: 320px;\n    overflow: auto;\n    position: relative;\n  }\n  .notes::-webkit-scrollbar { width: 10px; }\n  .notes::-webkit-scrollbar-thumb {\n    background: rgba(255,255,255,0.12);\n    border-radius: 10px;\n    border: 3px solid var(--notes-bg);\n  }\n  .notes h2 {\n    margin: 0 0 10px;\n    font-size: 22px;\n    font-weight: 800;\n    letter-spacing: -0.3px;\n    color: #f4f4f5;\n    display: flex; align-items: center; gap: 8px;\n  }\n  .notes h2 .em { font-size: 22px; }\n  .notes .lead {\n    margin: 0 0 14px;\n    font-size: 13px;\n    color: #d8d9dd;\n    line-height: 1.55;\n    display: flex; align-items: flex-start; gap: 8px;\n  }\n  .notes h3 {\n    margin: 14px 0 6px;\n    font-size: 14px; font-weight: 700;\n    color: #f2f2f4;\n    display: flex; align-items: center; gap: 6px;\n  }\n  .notes ul {\n    margin: 0 0 10px;\n    padding-left: 22px;\n    color: #d8d9dd;\n    font-size: 12.5px;\n    line-height: 1.6;\n  }\n  .notes ul li { margin-bottom: 4px; }\n  .notes ul li b { color: #f2f2f4; font-weight: 700; }\n  .notes ul li .tag {\n    display: inline-block;\n    font-size: 9px; font-weight: 800;\n    color: #fff; background: #e64a4a;\n    padding: 1px 4px; border-radius: 3px;\n    margin-right: 4px; vertical-align: middle;\n    letter-spacing: 0.5px;\n  }\n  .notes .foot {\n    margin-top: 10px;\n    font-size: 12.5px;\n    color: #d8d9dd;\n    line-height: 1.55;\n  }\n  .notes a { color: var(--link); text-decoration: none; }\n  .notes a:hover { text-decoration: underline; }\n  .notes .zh h2 { margin-top: 22px; }\n\n  /* lock hint lives OUTSIDE the scrollable notes card */\n  .locked-hint {\n    grid-column: 1 / -1;\n    margin: -2px 0 0;\n    padding: 2px 4px 0;\n    font-size: 11.5px;\n    color: #ffb84d;\n    display: flex; align-items: center; justify-content: center; gap: 6px;\n  }\n\n  /* ───────── Footer ───────── */\n  .footer {\n    padding: 10px 20px 16px;\n    display: flex; align-items: center;\n    border-top: 0.5px solid rgba(255,255,255,0.05);\n    background: var(--win-bg-2);\n  }\n  .check {\n    display: flex; align-items: center; gap: 8px;\n    font-size: 12px;\n    color: var(--text-subtle);\n    user-select: none;\n    cursor: not-allowed;\n  }\n  .check .box {\n    width: 14px; height: 14px; border-radius: 3px;\n    background: #4a4b4f;\n    border: 0.5px solid rgba(255,255,255,0.12);\n    display: flex; align-items: center; justify-content: center;\n    flex-shrink: 0;\n  }\n  .check.on .box { background: var(--accent); border-color: transparent; }\n  .check.on .box svg { display: block; }\n  .check .box svg { display: none; }\n\n  .spacer { flex: 1; }\n\n  .btn {\n    font: inherit;\n    font-size: 13px;\n    font-weight: 500;\n    padding: 5px 14px;\n    height: 26px;\n    border-radius: 6px;\n    border: 0.5px solid var(--btn-border);\n    background: linear-gradient(#5a5b5f, #4a4b4f);\n    color: #ebebeb;\n    cursor: pointer;\n    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 1px 1px rgba(0,0,0,0.25);\n    margin-left: 8px;\n    display: inline-flex; align-items: center; gap: 6px;\n  }\n  .btn:hover { background: linear-gradient(#656669, #545559); }\n  .btn:active { filter: brightness(0.92); }\n\n  .btn.ghost {\n    background: linear-gradient(#4a4b4f, #3e3f43);\n  }\n  .btn.primary {\n    background: linear-gradient(#1a90ff, #0a74e8);\n    border-color: rgba(0,0,0,0.25);\n    color: #fff;\n    font-weight: 600;\n    box-shadow:\n      0 1px 0 rgba(255,255,255,0.25) inset,\n      0 1px 2px rgba(0,0,0,0.35),\n      0 0 0 0.5px rgba(10,132,255,0.6);\n  }\n  .btn.primary:hover { background: linear-gradient(#2b9bff, #1080f0); }\n  .btn.primary .shine {\n    font-size: 12px;\n  }\n  .btn.disabled {\n    opacity: 0.5;\n    cursor: not-allowed;\n    background: linear-gradient(#3e3f43, #35363a);\n    color: #9a9b9e;\n  }\n  .btn.disabled:hover { filter: none; background: linear-gradient(#3e3f43, #35363a); }\n\n  .btn .lock {\n    width: 11px; height: 11px; opacity: 0.8;\n  }\n\n  /* Tweaks panel */\n  .tweaks {\n    position: fixed; right: 20px; bottom: 20px;\n    width: 260px;\n    background: rgba(40,41,45,0.92);\n    backdrop-filter: blur(24px) saturate(180%);\n    -webkit-backdrop-filter: blur(24px) saturate(180%);\n    border: 0.5px solid rgba(255,255,255,0.1);\n    border-radius: 12px;\n    padding: 14px 14px 12px;\n    color: #ebebeb;\n    font-size: 12px;\n    box-shadow: 0 12px 40px rgba(0,0,0,0.5);\n    z-index: 9999;\n    display: none;\n  }\n  .tweaks.show { display: block; }\n  .tweaks h4 {\n    margin: 0 0 10px; font-size: 12px; font-weight: 700;\n    color: #fff; letter-spacing: 0.3px;\n    text-transform: uppercase;\n    opacity: 0.7;\n  }\n  .tweaks label {\n    display: block;\n    margin-bottom: 10px;\n    color: var(--text-dim);\n  }\n  .tweaks label span.k {\n    display: block;\n    font-size: 11px;\n    margin-bottom: 4px;\n    color: #bfc0c4;\n  }\n  .tweaks input[type=\"text\"], .tweaks input[type=\"number\"], .tweaks select {\n    width: 100%; box-sizing: border-box;\n    background: #1d1e21;\n    border: 0.5px solid rgba(255,255,255,0.12);\n    color: #ebebeb;\n    padding: 5px 8px;\n    border-radius: 6px;\n    font: inherit;\n  }\n  .tweaks .row {\n    display: flex; gap: 8px;\n  }\n  .tweaks .row > label { flex: 1; margin-bottom: 10px; }\n  .tweaks .seg {\n    display: flex; gap: 4px; background: #1d1e21;\n    padding: 3px; border-radius: 8px;\n    border: 0.5px solid rgba(255,255,255,0.08);\n  }\n  .tweaks .seg button {\n    flex: 1; font: inherit; font-size: 11px;\n    background: transparent; border: 0; color: var(--text-dim);\n    padding: 5px 6px; border-radius: 5px; cursor: pointer;\n  }\n  .tweaks .seg button.on {\n    background: #3a3b3f; color: #fff;\n    box-shadow: 0 1px 2px rgba(0,0,0,0.3);\n  }\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n  <div class=\"stage\">\n    <div class=\"window\" role=\"dialog\" aria-label=\"Software Update\">\n      <div class=\"titlebar\">\n        <div class=\"traffic\">\n          <div class=\"dot close\"><\u002Fdiv>\n          <div class=\"dot min\"><\u002Fdiv>\n          <div class=\"dot max\"><\u002Fdiv>\n        <\u002Fdiv>\n        <div class=\"title\">Software Update<\u002Fdiv>\n      <\u002Fdiv>\n\n      <div class=\"body\">\n        <!-- app icon -->\n        <div class=\"app-icon\" aria-hidden=\"true\">\n          <div class=\"dots\"><span><\u002Fspan><span><\u002Fspan><span><\u002Fspan><\u002Fdiv>\n          <div class=\"w\">W<sup>s<\u002Fsup><\u002Fdiv>\n        <\u002Fdiv>\n\n        <!-- heading -->\n        <div class=\"head\">\n          <h1 data-tweak=\"heading\">A new version of Wins is available!<\u002Fh1>\n          <p data-tweak=\"subhead\">Wins 3.3 is now available—you have 3.2. However, your license has expired and cannot install this update.<\u002Fp>\n          <div class=\"rn\">Release Notes:<\u002Fdiv>\n        <\u002Fdiv>\n\n        <!-- expired banner -->\n        <div class=\"expired\">\n          <div class=\"ico\" aria-hidden=\"true\">\n            <!-- warning lock -->\n            <svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\">\n              <path d=\"M10 2.5 L18.5 17 H1.5 Z\" fill=\"rgba(255,159,10,0.2)\" stroke=\"#ff9f0a\" stroke-width=\"1.2\" stroke-linejoin=\"round\"><\u002Fpath>\n              <rect x=\"9.1\" y=\"8\" width=\"1.8\" height=\"5\" rx=\"0.9\" fill=\"#ffb84d\"><\u002Frect>\n              <circle cx=\"10\" cy=\"14.7\" r=\"0.9\" fill=\"#ffb84d\"><\u002Fcircle>\n            <\u002Fsvg>\n          <\u002Fdiv>\n          <div class=\"txt\">\n            <b>Your Wins license has expired.<\u002Fb>\n            <span class=\"sub\">Renew your subscription to install <span data-tweak=\"version\">Wins 3.3<\u002Fspan> and unlock future updates. Your current installation will keep working. <a href=\"#\" class=\"inline-renew\" id=\"inline-renew\">Renew now →<\u002Fa><\u002Fspan>\n          <\u002Fdiv>\n          <div class=\"pill\" data-tweak=\"pill\">EXPIRED · <span data-tweak=\"days\">23<\u002Fspan> days ago<\u002Fdiv>\n        <\u002Fdiv>\n\n        <!-- release notes -->\n        <div class=\"notes\">\n          <h2><span class=\"em\">🌠<\u002Fspan> Wins 3.3 — Using system window tiling APIs<\u002Fh2>\n          <p class=\"lead\"><span>☀️<\u002Fspan><span>This release focuses on improving reliability and making the overall experience smoother and more native.<\u002Fspan><\u002Fp>\n\n          <h3>✨ What's new<\u002Fh3>\n          <ul>\n            <li>🚀 On macOS 15 (Sequoia) and later, Wins now uses the system window tiling APIs for smoother animations and more native window behavior.<\u002Fli>\n            <li><span class=\"tag\">NEW<\u002Fspan>Mission Control Pro can now close windows and quit apps directly from the <b>App Exposé<\u002Fb> view.<\u002Fli>\n            <li>🧩 Improved window matching in Mission Control Pro to reduce accidental window closures.<\u002Fli>\n            <li>🐞 Fixed an issue where Dock window previews could overflow when window titles were too long.<\u002Fli>\n            <li>🌐 Reduced fake windows appearing in Dock Previews.<\u002Fli>\n            <li>⬆️ Chat apps no longer quit automatically when their last window is closed, so they can keep running in the background.<\u002Fli>\n          <\u002Ful>\n\n          <div class=\"foot\">\n            👉 See the full details: <a href=\"#\">Changelog<\u002Fa>\n          <\u002Fdiv>\n          <div class=\"foot\" style=\"margin-top:10px;\">\n            🙌 Thanks for all the feedback and support — it helps make Wins better with every release.\n          <\u002Fdiv>\n\n          <div class=\"zh\">\n            <h2><span class=\"em\">🌠<\u002Fspan> Wins 3.3 发布：引入系统级窗口管理 API<\u002Fh2>\n            <p class=\"lead\"><span>☀️<\u002Fspan><span>本次更新重点提升<b> 用户体验 <\u002Fb>与<b> 功能稳定性 <\u002Fb>，并进一步增强 Mission Control Pro 的能力。<\u002Fspan><\u002Fp>\n            <h3>✨ 主要更新内容：<\u002Fh3>\n            <ul>\n              <li>🚀 在 macOS 15 (Sequoia) 及更高版本上，Wins 使用系统级窗口平铺 API，动画更流畅、行为更原生。<\u002Fli>\n              <li>Mission Control Pro 可直接在 <b>App Exposé<\u002Fb> 视图中关闭窗口与退出应用。<\u002Fli>\n              <li>🧩 改进 Mission Control Pro 的窗口匹配，减少误关。<\u002Fli>\n            <\u002Ful>\n          <\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"locked-hint\">\n          <svg width=\"11\" height=\"11\" viewBox=\"0 0 11 11\" fill=\"none\" style=\"margin-top:-1px\">\n            <rect x=\"1.5\" y=\"5\" width=\"8\" height=\"5.2\" rx=\"1\" stroke=\"#ffb84d\" stroke-width=\"1\"><\u002Frect>\n            <path d=\"M3 5V3.5a2.5 2.5 0 015 0V5\" stroke=\"#ffb84d\" stroke-width=\"1\" fill=\"none\"><\u002Fpath>\n          <\u002Fsvg>\n          You can read the release notes, but installing requires an active subscription.\n        <\u002Fdiv>\n      <\u002Fdiv>\n\n      <!-- footer -->\n      <div class=\"footer\">\n        <button class=\"btn ghost\" id=\"btn-skip\">Skip This Version<\u002Fbutton>\n        <div class=\"spacer\"><\u002Fdiv>\n        <button class=\"btn primary\" id=\"btn-renew\">\n          <span class=\"shine\">✦<\u002Fspan>\n          <span data-tweak=\"cta\">Renew License<\u002Fspan>\n        <\u002Fbutton>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- Tweaks -->\n  <div class=\"tweaks\" id=\"tweaks\">\n    <h4>Tweaks<\u002Fh4>\n\n    <label>\n      <span class=\"k\">Expired banner style<\u002Fspan>\n      <div class=\"seg\" id=\"seg-style\">\n        <button data-v=\"amber\" class=\"on\">Amber (warn)<\u002Fbutton>\n        <button data-v=\"red\">Red (stop)<\u002Fbutton>\n      <\u002Fdiv>\n    <\u002Flabel>\n\n    <label>\n      <span class=\"k\">Days since expiry<\u002Fspan>\n      <input type=\"number\" id=\"t-days\" value=\"23\" min=\"1\" max=\"365\">\n    <\u002Flabel>\n\n    <label>\n      <span class=\"k\">Latest version tag<\u002Fspan>\n      <input type=\"text\" id=\"t-version\" value=\"Wins 3.3\">\n    <\u002Flabel>\n\n    <label>\n      <span class=\"k\">Renew CTA label<\u002Fspan>\n      <input type=\"text\" id=\"t-cta\" value=\"Renew Subscription\">\n    <\u002Flabel>\n\n    <label>\n      <span class=\"k\">Show price on CTA<\u002Fspan>\n      <div class=\"seg\" id=\"seg-price\">\n        <button data-v=\"off\" class=\"on\">Off<\u002Fbutton>\n        <button data-v=\"on\">On · $19/yr<\u002Fbutton>\n      <\u002Fdiv>\n    <\u002Flabel>\n  <\u002Fdiv>\n\n<script>\n/* ───────── Tweaks protocol ───────── */\nconst TWEAKS = /*EDITMODE-BEGIN*/{\n  \"bannerStyle\": \"red\",\n  \"days\": 23,\n  \"version\": \"Wins 3.3\",\n  \"cta\": \"Renew\",\n  \"showPrice\": false\n}/*EDITMODE-END*/;\n\nconst state = { ...TWEAKS };\n\nfunction apply() {\n  document.querySelector('[data-tweak=\"version\"]').textContent = state.version;\n  document.querySelector('[data-tweak=\"days\"]').textContent = state.days;\n\n  // CTA text (+ optional price)\n  const ctaEl = document.querySelector('[data-tweak=\"cta\"]');\n  ctaEl.textContent = state.showPrice ? `${state.cta} · $19/yr` : state.cta;\n\n  // heading/subhead refer to version\n  document.querySelector('[data-tweak=\"heading\"]').textContent =\n    `A new version of Wins is available!`;\n  document.querySelector('[data-tweak=\"subhead\"]').textContent =\n    `${state.version} is now available—you have 3.2. However, your license has expired and cannot install this update.`;\n\n  // banner color palette\n  const root = document.documentElement;\n  if (state.bannerStyle === 'red') {\n    root.style.setProperty('--warn', '#ff453a');\n    root.style.setProperty('--warn-soft', 'rgba(255,69,58,0.14)');\n    root.style.setProperty('--warn-border', 'rgba(255,69,58,0.38)');\n    document.querySelectorAll('.expired .pill')[0].style.color = '#ff7a6f';\n    document.querySelectorAll('.expired .pill')[0].style.background = 'rgba(255,69,58,0.14)';\n    document.querySelectorAll('.expired .pill')[0].style.borderColor = 'rgba(255,69,58,0.38)';\n    const t = document.querySelector('.expired .txt b');\n    if (t) t.style.color = '#ff8a80';\n    const inlineA = document.querySelector('.expired .txt a.inline-renew');\n    if (inlineA) {\n      inlineA.style.color = '#ff8a80';\n      inlineA.style.borderBottomColor = 'rgba(255,138,128,0.5)';\n    }\n    const svgs = document.querySelectorAll('.expired .ico svg *');\n    document.querySelector('.expired .ico svg path').setAttribute('fill','rgba(255,69,58,0.2)');\n    document.querySelector('.expired .ico svg path').setAttribute('stroke','#ff453a');\n    document.querySelector('.expired .ico svg rect').setAttribute('fill','#ff8a80');\n    document.querySelector('.expired .ico svg circle').setAttribute('fill','#ff8a80');\n    const hint = document.querySelector('.locked-hint');\n    hint.style.color = '#ff8a80';\n    hint.querySelectorAll('svg *').forEach(el => el.setAttribute('stroke','#ff8a80'));\n  } else {\n    root.style.setProperty('--warn', '#ff9f0a');\n    root.style.setProperty('--warn-soft', 'rgba(255,159,10,0.14)');\n    root.style.setProperty('--warn-border', 'rgba(255,159,10,0.35)');\n    const pill = document.querySelectorAll('.expired .pill')[0];\n    pill.style.color = '#ffb84d';\n    pill.style.background = 'rgba(255,159,10,0.12)';\n    pill.style.borderColor = 'rgba(255,159,10,0.35)';\n    const t = document.querySelector('.expired .txt b');\n    if (t) t.style.color = '#ffb84d';\n    const inlineA = document.querySelector('.expired .txt a.inline-renew');\n    if (inlineA) {\n      inlineA.style.color = '#ffb84d';\n      inlineA.style.borderBottomColor = 'rgba(255,184,77,0.4)';\n    }\n    document.querySelector('.expired .ico svg path').setAttribute('fill','rgba(255,159,10,0.2)');\n    document.querySelector('.expired .ico svg path').setAttribute('stroke','#ff9f0a');\n    document.querySelector('.expired .ico svg rect').setAttribute('fill','#ffb84d');\n    document.querySelector('.expired .ico svg circle').setAttribute('fill','#ffb84d');\n    const hint = document.querySelector('.locked-hint');\n    hint.style.color = '#ffb84d';\n    hint.querySelectorAll('svg *').forEach(el => el.setAttribute('stroke','#ffb84d'));\n  }\n}\napply();\n\n/* ───────── Edit-mode host wiring ───────── */\nfunction persist() {\n  try {\n    window.parent.postMessage({\n      type: '__edit_mode_set_keys',\n      edits: { ...state }\n    }, '*');\n  } catch(e){}\n}\n\nwindow.addEventListener('message', (e) => {\n  const d = e.data || {};\n  if (d.type === '__activate_edit_mode')  document.getElementById('tweaks').classList.add('show');\n  if (d.type === '__deactivate_edit_mode') document.getElementById('tweaks').classList.remove('show');\n});\nwindow.parent.postMessage({ type: '__edit_mode_available' }, '*');\n\n/* ───────── Tweaks UI ───────── */\nfunction seg(id, key) {\n  const root = document.getElementById(id);\n  root.addEventListener('click', e => {\n    const b = e.target.closest('button'); if (!b) return;\n    root.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));\n    const v = b.dataset.v;\n    state[key] = (key === 'showPrice') ? (v === 'on') : v;\n    apply(); persist();\n  });\n}\nseg('seg-style', 'bannerStyle');\nseg('seg-price', 'showPrice');\n\ndocument.getElementById('t-days').addEventListener('input', e => {\n  state.days = Number(e.target.value) || 1; apply(); persist();\n});\ndocument.getElementById('t-version').addEventListener('input', e => {\n  state.version = e.target.value || 'Wins 3.3'; apply(); persist();\n});\ndocument.getElementById('t-cta').addEventListener('input', e => {\n  state.cta = e.target.value || 'Renew Subscription'; apply(); persist();\n});\n\n/* init segmented controls from state */\nfunction initSeg(id, key, currentValueAsString) {\n  document.querySelectorAll(`#${id} button`).forEach(b => {\n    b.classList.toggle('on', b.dataset.v === currentValueAsString);\n  });\n}\ninitSeg('seg-style', 'bannerStyle', state.bannerStyle);\ninitSeg('seg-price', 'showPrice', state.showPrice ? 'on' : 'off');\ndocument.getElementById('t-days').value = state.days;\ndocument.getElementById('t-version').value = state.version;\ndocument.getElementById('t-cta').value = state.cta;\n\n/* Button interactions */\ndocument.getElementById('btn-renew').addEventListener('click', () => {\n  // flash\n  const b = document.getElementById('btn-renew');\n  b.style.transform = 'scale(0.97)';\n  setTimeout(()=> b.style.transform='', 120);\n});\ndocument.getElementById('btn-skip').addEventListener('click', () => {\n  const b = document.getElementById('btn-skip');\n  b.style.transform = 'scale(0.97)';\n  setTimeout(()=> b.style.transform='', 120);\n});\n\n<\u002Fscript>\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>

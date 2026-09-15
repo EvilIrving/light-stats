@@ -7,7 +7,7 @@ temperature, fan, processes, AI subscription usage, cleaning mode, self-update, 
 composite health score. Compact status item + detailed popover panel. Optional extras
 (Finder menu, window snap, default input source, display brightness) stay off until enabled.
 
-macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · zero third-party dependencies · `LSUIElement = YES`
+macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · `LSUIElement = YES`
 
 ## Layout
 
@@ -22,12 +22,11 @@ Light Stats/
 ├── Models/                          # Pure data structs; no logic, no imports
 │   ├── CPUInfo.swift
 │   ├── GPUInfo.swift
-│   ├── MemoryInfo.swift
 │   ├── DiskInfo.swift
 │   ├── NetworkInfo.swift
 │   ├── ProxyInfo.swift
 │   ├── BatteryInfo.swift
-│   ├── ProcessStats.swift
+│   ├── TopProcess.swift             # CPU ranking row (collector lives in Services)
 │   ├── AIProvider.swift             # Usage provider id; display names are localized keys
 │   ├── UsageWindow.swift            # 5h / weekly used-percent window
 │   ├── UsageWindowLabel.swift       # Language-neutral window label token
@@ -42,8 +41,30 @@ Light Stats/
 │   ├── InputSourceOption.swift      # Selectable input source id + display name
 │   ├── LicensePayload.swift         # Signed activation-code payload + Feature enum
 │   ├── WindowSnapAction.swift       # Snap action shared by hotkeys, gestures, menu bar
-│   ├── WindowSnapHotKey.swift       # Global shortcut: key code + modifiers → action
+│   ├── WindowSnapHotKey.swift       # Global shortcut: key code + modifiers → target
+│   ├── WindowSnapKeyCode.swift      # Carbon key codes + modifier masks as plain numbers
 │   ├── SnapGestureZone.swift        # Where a swipe must start (titlebar / pointer)
+│   ├── SnapTarget.swift             # action | normalized region — the engine's whole vocabulary
+│   ├── SnapNormalizedRect.swift     # 0–1 rect, top-left origin (y down) — one convention
+│   ├── SnapSegment.swift            # One tile of a layout
+│   ├── SnapLayout.swift             # Named arrangement of tiles (data, not classes)
+│   ├── SnapLayoutCatalog.swift      # The built-in presets
+│   ├── SnapSavedPlacement.swift     # A region the user kept from the grid selector
+│   ├── SnapGridSelection.swift      # 8×8 drag-selection state + rect math
+│   ├── SnapMargins.swift            # outer edge margin + inner gap
+│   ├── SnapZone.swift               # Edge/corner vocabulary + its tile
+│   ├── SnapZoneConfiguration.swift  # What the pointer can trigger while dragging
+│   ├── SnapIslandConfiguration.swift # Island geometry + activation band
+│   ├── SnapIslandMetrics.swift      # Island chrome constants + tile palettes
+│   ├── SnapIslandState.swift        # collapsed | open, and the motion between them
+│   ├── SnapMotion.swift             # show | expand | collapse | hide | resize
+│   ├── SnapTiming.swift             # spring / curve, plus the reduced-motion timeline
+│   ├── SnapScreenGeometry.swift     # One display in Accessibility space
+│   ├── SnapWindowCandidate.swift    # The value the eligibility rules judge
+│   ├── SnapShortcut.swift           # User-recorded shortcut → SnapTarget
+│   ├── WindowVisibilityCommand.swift # Hide others / hide all / restore (no AX needed)
+│   ├── SnapConfiguration.swift      # All window-snap preferences, one JSON value
+│   ├── WindowPreviewItem.swift      # One window, as every preview surface needs it
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
@@ -53,7 +74,11 @@ Light Stats/
 │   ├── DiagnosticLogService.swift   # Always-on structured fault journal (schema v3)
 │   ├── DiagnosticReportService.swift # User-exported support ZIP + fresh hardware probes
 │   ├── PerformanceLogService.swift  # Separate opt-in product resource recording
-│   ├── ProcessService.swift         # proc_listallpids + task_info
+│   ├── ProcessService.swift         # Native footprint sampling + identity-checked process control
+│   ├── ProcessSampler.swift         # All-PID footprint snapshot; unavailable is never RSS
+│   ├── ProcessStats.swift           # CPU ranking via system ps (setuid coverage)
+│   ├── MemoryInfo.swift             # host_statistics64 + pressure/swap collection
+│   ├── MemoryUsagePolicy.swift      # Anonymous - purgeable + wired + physical compressor
 │   ├── ExitNodeService.swift        # Geo-IP exit-node (actor)
 │   ├── DiskIOService.swift          # IOKit disk IO counters
 │   ├── HealthScoreService.swift     # Pure static compute(): 0–100 pressure score
@@ -84,15 +109,47 @@ Light Stats/
 │   ├── PresentationCursorAtlas.swift # Sprite-atlas grid, key times, 48-frame decode, thumbnails
 │   ├── PresentationCursorGeometry.swift # Cell pixels → points, and the window origin on the hotspot
 │   ├── PresentationPointerService.swift # Animated diamond cursor overlay; hides the real pointer
-│   ├── WindowSnappingService.swift  # Native-first snap engine; own placement as fallback
+│   ├── WindowSnappingService.swift  # Orchestration: resolve, filter, keep history, delegate
+│   ├── WindowPlacementEngine.swift  # The only place that writes another app's frame
+│   ├── WindowSnapHistory.swift      # Per-window restore point + whether it is still valid
+│   ├── WindowFrameResolver.swift    # AX → AX-window → WindowServer → window-list chain
+│   ├── WindowServerInventory.swift  # CGWindowList snapshot (no permission needed)
+│   ├── AXCommandQueue.swift         # One serial queue for every Accessibility call
+│   ├── ScreenGeometryProvider.swift # The only Cocoa ↔ Accessibility conversion + screen cache
 │   ├── WindowSnapGeometry.swift     # Pure placement math + Accessibility ↔ Cocoa flip
+│   ├── SnapGridGeometry.swift       # Normalized rect → screen rect, and the gap rule
+│   ├── SnapZonePolicy.swift         # Pure pointer → edge/corner/island decision
+│   ├── SnapIslandPolicy.swift       # Pure island geometry, activation, tile hit-testing
+│   ├── SnapIslandLayout.swift       # Island's internal geometry (shared by view and controller)
+│   ├── SnapAnimationCurve.swift     # Pure spring/curve sampling
+│   ├── SnapAnimationPlan.swift      # A transition as a value the tests can sample
+│   ├── SnapAnimationDriver.swift    # Timer-driven per-frame interpolation
+│   ├── ReduceMotionPreference.swift # Reads the system Reduce Motion switch
+│   ├── SceneAnimationPolicy.swift   # Hidden window / lightFlow → pause a scene timeline
+│   ├── FanRotationPolicy.swift      # rpm → revolutions/s; the only fan speed convention
+│   ├── SnapWindowEligibility.swift  # Three-layer "is this a real window" filter
+│   ├── SnapConfigurationBox.swift   # Lock-guarded config for the tap and AX threads
+│   ├── SnapConflictDetector.swift   # Other running window managers
+│   ├── WindowVisibilityService.swift # NSRunningApplication hide/unhide, tracks what it hid
+│   ├── DragShakeDetector.swift      # Pure Aero-Shake gesture recogniser
+│   ├── WindowListService.swift      # Enumerate/focus/minimize/close an app's windows
+│   ├── WindowPreviewIndex.swift     # Cached app→windows snapshot for the ⌘Tab tap
+│   ├── WindowThumbnailService.swift # ScreenCaptureKit captures + bounded cache
+│   ├── ScreenRecordingPermission.swift # TCC preflight/request + the restart state
+│   ├── DockGeometry.swift           # Pure Dock band + preview panel placement
+│   ├── DockHoverMonitorService.swift # Polls the pointer, resolves the Dock icon (Shape C)
+│   ├── AppSwitcherService.swift     # Active ⌘Tab event tap (Shape C)
+│   ├── AppSwitcherSession.swift     # Pure switcher selection + MRU ordering
+│   ├── AppSwitcherLayout.swift      # Pure panel/card sizing for both preview surfaces
+│   ├── ApplicationActivationTracker.swift # MRU order (lock-protected; read by the tap thread)
 │   ├── WindowGestureTargeting.swift # Point → window/zone resolution + control guard
 │   ├── NativeWindowTilingService.swift # Presses macOS' own Window-menu tiling items
 │   ├── SystemWindowTilingSetting.swift # Reads/writes macOS' own drag-to-edge tiling
-│   ├── WindowSnapPreviewService.swift # Snap-zone preview overlay
+│   ├── WindowSnapPreviewService.swift # Footprint overlay with geometry interpolation
 │   ├── WindowSnapHotKeyService.swift # Global snap hotkeys (opt-in)
 │   ├── PanelHotKeyService.swift     # Carbon hotkey: Cleanup panel at the pointer (opt-in, no AX)
 │   ├── TitlebarGestureService.swift # Titlebar swipe-to-snap (CGEventTap, opt-in)
+│   ├── WindowDragMonitorService.swift # Drag-to-edge: mouse CGEventTap (opt-in)
 │   ├── AccessibilityPermission.swift # Shared AXIsProcessTrusted check + prompt
 │   ├── LaunchAtLoginService.swift   # SMAppService login-item registration
 │   ├── KeepAwakeService.swift       # IOPMAssertion + AC clamshell virtual display (opt-in, default off)
@@ -122,6 +179,7 @@ Light Stats/
 │   ├── AIUsageCredentialStore.swift # API token Keychain facade
 │   ├── UsageWarmupManager.swift     # Opt-in fixed-interval keep-alive ping for Claude/Codex
 │   ├── AppMemoryManager.swift       # Process list + cleanup state
+│   ├── SnapIslandViewModel.swift    # Island view state: layouts, hover, open progress
 │   ├── LocalizationManager.swift    # Language change broadcast
 │   ├── SystemAppFilter.swift        # Apple-signed app exclusion list
 │   ├── CleaningModeViewModel.swift  # 60s countdown + keyboard lock
@@ -145,7 +203,8 @@ Light Stats/
 │   │       ├── ChildProcessRowView.swift
 │   │       ├── AIUsageCard.swift
 │   │       ├── Sparkline.swift             # SwiftUI trend mini-chart
-│   │       ├── SpinningFanIcon.swift       # CADisplayLink fan animation
+│   │       ├── SpinningFanIcon.swift       # Fan icon; rotation runs on a Core Animation layer
+│   │       ├── FanIconLayerView.swift      # Layer-hosted fan: no per-frame SwiftUI work
 │   │       ├── TabButton.swift
 │   │       ├── VisualEffectView.swift      # NSViewRepresentable blur
 │   │       └── ColorExtensions.swift
@@ -154,6 +213,13 @@ Light Stats/
 │   ├── Settings/PresentationCursorStylePicker.swift # Colourway thumbnails, chosen by looking
 │   ├── Settings/CleanupPanelHotKeySettingsSection.swift
 │   ├── Settings/WindowManagementSettingsSection.swift
+│   ├── Settings/SnapShortcutSettingsSection.swift # One recorder row per action + custom bindings
+│   ├── Settings/SnapLayoutSettingsSection.swift   # Layout list, saved positions
+│   ├── Settings/SnapGridSelectorView.swift        # 8×8 drag selector
+│   ├── Settings/SnapExclusionSettingsSection.swift # Restricted list + user exclusions
+│   ├── Settings/SnapWindowPreviewSettingsSection.swift # Thumbnails / Dock / ⌘Tab + TCC state
+│   ├── Settings/KeyComboRecorder.swift            # Shared Carbon key-combo recorder
+│   ├── Settings/GapSlider.swift                   # Commits on release, not per tick
 │   ├── Settings/DefaultInputSourceSettingsSection.swift
 │   ├── Settings/FinderMenuActionsSection.swift
 │   ├── Settings/FinderMenuTemplatesSection.swift
@@ -161,6 +227,21 @@ Light Stats/
 │   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
 │   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
 │   ├── About/AboutView.swift
+│   ├── WindowPreview/               # Shared by the Dock preview and ⌘Tab
+│   │   ├── PreviewOverlayWindow.swift     # NSPanel that may overlap the Dock/menu bar
+│   │   ├── WindowThumbnailView.swift      # Picture, or a titled stand-in
+│   │   └── WindowPreviewCard.swift        # One window card, selected state included
+│   ├── DockPreview/
+│   │   ├── DockPreviewController.swift
+│   │   └── DockPreviewView.swift
+│   ├── AppSwitcher/
+│   │   ├── AppSwitcherController.swift
+│   │   └── AppSwitcherView.swift
+│   ├── SnapIsland/
+│   │   ├── SnapIslandView.swift           # Layout chips + segment grid
+│   │   ├── SnapIslandText.swift           # Resolves localized layout/segment names
+│   │   ├── SnapIslandWindow.swift         # NSPanel that may overlap the menu bar
+│   │   └── SnapIslandController.swift     # Island state machine, animation, drop resolution
 │   ├── CleaningMode/
 │   │   ├── CleaningModeOverlayController.swift
 │   │   └── CleaningModeOverlayView.swift
@@ -184,6 +265,8 @@ Light Stats/
 ```
 
 Repo-root companions: `FinderMenu/` (shared models + IPC) and `FinderMenuExtension/` (FinderSync).
+Window management also has `AppDelegate+WindowSnap.swift`, which wires the drag monitor, the
+footprint preview, and the island together.
 
 Dependency direction:
 
@@ -247,23 +330,22 @@ actor ExitNodeService {
 Services return Model types. They never return View types or ObservableObject conformances.
 They are forbidden from importing ViewModels or Views.
 
-**Shape C — opt-in event-tap services.** `ScrollDirectionService`, `WindowSnapHotKeyService`,
-`TitlebarGestureService`, `FindMouseService`, and `KeyboardLockService` each own a `CGEventTap`
-(or an Accessibility session via `WindowSnappingService`) behind a `start()/stop()` lifecycle.
-They are the only services that hold OS-level taps, so they are also the only ones gated by
-the "default off" rule: AppDelegate creates the tap **only** when the owning switch turns on
-(`windowManagementEnabled` for the window trio; `scrollReverse*` for scrolling;
-`findMouseEnabled` for Find My Mouse; cleaning-mode activation for the keyboard lock) and
-calls `stop()` immediately when it turns off. `start()` returns `false` when Accessibility
-permission is missing — the caller keeps the switch on and retries on `didBecomeActive`.
-None of these run on a clean default install. See *Default form (zero-intrusion)* below.
+**Shape C — event-tap services.** `ScrollDirectionService`, `WindowSnapHotKeyService`,
+`TitlebarGestureService`, `WindowDragMonitorService`, `AppSwitcherService`,
+`FindMouseService`, and `KeyboardLockService` each own a `CGEventTap` (or an Accessibility session
+via `WindowSnappingService`) behind a `start()/stop()` lifecycle.
+`DockHoverMonitorService` is the same shape built on a 30 Hz pointer poll instead of a tap —
+see below. They are the only services that
+hold OS-level taps. AppDelegate creates the tap when the owning switch turns on
+(`windowManagementEnabled` for the window group; `scrollReverse*` for scrolling; `findMouseEnabled`
+for Find My Mouse; cleaning-mode activation for the keyboard lock) and calls `stop()`
+immediately when it turns off. `start()` returns `false` when Accessibility permission is
+missing — the caller keeps the switch on, retries on `didBecomeActive`, and the Settings page
+carries a persistent notice rather than firing a modal at an unrelated moment.
 
-`DefaultInputSourceService` is the same shape minus the tap: a `@MainActor` `start()/stop()`
-service that owns an `NSWorkspace.didActivateApplicationNotification` observer instead of a
-`CGEventTap`, gated by `defaultInputSourceEnabled` (default off). It does not need Accessibility
-permission — `TISSelectInputSource` is unprivileged. Its only decision rule lives in the pure
-`DefaultInputSourcePolicy`: **correct drift only inside a 1.2 s window after an app activation**, so a
-deliberate `Ctrl+Space` outside that window (and any secure-input field) is left alone.
+`SnapIslandController` is the same shape without a tap: a `@MainActor` `start…/stop…` lifecycle
+over one `NSPanel`, owned by AppDelegate and torn down the moment window management is switched
+off.
 
 `PresentationPointerService` is also the same shape without a tap, but it is the one opt-in tool
 with a **global** side effect: the window server draws the cursor above every window level, so the
@@ -284,18 +366,124 @@ from five thumbnails, because picking a pointer by reading its name is the wrong
 colourway is an atlas under `Resources/Cursors/`, a `PresentationCursorStyle` case with that style's
 `热点_128像素`, and a name in all four `Localizable.strings`; nothing else hard-codes a style.
 
-**Window management delegates to the system.** `WindowSnappingService` tries the native path
-first: `NativeWindowTilingService` finds the tiling item macOS injects into the target app's
-Window menu — matched by `AXIdentifier` (`_zoomLeft:`, `_zoomFill:`, …), never by localized
-title — and presses it, so the frame, the animation, and the per-display visible-area rules are
-the system's own. Only what macOS has no command for (thirds, display moves, minimize) is placed
-by the engine through `WindowSnapGeometry`. Two measured facts shape this: the press reports
-success even when the app is not frontmost and then does nothing at all, and the system animates
-by really moving the window, so the outcome cannot be read back until ~600 ms later.
-`confirmNativePlacement` waits that long and falls back to the engine's own placement if the
-window never moved. Accessibility ↔ Cocoa conversion goes through `WindowSnapGeometry.flip`,
-whose reference height must be the **primary** display's `maxY` — the topmost display shifts
-every frame by its own height and breaks snapping on secondary displays only.
+**Two taps now listen to the mouse.** `WindowDragMonitorService` watches left mouse down / drag /
+up to detect that a *window* is being moved. It proves that by the only signal that is actually
+reliable — the window's own frame moved while its size did not — so text selection, resizing, and
+plain clicks are excluded without needing a titlebar heuristic at all. Edges and corners are
+decided from the pointer (already in the event, so no Accessibility call per event); the only AX
+work is resolving the dragged window once and sampling its frame at ~15 Hz, both on
+`AXCommandQueue`.
+
+`DefaultInputSourceService` is the same shape minus the tap: a `@MainActor` `start()/stop()`
+service that owns an `NSWorkspace.didActivateApplicationNotification` observer instead of a
+`CGEventTap`, gated by `defaultInputSourceEnabled`. It does not need Accessibility
+permission — `TISSelectInputSource` is unprivileged. Its only decision rule lives in the pure
+`DefaultInputSourcePolicy`: **correct drift only inside a 1.2 s window after an app activation**, so a
+deliberate `Ctrl+Space` outside that window (and any secure-input field) is left alone.
+
+**Window management places windows itself; the system is an opt-in accelerator.**
+`WindowPlacementEngine` writes `AXPosition`/`AXSize` directly, and it is the only code in the app
+that moves another app's window. This inverted a previous contract, and the reason is measured
+rather than aesthetic: the system's tiling menu item reports success for a window it then does not
+move when the target app is not frontmost, the outcome cannot be read back until its animation
+settles (~600 ms), and it has no command at all for thirds, custom layouts, gaps, or display
+moves. Pressing the item is still available behind `SnapConfiguration.prefersNativeTiling`
+(`NativeWindowTilingService`, matched by `AXIdentifier` — `_zoomLeft:`, `_zoomFill:`, … — never by
+localized title), where `confirmNativePlacement` still waits out the animation and falls back to
+the engine. Windows are never left unrestorable on either path: `WindowSnapHistory` records the
+pre-snap rectangle *before* the branch, and refuses a restore once something else has moved the
+window since.
+
+Geometry has exactly one source of truth per shape. `SnapConfiguration` maps a `SnapTarget` to a
+rectangle through `SnapGridGeometry` (normalized layouts) or `WindowSnapGeometry.regionFrame`
+(fixed actions), and both apply the same gap rule: inset the whole area by the outer margin first,
+then split the inner gap across whichever tile edges are interior. The preview overlay, the island
+tiles, and the engine all call into those two functions, which is why what the user aims at is what
+the window becomes.
+
+Accessibility ↔ Cocoa conversion happens in exactly one place, `ScreenGeometryProvider`, whose
+reference height must be the **primary** display's `maxY` — the topmost display shifts every frame
+by its own height and breaks snapping on secondary displays only. Its screen snapshot is cached and
+invalidated by `didChangeScreenParametersNotification`, because the drag pipeline asks for the
+screen under the pointer up to sixty times a second.
+
+**Every Accessibility call goes through `AXCommandQueue`.** Accessibility is effectively serial per
+application, and a read that lands mid-write returns a frame from halfway through a previous move.
+`WindowFrameResolver.frame` and `WindowPlacementEngine` are the two entry points, and both are
+written so a nested call runs inline instead of deadlocking.
+
+**The island exposes every layout as directly droppable tiles.** `SnapIslandLayout.tiles` and
+`hit` share the same projected rectangles; there is no separate layout-selection step. The panel
+keeps its expanded frame while a top-centred reveal mask animates from the compact strip. Tile
+coordinates stay fixed during that reveal. One animation plan carries opacity and reveal progress,
+including collapse on exit. `SnapLayoutProjection` scales actual screen placements and their gaps
+uniformly for the live island, layout thumbnails, and interactive Settings desktop.
+
+Drag release is delivered as one main-actor callback using the actual mouse-up point. The island
+owns releases inside its frame, including gaps that cancel; outside it, edge targeting resumes.
+Generation checks discard frame reads and queued callbacks from an earlier drag. Only one AX frame
+sample may be outstanding, with a 30 Hz ceiling. WindowServer preview enumeration never occupies
+the drag/placement AX queue. Normal nested AX queue access runs inline without logging an error.
+
+`SnapEdgeRegionCatalog` owns the edge map: compact corner quarters; upper/middle/lower bands on
+both sides; five bottom destinations (left third, left two thirds, centre third, right two thirds,
+right third); and the top edge/island. `SnapZonePolicy` applies a six-point boundary hysteresis.
+Preview and mouse-up both use the retained result, so jitter cannot make the committed tile differ
+from the one being shown. The exact band thresholds are local tuning based on the supplied video,
+not claimed to be extracted Wins constants.
+
+The 8×8 editor supports multiple non-overlapping regions, moving, resizing, deleting, undo, editing
+saved layouts, pin ordering, and saved positions with direct shortcut recording. Region rectangles
+remain normalized with top-left origin. Labels stay concise; the interactive preview explains the
+gesture. Close/quit actions have no default shortcuts and use normal application close/terminate
+requests, preserving the target application's unsaved-document prompts.
+
+**Screen Recording buys exactly one thing: pixels.** Window titles, positions, and stacking all
+come from Accessibility and `CGWindowList` and need no permission — which is why the menu bar's
+window list works for everyone. `WindowThumbnailService` is the only consumer of
+`ScreenRecordingKit`, it sits behind its own `isWindowThumbnailsEnabled` switch, and it is entered
+only when that switch is on. With the switch off, or the permission refused, every preview surface
+still works and renders a titled placeholder — the features do not exist-or-vanish with a
+permission, they change resolution.
+
+`ScreenRecordingPermission` models **three** states, not two. `CGPreflightScreenCaptureAccess()` is
+cached for the life of the process, so a user who grants the permission in System Settings keeps
+reading `false` until the app restarts.
+`ScreenRecordingAuthorization.resolve(isGranted:hasRequestedThisSession:)` is the rule, it is
+tested, and `requiresRestart` is what turns "nothing happens" into a button that relaunches the app
+(only after the replacement instance actually starts — a relaunch that fails must not leave the
+user with no app at all).
+
+**⌘Tab is the one system gesture this app takes away, and the code is shaped by that.** The tap is
+**active** (`.defaultTap`, `.headInsertEventTap`), because suppressing the system switcher is the
+whole point; a listen-only tap would show two panels. The safety rules are not negotiable:
+
+- nothing is swallowed unless a session actually started — an empty provider, or one whose windows
+  are all filtered out, passes the event through and the system switcher appears as usual;
+- any key that is not Tab / Shift-Tab / arrows / Escape ends the session and is passed through, so
+  ⌘Q while the switcher is open still quits the frontmost application;
+- the session commits on Command *release* (`flagsChanged`), matching the muscle memory, and Escape
+  cancels;
+- `stop()` cancels any open session, so switching the feature off can never leave a stolen keyboard.
+
+The tap answers "what can I switch to?" **inside the event callback**, so it never touches
+Accessibility or the main actor: `WindowPreviewIndex` keeps a lock-protected WindowServer snapshot
+refreshed off the AX queue. AX elements are resolved only when acting on a selected window.
+`ApplicationActivationTracker` supplies the MRU order. Enumeration in the callback would block the
+tap, and a slow tap is one macOS disables. The first Tab selects the previous application exactly
+once; reverse Tab selects the final application. Scrollable rows keep every selected window visible.
+
+**The Dock preview polls the pointer rather than tapping `mouseMoved`.** A move-event tap fires on
+every pixel of travel — thousands of events a second to answer a question that changes at human
+speed. A 30 Hz poll reaches for Accessibility only when the pointer is inside the Dock's own
+rectangle; an unchanged pointer reuses the probe for 250 ms. It resolves the hovered icon through
+`AXApplicationDockItem` rather than by arithmetic
+against an icon grid, which magnification, spacers, stacks, and folders all break. The panel hands
+its frame back to the monitor (`previewFrame`) so that travelling from the icon into the panel —
+which is how a card gets clicked — does not read as leaving the Dock. A 180 ms entry delay avoids
+flashing while crossing icons; a 250 ms exit grace covers the gap between icon and preview.
+`DockGeometry` is pure, and
+covers the case a visible-frame calculation cannot: an auto-hidden Dock reserves no space at all.
 
 **Titlebar swipes are a heuristic, and the code says so.** A window's titlebar is not an
 Accessibility concept — `AXTitlebar` and `AXTitleUIElement` are nil on AppKit and Electron
@@ -307,10 +495,13 @@ Electron reports its whole web content as those). Holding **Fn** switches the ge
 only way to reach apps that draw their own titlebar. Rationale, measurements, and the
 alternatives that were rejected are in `docs/window-titlebar-gesture-research.md`.
 
-**macOS' own drag-to-edge tiling is surfaced, not reimplemented.** `SystemWindowTilingSetting`
-reads and writes `com.apple.WindowManager` so `WindowManagementDetail` can show the two system
-switches; the first time window management is enabled the edge-drag switch is turned on once
-(tracked by a non-preference flag), and the user's later choice is never overridden.
+**macOS' own drag-to-edge tiling is surfaced, and stood down.** Light Stats now implements the
+same gesture, so the two cannot both be live: whichever finishes last wins, and the result is
+indistinguishable from a bug. `SystemWindowTilingSetting` reads and writes
+`com.apple.WindowManager`; the first time window management is enabled the edge-drag switch is
+turned **off** once (tracked by a non-preference flag), and the user's later choice is never
+overridden — instead `WindowManagementDetail` shows a persistent warning with a one-click fix, and
+`SnapConflictDetector` names any other running window manager.
 
 ### ViewModels
 
@@ -351,6 +542,15 @@ SwiftUI for panels and settings. AppKit (`NSViewRepresentable`, `NSHostingView`)
 menu bar status item. `CleaningModeOverlayController` is the only View-layer class that
 owns `NSWindow` instances (a bridge, not a ViewModel).
 
+Two View-layer classes own windows, and both are bridges rather than view models:
+`CleaningModeOverlayController` (per-screen full-screen overlays) and `SnapIslandController` (the
+layout island's `NSPanel` plus its animation driver). `WindowSnapPreviewService` also owns a window
+but stays in Services, because `TitlebarGestureService` and `WindowDragMonitorService` drive it
+directly and Services may not import Views. Views may call the stateless `nonisolated` geometry and
+policy enums (`SnapIslandLayout`, `SnapGridGeometry`, `SnapWindowEligibility`,
+`SnapConflictDetector`) — those are pure functions with no lifecycle; they never instantiate a
+stateful service.
+
 `ThemeDefinition` is the only product composition table: each `AppTheme` fixes its UI tokens,
 `BackgroundSceneID`, and layout. `BackgroundHost` owns only sizing, clipping, window context,
 and disabled hit testing; `BackgroundSceneRouter` creates the selected Scene with a structural
@@ -360,6 +560,15 @@ grain, veil, and named light-field layers; Data Paper has its own static Canvas 
 and does not consume those effects.
 Shared tools are opt-in, not a common rendering pipeline.
 `ThemeLayout` is injected separately from `UITokens` and is the only runtime layout truth.
+
+**Per-frame animation is gated on visibility, explicitly.** `panel.orderOut(nil)` does not stop a
+`TimelineView` inside the panel: the hosting view stays, every tick re-marks it for layout, and the
+closed popover kept re-rendering its whole view tree at display rate (measured: 45–75% of one core,
+the main thread 36% inside `NSWindow layoutIfNeeded`, with the panel and all its windows offscreen).
+`SceneAnimationPolicy.isPaused(lightFlow:pauseThreshold:isVisible:)` is the only place that decides,
+`BackgroundHost(isVisible:)` carries `SystemMonitor.popoverVisible` in from the popover root, and the
+fan icon (`FanIconLayerView` → `FanAnimationLayer`) rotates on a Core Animation layer rather than a
+timeline, so a visible panel costs no per-frame SwiftUI work either.
 
 ## Concurrency
 
@@ -446,6 +655,19 @@ so the temperature dimension is always present.
 
 90–100 excellent · 75–89 good · 60–74 fair · 40–59 poor · <40 critical
 
+## Process and Memory Collection
+
+Application totals use footprint for every sampled process, never an RSS fallback or a top-N
+refinement threshold. Missing readings remain unavailable: show a known subtotal with `≥`, or `—`
+when no reading is known. Termination rechecks PID plus BSD start time before every action and
+again after waits. Parent-chain attribution alone never grants termination rights.
+
+CPU ranking retains system `ps`: its setuid privileges provide system-process coverage that
+ordinary libproc calls cannot reproduce. The memory sampler is native and demand driven.
+System used RAM is non-purgeable anonymous memory + wired + physical compressor storage;
+active/inactive are not ownership categories. `free_count` already includes speculative pages.
+See `docs/process-memory-collection.md` for the evidence, limitations and regression coverage.
+
 ## Cleaning Mode
 
 Locks the keyboard for 60 seconds so the user can wipe the keyboard without spurious input.
@@ -483,7 +705,7 @@ These are separate systems and must never share storage or exports:
 
 ## Auto-Update
 
-Zero-dependency self-updater. Checks the Cloudflare R2 channel marker (falling back to
+Self-updater. Checks the Cloudflare R2 channel marker (falling back to
 GitHub Releases), downloads the DMG, verifies it cryptographically (R2 channel also checks
 the SHA-256 sum), replaces the running app via a detached shell script after exit.
 
@@ -699,7 +921,7 @@ Suites:
   cap (and that `power` is excluded from it), EMA smoothing, grade boundaries.
 - `PanelHotKeyTests` / `PanelPointerPlacementTests` — cleanup-shortcut serialization, Carbon
   modifier mapping, and pointer-to-panel clamping (including a panel taller than the screen).
-- `SettingsDefaultsTests` — the "default off" contract on a clean `UserDefaults` suite, via
+- `SettingsDefaultsTests` — default values on a clean `UserDefaults` suite, via
   `SettingsManager(defaults:)`. (Instances are retained for the process: a fresh
   `@MainActor`-isolated `SettingsManager` deinit trips a Swift Concurrency back-deploy
   double-free on macOS 14.x; the production singleton never deallocates, so this is test-only.)
@@ -731,6 +953,66 @@ Suites:
   Accessibility ↔ Cocoa flip (including that a wrong reference height shifts a frame by exactly
   the height of the display above the primary), display-to-display transfer clamping, and the
   snap-action → native command mapping.
+- `SnapGridGeometryTests` — the gap rule (outer margin first, then half the inner gap on interior
+  edges only), that a stacked layout shares one gap on every interior edge, that absurd margins
+  degrade to a zero-area rect rather than an inverted one, and the invariant that the fixed-action
+  path and the normalized layout path agree to within a thousandth of a point.
+- `SnapZonePolicyTests` — every edge and corner, the top edge measured from the *visible* top, the
+  island claiming only the centred band, corners winning over edges, each zone's ability to be
+  switched off, small overshoot past an edge still counting, and a pointer on another display
+  arming nothing.
+- `SnapIslandPolicyTests` — collapsed vs expanded geometry (top-pinned, width-capped, height
+  clamped), the activation band, chip and segment hit-testing through the same geometry the
+  placement uses, and that the gap between two tiles belongs to neither.
+- `SnapAnimationCurveTests` — linear/ease-out sampling, critically damped springs staying monotonic
+  and bounded, underdamped springs overshooting, duration derived from the decay envelope, plan
+  interpolation, hide-only plans keeping their frame, and that Reduce Motion produces a *shorter*
+  timeline rather than no transition.
+- `SceneAnimationPolicyTests` / `FanRotationPolicyTests` / `FanAnimationLayerTests` — the panel's
+  animation gates: a hidden host pauses the scene timeline even at full lightFlow, the threshold
+  keeps the scene's `>=` semantics, rpm maps to revolutions/s with its 3 rev/s cap, and a hidden fan
+  layer stops rotating and hides its icon instead of spinning behind an offscreen window.
+- `SnapLayoutCatalogTests` — catalog ids resolve and are unique, every tile is inside the screen,
+  the built-ins cover the screen exactly once, and the top-left-origin convention that Wins' own
+  bottom-left JSON would silently mirror.
+- `SnapGridSelectionTests` — forward and backward drags producing the same rectangle, clamping,
+  containment, and the layout built from a selection.
+- `SnapWindowEligibilityTests` — one test per failure each of the three layers prevents: subrole
+  whitelist, restricted apps (including the JetBrains prefix), Wine by process name, user
+  exclusions, untitled windows, Electron modal widgets, and too-small geometry.
+- `SnapConfigurationTests` — JSON round-trip, a value written by an older build decoding with
+  defaults for fields it did not know, shortcut upsert, island-order pruning, dangling region
+  bindings being dropped, and the top edge falling back to `maximize` when no layout is left.
+- `WindowSnapHistoryTests` — repeated snaps keeping the *first* restore point, restore refusing
+  once someone else moved the window, a stale record being replaced by the window's new position,
+  and tolerance for an app that clamps its own frame.
+- `SnapMarginsTests` / `SnapTargetCodingTests` / `WindowSnapActionTests` — margin clamping, the
+  named (not positional) target wire format, and the action raw values and title keys that a
+  recorded shortcut depends on.
+- `DockGeometryTests` — the Dock band from the visible-frame difference, the auto-hidden fallback,
+  panels above a bottom Dock and beside a side one, sliding inward at a screen corner, that the
+  perpendicular axis is never repositioned, and the orientation preference (including an unknown
+  value falling back to the bottom).
+- `AppSwitcherSessionTests` — that opening selects the *previous* application, wrapping forward and
+  backward, window stepping inside an application, the window selection resetting when the
+  application changes, commit returning the selection and ending the session, cancel returning
+  nothing, and out-of-range selections being ignored.
+- `AppSwitcherKeyTests` — the whole key model: Tab begins without Command and moves with it, arrows
+  step windows only mid-session, Escape cancels only mid-session, and every other key passes
+  through.
+- `ApplicationOrderingTests` — most-recently-used first, unseen applications kept at the end, and no
+  application ever dropped.
+- `AppSwitcherLayoutTests` — preferred card width for few windows, shrinking rather than overflowing
+  for many, an overflow count once shrinking stops helping, the app row's contribution to height,
+  and the panel staying inside the screen.
+- `ScreenRecordingAuthorizationTests` — the four-state rule, including the case a two-state model
+  gets wrong: asked, still not granted, so a restart is required.
+- `WindowThumbnailSizingTests` — pixel width clamped so a thumbnail cannot ask for a 6K capture,
+  aspect ratio preserved, and extreme ratios clamped rather than producing an absurd capture.
+- `DragShakeDetectorTests` — the Aero Shake gesture on a fake clock: one stroke is not a shake,
+  three reversals inside the window are, the same three spread out are not, movement smaller than a
+  stroke never counts, the cooldown suppresses a continuing gesture but not a later one, and reset
+  cannot assemble a shake from two drags.
 - `DefaultInputSourceTests` — the drift-correction window (inside = correct, outside = the
   user's `Ctrl+Space` wins, secure input = never), input-source dedup/sort, the
   unavailable-selection placeholder, the picker merge rules, `start()` refusing without a
@@ -748,41 +1030,6 @@ Suites:
   after the paid-release switch, only new installs are locked, while prior gifts persist and invalid codes are rejected.
 - `LightStatsSmokeTests` — model sentinels + formatter sanity.
 
-## Default form (zero-intrusion)
-
-The product is "monitoring core + extra tools that are off by default". Every capability
-beyond read-only monitoring (window management, scroll reversal, Finder menu, default
-input source, display brightness, AI usage, exit-node detection) ships **off**. A user
-who never opts in must not see an entry point, be asked for a permission, or pay any
-tap / collection / network cost.
-
-Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
-
-- **No menu bar icon beyond monitoring.** The window-controls icon (`rectangle.split.2x1`)
-  is created lazily and only when `windowManagementEnabled` is on. Default install shows
-  only the monitoring status item.
-- **No Accessibility prompt.** `AXIsProcessTrustedWithOptions` is never called by default;
-  permission is requested only when the user actively enables a feature that needs it
-  (scroll reversal, window management, Find My Mouse, cleaning mode).
-- **No `CGEventTap`.** scroll / keyboard / window / find-mouse taps are all off by default;
-  nothing is installed until the matching switch is turned on.
-- **No cleanup-panel Carbon hotkey.** `cleanupPanelHotKeyEnabled` is off, so
-  `PanelHotKeyService` never calls `RegisterEventHotKey` on a clean install. It does not
-  need Accessibility permission.
-- **No input-source observer.** `defaultInputSourceEnabled` is off, so `DefaultInputSourceService`
-  never registers for app activation and never calls `TISSelectInputSource` on a clean install.
-- **No outbound request at all by default.** `autoCheckUpdates` is now opt-in (default off),
-  alongside exit-node detection and AI usage polling. A clean install makes zero network calls.
-- **No privileged helper.** The app bundle contains no privileged executable, LaunchDaemon,
-  or `SMAppService` daemon.
-- **Window management is a single master switch.** `windowManagementEnabled` (default off)
-  drives the menu bar icon **and** snap shortcuts **and** titlebar gestures together —
-  on = icon + shortcuts + gestures + taps all start; off = all stop. There are no
-  sub-switches.
-- **Runtime off-path is as thorough as terminate.** Turning a feature off in Settings must
-  `stop()` its services / taps / observers immediately, not only at
-  `applicationWillTerminate`.
-
 ## What this app is not
 
 - Not an Activity Monitor replacement — status indicator, not full diagnostic. Top-N processes only.
@@ -791,10 +1038,15 @@ Cold-start checklist — must hold on a clean install (empty `UserDefaults`):
 - No content cards behind instrument readouts — the scene is the surface. Do not
   reintroduce Bento-style plates as “reading boards”.
 - No plugin system — every metric is a built-in Service.
-- No privileged helper or battery charge-control feature.
+- Not a scriptable window manager — no AppleScript surface, no per-app window rules, no window
+  history beyond the one restore point per window needed to undo a snap.
+- No screen capture beyond window thumbnails. Screen Recording is requested only by the thumbnail
+  switch, only after the user turns it on, and nothing is ever recorded, saved, or sent — the
+  captures live in a bounded in-memory cache with a four-second lifetime. Recently used windows
+  are prewarmed; visible cards share captures and ScreenCaptureKit enumeration. Closing a preview
+  releases its view tree and schedules expiry cleanup; disabling thumbnails clears the cache immediately.
 - Not an input method and not an input-source manager box — it only selects among input sources
   macOS already has, and only for one global default. No per-app rules, no website rules, no indicator.
-- No remote telemetry — the app phones home only for user-initiated update checks and opt-in exit-node detection.
 - No Intel support — `ARCHS = arm64`, so this ships Apple Silicon only, and the private-API display
   (DDC) code has no x86_64 fallback. Re-adding Intel is a documented multi-file operation, not a
   one-line revert: read `docs/intel-support.md` before touching it.

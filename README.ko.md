@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 Light Stats는 Mac의 실시간 압박 신호를 메뉴 막대에 상시 표시하고, 더 자세한 정보가 필요할 때 떠 있는 패널을 엽니다. 활성 상태 보기를 계속 열어두지 않고 상태를 확인하려는 고급 사용자와 AI 에이전트, 네트워크, Finder 작업 맥락을 가까이 두려는 개발자를 위한 앱입니다.
 
-일상적인 샘플링에는 macOS 네이티브 API를 사용하고 서드파티 런타임 의존성이 없습니다. 모니터링은 읽기 전용 코어이며 네트워크 요청과 지속적인 시스템 작업은 **기본적으로 꺼져 있습니다**. 새로 설치한 직후에는 메뉴 막대 표시만 동작하고, 추가 아이콘, 손쉬운 사용 권한 요청, 이벤트 tap, 입력 소스 감시, 특권 helper, 외부 요청이 없습니다.
+일상적인 샘플링에는 macOS 네이티브 API를 사용합니다. 모니터링은 읽기 전용 코어이며, 개발자·시스템 도구는 설정에서 켭니다.
 
 ---
 
@@ -177,16 +177,15 @@ Claude Code와 Codex에는 별도의 사용량 창 유지 스위치가 있으며
 
 ## 개인정보 보호
 
-Light Stats에는 원격 텔레메트리가 없습니다. 로컬 시스템 지표, 로컬 프록시 감지, 프로세스 목록, 스크롤 동작, 창 제어는 Mac 안에 머뭅니다.
+로컬 시스템 지표, 로컬 프록시 감지, 프로세스 목록, 스크롤 동작, 창 제어는 Mac 안에 머뭅니다. 각 네트워크 기능이 무엇을 보내는지는 아래에 정리되어 있습니다.
 
-- 새로 설치한 앱은 외부 요청을 보내지 않습니다. 출구 노드 조회, AI 사용량 모니터링, Claude/Codex 창 유지, 자동 업데이트 확인은 모두 기본적으로 꺼져 있습니다. Beta 업데이트 채널도 기본 꺼짐입니다.
 - 출구 노드 감지는 선택한 geo-IP 공급자에 공개 IP, 위치, ASN, ISP를 조회하고 결과를 60초 동안 캐시합니다.
 - AI 모니터링은 켠 공급자 자체의 사용량 엔드포인트에만 연결하고 해당 CLI가 저장한 인증 정보를 사용합니다.
 - 선택형 Claude/Codex 창 유지는 위에서 설명한 최소 프롬프트를 해당 공급자의 CLI로 보냅니다.
 - 수동 업데이트 확인과 선택형 자동 확인은 Cloudflare R2에 연결하고 GitHub Releases로 폴백하며, 다운로드 후 SHA-256(R2), 서명, 공증, Team ID를 검증합니다.
 - 장애 저널은 디스크에만 남고, 진단 보고서 내보내기는 사용자가 시작합니다. 성능 기록은 별도의 선택 세션입니다. 둘 다 Light Stats 개발자에게 전송되지 않습니다.
 
-분석, 충돌 보고, 광고, 계정 시스템, 개발자가 운영하는 텔레메트리 엔드포인트가 없습니다. 자세한 내용은 [개인정보 보호 정책](https://evilirving.github.io/light-stats/#privacy)을 확인하세요.
+자세한 내용은 [개인정보 보호 정책](https://evilirving.github.io/light-stats/#privacy)을 확인하세요.
 
 ---
 
@@ -255,8 +254,8 @@ GitHub Actions는 SwiftLint, 현지화 검증, Release 빌드, 산출물 업로�
 
 XCTest 스위트는 `LightStatsTests/`에 있으며 Xcode 프로젝트에 연결되어 있습니다(공유
 `Light Stats` 스킴의 `LightStatsTests` 유닛 테스트 타깃). CI와 아래 명령 모두 이를 실행합니다.
-커버리지는 회귀가 잦은 순수 로직에 집중합니다: `HealthScoreService` 점수 곡선, "기본 꺼짐"
-설정 계약, 그리고 세 가지 AI 사용량 JSON 파서(픽스처는 `LightStatsTests/Fixtures/`).
+커버리지는 회귀가 잦은 순수 로직에 집중합니다: `HealthScoreService` 점수 곡선, 설정 기본값,
+그리고 세 가지 AI 사용량 JSON 파서(픽스처는 `LightStatsTests/Fixtures/`).
 
 ```bash
 xcodebuild test \
@@ -271,7 +270,6 @@ xcodebuild test \
 - 메뉴 막대 통합, 팝오버, 오버레이, 커스텀 뷰에 AppKit
 - Combine 및 Swift Concurrency
 - Mach API, IOKit, Accessibility, Core Graphics event tap, CFNetwork, Network, SMC, getifaddrs
-- 서드파티 런타임 의존성 없음
 
 ### 아키텍처
 

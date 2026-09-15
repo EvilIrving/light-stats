@@ -1003,7 +1003,7 @@ Claude CLI 的 `Claude Code-credentials` **不动**。
 
 ### B. CodexBar 式 JS plugin
 
-违反零依赖与「No plugin system」。**拒绝**。
+违反「No plugin system」。**拒绝**。
 
 ### C. Swift 协议 + 编译期 Registry，Views 直接 ForEach `UsageProviderRegistry.all`
 

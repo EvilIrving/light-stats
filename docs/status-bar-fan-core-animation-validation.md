@@ -64,11 +64,11 @@ fanLayer.speed = visualRevolutionsPerSecond
 ### 本次不解决的问题
 
 - 不修改 SMC 风扇转速采集、系统指标轮询频率或 Combine 数据流。
-- 不改变弹窗中的 `SpinningFanIcon`；它由 `TimelineView` 驱动且会随弹窗隐藏停止，
-  不属于这次状态栏常驻性能问题。
+- 不改变弹窗中的 `SpinningFanIcon`。**该假设后被证伪**：`TimelineView` 不会随
+  `panel.orderOut(nil)` 停摆，弹窗关着仍按帧重绘整棵视图树，见文末「后续修正」。
 - 不调整状态栏字体、宽度、指标顺序、分隔间距或设置项。
 - 不把视觉转速改成物理 `RPM / 60`。真实物理转速会快到无法辨认。
-- 不引入私有 AppKit API、第三方依赖或新的全局定时器。
+- 不引入新的全局定时器。
 
 ## 目标架构
 
@@ -271,3 +271,45 @@ StatusBarView deinit
 
 若公开 API 无法让独立风扇图层匹配菜单栏 template tint，保留当前实现并记录阻塞原因。回退
 必须是完整回退到现有渲染路径，不能留下双重风扇、透明空槽或点击区域变化。
+
+## 后续修正：弹窗风扇与背景场景（2026-09-14）
+
+状态栏迁移完成后，弹窗自身仍在逐帧重绘，且比上面假设的更严重——**弹窗关着也在跑**。
+
+### 实测（Release 1.9.5-dev.6，M4，默认 noir 主题，`showFan = 1`，风扇 1000 RPM）
+
+- `ps` 稳态 45–75%；本次 6.1 小时会话累计 190 分钟 CPU（单核约 52%）。
+- 该会话弹窗实际只打开 700 秒（3%），占用与弹窗可见性无关。
+- 弹窗关闭、四个窗口全部 offscreen 时采样：主线程 4057 个采样中 1468 个（36%）卡在
+  `-[NSWindow layoutIfNeeded]` → `NSHostingView.layout()` →
+  `ViewGraphRootValueUpdater.render`，栈内出现 `SpinningFanIcon.advance(to:)`、
+  `OverviewTabView`、`Sparkline`、`InkNightScene` 等弹窗内部视图；
+  `libdispatch-manager` 另有 381 个采样（9%）消耗在 display link 定时器的 arm/disarm
+  （`_dispatch_timer_unote_disarm` → `_dispatch_timer_heap_resift`）。
+
+原因：`TimelineView(.animation)` 在 `orderOut` 的窗口里不会自动暂停。窗口不再合成，
+hosting view 却仍在窗口层级里，每次 tick 都让整棵弹窗视图树变脏，AppKit 随即重做整体
+layout。弹窗里有两个这样的时间线：`SpinningFanIcon`（无 `minimumInterval`，跟显示刷新率）
+和 `InkNightScene`（24 fps，`paused` 只看 `lightFlow`，而 noir 默认 0.2 高于阈值 0.02）。
+
+### 修正
+
+- `SceneAnimationPolicy.isPaused(lightFlow:pauseThreshold:isVisible:)` 是唯一判断处，
+  不可见优先于亮度阈值。`BackgroundHost(isVisible:)` / `BackgroundSceneRouter(isVisible:)`
+  由 `PopoverContentView` 传入 `SystemMonitor.popoverVisible`（该标志原本就有，只是没暴露给视图）。
+- 弹窗风扇改用 `FanIconLayerView` + `FanAnimationLayer`，与状态栏同一条图层路径；
+  `SpinningFanIcon` 只负责尺寸与主题色，旋转不再进 SwiftUI 图。
+- `FanRotationPolicy` 收拢 rpm → 圈/秒的唯一约定（原先状态栏与弹窗各写一份）。
+
+### 验证
+
+同一台机器、同一 Release 配置，弹窗关闭（全部窗口 offscreen）：
+
+| | 修正前 | 修正后 |
+|---|---|---|
+| 稳态 CPU（隐藏） | 45–75% | 1–3%（30 s 内 0.84 s CPU） |
+| 采样热点 | `NSWindow layoutIfNeeded` 36%、display link 定时器 9% | 只剩 `mach_msg2_trap` / `__workq_kernreturn` |
+| 栈内 TimelineView / 风扇 / 场景帧 | 有 | 0 |
+
+单元测试另覆盖门控规则与图层状态（`SceneAnimationPolicyTests`、`FanRotationPolicyTests`、
+`FanAnimationLayerTests`）。弹窗内的视觉（风扇转向、主题色、行内对齐）仍需一次手动开面板确认。

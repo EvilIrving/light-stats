@@ -337,7 +337,7 @@ DeepSeek review 后补的两个修复：
 
 > 本条目描述 2026-07-12 状态，主题阵容部分已被下方更新条目取代：当时是 film（冷启动默认）/ bento / glass / noir 四主题、paper/aurora 读档映射 film；现为 glass（默认）/ film / bar / noir + 隐藏 dataPaper，bento 与 ashVeil 已删除（见 2026-08-18「主题阵容收缩」），未知键回落 noir（见 2026-08-16「ThemeDefinition 固定组合」）。以下其余事实经核对仍有效。
 
-- **Reicon Outline SVG**：从 [dqev/reicon](https://github.com/dqev/reicon) 导出到 `Resources/Icons/`（cpu / gpu / memory / network / proxy / disk / temperature / processes），`SVGIcon` / `AppSVGIcon` 用 NSImage 解码 + template 着色（零第三方）；`ATTRIBUTION.txt` 标注 MIT + Solar/Zappicon 上游；负载/风扇/上下行等仍用 SF Symbol。
+- **Reicon Outline SVG**：从 [dqev/reicon](https://github.com/dqev/reicon) 导出到 `Resources/Icons/`（cpu / gpu / memory / network / proxy / disk / temperature / processes），`SVGIcon` / `AppSVGIcon` 用 NSImage 解码 + template 着色；`ATTRIBUTION.txt` 标注 MIT + Solar/Zappicon 上游；负载/风扇/上下行等仍用 SF Symbol。
 - **设置窗固定系统白底**，不跟随展示主题：`.appThemed(.glass)`（当时是 `.bento`，同为 vibrant + 系统控件底、视觉等效，2026-08-16 改锁为 glass）+ `controlBackgroundColor`，不挂 ThemeBackgroundView；主题只作用 Popover / About / Toast / Update。
 - **主题选择器精简**：去掉迷你预览画布，只保留标题 + 副标题 + 选中描边（更省高、更像系统设置）。
 - **胶片专属外观**（仅 `appTheme == .film` 时 UI 露出）：`filmGrainEnabled`（默认 true，关 = 只留光影无胶片 grit）+ `filmLightFlow`（0–1，0 = 静止，0.5 = 产品默认，1 = 更快更大幅漂移）；初版幅度太小且设置页无反馈 → 加大漂移与平移，并内嵌实时 mesh 预览。
