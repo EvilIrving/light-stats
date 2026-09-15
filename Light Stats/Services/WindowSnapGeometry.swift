@@ -14,29 +14,68 @@ import CoreGraphics
 /// pipeline stays in it — converting once at the boundary is what keeps multi-display placement
 /// honest, because flipping with the wrong reference height silently shifts every frame that lands
 /// outside the primary display.
-enum WindowSnapGeometry {
+nonisolated enum WindowSnapGeometry {
 
     /// Windows rarely end up on the exact requested rect (apps clamp their size, the system rounds
     /// to the backing scale), so placement checks compare with a tolerance rather than for equality.
     static let placementTolerance: CGFloat = 2
 
     /// Frame an action asks for, given the target screen's visible area.
+    ///
+    /// `margins` are applied through the same gap rule the layout engine uses, so a fixed action
+    /// and a custom layout produce identical spacing.
     static func targetFrame(
         for action: WindowSnapAction,
         visibleFrame: CGRect,
-        currentSize: CGSize
+        currentSize: CGSize,
+        margins: SnapMargins = .zero
     ) -> CGRect {
         if action == .center {
-            return centeredFrame(size: currentSize, in: visibleFrame)
+            return centeredFrame(size: currentSize, in: SnapGridGeometry.insetBounds(visibleFrame, margins: margins))
         }
-        if let frame = halfOrQuarterFrame(for: action, in: visibleFrame) {
-            return frame
+        if action == .restore {
+            // Restore and display moves preview as the whole visible area.
+            return visibleFrame
         }
-        if let frame = thirdFrame(for: action, in: visibleFrame) {
-            return frame
+        return regionFrame(for: action, bounds: visibleFrame, margins: margins) ?? visibleFrame
+    }
+
+    /// Screen rect of a fixed action, or `nil` for the actions that are not a region at all
+    /// (center, restore, minimize, display moves).
+    static func regionFrame(
+        for action: WindowSnapAction,
+        bounds: CGRect,
+        margins: SnapMargins = .zero
+    ) -> CGRect? {
+        // The outer margin is applied by shrinking the area first, exactly as the layout path does,
+        // so a third of the screen and a third of a custom layout land on the same rectangle.
+        let area = SnapGridGeometry.insetBounds(bounds, margins: margins)
+        guard let rect = halfOrQuarterFrame(for: action, in: area) ?? thirdFrame(for: action, in: area) else {
+            return nil
         }
-        // Restore, minimize, and display moves preview as the whole visible area.
-        return visibleFrame
+        return SnapGridGeometry.applyingInnerGap(to: rect, in: area, inner: margins.inner)
+    }
+
+    /// The normalized tile an action covers, when it is a plain region. Used by the drag pipeline to
+    /// reuse one geometry path with the layout catalog.
+    static func normalizedRect(for action: WindowSnapAction) -> SnapNormalizedRect? {
+        switch action {
+        case .leftHalf: return .leftHalf
+        case .rightHalf: return .rightHalf
+        case .topHalf: return .topHalf
+        case .bottomHalf: return .bottomHalf
+        case .topLeft: return .topLeftQuarter
+        case .topRight: return .topRightQuarter
+        case .bottomLeft: return .bottomLeftQuarter
+        case .bottomRight: return .bottomRightQuarter
+        case .leftThird: return SnapNormalizedRect(columns: 3, rows: 1, column: 0, row: 0)
+        case .leftTwoThirds: return SnapNormalizedRect(columns: 3, rows: 1, column: 0, row: 0, columnSpan: 2)
+        case .centerThird: return SnapNormalizedRect(columns: 3, rows: 1, column: 1, row: 0)
+        case .rightTwoThirds: return SnapNormalizedRect(columns: 3, rows: 1, column: 1, row: 0, columnSpan: 2)
+        case .rightThird: return SnapNormalizedRect(columns: 3, rows: 1, column: 2, row: 0)
+        case .maximize: return .full
+        case .nextDisplay, .previousDisplay, .center, .restore, .minimize, .closeWindow, .quitApplication: return nil
+        }
     }
 
     private static func halfOrQuarterFrame(for action: WindowSnapAction, in visibleFrame: CGRect) -> CGRect? {

@@ -16,7 +16,7 @@ import CoreGraphics
 /// a heuristic — a measured titlebar band, plus a refusal to start on anything the app reacts to —
 /// with `SnapGestureZone.pointer` as the escape hatch. See
 /// `docs/window-titlebar-gesture-research.md`.
-struct WindowGestureTargeting {
+nonisolated struct WindowGestureTargeting {
 
     /// Either the window to act on, or why the point was refused.
     struct Target {
