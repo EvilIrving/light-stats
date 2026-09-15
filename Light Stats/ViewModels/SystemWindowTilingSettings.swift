@@ -42,22 +42,30 @@ final class SystemWindowTilingSettings: ObservableObject {
         topEdgeDragEnabled = SystemWindowTilingSetting.isTopEdgeDragEnabled
     }
 
-    /// Turns the system's edge-drag tiling on the first time window management is enabled.
+    /// Settles the one-time conflict between the system's edge-drag tiling and ours.
     ///
-    /// Our own swipe gesture can only guess which part of a window is its titlebar; the system's
-    /// drag-to-edge path needs no guess at all, so it is the route a user should have working by
-    /// default. This runs once per install and never fights the user afterwards — if they switch it
-    /// back off, that choice stays.
+    /// Both act on the same gesture. While both are live, the system tiles the window at the same
+    /// moment the engine places it, and which one wins depends on which finished last — so exactly
+    /// one has to own the gesture, and while our drag pipeline is on that has to be us.
     ///
-    /// The bookkeeping flag is deliberately not a `SettingsManager` preference: it has no UI and
-    /// represents a one-time migration, not a user choice.
-    static func applyDefaultEdgeDragIfNeeded(defaults: UserDefaults = .standard) {
+    /// This runs once per install. After that the user's own choice stands, even if it reintroduces
+    /// the conflict: the Settings page says so explicitly rather than silently correcting them.
+    ///
+    /// The bookkeeping flag is deliberately not a `SettingsManager` preference — it has no UI and
+    /// represents a migration, not a choice.
+    static func applyInitialEdgeDragPolicy(ownsEdgeSnapping: Bool, defaults: UserDefaults = .standard) {
         guard #available(macOS 15.0, *) else { return }
         let appliedKey = "settings.systemTilingEdgeDragDefaultApplied"
         guard !defaults.bool(forKey: appliedKey) else { return }
         defaults.set(true, forKey: appliedKey)
 
-        guard !SystemWindowTilingSetting.isEdgeDragEnabled else { return }
-        SystemWindowTilingSetting.setEdgeDragEnabled(true)
+        let desired = !ownsEdgeSnapping
+        guard SystemWindowTilingSetting.isEdgeDragEnabled != desired else { return }
+        SystemWindowTilingSetting.setEdgeDragEnabled(desired)
+        DiagnosticLogService.record(
+            category: "windowManagement",
+            action: "systemTilingReconciled",
+            fields: ["edgeDrag": desired ? "true" : "false"]
+        )
     }
 }

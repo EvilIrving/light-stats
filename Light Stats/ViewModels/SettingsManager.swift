@@ -14,9 +14,8 @@ import UniformTypeIdentifiers
 nonisolated enum AppConfig {
     static let topCPUProcessCount: Int = 5
     static let topMemoryProcessCount: Int = 300
-    static let topMemoryExactProcessLimit: Int = 80
-    /// 进程榜采样间隔：进程榜仅在弹窗内展示，无需跟随主采样周期高频刷新，
-    /// 单独节流以降低 `ps -A` 全进程表遍历的 CPU 开销。
+    /// 进程榜仅在弹窗内展示；CPU 使用系统 ps，内存使用原生 footprint 采样。
+    /// 单独节流，避免跟随主采样周期高频遍历全进程表。
     static let topProcessRefreshInterval: TimeInterval = 5.0
     static let appMemoryRefreshInterval: TimeInterval = 5.0
     /// 出口节点探测缓存有效期：TTL 内不重复发外部请求。
@@ -260,7 +259,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
     // MARK: - Network / Exit Node Settings
 
-    /// 出口节点探测开关。隐私红线：默认关闭，需用户主动开启。
+    /// 出口节点探测开关。默认关闭，需用户主动开启。
     @Published var exitNodeDetectionEnabled: Bool {
         didSet { save(exitNodeDetectionEnabled, for: .exitNodeDetectionEnabled) }
     }
@@ -271,7 +270,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
 
     // MARK: - Software Update Settings
 
-    /// 启动时与定时自动检查更新。默认关闭（opt-in，零外发）。
+    /// 启动时与定时自动检查更新。默认关闭。
     @Published var autoCheckUpdates: Bool {
         didSet { save(autoCheckUpdates, for: .autoCheckUpdates) }
     }
@@ -284,11 +283,15 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     @Published var scrollReverseEnabled: Bool {
         didSet { save(scrollReverseEnabled, for: .scrollReverseEnabled) }
     }
-    /// 窗口管理总开关：单一开关同时驱动菜单栏图标、贴靠快捷键、标题栏滑动手势。
-    /// 默认关闭（opt-in），需辅助功能权限移动其他 App 窗口。开 = 图标 + 快捷键 + 手势全开；
-    /// 关 = 三者一起消失、tap 全部 stop。
+    /// 窗口管理总开关：单一开关同时驱动菜单栏图标、贴靠快捷键、标题栏滑动手势、拖动吸附与悬浮岛。
+    /// 默认关闭（opt-in），需辅助功能权限移动其他 App 窗口。
     @Published var windowManagementEnabled: Bool {
         didSet { save(windowManagementEnabled, for: .windowManagementEnabled) }
+    }
+    /// 窗口管理的全部子配置（间距、触发区、悬浮岛、排除列表、快捷键、布局）。
+    /// 作为单个 JSON 值存储：设置面一次只增加一个键，重置窗口管理也只是删一个键。
+    @Published var windowSnap: SnapConfiguration {
+        didSet { save(windowSnap.json, for: .windowSnap) }
     }
     /// 默认输入法：默认关闭（opt-in）。开 → 每个 App 激活后把输入源拉回 `defaultInputSourceID`；
     /// 关 → 立即移除激活观察者，不再触碰输入源。
@@ -454,6 +457,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case lastIgnoredVersion = "settings.lastIgnoredVersion"
         case scrollReverseEnabled = "settings.scrollReverseEnabled"
         case windowManagementEnabled = "settings.windowManagementEnabled"
+        case windowSnap = "settings.windowSnap"
         case defaultInputSourceEnabled = "settings.defaultInputSourceEnabled"
         case defaultInputSourceID = "settings.defaultInputSourceID"
         case displayBrightnessControlEnabled = "settings.displayBrightnessControlEnabled"
@@ -540,7 +544,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         let langStr = defaults.string(forKey: Key.appLanguage.rawValue) ?? AppLanguage.system.rawValue
         appLanguage = AppLanguage(rawValue: langStr) ?? .system
 
-        // 出口探测默认关闭（隐私红线），provider 默认 ip.sb。
+        // 出口探测默认关闭，provider 默认 ip.sb。
         exitNodeDetectionEnabled = defaults.object(forKey: Key.exitNodeDetectionEnabled.rawValue) as? Bool ?? false
         let providerStr = defaults.string(forKey: Key.exitNodeProvider.rawValue) ?? ExitNodeProvider.ipsb.rawValue
         exitNodeProvider = ExitNodeProvider(rawValue: providerStr) ?? .ipsb
@@ -551,7 +555,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         autoRefreshClaudeEnabled = defaults.object(forKey: Key.autoRefreshClaude.rawValue) as? Bool ?? false
         autoRefreshCodexEnabled = defaults.object(forKey: Key.autoRefreshCodex.rawValue) as? Bool ?? false
 
-        // 自动检查更新：默认关闭（opt-in）。彻底零外发：默认形态不发起任何网络请求。
+        // 自动检查更新：默认关闭。
         autoCheckUpdates = defaults.object(forKey: Key.autoCheckUpdates.rawValue) as? Bool ?? false
         // Beta 尝鲜：默认关闭，正式用户只收稳定版。
         includeBetaUpdates = defaults.object(forKey: Key.includeBetaUpdates.rawValue) as? Bool ?? false
@@ -559,6 +563,8 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的快捷键/标题栏手势子开关。
         windowManagementEnabled = defaults.object(forKey: Key.windowManagementEnabled.rawValue) as? Bool ?? false
+        windowSnap = defaults.string(forKey: Key.windowSnap.rawValue)
+            .flatMap(SnapConfiguration.init(json:)) ?? .default
         // 默认输入法：默认关闭（opt-in）。冷启动不注册 NSWorkspace 激活观察者、不读输入源。
         defaultInputSourceEnabled = defaults.object(forKey: Key.defaultInputSourceEnabled.rawValue) as? Bool ?? false
         defaultInputSourceID = defaults.string(forKey: Key.defaultInputSourceID.rawValue)
@@ -658,6 +664,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             "exitNodeDetectionEnabled": String(exitNodeDetectionEnabled),
             "aiEnabled": enabledAIProviders.map(\.rawValue).sorted().joined(separator: ","),
             "windowManagementEnabled": String(windowManagementEnabled),
+            "snapMargins": String(format: "%.0f/%.0f", windowSnap.margins.outer, windowSnap.margins.inner),
+            "snapTopEdgeMode": windowSnap.zones.topEdgeMode.rawValue,
+            "snapShortcuts": String(windowSnap.shortcuts.count),
+            "snapExclusions": String(windowSnap.exclusions.count),
             "displayBrightnessControlEnabled": String(displayBrightnessControlEnabled),
             "finderMenuEnabled": String(finderMenuEnabled),
             "scrollReverseEnabled": String(scrollReverseEnabled),
@@ -687,7 +697,7 @@ private extension SettingsManager {
         } else {
             defaults.set(value, forKey: key.rawValue)
         }
-        let loggedValue = key == .activationCode ? "<redacted>" : String(describing: value)
+        let loggedValue = Self.loggedValue(for: key, value: value)
         DiagnosticLogService.record(
             category: "settings",
             action: "changed",
@@ -696,6 +706,34 @@ private extension SettingsManager {
         // 延迟执行以避免在视图更新过程中修改状态
         Task { @MainActor in
             ensureAtLeastOneItem()
+        }
+    }
+
+    /// What goes into the diagnostic journal for a preference change.
+    ///
+    /// The window-snap configuration is a JSON blob that changes on every drag of a gap slider;
+    /// logging it verbatim would flood the journal with kilobytes of base64-free JSON per second and
+    /// make the journal useless for the thing it exists for. It is summarised instead.
+    private static func loggedValue<T>(for key: Key, value: T) -> String {
+        switch key {
+        case .activationCode:
+            return "<redacted>"
+        case .windowSnap:
+            guard let configuration = SnapConfiguration(json: value as? String ?? "") else {
+                return "<unreadable>"
+            }
+            return String(
+                format: "margins=%.0f/%.0f zones=%d island=%d shortcuts=%d layouts=%d exclusions=%d",
+                configuration.margins.outer,
+                configuration.margins.inner,
+                configuration.zones.isActive ? 1 : 0,
+                configuration.islandLayoutIDs.count,
+                configuration.shortcuts.count,
+                configuration.customLayouts.count,
+                configuration.exclusions.count
+            )
+        default:
+            return String(describing: value)
         }
     }
 }
