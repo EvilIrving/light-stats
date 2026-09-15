@@ -2,11 +2,10 @@
 //  SettingsDefaultsTests.swift
 //  Light Stats Tests
 //
-//  Pins the "zero-intrusion / default-off" product rule into code: on a clean
-//  install (empty UserDefaults) every capability beyond read-only monitoring is
-//  off, and no opt-in feature silently flips on. `SettingsManager(defaults:)`
-//  lets us read those defaults against an isolated suite without touching the
-//  real `.standard` domain.
+//  Pins the shipped default values into code: on a clean install (empty
+//  UserDefaults) every capability beyond read-only monitoring reads back off.
+//  `SettingsManager(defaults:)` lets us read those defaults against an isolated
+//  suite without touching the real `.standard` domain.
 //
 
 import XCTest
@@ -223,7 +222,7 @@ final class SettingsDefaultsTests: XCTestCase {
 
     func testNoNetworkFeatureIsOnByDefault() {
         let s = freshSettings()
-        // Zero outbound on a clean install: even update checks are opt-in now.
+        // Update checks are off until the user enables them.
         XCTAssertFalse(s.autoCheckUpdates)
         XCTAssertFalse(s.includeBetaUpdates)
         XCTAssertFalse(s.exitNodeDetectionEnabled)
