@@ -116,6 +116,84 @@ actor PowerService {
         return data
     }
 
+    /// AppleSmartBattery 的一层属性表：节点顶层属性，或节点里的一个嵌套 `BatteryData` 字典。
+    /// `origin` 只用于诊断标注，说明某个键最终是从哪一层读到的。
+    struct BatteryLayer {
+        var origin: String
+        var values: [String: Any]
+    }
+
+    /// 容量/温度键在不同 macOS 版本位于不同层级：
+    /// - macOS 26 及更早：`DesignCapacity` / `AppleRawMaxCapacity` / `Temperature` 直接在 AppleSmartBattery 顶层；
+    /// - macOS 27 起：顶层只剩 `CycleCount` / `MaxCapacity` / `Voltage` / `InstantAmperage` 等，
+    ///   容量移进嵌套的 `BatteryData`（顶层一份精简版），温度与 `PermanentFailureStatus`
+    ///   只在子节点（典型为 AppleSmartBatteryPack）的电量计 `BatteryData` 里。
+    /// 按层收集后合并，两代系统才能走同一条解析路径。
+    private func batteryPropertyLayers(topLevel: [String: Any], service: io_service_t) -> [BatteryLayer] {
+        var layers = [BatteryLayer(origin: "AppleSmartBattery", values: topLevel)]
+        if let summary = topLevel["BatteryData"] as? [String: Any] {
+            layers.append(BatteryLayer(origin: "AppleSmartBattery.BatteryData", values: summary))
+        }
+        layers.append(contentsOf: Self.childBatteryLayers(of: service))
+        return layers
+    }
+
+    /// 直接子节点的属性及其 `BatteryData`。无子节点（旧系统、无电池机型）时返回空数组，
+    /// 此时读取退化为只认顶层属性，即升级前的行为。
+    nonisolated static func childBatteryLayers(of service: io_service_t) -> [BatteryLayer] {
+        var iterator: io_iterator_t = 0
+        guard IORegistryEntryGetChildIterator(service, kIOServicePlane, &iterator) == kIOReturnSuccess else {
+            return []
+        }
+        defer { IOObjectRelease(iterator) }
+
+        var layers: [BatteryLayer] = []
+        var child = IOIteratorNext(iterator)
+        while child != 0 {
+            defer { IOObjectRelease(child) }
+            if let properties = registryProperties(of: child) {
+                let label = registryClassName(of: child)
+                layers.append(BatteryLayer(origin: label, values: properties))
+                if let nested = properties["BatteryData"] as? [String: Any] {
+                    layers.append(BatteryLayer(origin: "\(label).BatteryData", values: nested))
+                }
+            }
+            child = IOIteratorNext(iterator)
+        }
+        return layers
+    }
+
+    /// 按传入顺序从外到内合并：先出现的层优先，同名键不覆盖。
+    /// 于是 macOS ≤26 读到的仍是顶层值，macOS 27 由嵌套/子节点补齐。
+    nonisolated static func mergedBatteryLayers(_ layers: [BatteryLayer])
+        -> (values: [String: Any], origins: [String: String]) {
+        var values: [String: Any] = [:]
+        var origins: [String: String] = [:]
+        for layer in layers {
+            for (key, value) in layer.values where values[key] == nil {
+                values[key] = value
+                origins[key] = layer.origin
+            }
+        }
+        return (values, origins)
+    }
+
+    nonisolated static func registryProperties(of entry: io_object_t) -> [String: Any]? {
+        var propsRef: Unmanaged<CFMutableDictionary>?
+        let result = IORegistryEntryCreateCFProperties(entry, &propsRef, kCFAllocatorDefault, 0)
+        guard result == kIOReturnSuccess,
+              let properties = propsRef?.takeRetainedValue() as? [String: Any] else {
+            return nil
+        }
+        return properties
+    }
+
+    nonisolated static func registryClassName(of entry: io_object_t) -> String {
+        var name = [CChar](repeating: 0, count: 128)
+        guard IOObjectGetClass(entry, &name) == kIOReturnSuccess else { return "unknown" }
+        return String(cString: name)
+    }
+
     private func readSmartBattery() -> SmartData? {
         let source = "IORegistry/AppleSmartBattery"
         let service = IOServiceGetMatchingService(kIOMainPortDefault,
@@ -147,51 +225,20 @@ actor PowerService {
             return nil
         }
 
+        let merged = Self.mergedBatteryLayers(batteryPropertyLayers(topLevel: dict, service: service))
+        let properties = merged.values
+
         var data = SmartData()
 
         // 循环次数
-        data.cycleCount = (dict["CycleCount"] as? NSNumber)?.intValue
-
-        // 健康度 = 当前最大容量 / 设计容量。
-        // 优先 AppleRawMaxCapacity（电池控制器上报的真实最大容量），
-        // 缺失时回退到 NominalChargeCapacity 或 MaxCapacity（后者在部分机型是百分比，>100 才当容量用）。
-        // system_profiler 用 NominalChargeCapacity，偏乐观（偏高 2-3pp）；这里用真实值。
-        if let design = (dict["DesignCapacity"] as? NSNumber)?.doubleValue, design > 0 {
-            let rawMax = (dict["AppleRawMaxCapacity"] as? NSNumber)?.doubleValue
-            let nominal = (dict["NominalChargeCapacity"] as? NSNumber)?.doubleValue
-            let maxCap = (dict["MaxCapacity"] as? NSNumber)?.doubleValue
-            let effectiveMax: Double?
-            if let rawMax, rawMax > 0 {
-                effectiveMax = rawMax
-            } else if let nominal, nominal > 0 {
-                effectiveMax = nominal
-            } else if let maxCap, maxCap > 0, maxCap > 100 {
-                // MaxCapacity ≤100 时是百分比（充满上限/电量），不是 mAh 容量，跳过。
-                effectiveMax = maxCap
-            } else {
-                effectiveMax = nil
-            }
-            if let m = effectiveMax {
-                data.healthPercent = Swift.min(100, Int((m / design * 100).rounded()))
-            }
-        }
-
-        // 状态正常与否（best-effort）：PermanentFailureStatus == 0 视为正常。
-        if let pfs = (dict["PermanentFailureStatus"] as? NSNumber)?.intValue {
-            data.conditionOK = (pfs == 0)
-        }
-
-        // 温度：单位 0.01°C，除以 100。超出合理范围视为脏值丢弃。
-        if let t = (dict["Temperature"] as? NSNumber)?.doubleValue {
-            let celsius = t / 100.0
-            if celsius > 0, celsius < 80 {
-                data.temperature = celsius
-            }
-        }
+        data.cycleCount = (properties["CycleCount"] as? NSNumber)?.intValue
+        data.healthPercent = Self.healthPercent(from: properties)
+        data.conditionOK = Self.conditionOK(from: properties)
+        data.temperature = Self.batteryTemperatureCelsius(from: properties)
 
         // 实时功耗：InstantAmperage(mA, 有符号) × Voltage(mV) → W。
-        if let voltage = (dict["Voltage"] as? NSNumber)?.doubleValue,
-           let a = signedRegistryInteger(dict["InstantAmperage"] ?? dict["Amperage"]),
+        if let voltage = (properties["Voltage"] as? NSNumber)?.doubleValue,
+           let a = signedRegistryInteger(properties["InstantAmperage"] ?? properties["Amperage"]),
            abs(a) <= 30_000 {
             let watts = Double(abs(a)) * voltage / 1_000_000.0
             if watts >= 0, watts < 200 {
@@ -200,7 +247,7 @@ actor PowerService {
         }
 
         if data.powerWatts == nil,
-           let telemetry = dict["PowerTelemetryData"] as? [String: Any],
+           let telemetry = properties["PowerTelemetryData"] as? [String: Any],
            let batteryPower = signedRegistryInteger(telemetry["BatteryPower"]) {
             let watts = Double(abs(batteryPower)) / 1_000.0
             if watts >= 0, watts < 200 {
@@ -208,11 +255,54 @@ actor PowerService {
             }
         }
 
-        recordSmartBatteryDiagnostics(properties: dict, data: data)
+        recordSmartBatteryDiagnostics(properties: properties, origins: merged.origins, data: data)
         return data
     }
 
-    private func recordSmartBatteryDiagnostics(properties: [String: Any], data: SmartData) {
+    /// 健康度 = 当前最大容量 / 设计容量。
+    /// 优先 AppleRawMaxCapacity（电池控制器上报的真实最大容量），
+    /// 缺失时回退到 NominalChargeCapacity 或 MaxCapacity（后者在部分机型是百分比，>100 才当容量用）。
+    /// system_profiler 用 NominalChargeCapacity，偏乐观（偏高 2-3pp）；这里用真实值。
+    nonisolated static func healthPercent(from properties: [String: Any]) -> Int? {
+        guard let design = (properties["DesignCapacity"] as? NSNumber)?.doubleValue, design > 0 else {
+            return nil
+        }
+        let rawMax = (properties["AppleRawMaxCapacity"] as? NSNumber)?.doubleValue
+        let nominal = (properties["NominalChargeCapacity"] as? NSNumber)?.doubleValue
+        let maxCap = (properties["MaxCapacity"] as? NSNumber)?.doubleValue
+        let effectiveMax: Double?
+        if let rawMax, rawMax > 0 {
+            effectiveMax = rawMax
+        } else if let nominal, nominal > 0 {
+            effectiveMax = nominal
+        } else if let maxCap, maxCap > 0, maxCap > 100 {
+            // MaxCapacity ≤100 时是百分比（充满上限/电量），不是 mAh 容量，跳过。
+            effectiveMax = maxCap
+        } else {
+            effectiveMax = nil
+        }
+        guard let maximum = effectiveMax else { return nil }
+        return Swift.min(100, Int((maximum / design * 100).rounded()))
+    }
+
+    /// 状态正常与否（best-effort）：PermanentFailureStatus == 0 视为正常。
+    nonisolated static func conditionOK(from properties: [String: Any]) -> Bool? {
+        guard let status = (properties["PermanentFailureStatus"] as? NSNumber)?.intValue else {
+            return nil
+        }
+        return status == 0
+    }
+
+    /// 温度：单位 0.01°C，除以 100。超出合理范围视为脏值丢弃。
+    nonisolated static func batteryTemperatureCelsius(from properties: [String: Any]) -> Double? {
+        guard let raw = (properties["Temperature"] as? NSNumber)?.doubleValue else { return nil }
+        let celsius = raw / 100.0
+        return celsius > 0 && celsius < 80 ? celsius : nil
+    }
+
+    private func recordSmartBatteryDiagnostics(properties: [String: Any],
+                                               origins: [String: String],
+                                               data: SmartData) {
         let source = "IORegistry/AppleSmartBattery"
         DiagnosticLogService.recordProbe(
             component: "PowerService",
@@ -220,7 +310,7 @@ actor PowerService {
             status: data.cycleCount == nil ? .unavailable : .success,
             reasonCode: data.cycleCount == nil ? "missingOrInvalidCycleCount" : "valueRead",
             source: source,
-            fields: diagnosticFields(for: ["CycleCount"], in: properties)
+            fields: diagnosticFields(for: ["CycleCount"], in: properties, origins: origins)
         )
 
         let healthKeys = ["DesignCapacity", "AppleRawMaxCapacity", "NominalChargeCapacity", "MaxCapacity"]
@@ -230,7 +320,7 @@ actor PowerService {
             status: data.healthPercent == nil ? .unavailable : .success,
             reasonCode: data.healthPercent == nil ? Self.healthFailureReason(properties) : "capacityRatioComputed",
             source: source,
-            fields: diagnosticFields(for: healthKeys, in: properties)
+            fields: diagnosticFields(for: healthKeys, in: properties, origins: origins)
         )
 
         DiagnosticLogService.recordProbe(
@@ -239,7 +329,7 @@ actor PowerService {
             status: data.temperature == nil ? .unavailable : .success,
             reasonCode: Self.batteryTemperatureReason(properties: properties, value: data.temperature),
             source: source,
-            fields: diagnosticFields(for: ["Temperature"], in: properties)
+            fields: diagnosticFields(for: ["Temperature"], in: properties, origins: origins)
         )
 
         let powerKeys = ["Voltage", "InstantAmperage", "Amperage", "PowerTelemetryData"]
@@ -249,7 +339,7 @@ actor PowerService {
             status: data.powerWatts == nil ? .unavailable : .success,
             reasonCode: data.powerWatts == nil ? "noUsablePowerSource" : "valueRead",
             source: source,
-            fields: diagnosticFields(for: powerKeys, in: properties)
+            fields: diagnosticFields(for: powerKeys, in: properties, origins: origins)
         )
     }
 
@@ -271,7 +361,9 @@ actor PowerService {
         return celsius > 0 && celsius < 80 ? "parseFailed" : "temperatureOutOfRange"
     }
 
-    private func diagnosticFields(for keys: [String], in properties: [String: Any])
+    private func diagnosticFields(for keys: [String],
+                                  in properties: [String: Any],
+                                  origins: [String: String])
         -> [String: DiagnosticLogService.Field] {
         let attempts = keys.map { key -> DiagnosticLogService.Value in
             guard let value = properties[key] else {
@@ -283,7 +375,8 @@ actor PowerService {
             var detail: [String: DiagnosticLogService.Value] = [
                 "key": .string(key),
                 "present": .bool(true),
-                "type": .string(String(describing: type(of: value)))
+                "type": .string(String(describing: type(of: value))),
+                "origin": .string(origins[key] ?? "unknown")
             ]
             if let number = value as? NSNumber {
                 detail["numericValue"] = .double(number.doubleValue)
