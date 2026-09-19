@@ -79,6 +79,7 @@
 "battery.na" = "—";
 "battery.cycles" = "Cycles";
 "battery.health" = "Health";
+"battery.health.hint" = "Click to switch: measured capacity ratio / system-reported value";
 "battery.power" = "Power";
 "battery.temp" = "Temp";
 "battery.timeLeft" = "%@ left";

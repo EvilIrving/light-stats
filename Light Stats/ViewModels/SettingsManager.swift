@@ -22,6 +22,8 @@ nonisolated enum AppConfig {
     static let exitNodeCacheTTL: TimeInterval = 60
     /// 电池慢变量（循环/健康/功耗/温度）缓存有效期：TTL 内不重复读 IORegistry。
     static let batteryHealthCacheTTL: TimeInterval = 30
+    /// 系统报告的健康度（system_profiler）缓存有效期：它以天计变化，别跟着 30s 的采样周期反复起进程。
+    static let batterySystemHealthCacheTTL: TimeInterval = 3_600
     /// AI 用量刷新间隔固定为 2 分钟，降低令牌长时间闲置后失效的概率。
     static let aiUsageRefreshInterval: TimeInterval = 120
     /// 正式收费前保持开启：每个启动过本版本的用户都会永久获赠 Pro。

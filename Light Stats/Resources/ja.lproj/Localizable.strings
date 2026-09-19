@@ -81,6 +81,7 @@
 "battery.na" = "—";
 "battery.cycles" = "充放電回数";
 "battery.health" = "状態";
+"battery.health.hint" = "クリックで切替：実測の容量比 / システム報告値";
 "battery.power" = "電力";
 "battery.temp" = "温度";
 "battery.timeLeft" = "残り %@";

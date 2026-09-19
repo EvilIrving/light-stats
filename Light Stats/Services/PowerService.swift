@@ -19,6 +19,8 @@ actor PowerService {
     private struct SmartData {
         var cycleCount: Int?
         var healthPercent: Int?
+        /// 系统（电源管理）报告的最大容量，见 `systemHealthPercent(fromProfilerJSON:)`。
+        var systemHealthPercent: Int?
         var conditionOK: Bool?
         var powerWatts: Double?
         var temperature: Double?
@@ -26,19 +28,23 @@ actor PowerService {
 
     private var cachedSmart: SmartData?
     private var cachedSmartAt: Date?
+    /// 系统报告的健康度单独缓存：它只在 system_profiler 里公开，数值以天计变化。
+    private var cachedSystemHealth: Int?
+    private var cachedSystemHealthAt: Date?
 
     /// 采集当前电池信息。无电池 → `.noBattery`。
-    func current() -> BatteryInfo {
+    func current() async -> BatteryInfo {
         guard let live = readPowerSources() else {
             return .noBattery
         }
-        let smart = smartData()
+        let smart = await smartData()
         return BatteryInfo(
             state: live.state,
             percent: live.percent,
             timeRemaining: live.timeRemaining,
             cycleCount: smart.cycleCount,
             healthPercent: smart.healthPercent,
+            systemHealthPercent: smart.systemHealthPercent,
             conditionOK: smart.conditionOK,
             powerWatts: smart.powerWatts,
             temperature: smart.temperature
@@ -105,12 +111,13 @@ actor PowerService {
 
     // MARK: - AppleSmartBattery（循环/健康/功耗/温度，缓存 30s）
 
-    private func smartData() -> SmartData {
+    private func smartData() async -> SmartData {
         if let cachedSmart, let at = cachedSmartAt,
            Date().timeIntervalSince(at) < AppConfig.batteryHealthCacheTTL {
             return cachedSmart
         }
-        let data = readSmartBattery() ?? SmartData()
+        var data = readSmartBattery() ?? SmartData()
+        data.systemHealthPercent = await systemReportedHealthPercent()
         cachedSmart = data
         cachedSmartAt = Date()
         return data
@@ -257,6 +264,76 @@ actor PowerService {
 
         recordSmartBatteryDiagnostics(properties: properties, origins: merged.origins, data: data)
         return data
+    }
+
+    // MARK: - 系统报告的健康度（system_profiler）
+
+    /// 系统报告的最大容量，带独立的长 TTL 缓存。
+    private func systemReportedHealthPercent() async -> Int? {
+        if let at = cachedSystemHealthAt,
+           Date().timeIntervalSince(at) < AppConfig.batterySystemHealthCacheTTL {
+            return cachedSystemHealth
+        }
+        let value = await profiledSystemHealthPercent()
+        DiagnosticLogService.recordProbe(
+            component: "PowerService",
+            operation: "batterySystemHealth",
+            status: value == nil ? .unavailable : .success,
+            reasonCode: value == nil ? "systemProfilerUnavailable" : "systemReportedCapacity",
+            source: "system_profiler/SPPowerDataType"
+        )
+        cachedSystemHealth = value
+        cachedSystemHealthAt = Date()
+        return value
+    }
+
+    /// 电源管理的「最大容量」只有 system_profiler 公开，IOKit 侧没有对应键：
+    /// 本机实测 AppleRawMaxCapacity（4 835）与 NominalChargeCapacity（4 985）配 DesignCapacity（6 075）
+    /// 只能算出 80% / 82%，而系统自己报 84%。所以这里读系统自己的口径，而不是再推一个公式。
+    /// 用 `-json`：键固定为英文，与界面语言无关；等进程退出再读管道，输出约 3 KB，远小于管道缓冲。
+    private func profiledSystemHealthPercent() async -> Int? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/system_profiler")
+        process.arguments = ["-json", "SPPowerDataType"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        let launched = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            // 处理器必须在 run() 之前挂上，否则进程可能在挂上之前就退出，continuation 永不恢复。
+            process.terminationHandler = { _ in continuation.resume(returning: true) }
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(returning: false)
+            }
+        }
+        guard launched, process.terminationStatus == 0 else { return nil }
+        return Self.systemHealthPercent(fromProfilerJSON: pipe.fileHandleForReading.readDataToEndOfFile())
+    }
+
+    /// 解析 `system_profiler -json SPPowerDataType` 的最大容量（`"84%"` → 84）。
+    /// 缺键、非数字、0 都当作取不到；超过 100 按 100 截断（换新电池后系统会短暂报 >100%）。
+    nonisolated static func systemHealthPercent(fromProfilerJSON data: Data) -> Int? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let entries = root["SPPowerDataType"] as? [[String: Any]] else {
+            return nil
+        }
+        for entry in entries {
+            guard let info = entry["sppower_battery_health_info"] as? [String: Any],
+                  let raw = info["sppower_battery_health_maximum_capacity"] else { continue }
+            let digits: Substring
+            if let text = raw as? String {
+                digits = text.prefix { $0.isNumber }
+            } else if let number = raw as? NSNumber {
+                digits = Substring(String(number.intValue))
+            } else {
+                continue
+            }
+            guard let value = Int(digits), value > 0 else { continue }
+            return Swift.min(100, value)
+        }
+        return nil
     }
 
     /// 健康度 = 当前最大容量 / 设计容量。

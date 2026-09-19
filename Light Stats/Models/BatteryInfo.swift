@@ -28,8 +28,11 @@ nonisolated struct BatteryInfo: Sendable, Equatable {
     /// 剩余/充满分钟数；计算中或未知为 nil。
     var timeRemaining: Int?
     var cycleCount: Int?
-    /// 最大容量 / 设计容量，0–100。
+    /// 最大容量 / 设计容量，0–100。本机值：电池控制器上报的最大容量 ÷ 设计容量。
     var healthPercent: Int?
+    /// 系统（电源管理）报告的最大容量，0–100。与 `healthPercent` 是两个算法，数值通常不同。
+    /// 只在 `system_profiler` 里公开，取不到为 nil。
+    var systemHealthPercent: Int?
     /// 电池状态正常与否（best-effort，取不到为 nil）。
     var conditionOK: Bool?
     /// 实时功耗（W）。取不到或数值异常为 nil（避免溢出脏值）。
@@ -40,7 +43,7 @@ nonisolated struct BatteryInfo: Sendable, Equatable {
     /// 无电池占位值（台式 Mac / 读取失败）。
     static let noBattery = BatteryInfo(
         state: .noBattery, percent: 0, timeRemaining: nil,
-        cycleCount: nil, healthPercent: nil, conditionOK: nil,
+        cycleCount: nil, healthPercent: nil, systemHealthPercent: nil, conditionOK: nil,
         powerWatts: nil, temperature: nil
     )
 }

@@ -81,6 +81,7 @@
 "battery.na" = "—";
 "battery.cycles" = "충전 횟수";
 "battery.health" = "상태";
+"battery.health.hint" = "클릭하여 전환: 실측 용량 비율 / 시스템 보고 값";
 "battery.power" = "전력";
 "battery.temp" = "온도";
 "battery.timeLeft" = "%@ 남음";

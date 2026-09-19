@@ -81,6 +81,7 @@
 "battery.na" = "—";
 "battery.cycles" = "循环次数";
 "battery.health" = "健康度";
+"battery.health.hint" = "点击切换：实测容量比 / 系统报告值";
 "battery.power" = "功耗";
 "battery.temp" = "温度";
 "battery.timeLeft" = "剩余 %@";
