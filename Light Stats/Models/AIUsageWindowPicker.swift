@@ -9,12 +9,17 @@
 import Foundation
 
 enum AIUsageWindowPicker {
-    /// Highest `usedPercent` (lowest remaining). `nil` percent is least strained
-    /// so an unlimited / unknown window never hides a real quota.
-    static func mostStrained(in windows: [UsageWindow]) -> UsageWindow? {
+    /// The window that resets soonest. `nil` reset time is never nearest, so an
+    /// unknown window cannot hide a dated one. Provider order breaks ties.
+    ///
+    /// The header answers "which allowance is about to change?", so the nearest
+    /// reset wins even when another window is far more consumed: a full 5h
+    /// window still resets within hours, while an 88% weekly one is unchanged
+    /// tomorrow.
+    static func nearestReset(in windows: [UsageWindow]) -> UsageWindow? {
         guard let first = windows.first else { return nil }
         return windows.dropFirst().reduce(first) { current, next in
-            strain(next) > strain(current) ? next : current
+            isNearer(next, than: current) ? next : current
         }
     }
 
@@ -25,7 +30,14 @@ enum AIUsageWindowPicker {
         return windows
     }
 
-    private static func strain(_ window: UsageWindow) -> Double {
-        window.usedPercent ?? -1
+    private static func isNearer(_ lhs: UsageWindow, than rhs: UsageWindow) -> Bool {
+        switch (lhs.resetsAt, rhs.resetsAt) {
+        case let (.some(lhsReset), .some(rhsReset)):
+            return lhsReset < rhsReset
+        case (.some, .none):
+            return true
+        case (.none, _):
+            return false
+        }
     }
 }

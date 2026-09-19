@@ -178,7 +178,7 @@ struct AIProviderCompactRow: View {
     private func loadedHeaderTrailing(_ snapshot: ProviderUsageSnapshot) -> some View {
         if isExpanded {
             headerBalance(snapshot.balance)
-        } else if let primary = AIUsageWindowPicker.mostStrained(in: snapshot.windows) {
+        } else if let primary = AIUsageWindowPicker.nearestReset(in: snapshot.windows) {
             QuotaMeter(window: primary)
         } else {
             headerBalance(snapshot.balance)
