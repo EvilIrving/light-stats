@@ -373,6 +373,7 @@ private struct SubStat: View {
 /// 系统值是电源管理报告的最大容量。点数字在两个数值之间切换，说明放在 tooltip 里。
 private struct HealthSubStat: View {
     @Environment(\.theme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let healthPercent: Int?
     let systemPercent: Int?
@@ -382,12 +383,22 @@ private struct HealthSubStat: View {
     private var isSwitchable: Bool { systemPercent != nil }
     private var shown: Int? { showsSystem ? (systemPercent ?? healthPercent) : healthPercent }
 
+    private var countsDown: Bool {
+        HealthReadoutPolicy.countsDown(
+            showsSystem: showsSystem,
+            healthPercent: healthPercent,
+            systemPercent: systemPercent
+        )
+    }
+
     var body: some View {
         if isSwitchable {
             readout
                 // 数字本身很小，命中区扩到整个标签块。
                 .contentShape(Rectangle())
-                .onTapGesture { showsSystem.toggle() }
+                .onTapGesture {
+                    withAnimation(.snappy(duration: 0.25)) { showsSystem.toggle() }
+                }
                 .help("battery.health.hint".localized)
                 .accessibilityAddTraits(.isButton)
         } else {
@@ -400,6 +411,8 @@ private struct HealthSubStat: View {
             Text(shown.map { "\($0)%" } ?? "—")
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(theme.inkPrimary)
+                // 逐位滚动；减弱动态时退化为交叉淡化（更短而非没有）。
+                .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: countsDown))
             Text("battery.health".localized)
                 .font(.system(size: 9, design: .monospaced))
                 .foregroundStyle(theme.inkFaint)
