@@ -2,8 +2,9 @@
 //  DiagnosticReportService.swift
 //  Light Stats
 //
-//  User-initiated support report: environment baseline, fresh capability probes,
-//  relevant settings, and the bounded local journal in one ZIP archive.
+//  User-initiated support report: environment baseline, fresh capability probes
+//  (each with the reason it has no value), relevant settings, a readable digest of
+//  the journal, and the bounded local journal itself, in one ZIP archive.
 //
 
 import Darwin
@@ -22,6 +23,13 @@ actor DiagnosticReportService {
     }
 
     static let shared = DiagnosticReportService()
+
+    /// Categories kept in the app-owned journal but never shipped in a support report.
+    /// Declared in the manifest so a reader knows the package is not the whole story.
+    nonisolated static let journalExcludedCategories: Set<String> = ["selfMonitoring"]
+
+    /// Report layout version. Bumped when files are added or a field changes meaning.
+    nonisolated static let reportSchemaVersion = 2
 
     private let journalDirectory: URL
     private let collectsFreshProbes: Bool
@@ -61,23 +69,24 @@ actor DiagnosticReportService {
 
         let capabilities: [String: Any]
         if collectsFreshProbes {
-            let battery = await PowerService().current()
-            let cpuTemperature = await SMCInfo.getCPUTemperature()
-            let fanSpeed = await SMCInfo.getFanSpeed()
-            let gpuUsage = await GPUInfo.getGPUUsage()
+            let powerService = PowerService()
+            let battery = await powerService.current()
+            let batteryReasons = await powerService.probeReasonCodes()
             capabilities = capabilityObject(
                 battery: battery,
-                cpuTemperature: cpuTemperature,
-                fanSpeed: fanSpeed,
-                gpuUsage: gpuUsage
+                batteryReasons: batteryReasons,
+                cpuTemperature: SMCInfo.getCPUTemperatureProbe(),
+                fan: SMCInfo.getFanProbe(),
+                gpu: GPUInfo.getGPUUsageProbe()
             )
             await DiagnosticLogService.shared.flush()
         } else {
             capabilities = capabilityObject(
                 battery: nil,
-                cpuTemperature: nil,
-                fanSpeed: nil,
-                gpuUsage: nil
+                batteryReasons: [:],
+                cpuTemperature: .notCollected,
+                fan: .notCollected,
+                gpu: .notCollected
             )
         }
 
@@ -88,19 +97,41 @@ actor DiagnosticReportService {
         try fileManager.createDirectory(at: reportDirectory, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: stagingRoot) }
 
+        let journalInputs = try copyJournal(to: reportDirectory.appendingPathComponent("journal", isDirectory: true))
+        let digest = DiagnosticJournalSummary.build(files: journalInputs)
+
         try writeJSON(
             [
-                "reportSchemaVersion": 1,
+                "reportSchemaVersion": Self.reportSchemaVersion,
                 "createdAt": ISO8601DateFormatter().string(from: Date()),
                 "sessionID": DiagnosticLogService.sessionID,
-                "privacy": "No serial numbers, credentials, usernames, or full home paths are included."
+                "privacy": "No serial numbers, credentials, usernames, or full home paths are included.",
+                "contents": [
+                    "manifest.json",
+                    "environment.json",
+                    "settings.json",
+                    "capabilities.json",
+                    "summary.json",
+                    "sessions.json",
+                    "journal/"
+                ],
+                "journalPolicy": DiagnosticLogService.journalPolicyDescription(),
+                "journalExcludedCategories": Self.journalExcludedCategories.sorted(),
+                "journalFiles": journalInputs.map { input in
+                    [
+                        "name": input.name,
+                        "bytes": input.bytes,
+                        "excludedRecords": input.excludedRecords
+                    ]
+                }
             ],
             to: reportDirectory.appendingPathComponent("manifest.json")
         )
         try writeJSON(Self.environmentObject(), to: reportDirectory.appendingPathComponent("environment.json"))
         try writeJSON(settings, to: reportDirectory.appendingPathComponent("settings.json"))
         try writeJSON(capabilities, to: reportDirectory.appendingPathComponent("capabilities.json"))
-        try copyJournal(to: reportDirectory.appendingPathComponent("journal", isDirectory: true))
+        try writeJSON(digest.summary, to: reportDirectory.appendingPathComponent("summary.json"))
+        try writeJSON(digest.sessions, to: reportDirectory.appendingPathComponent("sessions.json"))
 
         let archiveURL = stagingRoot.appendingPathComponent("report.zip")
         try await archive(directory: reportDirectory, to: archiveURL)
@@ -138,6 +169,7 @@ actor DiagnosticReportService {
             "app.version": .string(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"),
             "app.build": .string(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"),
             "os.version": .string(processInfo.operatingSystemVersionString),
+            "os.versionNumber": .string(versionNumber(processInfo.operatingSystemVersion)),
             "os.build": .string(sysctlString("kern.osversion") ?? "unknown"),
             "hardware.model": .string(sysctlString("hw.model") ?? "unknown"),
             "hardware.machine": .string(sysctlString("hw.machine") ?? "unknown"),
@@ -145,11 +177,17 @@ actor DiagnosticReportService {
             "hardware.memoryBytes": sysctlUInt64("hw.memsize").map(DiagnosticLogService.Value.unsignedInteger) ?? .null,
             "hardware.processorCount": .integer(Int64(processInfo.processorCount)),
             "hardware.activeProcessorCount": .integer(Int64(processInfo.activeProcessorCount)),
-            "process.uptimeSeconds": .double(processInfo.systemUptime),
+            // 系统开机时长（不是本进程的）：两次会话里数值变小 = 期间重启过。
+            "system.uptimeSeconds": .double(processInfo.systemUptime),
             "process.sandboxed": .bool(processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil),
             "locale.identifier": .string(Locale.current.identifier),
             "timezone.identifier": .string(TimeZone.current.identifier)
         ]
+    }
+
+    /// `ProcessInfo.operatingSystemVersionString` is localized; this is the parseable form.
+    private static func versionNumber(_ version: OperatingSystemVersion) -> String {
+        "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
     }
 
     private static func sysctlString(_ name: String) -> String? {
@@ -167,43 +205,77 @@ actor DiagnosticReportService {
         return value
     }
 
+    /// 每个能力块除了值，还要带「为什么没有值」——支持报告的第一个文件必须是能自证的。
     private func capabilityObject(
         battery: BatteryInfo?,
-        cpuTemperature: Double?,
-        fanSpeed: Int?,
-        gpuUsage: Double?
+        batteryReasons: [String: String],
+        cpuTemperature: SMCInfo.TemperatureProbe,
+        fan: SMCInfo.FanProbe,
+        gpu: GPUInfo.GPUProbe
     ) -> [String: Any] {
         let batteryAvailable = battery.map { $0.state != .noBattery }
+        var batteryBlock: [String: Any] = [
+            "available": optionalJSONValue(batteryAvailable),
+            "state": battery.map { String(describing: $0.state) } ?? "notCollected",
+            "percent": optionalJSONValue(battery?.percent),
+            "cycleCount": optionalJSONValue(battery?.cycleCount),
+            "healthPercent": optionalJSONValue(battery?.healthPercent),
+            "systemHealthPercent": optionalJSONValue(battery?.systemHealthPercent),
+            "conditionOK": optionalJSONValue(battery?.conditionOK),
+            "powerWatts": optionalJSONValue(battery?.powerWatts),
+            "temperatureCelsius": optionalJSONValue(battery?.temperature)
+        ]
+        if !collectsFreshProbes {
+            batteryBlock["reasonCodes"] = ["all": "notCollected"]
+        } else if battery?.state == .noBattery {
+            batteryBlock["reasonCodes"] = ["all": "noBattery"]
+        } else {
+            batteryBlock["reasonCodes"] = batteryReasons
+        }
+
         return [
             "probeCollectionEnabled": collectsFreshProbes,
-            "battery": [
-                "available": jsonValue(batteryAvailable),
-                "state": battery.map { String(describing: $0.state) } ?? "notCollected",
-                "percent": jsonValue(battery?.percent),
-                "cycleCount": jsonValue(battery?.cycleCount),
-                "healthPercent": jsonValue(battery?.healthPercent),
-                "conditionOK": jsonValue(battery?.conditionOK),
-                "powerWatts": jsonValue(battery?.powerWatts),
-                "temperatureCelsius": jsonValue(battery?.temperature)
-            ],
+            "battery": batteryBlock,
             "cpuTemperature": [
-                "available": cpuTemperature != nil,
-                "celsius": jsonValue(cpuTemperature)
+                "available": cpuTemperature.celsius != nil,
+                "celsius": optionalJSONValue(cpuTemperature.celsius),
+                "reasonCode": cpuTemperature.reasonCode,
+                "acceptedKeyCount": cpuTemperature.acceptedKeyCount,
+                "usedCachedValue": cpuTemperature.usedCachedValue
             ],
             "fan": [
-                "available": fanSpeed != nil,
-                "rpm": jsonValue(fanSpeed)
+                "available": fan.rpm != nil,
+                "rpm": optionalJSONValue(fan.rpm),
+                "reasonCode": fan.reasonCode,
+                "fanCount": optionalJSONValue(fan.fanCountFromSMC),
+                "attempts": SMCInfo.fanEvidenceValues(fan).map(Self.jsonValue)
             ],
             "gpu": [
-                "available": gpuUsage != nil,
-                "utilizationPercent": jsonValue(gpuUsage)
+                "available": gpu.usage != nil,
+                "utilizationPercent": optionalJSONValue(gpu.usage),
+                "reasonCode": gpu.reasonCode,
+                "selectedKey": optionalJSONValue(gpu.selectedKey)
             ]
         ]
     }
 
-    private func jsonValue<T>(_ value: T?) -> Any {
+    private func optionalJSONValue<T>(_ value: T?) -> Any {
         guard let value else { return NSNull() }
         return value
+    }
+
+    /// `DiagnosticLogService.Value` → 能直接交给 JSONSerialization 的对象。
+    nonisolated static func jsonValue(_ value: DiagnosticLogService.Value) -> Any {
+        switch value {
+        case .string(let string): return string
+        case .integer(let integer): return integer
+        case .unsignedInteger(let unsigned): return unsigned
+        case .double(let double): return double
+        case .bool(let bool): return bool
+        case .null: return NSNull()
+        case .array(let values): return values.map { Self.jsonValue($0) }
+        case .object(let values): return values.mapValues { Self.jsonValue($0) }
+        }
     }
 
     private func writeJSON(_ object: Any, to url: URL) throws {
@@ -211,17 +283,27 @@ actor DiagnosticReportService {
         try data.write(to: url, options: .atomic)
     }
 
-    private func copyJournal(to destination: URL) throws {
+    private func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        try encoder.encode(value).write(to: url, options: .atomic)
+    }
+
+    /// Writes the report's copy of the journal and reports back what went in, so the
+    /// manifest can state the coverage instead of leaving it to be discovered.
+    private func copyJournal(to destination: URL) throws -> [DiagnosticJournalSummary.FileInput] {
         let fileManager = FileManager.default
         let source = journalDirectory
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
-        guard fileManager.fileExists(atPath: source.path) else { return }
+        guard fileManager.fileExists(atPath: source.path) else { return [] }
 
         let files = try fileManager.contentsOfDirectory(
             at: source,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         )
+        var inputs: [DiagnosticJournalSummary.FileInput] = []
         for file in files where file.lastPathComponent.hasPrefix("diagnostics-") && file.pathExtension == "jsonl" {
             let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n")
             let filtered = lines.filter(shouldIncludeJournalLine)
@@ -232,14 +314,22 @@ actor DiagnosticReportService {
                 atomically: true,
                 encoding: .utf8
             )
+            inputs.append(DiagnosticJournalSummary.FileInput(
+                name: file.lastPathComponent,
+                bytes: output.utf8.count,
+                copiedLines: filtered.map(String.init),
+                excludedRecords: lines.count - filtered.count
+            ))
         }
+        return inputs.sorted { $0.name < $1.name }
     }
 
     private func shouldIncludeJournalLine(_ line: Substring) -> Bool {
         guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else {
             return true
         }
-        return object["category"] as? String != "selfMonitoring"
+        guard let category = object["category"] as? String else { return true }
+        return !Self.journalExcludedCategories.contains(category)
     }
 
     private func archive(directory: URL, to destination: URL) async throws {

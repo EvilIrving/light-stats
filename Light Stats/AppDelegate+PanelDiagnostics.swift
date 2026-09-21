@@ -44,7 +44,7 @@ extension AppDelegate {
             fields["terminationInFlight"] = "false"
         }
 
-        fields["classification"] = classifyPanelClose(reason: reason, fields: fields)
+        fields["classification"] = classifyPanelClose(fields: fields, reason: reason).rawValue
 
         DiagnosticLogService.record(
             category: "popover",
@@ -55,13 +55,23 @@ extension AppDelegate {
 
     func panelDiagnosticFields() -> [String: String] {
         let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        let keyWindow = NSApp.keyWindow
+        let role = PanelKeyWindowRole.resolve(
+            className: keyWindow.map { String(describing: type(of: $0)) },
+            identifier: keyWindow?.identifier?.rawValue,
+            isModal: NSApp.modalWindow != nil,
+            isOwnedPanel: keyWindow === panel
+        )
         return [
             "frontmostApplication": frontmostApplication?.localizedName ?? "none",
             "frontmostBundleIdentifier": frontmostApplication?.bundleIdentifier ?? "none",
             "lightStatsActive": String(NSApp.isActive),
             "panelKey": String(panel?.isKeyWindow == true),
             "panelVisible": String(panel?.isVisible == true),
-            "keyWindowClass": NSApp.keyWindow.map { String(describing: type(of: $0)) } ?? "none"
+            // 原始类名保留作证据，角色字段供阅读与聚合（见 PanelKeyWindowRole）。
+            "keyWindowClass": keyWindow.map { String(describing: type(of: $0)) } ?? "none",
+            "keyWindowRole": role.rawValue,
+            "ownWindowKeyed": String(role.isOwnWindow)
         ]
     }
 
@@ -70,20 +80,18 @@ extension AppDelegate {
         return Date().timeIntervalSince(lastGlobalMouseDownAt) < 0.25
     }
 
-    /// 面板关闭归类：区分「正常」（点外部 / 手动 / 目标应用弹框置前）与「异常」（无理由失焦）。
-    private func classifyPanelClose(reason: PanelDismissReason, fields: [String: String]) -> String {
-        switch reason {
-        case .globalMouseDown, .localMouseDown, .resignActive:
-            return "externalClick"
-        case .statusItemToggle, .hotkeyToggle, .externalRequest:
-            return "manual"
-        case .resignKey:
-            if fields["terminationInFlight"] == "true" {
-                return fields["frontmostMatchesTerminationTarget"] == "true"
-                    ? "expectedFocusGrab"
-                    : "unexpectedResign"
-            }
-            return fields["recentOutsideClick"] == "true" ? "externalClick" : "unexpectedResign"
-        }
+    /// 面板关闭归类：区分「正常」（点外部 / 手动 / 目标应用弹框置前 / 自家窗口拿走 key）与
+    /// 「异常」（无理由失焦）。判定规则在 `PanelCloseClassification`，这里只负责取证据。
+    private func classifyPanelClose(
+        fields: [String: String],
+        reason: PanelDismissReason
+    ) -> PanelCloseClassification {
+        PanelCloseClassification.classify(
+            reason: reason,
+            keyWindowRole: PanelKeyWindowRole(rawValue: fields["keyWindowRole"] ?? "") ?? .other,
+            recentOutsideClick: fields["recentOutsideClick"] == "true",
+            terminationInFlight: fields["terminationInFlight"] == "true",
+            frontmostMatchesTerminationTarget: fields["frontmostMatchesTerminationTarget"] == "true"
+        )
     }
 }

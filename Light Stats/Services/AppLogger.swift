@@ -7,6 +7,10 @@
 //  Messages are also handed to os.Logger with private privacy so they can show up
 //  in Console after a crash or support session — not for live developer streaming.
 //
+//  Dedup policy: info/notice/debug collapse identical repeats into one record plus a
+//  sparse heartbeat, because a state that stays the same is one fact, not a stream.
+//  Errors always write — an error that repeats is exactly what a support report needs.
+//
 
 import Foundation
 import os
@@ -39,7 +43,7 @@ nonisolated struct AppLogger {
 
     func notice(_ message: String) {
         logger.notice("\(message, privacy: .private)")
-        record(.info, message)
+        recordRepeated(.info, message)
     }
 
     func error(_ message: String) {

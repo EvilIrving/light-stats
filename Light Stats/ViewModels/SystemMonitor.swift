@@ -464,26 +464,35 @@ final class SystemMonitor: ObservableObject {
         fields["battery.temperatureCelsius"] = optionalDouble(snapshot.battery.temperature)
         fields["health.score"] = field(.integer(Int64(snapshot.health.score)))
         fields["health.breakdown"] = field(healthBreakdown)
+        // 可用性跟着每个采样走：只写「变更时」，读样本的人就只能看到一排 null。
+        for (key, value) in capabilityFields(snapshot) {
+            fields[key] = value
+        }
         recordCapabilityState(snapshot)
         recordCoreCollectorProbes(snapshot)
         DiagnosticLogService.recordSample(category: "system", action: "collected", fields: fields)
     }
 
-    private func recordCapabilityState(_ snapshot: SystemSnapshot) {
+    /// 能力可用性字段。采样行与 `capabilitiesChanged` 共用同一份定义，避免两处说法不一致。
+    private func capabilityFields(_ snapshot: SystemSnapshot) -> [String: DiagnosticLogService.Field] {
         let battery = snapshot.battery
+        return [
+            "battery.available": .privateValue(.bool(battery.state != .noBattery)),
+            "battery.cycleCount.available": .privateValue(.bool(battery.cycleCount != nil)),
+            "battery.health.available": .privateValue(.bool(battery.healthPercent != nil)),
+            "battery.power.available": .privateValue(.bool(battery.powerWatts != nil)),
+            "battery.temperature.available": .privateValue(.bool(battery.temperature != nil)),
+            "cpuTemperature.available": .privateValue(.bool(snapshot.cpuTemperature != nil)),
+            "fan.available": .privateValue(.bool(snapshot.fanSpeed != nil)),
+            "gpu.available": .privateValue(.bool(snapshot.gpuUsage != nil))
+        ]
+    }
+
+    private func recordCapabilityState(_ snapshot: SystemSnapshot) {
         DiagnosticLogService.recordState(
             category: "system",
             action: "capabilitiesChanged",
-            fields: [
-                "battery.available": .privateValue(.bool(battery.state != .noBattery)),
-                "battery.cycleCount.available": .privateValue(.bool(battery.cycleCount != nil)),
-                "battery.health.available": .privateValue(.bool(battery.healthPercent != nil)),
-                "battery.power.available": .privateValue(.bool(battery.powerWatts != nil)),
-                "battery.temperature.available": .privateValue(.bool(battery.temperature != nil)),
-                "cpuTemperature.available": .privateValue(.bool(snapshot.cpuTemperature != nil)),
-                "fan.available": .privateValue(.bool(snapshot.fanSpeed != nil)),
-                "gpu.available": .privateValue(.bool(snapshot.gpuUsage != nil))
-            ]
+            fields: capabilityFields(snapshot)
         )
     }
 

@@ -145,12 +145,28 @@ actor DiagnosticLogService {
     nonisolated static let sessionID = UUID().uuidString
     nonisolated static var diagnosticsDirectoryURL: URL { Configuration.production.directory }
 
+    /// Retention/rate policy as reported to the user: a support package must be able to
+    /// explain why it does not contain an earlier day, or why a sample is missing.
+    nonisolated static func journalPolicyDescription() -> [String: Int] {
+        [
+            "retentionDays": Configuration.production.retentionDays,
+            "maximumBytes": Int(clamping: Configuration.production.maximumBytes),
+            "sampleIntervalSeconds": Int(defaultSampleInterval),
+            "stateHeartbeatSeconds": Int(defaultStateHeartbeatInterval)
+        ]
+    }
+
     /// Default spacing for continuously changing metric samples.
     nonisolated static let defaultSampleInterval: TimeInterval = 45
+    /// How often an unchanged state is re-recorded while it persists.
+    nonisolated static let defaultStateHeartbeatInterval: TimeInterval = 6 * 60 * 60
 
     private static let systemLog = Logger(subsystem: AppLogger.subsystem, category: "Diagnostics")
     private static let buffer = DiagnosticRecordBuffer()
-    private static let policy = DiagnosticJournalPolicy(sampleInterval: defaultSampleInterval)
+    private static let policy = DiagnosticJournalPolicy(
+        sampleInterval: defaultSampleInterval,
+        stateHeartbeatInterval: defaultStateHeartbeatInterval
+    )
     private static let cleanupInterval: TimeInterval = 3600
 
     private let configuration: Configuration
@@ -172,7 +188,7 @@ actor DiagnosticLogService {
     /// Test seam: reset sample, state-change, and heartbeat throttle state.
     nonisolated static func resetPolicyForTesting(
         sampleInterval: TimeInterval = defaultSampleInterval,
-        stateHeartbeatInterval: TimeInterval = 6 * 60 * 60
+        stateHeartbeatInterval: TimeInterval = defaultStateHeartbeatInterval
     ) {
         policy.reset(sampleInterval: sampleInterval, stateHeartbeatInterval: stateHeartbeatInterval)
     }
@@ -277,6 +293,40 @@ actor DiagnosticLogService {
         )
     }
 
+    /// High-frequency events of one kind are useful as a rate, not as a stream.
+    /// The first occurrence writes immediately; afterwards at most one record per
+    /// `interval` per identity, carrying how many identical occurrences it swallowed.
+    /// No occurrence is ever severity-filtered — only duplicates are folded.
+    nonisolated static func recordThrottled(
+        level: Level = .info,
+        category: String,
+        action: String,
+        identity: String,
+        interval: TimeInterval,
+        fields: [String: Field] = [:]
+    ) {
+        let cleaned = sanitized(fields)
+        guard let suppressed = policy.throttledCount(
+            category: category,
+            action: action,
+            identity: identity,
+            interval: interval,
+            at: Date()
+        ) else { return }
+        record(level: level, category: category, action: action, fields: throttledFields(cleaned, suppressed: suppressed))
+    }
+
+    /// Payload of a throttled record: the original fields plus how many identical
+    /// occurrences were folded into this one.
+    nonisolated static func throttledFields(
+        _ fields: [String: Field],
+        suppressed: Int
+    ) -> [String: Field] {
+        var payload = fields
+        payload["suppressedCount"] = .publicValue(String(suppressed))
+        return payload
+    }
+
     nonisolated static func recordPrivate(
         level: Level = .info,
         category: String,
@@ -344,18 +394,44 @@ actor DiagnosticLogService {
         try prepareDirectory()
         try closeCurrentFile()
         let expiration = referenceDate.addingTimeInterval(-Double(configuration.retentionDays) * 86_400)
+        var filesRemovedByAge = 0
+        var bytesRemovedByAge: UInt64 = 0
         for file in try diagnosticFiles() where file.modifiedAt < expiration {
             try fileManager.removeItem(at: file.url)
+            filesRemovedByAge += 1
+            bytesRemovedByAge += file.size
         }
 
         var retained = try diagnosticFiles().sorted { $0.modifiedAt < $1.modifiedAt }
         var totalBytes = retained.reduce(UInt64(0)) { $0 + $1.size }
+        var filesRemovedBySize = 0
+        var bytesRemovedBySize: UInt64 = 0
         while totalBytes > configuration.maximumBytes, let oldest = retained.first {
             try fileManager.removeItem(at: oldest.url)
             totalBytes = totalBytes >= oldest.size ? totalBytes - oldest.size : 0
+            filesRemovedBySize += 1
+            bytesRemovedBySize += oldest.size
             retained.removeFirst()
         }
         lastCleanupAt = referenceDate
+
+        // A support report missing earlier days must be able to tell "retention deleted it"
+        // apart from "the app was not running".
+        guard filesRemovedByAge > 0 || filesRemovedBySize > 0 else { return }
+        Self.record(
+            category: "diagnostics",
+            action: "cleaned",
+            fields: [
+                "retentionDays": .privateValue(.integer(Int64(configuration.retentionDays))),
+                "maximumBytes": .privateValue(.unsignedInteger(configuration.maximumBytes)),
+                "filesRemovedByAge": .privateValue(.integer(Int64(filesRemovedByAge))),
+                "bytesRemovedByAge": .privateValue(.unsignedInteger(bytesRemovedByAge)),
+                "filesRemovedBySize": .privateValue(.integer(Int64(filesRemovedBySize))),
+                "bytesRemovedBySize": .privateValue(.unsignedInteger(bytesRemovedBySize)),
+                "retainedFiles": .privateValue(.integer(Int64(retained.count))),
+                "retainedBytes": .privateValue(.unsignedInteger(totalBytes))
+            ]
+        )
     }
 
     private func cleanUpIfNeeded(referenceDate: Date) throws {
@@ -465,7 +541,8 @@ actor DiagnosticLogService {
 }
 
 /// Process-wide semantic rate control. Events are never severity-filtered.
-/// Samples use a fixed cadence; states write on change plus a sparse heartbeat.
+/// Samples use a fixed cadence; states write on change plus a sparse heartbeat;
+/// throttled events write the first occurrence plus at most one per interval.
 nonisolated final class DiagnosticJournalPolicy: @unchecked Sendable {
     private let lock = NSLock()
     private var sampleInterval: TimeInterval
@@ -473,22 +550,29 @@ nonisolated final class DiagnosticJournalPolicy: @unchecked Sendable {
     private var lastSampleAt: [String: Date] = [:]
     private var lastStateAt: [String: Date] = [:]
     private var lastStateFingerprint: [String: String] = [:]
+    private var lastThrottledAt: [String: Date] = [:]
+    private var throttledSuppressed: [String: Int] = [:]
 
     init(
         sampleInterval: TimeInterval = DiagnosticLogService.defaultSampleInterval,
-        stateHeartbeatInterval: TimeInterval = 6 * 60 * 60
+        stateHeartbeatInterval: TimeInterval = DiagnosticLogService.defaultStateHeartbeatInterval
     ) {
         self.sampleInterval = sampleInterval
         self.stateHeartbeatInterval = stateHeartbeatInterval
     }
 
-    func reset(sampleInterval: TimeInterval, stateHeartbeatInterval: TimeInterval = 6 * 60 * 60) {
+    func reset(
+        sampleInterval: TimeInterval,
+        stateHeartbeatInterval: TimeInterval = DiagnosticLogService.defaultStateHeartbeatInterval
+    ) {
         lock.lock()
         self.sampleInterval = sampleInterval
         self.stateHeartbeatInterval = stateHeartbeatInterval
         lastSampleAt.removeAll()
         lastStateAt.removeAll()
         lastStateFingerprint.removeAll()
+        lastThrottledAt.removeAll()
+        throttledSuppressed.removeAll()
         lock.unlock()
     }
 
@@ -523,6 +607,28 @@ nonisolated final class DiagnosticJournalPolicy: @unchecked Sendable {
             return true
         }
         return false
+    }
+
+    /// `nil` means "fold into the next record"; otherwise the returned count is how many
+    /// identical occurrences were swallowed since the previous emitted record.
+    func throttledCount(
+        category: String,
+        action: String,
+        identity: String,
+        interval: TimeInterval,
+        at date: Date
+    ) -> Int? {
+        lock.lock()
+        defer { lock.unlock() }
+        let key = "\(category).\(action).\(identity)"
+        let suppressed = throttledSuppressed[key] ?? 0
+        if let last = lastThrottledAt[key], date.timeIntervalSince(last) < max(interval, 0) {
+            throttledSuppressed[key] = suppressed + 1
+            return nil
+        }
+        lastThrottledAt[key] = date
+        throttledSuppressed[key] = 0
+        return suppressed
     }
 }
 

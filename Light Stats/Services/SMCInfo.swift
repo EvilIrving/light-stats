@@ -23,24 +23,40 @@ enum SMCInfo {
     private static var _cacheTimestamp: Date?
     private static let maxCacheAge: TimeInterval = 10  // 10 seconds
 
-    /// Thread-safe cached temperature with automatic expiration
-    private static var cachedTemperature: Double? {
-        get {
-            temperatureLock.withLock {
-                if let timestamp = _cacheTimestamp,
-                   Date().timeIntervalSince(timestamp) > maxCacheAge {
-                    _cachedTemperature = nil
-                    _cacheTimestamp = nil
-                }
-                return _cachedTemperature
-            }
-        }
-        set {
-            temperatureLock.withLock {
-                _cachedTemperature = newValue
-                _cacheTimestamp = Date()
-            }
-        }
+    // MARK: - Probe results
+
+    /// 温度探测的原因码（写进诊断日志，支持报告据此解释「为什么没有温度」）。
+    enum TemperatureReason {
+        static let keysRead = "keysRead"
+        static let connectionUnavailable = "connectionUnavailable"
+        static let usingCachedValue = "usingCachedValue"
+        static let reconnectFailed = "reconnectFailed"
+        static let usingCachedAfterReconnectFailure = "usingCachedAfterReconnectFailure"
+        static let noValidTemperatureKeys = "noValidTemperatureKeys"
+        static let usingCachedAfterEmptyRead = "usingCachedAfterEmptyRead"
+    }
+
+    struct TemperatureProbe: Sendable, Equatable {
+        let celsius: Double?
+        let reasonCode: String
+        /// 本轮接受的有效温度键数量；走缓存时为 0。
+        let acceptedKeyCount: Int
+        let usedCachedValue: Bool
+
+        /// 报告在 `probeCollectionEnabled == false` 时使用的占位：没有采集过，不等于读不到。
+        static let notCollected = TemperatureProbe(
+            celsius: nil,
+            reasonCode: "notCollected",
+            acceptedKeyCount: 0,
+            usedCachedValue: false
+        )
+    }
+
+    /// SMC 键读取结果：区分「键不存在」和「键在但读失败」。
+    enum KeyReadOutcome: String, Sendable, Equatable {
+        case value
+        case missing
+        case failed
     }
 
     // MARK: - SMC Selectors
@@ -66,83 +82,54 @@ enum SMCInfo {
     }
 
     static func getCPUTemperature() -> Double? {
-        // Hold lock for entire read/compute/update. Use only _cachedTemperature/_cacheTimestamp
-        // inside the block—never the cachedTemperature property—to avoid reentrant deadlock (NSLock is non-reentrant).
+        getCPUTemperatureProbe().celsius
+    }
+
+    /// 温度探测：值 + 「为什么没有值」。调用方要读数时用 `getCPUTemperature()`；
+    /// 支持报告要解释原因时用本方法。
+    static func getCPUTemperatureProbe() -> TemperatureProbe {
+        // Hold lock for entire read/compute/update, and touch only the cache internals
+        // (`_cachedTemperature` / `_cacheTimestamp`) inside the block: NSLock is not reentrant.
         return temperatureLock.withLock {
             guard ensureConnection() else {
                 let cached = readCachedTemperatureIfValid()
-                Self.recordProbe(
-                    operation: "cpuTemperature",
-                    status: cached == nil ? .unavailable : .degraded,
-                    reasonCode: cached == nil ? "connectionUnavailable" : "usingCachedValue"
-                )
-                return cached
+                let reason = cached == nil
+                    ? TemperatureReason.connectionUnavailable
+                    : TemperatureReason.usingCachedValue
+                return unavailableTemperatureProbe(cached: cached, reason: reason)
             }
 
-            let cpuTempKeys = [
-                // Apple Silicon SOC 温度
-                "Te05",
-                // Apple Silicon CPU Package
-                "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0Y", "Tp0b", "Tp0e",
-                // 风扇区域温度
-                "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0E",
-            ]
-
-            var temperatures: [Double] = []
-
-            if smcDebugEnabled {
-                var debugLog = "[Temperature Debug] Starting...\n"
-                debugLog += "[Temperature Debug] SMC connection opened\n"
-
-                for key in cpuTempKeys {
-                    let result = readTemperatureDebug(key: key)
-                    debugLog += result.log
-
-                    if let temp = result.temp, temp > 5 && temp < 115 {
-                        temperatures.append(temp)
-                        debugLog += "  -> ACCEPTED\n"
-                    } else {
-                        debugLog += "  -> REJECTED (out of range 5-115)\n"
-                    }
-                }
-
-                debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
-                debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
-                writeDebugLog(debugLog)
-            } else {
-                for key in cpuTempKeys {
-                    if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
-                        temperatures.append(temp)
-                    }
-                }
-            }
+            let cpuTempKeys = Self.cpuTemperatureKeys
+            var temperatures = readAcceptedTemperatures(keys: cpuTempKeys)
 
             if temperatures.isEmpty {
                 // Possible stale connection (e.g. after sleep); reconnect and retry once.
                 invalidateConnection()
                 guard ensureConnection() else {
                     let cached = readCachedTemperatureIfValid()
-                    Self.recordProbe(
-                        operation: "cpuTemperature",
-                        status: cached == nil ? .unavailable : .degraded,
-                        reasonCode: cached == nil ? "reconnectFailed" : "usingCachedAfterReconnectFailure"
-                    )
-                    return cached
+                    let reason = cached == nil
+                        ? TemperatureReason.reconnectFailed
+                        : TemperatureReason.usingCachedAfterReconnectFailure
+                    return unavailableTemperatureProbe(cached: cached, reason: reason)
                 }
-                for key in cpuTempKeys {
-                    if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
-                        temperatures.append(temp)
-                    }
-                }
+                temperatures = readAcceptedTemperatures(keys: cpuTempKeys)
                 guard !temperatures.isEmpty else {
                     let cached = readCachedTemperatureIfValid()
+                    let reason = cached == nil
+                        ? TemperatureReason.noValidTemperatureKeys
+                        : TemperatureReason.usingCachedAfterEmptyRead
                     Self.recordProbe(
                         operation: "cpuTemperature",
                         status: cached == nil ? .unavailable : .degraded,
-                        reasonCode: cached == nil ? "noValidTemperatureKeys" : "usingCachedAfterEmptyRead",
+                        reasonCode: reason,
                         fields: temperatureCandidateFields(cpuTempKeys)
                     )
-                    return cached
+                    return TemperatureProbe(
+                        celsius: cached,
+                        reasonCode: reason,
+                        acceptedKeyCount: 0,
+                        usedCachedValue: cached != nil
+                    )
                 }
             }
 
@@ -159,11 +146,67 @@ enum SMCInfo {
             Self.recordProbe(
                 operation: "cpuTemperature",
                 status: .success,
-                reasonCode: "keysRead",
+                reasonCode: TemperatureReason.keysRead,
                 fields: ["acceptedKeyCount": .privateValue(.integer(Int64(temperatures.count)))]
             )
-            return smoothedTemp
+            return TemperatureProbe(
+                celsius: smoothedTemp,
+                reasonCode: TemperatureReason.keysRead,
+                acceptedKeyCount: temperatures.count,
+                usedCachedValue: false
+            )
         }
+    }
+
+    /// Apple Silicon SOC / CPU Package / 风扇区域温度候选键。
+    private static let cpuTemperatureKeys = [
+        "Te05",
+        "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0Y", "Tp0b", "Tp0e",
+        "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0E"
+    ]
+
+    /// 读一遍候选键，返回落在 5–115 °C 的有效温度。`LIGHT_STATS_SMC_DEBUG=1` 时顺手写下逐键日志。
+    private static func readAcceptedTemperatures(keys: [String]) -> [Double] {
+        var temperatures: [Double] = []
+        guard smcDebugEnabled else {
+            for key in keys {
+                if let temp = readTemperature(key: key), temp > 5 && temp < 115 {
+                    temperatures.append(temp)
+                }
+            }
+            return temperatures
+        }
+
+        var debugLog = "[Temperature Debug] Starting...\n[Temperature Debug] SMC connection opened\n"
+        for key in keys {
+            let result = readTemperatureDebug(key: key)
+            debugLog += result.log
+            if let temp = result.temp, temp > 5 && temp < 115 {
+                temperatures.append(temp)
+                debugLog += "  -> ACCEPTED\n"
+            } else {
+                debugLog += "  -> REJECTED (out of range 5-115)\n"
+            }
+        }
+        debugLog += "[Temperature Debug] Valid temperatures: \(temperatures)\n"
+        debugLog += "[Temperature Debug] Count: \(temperatures.count)\n"
+        writeDebugLog(debugLog)
+        return temperatures
+    }
+
+    /// 走缓存（或彻底读不到）时的探测结果：值可能来自缓存，原因码要说清是哪种。
+    private static func unavailableTemperatureProbe(cached: Double?, reason: String) -> TemperatureProbe {
+        Self.recordProbe(
+            operation: "cpuTemperature",
+            status: cached == nil ? .unavailable : .degraded,
+            reasonCode: reason
+        )
+        return TemperatureProbe(
+            celsius: cached,
+            reasonCode: reason,
+            acceptedKeyCount: 0,
+            usedCachedValue: cached != nil
+        )
     }
 
     /// Call only while holding temperatureLock. Returns cache if not expired; otherwise nil.
@@ -176,96 +219,13 @@ enum SMCInfo {
         return nil
     }
 
-    static func getFanSpeed() -> Int? {
-        guard ensureConnection() else {
-            Self.recordProbe(
-                operation: "fanSpeed",
-                status: .unavailable,
-                reasonCode: "connectionUnavailable"
-            )
-            return nil
-        }
-
-        // Try to read fan count first
-        var fanCount = 1
-        if let countData = readKey("FNum"), !countData.isEmpty {
-            fanCount = max(Int(countData[0]), 1)
-        }
-
-        // Read all fans and return the maximum speed
-        var maxSpeed: Int?
-
-        for i in 0..<min(fanCount, 4) {
-            if let speed = readFanSpeed(index: i) {
-                if maxSpeed == nil || speed > maxSpeed! {
-                    maxSpeed = speed
-                }
-            }
-        }
-
-        // If we found valid fan data (even if 0 RPM), return it
-        if let speed = maxSpeed {
-            Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "valueRead")
-            return speed
-        }
-
-        // Fallback: try indices 0-3 directly
-        for index in 0..<4 {
-            if let speed = readFanSpeed(index: index) {
-                Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "fallbackIndexRead")
-                return speed
-            }
-        }
-
-        // Possible stale connection (e.g. after sleep); reconnect and retry once.
-        invalidateConnection()
-        guard ensureConnection() else {
-            Self.recordProbe(
-                operation: "fanSpeed",
-                status: .unavailable,
-                reasonCode: "reconnectFailed"
-            )
-            return nil
-        }
-
-        fanCount = 1
-        if let countData = readKey("FNum"), !countData.isEmpty {
-            fanCount = max(Int(countData[0]), 1)
-        }
-
-        var retryMaxSpeed: Int?
-        for i in 0..<min(fanCount, 4) {
-            if let speed = readFanSpeed(index: i) {
-                if retryMaxSpeed == nil || speed > retryMaxSpeed! {
-                    retryMaxSpeed = speed
-                }
-            }
-        }
-
-        if retryMaxSpeed == nil {
-            for index in 0..<4 {
-                if let speed = readFanSpeed(index: index) {
-                    Self.recordProbe(operation: "fanSpeed", status: .success, reasonCode: "fallbackIndexRead")
-                    return speed
-                }
-            }
-        }
-
-        Self.recordProbe(
-            operation: "fanSpeed",
-            status: retryMaxSpeed == nil ? .unavailable : .success,
-            reasonCode: retryMaxSpeed == nil ? "noValidFanKeys" : "valueReadAfterReconnect"
-        )
-        return retryMaxSpeed
-    }
-
     // MARK: - SMC Connection (persistent)
 
     /// Ensure a usable SMC connection exists, opening a new one if needed.
     /// This is the single entry point for all SMC reads — the connection stays
     /// open across calls so `IOServiceOpen` (and its auth dialog) fires once,
     /// not every sampling cycle.
-    private static func ensureConnection() -> Bool {
+    static func ensureConnection() -> Bool {
         connLock.lock()
         defer { connLock.unlock() }
 
@@ -516,45 +476,11 @@ enum SMCInfo {
         }
     }
 
-    private static func readFanSpeed(index: Int) -> Int? {
-        let key = String(format: "F%dAc", index)
-        guard let data = readKey(key), data.count >= 2 else { return nil }
-
-        // M2/M3/M4 chips use flt (Float) format: 4 bytes little-endian
-        if data.count >= 4 {
-            let floatValue = data.withUnsafeBytes { ptr -> Float in
-                ptr.load(as: Float.self)
-            }
-            // Allow 0 RPM (fan stopped) - valid range 0-10000
-            if floatValue >= 0 && floatValue < 10000 {
-                return Int(floatValue)
-            }
-        }
-
-        let byte0 = Int(data[0])
-        let byte1 = Int(data[1])
-
-        // FPE2 format: unsigned fixed-point with 2 fractional bits
-        // Variant 1: (byte0 << 6) | (byte1 >> 2)
-        let fpe2Variant1 = (byte0 << 6) | (byte1 >> 2)
-        if fpe2Variant1 >= 0 && fpe2Variant1 < 10000 {
-            return fpe2Variant1
-        }
-
-        // Variant 2: (rawValue >> 2)
-        let rawValue = (byte0 << 8) | byte1
-        let fpe2Variant2 = rawValue >> 2
-        if fpe2Variant2 >= 0 && fpe2Variant2 < 10000 {
-            return fpe2Variant2
-        }
-
-        return nil
-    }
-
     // MARK: - Core SMC Read
 
-    private static func readKey(_ key: String) -> [UInt8]? {
-        guard key.count == 4 else { return nil }
+    /// 一次键读取的完整结果：`missing` = 键不存在，`failed` = 键在但读失败。
+    static func readKeyProbe(_ key: String) -> (outcome: KeyReadOutcome, bytes: [UInt8]?) {
+        guard key.count == 4 else { return (.missing, nil) }
 
         let keyCode = fourCharCode(key)
 
@@ -577,11 +503,11 @@ enum SMCInfo {
         )
 
         guard result == kIOReturnSuccess, outputStruct.result == 0 else {
-            return nil
+            return (.missing, nil)
         }
 
         let dataSize = Int(outputStruct.keyInfo.dataSize)
-        guard dataSize > 0 && dataSize <= 32 else { return nil }
+        guard dataSize > 0 && dataSize <= 32 else { return (.failed, nil) }
 
         // Step 2: Read the actual data
         inputStruct = SMCParamStruct()
@@ -602,7 +528,7 @@ enum SMCInfo {
         )
 
         guard result == kIOReturnSuccess, outputStruct.result == 0 else {
-            return nil
+            return (.failed, nil)
         }
 
         // Extract bytes from output
@@ -613,7 +539,7 @@ enum SMCInfo {
             }
         }
 
-        return bytes
+        return (.value, bytes)
     }
 
     private static func fourCharCode(_ str: String) -> UInt32 {

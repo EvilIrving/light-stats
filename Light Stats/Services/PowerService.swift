@@ -31,6 +31,14 @@ actor PowerService {
     /// 系统报告的健康度单独缓存：它只在 system_profiler 里公开，数值以天计变化。
     private var cachedSystemHealth: Int?
     private var cachedSystemHealthAt: Date?
+    /// 最近一次 AppleSmartBattery 探测的原因码，按字段命名（cycleCount/health/temperature/power/systemHealth）。
+    /// 支持报告据此解释「为什么没有值」，而不是只看到一个 null。
+    private var probeReasons: [String: String] = [:]
+
+    /// 最近一次电池探测的原因码。走缓存时返回的是产生缓存值的那次探测。
+    func probeReasonCodes() -> [String: String] {
+        probeReasons
+    }
 
     /// 采集当前电池信息。无电池 → `.noBattery`。
     func current() async -> BatteryInfo {
@@ -206,6 +214,7 @@ actor PowerService {
         let service = IOServiceGetMatchingService(kIOMainPortDefault,
                                                   IOServiceMatching("AppleSmartBattery"))
         guard service != 0 else {
+            probeReasons["read"] = "serviceNotFound"
             DiagnosticLogService.recordProbe(
                 component: "PowerService",
                 operation: "readSmartBattery",
@@ -221,6 +230,7 @@ actor PowerService {
         let propertiesResult = IORegistryEntryCreateCFProperties(service, &propsRef, kCFAllocatorDefault, 0)
         guard propertiesResult == kIOReturnSuccess,
               let dict = propsRef?.takeRetainedValue() as? [String: Any] else {
+            probeReasons["read"] = "propertyReadFailed"
             DiagnosticLogService.recordProbe(
                 component: "PowerService",
                 operation: "readSmartBattery",
@@ -275,6 +285,7 @@ actor PowerService {
             return cachedSystemHealth
         }
         let value = await profiledSystemHealthPercent()
+        probeReasons["systemHealth"] = value == nil ? "systemProfilerUnavailable" : "systemReportedCapacity"
         DiagnosticLogService.recordProbe(
             component: "PowerService",
             operation: "batterySystemHealth",
@@ -381,11 +392,20 @@ actor PowerService {
                                                origins: [String: String],
                                                data: SmartData) {
         let source = "IORegistry/AppleSmartBattery"
+        let cycleReason = data.cycleCount == nil ? "missingOrInvalidCycleCount" : "valueRead"
+        let healthReason = data.healthPercent == nil ? Self.healthFailureReason(properties) : "capacityRatioComputed"
+        let temperatureReason = Self.batteryTemperatureReason(properties: properties, value: data.temperature)
+        let powerReason = data.powerWatts == nil ? "noUsablePowerSource" : "valueRead"
+        probeReasons["cycleCount"] = cycleReason
+        probeReasons["health"] = healthReason
+        probeReasons["temperature"] = temperatureReason
+        probeReasons["power"] = powerReason
+
         DiagnosticLogService.recordProbe(
             component: "PowerService",
             operation: "batteryCycleCount",
             status: data.cycleCount == nil ? .unavailable : .success,
-            reasonCode: data.cycleCount == nil ? "missingOrInvalidCycleCount" : "valueRead",
+            reasonCode: cycleReason,
             source: source,
             fields: diagnosticFields(for: ["CycleCount"], in: properties, origins: origins)
         )
@@ -395,7 +415,7 @@ actor PowerService {
             component: "PowerService",
             operation: "batteryHealth",
             status: data.healthPercent == nil ? .unavailable : .success,
-            reasonCode: data.healthPercent == nil ? Self.healthFailureReason(properties) : "capacityRatioComputed",
+            reasonCode: healthReason,
             source: source,
             fields: diagnosticFields(for: healthKeys, in: properties, origins: origins)
         )
@@ -404,7 +424,7 @@ actor PowerService {
             component: "PowerService",
             operation: "batteryTemperature",
             status: data.temperature == nil ? .unavailable : .success,
-            reasonCode: Self.batteryTemperatureReason(properties: properties, value: data.temperature),
+            reasonCode: temperatureReason,
             source: source,
             fields: diagnosticFields(for: ["Temperature"], in: properties, origins: origins)
         )
@@ -414,7 +434,7 @@ actor PowerService {
             component: "PowerService",
             operation: "batteryPower",
             status: data.powerWatts == nil ? .unavailable : .success,
-            reasonCode: data.powerWatts == nil ? "noUsablePowerSource" : "valueRead",
+            reasonCode: powerReason,
             source: source,
             fields: diagnosticFields(for: powerKeys, in: properties, origins: origins)
         )

@@ -412,6 +412,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         )
         window.titleVisibility = .hidden
         window.isReleasedWhenClosed = false
+        // Stable identity for the close-classification evidence (`PanelKeyWindowRole`).
+        window.identifier = NSUserInterfaceItemIdentifier(PanelKeyWindowRole.aboutIdentifier)
         window.center()
         window.contentViewController = NSHostingController(
             rootView: AboutView()

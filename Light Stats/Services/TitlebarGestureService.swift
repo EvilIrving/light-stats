@@ -426,13 +426,17 @@ final class TitlebarGestureService: TitlebarGestureControlling {
 
         cancelPreviewTimeout()
         hidePreview()
-        DiagnosticLogService.record(
+        // 这是「同一种拒绝每秒来几次」的高频事件：同一 (动作, 区域, 原因) 每分钟最多一条，
+        // 记录里带上被折叠的次数。逐条写曾在一天里产生 3000+ 行，把报告淹掉。
+        DiagnosticLogService.recordThrottled(
             category: "windowManagement",
             action: "gestureRejected",
+            identity: "\(action)|\(zone.diagnosticName)|\(reason)",
+            interval: 60,
             fields: [
-                "snapAction": String(describing: action),
-                "zone": zone.diagnosticName,
-                "reason": reason
+                "snapAction": .privateValue(String(describing: action)),
+                "zone": .privateValue(zone.diagnosticName),
+                "reason": .privateValue(reason)
             ]
         )
     }

@@ -696,9 +696,18 @@ These are separate systems and must never share storage or exports:
   every state change, and a sparse heartbeat. Collector absence must include a stable `reasonCode`,
   source, stage/candidate evidence where applicable, and must not collapse silently into `nil`.
 - `DiagnosticReportService` creates a user-initiated ZIP containing environment context, fresh
-  hardware probes, relevant non-secret settings, and the bounded diagnostic journal. It excludes
-  product performance recordings and never includes serial numbers, credentials, usernames, or raw
-  home paths. Diagnostics retain 7 days with a 50 MB total cap.
+  hardware probes, relevant non-secret settings, a readable digest of the journal, and the bounded
+  journal itself. It excludes product performance recordings and never includes serial numbers,
+  credentials, usernames, or raw home paths. Diagnostics retain 7 days with a 50 MB total cap.
+  The package is self-describing: `manifest.json` declares the report schema, the retention/rate
+  policy, the excluded categories, and the copied journal files (bytes + excluded lines);
+  `summary.json` carries per-file coverage plus counts by level/category/action and the probe
+  reason distribution; `sessions.json` lists one entry per app launch (version, build, launch
+  uptime) so reboots and restarts are readable without parsing the journal. Capability probes
+  report a reason code alongside every value, and the fan separates `noFanKeys` (fanless machine)
+  from `fanKeysUnreadable` (keys present but unreadable — a regression). High-frequency events use
+  `DiagnosticLogService.recordThrottled`: the first occurrence writes immediately, later ones fold
+  into at most one record per interval carrying `suppressedCount`.
 - `PerformanceLogService` records only this app's CPU, memory, wakeup, disk, and companion system
   load metrics during the explicit 48-hour performance session. It writes under `Performance
   Recordings`, uses its own schema/lifecycle, retains 14 days, and is not a user-behavior log.

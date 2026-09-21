@@ -259,6 +259,55 @@ final class DiagnosticLogServiceTests: XCTestCase {
         ))
     }
 
+    // 高频事件：第一次立刻写，间隔内折叠，到下一条时把折掉的次数一起带上。
+    func testThrottleFoldsRepeatsWithinIntervalAndReportsTheCount() {
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertEqual(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "maximize|titlebar|notTitlebar",
+            interval: 60, at: base
+        ), 0)
+        XCTAssertNil(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "maximize|titlebar|notTitlebar",
+            interval: 60, at: base.addingTimeInterval(1)
+        ))
+        XCTAssertNil(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "maximize|titlebar|notTitlebar",
+            interval: 60, at: base.addingTimeInterval(30)
+        ))
+        XCTAssertEqual(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "maximize|titlebar|notTitlebar",
+            interval: 60, at: base.addingTimeInterval(60)
+        ), 2)
+    }
+
+    func testThrottleKeepsIdentitiesIndependent() {
+        let policy = DiagnosticJournalPolicy(sampleInterval: 45)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+
+        XCTAssertEqual(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "a", interval: 60, at: base
+        ), 0)
+        XCTAssertEqual(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "b", interval: 60, at: base
+        ), 0, "另一种拒绝原因不能被上一种的节流吞掉")
+        XCTAssertNil(policy.throttledCount(
+            category: "windowManagement", action: "gestureRejected", identity: "a", interval: 60,
+            at: base.addingTimeInterval(1)
+        ))
+    }
+
+    func testThrottledFieldsCarrySuppressedCount() {
+        let fields = DiagnosticLogService.throttledFields(
+            ["reason": .privateValue("notTitlebar")],
+            suppressed: 42
+        )
+
+        XCTAssertEqual(fields["suppressedCount"], .publicValue("42"))
+        XCTAssertEqual(fields["reason"], .privateValue("notTitlebar"))
+    }
+
     func testPerformanceRecordingsUseSeparateStorage() {
         XCTAssertNotEqual(
             PerformanceLogService.recordingsDirectoryURL,
