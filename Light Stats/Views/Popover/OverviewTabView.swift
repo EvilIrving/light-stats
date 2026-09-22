@@ -33,7 +33,7 @@ struct OverviewTabView: View {
             PanelDivider().padding(.vertical, 10)
             // CPU / GPU / Load / MEM — one readout group (not two section headers).
             resourcesSection
-            if monitor.battery.state != .noBattery {
+            if monitor.hasBatteryHardware {
                 PanelDivider().padding(.vertical, 10)
                 batterySection
             }
@@ -161,14 +161,14 @@ struct OverviewTabView: View {
 
     // MARK: - Thermal / disk strip
 
-    /// Three equal columns (temp | fan | disk) with I/O row aligned under them —
+    /// System strip: temp | fan | disk when the machine has fans; temp | disk otherwise.
     private var thermalStrip: some View {
         PanelSection(title: "overview.system".localized) {
             systemMetricsGrid
         }
     }
 
-    /// Three equal columns, each a VStack (sensor on top, I/O line below).
+    /// Equal columns, each a VStack (sensor on top, I/O line below).
     /// Leading-aligned so the first column sits flush with the section title (no leading gap).
     private var systemMetricsGrid: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -180,36 +180,32 @@ struct OverviewTabView: View {
                     )
                 },
                 bottom: {
-                    Text("overview.diskIO".localized)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(theme.inkSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-            )
-            systemMetricColumn(
-                top: {
-                    HStack(spacing: 4) {
-                        SpinningFanIcon(rpm: monitor.fanSpeed, isPanelVisible: monitor.popoverVisible)
-                        Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
+                    if monitor.hasFanHardware {
+                        Text("overview.diskIO".localized)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(theme.inkSecondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
+                    } else {
+                        diskIOReadLabel
                     }
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundStyle(theme.inkMuted)
-                },
-                bottom: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.down")
-                            .foregroundStyle(theme.metricIcon)
-                        Text(formatMBs(monitor.diskIO.readMBs))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 }
             )
+            if monitor.hasFanHardware {
+                systemMetricColumn(
+                    top: {
+                        HStack(spacing: 4) {
+                            SpinningFanIcon(rpm: monitor.fanSpeed, isPanelVisible: monitor.popoverVisible)
+                            Text(monitor.fanSpeed.map { "\($0) RPM" } ?? "—")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(theme.inkMuted)
+                    },
+                    bottom: { diskIOReadLabel }
+                )
+            }
             systemMetricColumn(
                 top: {
                     systemSVGIconValue(
@@ -217,19 +213,33 @@ struct OverviewTabView: View {
                         text: ByteFormatter.formatDisk(monitor.diskAvailable)
                     )
                 },
-                bottom: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.up")
-                            .foregroundStyle(theme.metricIcon)
-                        Text(formatMBs(monitor.diskIO.writeMBs))
-                            .foregroundStyle(theme.inkMuted)
-                    }
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                }
+                bottom: { diskIOWriteLabel }
             )
         }
+    }
+
+    private var diskIOReadLabel: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "arrow.down")
+                .foregroundStyle(theme.metricIcon)
+            Text(formatMBs(monitor.diskIO.readMBs))
+                .foregroundStyle(theme.inkMuted)
+        }
+        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+
+    private var diskIOWriteLabel: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "arrow.up")
+                .foregroundStyle(theme.metricIcon)
+            Text(formatMBs(monitor.diskIO.writeMBs))
+                .foregroundStyle(theme.inkMuted)
+        }
+        .font(.system(size: 11, weight: .medium, design: .monospaced))
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
     }
 
     // MARK: - AI

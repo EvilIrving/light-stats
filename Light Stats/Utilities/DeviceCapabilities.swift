@@ -32,4 +32,7 @@ enum DeviceCapabilities {
         }
         return false
     }()
+
+    /// 是否有内置电池硬件。与 `isPortable` 同一判据；电池 UI 门控读这个名字更直白。
+    static var hasBatteryHardware: Bool { isPortable }
 }

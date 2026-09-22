@@ -32,6 +32,10 @@ private struct SystemSnapshot {
     let cpuTemperature: Double?
     let thermalState: String
     let fanSpeed: Int?
+    /// Derived from the fan probe reason — false only when SMC has no fan keys.
+    let hasFanHardware: Bool
+    /// Internal-battery hardware fact — false on desktop Macs with no battery.
+    let hasBatteryHardware: Bool
     let health: HealthScore
     // Phase 2: 电池/功耗 + 磁盘 IO
     let battery: BatteryInfo
@@ -161,7 +165,9 @@ private actor MonitorSampler {
         let networkStats = await networkInfo.getNetworkStats()
         let gpuUsage = await GPUInfo.getGPUUsage()
         let cpuTemperature = await SMCInfo.getCPUTemperature()
-        let fanSpeed = await SMCInfo.getFanSpeed()
+        let fanProbe = await SMCInfo.getFanProbe()
+        let fanSpeed = fanProbe.rpm
+        let hasFanHardware = FanHardwarePolicy.shouldShowSurfaces(reasonCode: fanProbe.reasonCode)
 
         // 磁盘 IO 是 nonisolated 纯 syscall（差值法），在采集 actor 上同步执行。
         let diskIO = diskIOService.sample()
@@ -221,6 +227,10 @@ private actor MonitorSampler {
             cpuTemperature: cpuTemperature,
             thermalState: String(describing: thermalState),
             fanSpeed: fanSpeed,
+            hasFanHardware: hasFanHardware,
+            hasBatteryHardware: BatteryHardwarePolicy.shouldShowSurfaces(
+                hasInternalBattery: DeviceCapabilities.hasBatteryHardware
+            ),
             health: health,
             battery: battery,
             diskIO: diskIO,
@@ -269,6 +279,10 @@ final class SystemMonitor: ObservableObject {
 
     @Published var cpuTemperature: Double?
     @Published var fanSpeed: Int?
+    /// Optimistic until the first probe; only `noFanKeys` flips this to false.
+    @Published private(set) var hasFanHardware = true
+    /// Hardware fact from IOPS internal-battery presence; false on battery-less Macs.
+    @Published private(set) var hasBatteryHardware = DeviceCapabilities.hasBatteryHardware
     @Published var health: HealthScore = .perfect
 
     /// 各指标最近一段时间的取值序列，供弹窗 sparkline 折线读取（只读）。
@@ -419,6 +433,8 @@ final class SystemMonitor: ObservableObject {
         networkDownload = snapshot.networkDownload
         cpuTemperature = snapshot.cpuTemperature
         fanSpeed = snapshot.fanSpeed
+        hasFanHardware = snapshot.hasFanHardware
+        hasBatteryHardware = snapshot.hasBatteryHardware
         health = snapshot.health
         battery = snapshot.battery
         diskIO = snapshot.diskIO
