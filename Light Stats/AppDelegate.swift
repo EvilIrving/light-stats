@@ -533,6 +533,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         appMemoryManager.startMonitoring()
         installOutsideClickMonitors()
     }
+}
+
+extension AppDelegate {
+    func closePanel() {
+        dismissPanel(reason: .externalRequest)
+    }
 
     // MARK: - Scroll Direction
 
@@ -643,12 +649,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     private func presentAccessibilityAlert(title: String, message: String) {
         AccessibilityPermission.presentSettingsAlert(title: title, message: message)
-    }
-}
-
-extension AppDelegate {
-    func closePanel() {
-        dismissPanel(reason: .externalRequest)
     }
 
     private func syncKeepAwakeService() {
