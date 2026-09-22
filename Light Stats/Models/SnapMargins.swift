@@ -7,8 +7,8 @@ import CoreGraphics
 
 /// Gaps applied to snapped windows.
 ///
-/// Wins exposes four independent sliders (`marginTop/Bottom/Left/Right`) plus a separate enable
-/// switch. Two values cover the same ground without needing a mode:
+/// Two values cover the same ground as a set of per-edge sliders, without needing a mode,
+/// and no separate enable switch:
 ///
 /// - `outer` — distance between a snapped window and the screen's visible edge.
 /// - `inner` — distance between two adjacent snapped windows.

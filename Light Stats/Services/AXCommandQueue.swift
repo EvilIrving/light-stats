@@ -10,8 +10,8 @@ import OSLog
 ///
 /// Accessibility is effectively serial per application: two concurrent requests to the same app
 /// block each other, and a blocked request that is waiting on a menu-bar press can hold the caller
-/// for seconds. Wins discovered the same thing and funnels every AX call through one dedicated
-/// queue (`accessibilityCommandsQueue`, with a note that it "waits synchronously before return").
+/// for seconds. Every AX call therefore goes through one dedicated serial queue, which waits for an
+/// in-flight write instead of racing it.
 ///
 /// The drag pipeline and the placement engine share this queue, so a drag can never be starved by
 /// a burst of window reads, and a window read can never interleave with a frame write.

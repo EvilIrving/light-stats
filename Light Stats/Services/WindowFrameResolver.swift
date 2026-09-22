@@ -18,7 +18,7 @@ nonisolated struct ResolvedWindowFrame: Hashable, Sendable {
 /// Reads a window's frame with fallbacks.
 ///
 /// One path is not enough, and this is the single most important piece of plumbing in the
-/// subsystem. Wins keeps four (`dragWindowRectAX → AXFallback → WindowServer → WindowListFallback`)
+/// subsystem. Four sources are tried in order (`AX → AX window → WindowServer → window list`),
 /// because the failure modes differ by app: Electron windows report a usable frame on the element
 /// but not on their children; Java and some games report nothing until `AXEnhancedUserInterface`
 /// is on; and a window that is mid-animation reports a stale frame on every path. Giving up quietly

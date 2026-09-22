@@ -10,8 +10,8 @@ import Foundation
 /// Two shapes only. Everything the engine can do is either one of the fixed actions the menu bar
 /// and the default shortcuts expose, or a normalized region produced by the layout catalog, the
 /// grid selector, or the drag-zone detector. Normalizing at this boundary is what lets the preview
-/// overlay and the placement engine share one geometry path — the reason Wins never shows a
-/// footprint in one place and drops the window in another.
+/// overlay and the placement engine share one geometry path, so the preview cannot show one
+/// footprint in one place and drop the window in another.
 enum SnapTarget: Hashable, Sendable {
     case action(WindowSnapAction)
     case region(SnapNormalizedRect)

@@ -7,10 +7,10 @@ import Foundation
 
 /// The layouts every install starts with.
 ///
-/// Deliberately small and legible. Wins' four user-visible presets are covered (`Halves`,
+/// Deliberately small and legible. The four arrangement families users ask for (`Halves`,
 /// `Thirds`, `Right Stack`, `Quadrants`) plus a regular grid family, because a grid is what the
 /// island's tile buttons are actually good at expressing. Anything else the user builds themselves
-/// with the grid selector, which is a better answer than shipping 62 hidden presets.
+/// with the grid selector — a better answer than shipping dozens of presets nobody can name.
 enum SnapLayoutCatalog {
 
     static let halvesID = "built-in-halves"
@@ -52,8 +52,8 @@ enum SnapLayoutCatalog {
         )
     }
 
-    /// Wins' own "Thirds" preset is actually 2/3 + 1/3. Kept as its own layout so both readings of
-    /// "thirds" are reachable instead of picking one for the user.
+    /// "Thirds" is read two ways: three equal columns, or 2/3 + 1/3. Both are kept so both readings
+    /// of "thirds" are reachable instead of picking one for the user.
     static var twoThirds: SnapLayout {
         SnapLayout(
             id: twoThirdsID,
@@ -98,7 +98,7 @@ enum SnapLayoutCatalog {
         )
     }
 
-    /// Left half full height plus the right half split — the arrangement Wins calls `Right Stack`.
+    /// Left half full height plus the right half split — the "Right Stack" preset.
     static var rightStack: SnapLayout {
         SnapLayout(
             id: rightStackID,

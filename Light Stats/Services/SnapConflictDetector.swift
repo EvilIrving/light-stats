@@ -7,10 +7,10 @@ import AppKit
 
 /// Detects other window managers that are running.
 ///
-/// Wins ships a blacklist of apps whose windows it refuses to touch; this is the mirror image. Two
-/// window managers both listening for a drag to a screen edge produce a result that depends on
-/// whichever moved the window last, which is indistinguishable from a bug. The user cannot be
-/// expected to work that out, so the settings page says it.
+/// Two window managers both listening for a drag to a screen edge produce a result that depends
+/// on whichever moved the window last. That result is indistinguishable from a bug, and the user
+/// cannot be expected to work it out — so the settings page says it instead. Two window managers
+/// fighting over one gesture is the whole reason this list exists.
 ///
 /// Detection is best-effort by bundle identifier: an app that is not in the list is simply not
 /// reported. That is the right failure direction — a missed warning is silent, a wrong one is

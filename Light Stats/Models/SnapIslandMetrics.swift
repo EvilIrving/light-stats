@@ -23,7 +23,7 @@ enum SnapIslandMetrics {
     /// Corner radius of the small tiles drawn inside a chip.
     static let chipTileRadius: CGFloat = 2
 
-    /// Tile colour presets, matching Wins' `floatingColor`.
+    /// Tile colour presets for the layout tiles.
     enum Palette: String, Codable, Sendable, CaseIterable {
         case neutral
         case accent

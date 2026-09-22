@@ -4,9 +4,9 @@
 //
 //  The animation engine, sampled without a display.
 //
-//  This is the piece Wins cannot test at all — its island animator is a `Timer` plus two closures,
-//  so the only way to know whether a transition looks right is to watch it. Here the curve, the
-//  duration, the interpolation, and the reduced-motion timeline are all values.
+//  Nothing here needs a display or a running island: the curve, the duration, the interpolation,
+//  and the reduced-motion timeline are all values. An animator driven by a `Timer` plus two
+//  closures could not be checked that way at all.
 //
 
 import XCTest

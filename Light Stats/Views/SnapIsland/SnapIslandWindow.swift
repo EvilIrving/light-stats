@@ -13,8 +13,8 @@ import AppKit
 /// the top" idea would be gone. Returning the rect unchanged is what allows the panel to sit flush
 /// against the physical top edge, where it covers the menu bar while a drag is in progress.
 ///
-/// Wins' `SnappingIslandWindow` overrides exactly this one method, which is how it was identified
-/// during the teardown.
+/// This is the one method `NSPanel` hands the window's frame to before applying it, so it is the
+/// only place the menu-bar clamp can be refused.
 final class SnapIslandWindow: NSPanel {
 
     init(contentRect: NSRect) {

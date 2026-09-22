@@ -7,8 +7,8 @@ import Foundation
 
 /// A named arrangement of drop targets.
 ///
-/// Layouts are **data**, not code. Wins ships 62 `*Calculation` classes and exposes four of them;
-/// this project stores the geometry as normalized rects and solves every one of them with a single
+/// Layouts are **data**, not code. A class per arrangement is exactly the shape this refuses;
+/// the geometry is stored as normalized rects and every arrangement is solved by a single
 /// `SnapGridGeometry` function, so a new preset is a value — and a new test — rather than a class.
 struct SnapLayout: Codable, Hashable, Sendable, Identifiable {
 

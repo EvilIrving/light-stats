@@ -12,8 +12,8 @@ import CoreGraphics
 /// so any snap that went through the system's menu item returned early and never recorded an
 /// original frame — leaving "restore" permanently disabled for those windows.
 ///
-/// Keeping `placed` as well as `original` is what Wins gets from `lastRectangleActions` /
-/// `lastSystemActions`: if the window is no longer where we left it, the user (or another tool, or
+/// Keeping `placed` as well as `original` is what makes a restore safe: if the window is no longer
+/// where we left it, the user (or another tool, or
 /// the system) moved it, and restoring to a rectangle from three actions ago would be worse than
 /// doing nothing.
 nonisolated struct WindowSnapHistory<Key: Hashable> {
@@ -33,7 +33,7 @@ nonisolated struct WindowSnapHistory<Key: Hashable> {
     ///
     /// If the window has been moved by something other than us since we placed it, the stored
     /// restore point no longer describes anything real, so the current position becomes the new
-    /// one. That is Wins' `updateRestoreRect` decision, made automatically rather than passed in.
+    /// one. That decision is made automatically here rather than passed in by the caller.
     mutating func prepare(key: Key, currentFrame: CGRect) {
         guard let existing = records[key] else {
             records[key] = Record(original: currentFrame, placed: currentFrame)

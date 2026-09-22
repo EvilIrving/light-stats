@@ -65,8 +65,8 @@ final class SnapLayoutCatalogTests: XCTestCase {
         }
     }
 
-    /// Wins stores its layouts with a bottom-left origin, so reading them as-is mirrors everything.
-    /// These assertions pin the convention this project uses: top-left origin, `y` downward.
+    /// A bottom-left origin would mirror every stored layout, so these assertions pin the
+    /// convention this project uses: top-left origin, `y` downward.
     func testLayoutsAreStoredTopLeftOrigin() {
         let quadrants = SnapLayoutCatalog.quadrants
         let topLeft = quadrants.segments.first { $0.id == "topLeft" }

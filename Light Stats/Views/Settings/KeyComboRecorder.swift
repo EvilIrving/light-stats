@@ -9,7 +9,7 @@ import SwiftUI
 /// Records a key combination into a Carbon key code plus modifier mask.
 ///
 /// Generalised from the cleanup panel's recorder, which was the only place in the project that
-/// already did this. Wins uses the `KeyboardShortcuts` package; a third-party dependency is not
+/// already did this. A third-party recorder package is not
 /// worth adding for forty lines that already exist here, but the *behaviour* is what matters and it
 /// is now shared: click to record, Escape cancels, and the button always shows what is bound.
 struct KeyComboRecorder: View {

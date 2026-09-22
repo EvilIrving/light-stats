@@ -7,8 +7,8 @@ import Foundation
 
 /// A region the user kept from the grid selector.
 ///
-/// Wins stores these alongside layouts (`snappingIslandSavedPlacements`) and lets them be promoted
-/// into a full layout. Keeping them as first-class values means the grid selector has somewhere to
+/// First-class values, stored alongside layouts and promotable into a full layout.
+/// Keeping them first-class means the grid selector has somewhere to
 /// put a one-off rectangle that is not worth building a named layout around.
 struct SnapSavedPlacement: Codable, Hashable, Sendable, Identifiable {
 

@@ -7,13 +7,13 @@ import Foundation
 
 /// A user-recordable global shortcut for one snap target.
 ///
-/// Wins records shortcuts with the `KeyboardShortcuts` package; this project already has a working
-/// recorder for the cleanup panel, so the same mechanic is generalized rather than adding a
+/// Recording a shortcut is the same mechanic the cleanup panel already uses, so it is
+/// generalized here rather than adding a
 /// dependency. Key code and modifier mask are Carbon's own values, kept as `UInt32` so the model
 /// stays free of Carbon.
 ///
 /// The target can be an action *or* a region, which is what lets a shortcut point at a layout the
-/// user drew themselves. Wins has the same reach; a fixed enum of 19 actions does not.
+/// user drew themselves, which a fixed enum of 19 actions could never reach.
 struct SnapShortcut: Codable, Hashable, Sendable, Identifiable {
 
     var target: SnapTarget

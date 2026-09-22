@@ -8,7 +8,7 @@ import CoreGraphics
 /// Everything the eligibility rules need to know about a window.
 ///
 /// Passing a value instead of an `AXUIElement` is what makes the rules testable: the three-layer
-/// filter Wins applies is the difference between "snapping feels reliable" and "snapping grabs a
+/// filter is the difference between "snapping feels reliable" and "snapping grabs a
 /// Chrome toolbar once in a while", and none of that judgment needs a live window to verify.
 struct SnapWindowCandidate: Sendable, Hashable {
 

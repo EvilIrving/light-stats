@@ -15,11 +15,11 @@ struct SnapGridCell: Hashable, Sendable {
 ///
 /// Pure state and pure geometry, so the whole interaction — anchoring, extending, normalising a
 /// backwards drag, clearing — is covered by tests instead of by dragging a mouse across a preview.
-/// Wins keeps this in `SnappingIslandGridSelectorController` alongside its window and its event
-/// monitors, which is why none of it is testable there.
+/// Kept out of the controller on purpose: a state machine that lived alongside a window and its
+/// event monitors would not be testable.
 struct SnapGridSelection: Equatable, Sendable {
 
-    /// The grid is square and small. Wins uses the same fixed size; anything finer than 8×8
+    /// The grid is square and small. 8×8 is the fixed size; anything finer
     /// produces tiles too thin to hit at the sizes a window actually gets.
     static let defaultSize = 8
 

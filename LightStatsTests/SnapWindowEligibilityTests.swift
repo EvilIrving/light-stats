@@ -91,8 +91,8 @@ final class SnapWindowEligibilityTests: XCTestCase {
         )
     }
 
-    /// Browsers, Finder, and Electron chat clients are windows people snap all day. Wins excludes
-    /// them by default; shipping that would make the feature look broken, so they are opt-in.
+    /// Browsers, Finder, and Electron chat clients are windows people snap all day. Excluding them
+    /// by default would make the feature look broken, so they are opt-in.
     func testCommonAppsAreNotRejectedByDefault() {
         for bundle in ["com.google.Chrome", "com.apple.finder", "com.hammerandchisel.discord"] {
             XCTAssertNil(rejection(candidate(bundle: bundle)), bundle)

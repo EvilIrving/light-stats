@@ -7,7 +7,7 @@ import CoreGraphics
 
 /// Recognises "shake the window sideways" while a drag is in progress.
 ///
-/// Aero Shake, and Wins' `DragShakeChecker`. Pure and time-injected, so the whole gesture — how
+/// The gesture Windows has called Aero Shake for years. Pure and time-injected, so the whole gesture — how
 /// many reversals, how fast, and how long before it can fire again — is covered by tests instead of
 /// by waving a mouse at the screen.
 ///

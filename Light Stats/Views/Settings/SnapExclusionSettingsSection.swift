@@ -10,8 +10,8 @@ import SwiftUI
 ///
 /// Two tiers, and the distinction matters. The built-in `restricted` list is short and contains
 /// only apps that genuinely break when a third party moves their windows — media players, games,
-/// remote desktops. Wins' full list also excludes Chrome, Firefox, Finder, Preview, and every
-/// Electron chat client, which are windows people snap constantly; shipping that as a default would
+/// remote desktops. Chrome, Firefox, Finder, Preview, and every Electron chat client sit in the same
+/// category, but those are windows people snap constantly; shipping that as a default would
 /// make the feature look broken rather than careful. So it is offered here as one button.
 struct SnapExclusionSettingsSection: View {
 

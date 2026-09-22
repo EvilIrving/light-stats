@@ -7,7 +7,7 @@ import Foundation
 
 /// The kind of transition an island or preview is performing.
 ///
-/// Wins splits this out of the animation parameters because the same two frames can mean different
+/// This is split out of the animation parameters because the same two frames can mean different
 /// things: `resize` moves and resizes in place, while `show` is a first appearance. Treating
 /// `resize` as a fresh `show` is exactly what makes an island visibly blink when the screen or the
 /// layout changes mid-interaction.

@@ -7,8 +7,8 @@ import CoreGraphics
 
 /// Geometry and activation rules for the top-edge layout island.
 ///
-/// Wins exposes four separate tunables (`topOverflowTolerance`, `horizontalTolerance`,
-/// `collapsedPreviewTopRatio`, `centerActivationWidthRatio`). Three of them are folded into
+/// Four tunables describe this geometry (`topOverflowTolerance`, `horizontalTolerance`,
+/// `collapsedPreviewTopRatio`, `centerActivationWidthRatio`). Three are folded into
 /// sensible constants here — they describe the same feel and nobody has ever asked for a slider on
 /// "how far past the top edge counts as the top edge" — while the two that change the product's
 /// character (how tall the strip is, how wide the activation band is) stay configurable.

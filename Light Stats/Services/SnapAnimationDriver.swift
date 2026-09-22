@@ -8,7 +8,7 @@ import OSLog
 
 /// Drives a `SnapAnimationPlan` frame by frame on the main run loop.
 ///
-/// A `Timer`, not `NSAnimationContext`. Wins made the same choice for the same reason: the
+/// A `Timer`, not `NSAnimationContext`, for one reason: the
 /// intermediate frames have to be readable, because the island changes its corner radii, its shadow
 /// progress, and its content layout on the same timeline that moves it. An API that only offers a
 /// start value and an end value cannot do that, and cannot be interrupted mid-flight.

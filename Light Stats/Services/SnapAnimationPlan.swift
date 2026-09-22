@@ -8,8 +8,8 @@ import CoreGraphics
 /// A fully described transition: where a window or panel starts, where it ends, and how it gets
 /// there.
 ///
-/// The plan is a value, which is the point. Wins drives its island with a `Timer` plus closures and
-/// cannot test any of it; here the frames, the alpha, and the interrupt behaviour are all readable
+/// The plan is a value, which is the point. A `Timer` plus closures would drive the island and
+/// leave none of it testable; here the frames, the alpha, and the interrupt behaviour are all readable
 /// from a value that a test can construct and sample.
 nonisolated struct SnapAnimationPlan: Hashable, Sendable {
 

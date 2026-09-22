@@ -7,7 +7,7 @@ import Foundation
 
 /// Whether a window may be snapped at all.
 ///
-/// Wins filters in three layers — an Accessibility subrole whitelist, a built-in app blacklist, and
+/// The filter runs in three layers — an Accessibility subrole whitelist, a built-in app blacklist, and
 /// geometry/title heuristics — because each layer catches a different failure. Without them a drag
 /// that starts on a Chrome toolbar flyout or an Electron modal widget gets tiled, which is the
 /// single most common way a window manager feels broken.
@@ -24,9 +24,9 @@ nonisolated enum SnapWindowEligibility {
     /// Apps that break when a third party moves their windows. Kept deliberately short, because
     /// every entry is a window the user cannot snap.
     ///
-    /// Wins also excludes browsers, Finder, Preview, Keynote, and every Electron chat client. Those
-    /// are windows users snap all day long, so they are offered as an opt-in *recommended* list
-    /// (`recommendedExclusions`) rather than being forced on.
+    /// Browsers, Finder, Preview, Keynote, and every Electron chat client are just as unsnappable in
+    /// practice, but they are windows users snap all day long, so they are offered as an opt-in
+    /// *recommended* list (`recommendedExclusions`) rather than being forced on.
     static let restrictedBundleIdentifiers: Set<String> = [
         "org.videolan.vlc",          // interrupts playback
         "com.colliderli.iina",
@@ -50,7 +50,7 @@ nonisolated enum SnapWindowEligibility {
         "AXDocumentWindow"
     ]
 
-    /// Wins' full list, offered in Settings as a one-click opt-in.
+    /// The full recommended set, offered in Settings as a one-click opt-in.
     static let recommendedExclusions: [String] = [
         "com.bilibili.bilibiliPC",
         "com.openai.codex",
@@ -89,7 +89,7 @@ nonisolated enum SnapWindowEligibility {
         "com.google.android.studio"
     ]
 
-    /// Bundle-identifier prefixes that stand in for Wins' JetBrains regex. A prefix check is exactly
+    /// Bundle-identifier prefixes for the whole JetBrains family. A prefix check is exactly
     /// as precise here and cannot be derailed by a malformed pattern.
     static let restrictedBundlePrefixes: [String] = [
         "com.jetbrains.",

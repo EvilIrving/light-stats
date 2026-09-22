@@ -8,7 +8,7 @@ import Foundation
 /// How an island or preview transition is timed.
 ///
 /// The spring case carries SwiftUI's vocabulary (`response`, `dampingFraction`) because that is the
-/// feel Wins is matching and it is what a designer can reason about. It is sampled analytically
+/// feel this animation is matching and it is what a designer can reason about. It is sampled analytically
 /// here rather than handed to an animation API, because the intermediate frames have to be readable
 /// — the island changes its corner radii and shadow progress on the same timeline that moves it.
 enum SnapTiming: Hashable, Sendable {
@@ -25,7 +25,7 @@ enum SnapTiming: Hashable, Sendable {
 
     /// The shorter timeline used when the system asks for reduced motion.
     ///
-    /// Reduce Motion is not "no animation" — Wins keeps a shorter one, and so does this. Removing
+    /// Reduce Motion is not "no animation" — it keeps a shorter one. Removing
     /// the transition entirely makes placement feel like a glitch rather than a deliberate act.
     static let reduced = SnapTiming.curve(name: .easeOut, duration: 0.08)
 }

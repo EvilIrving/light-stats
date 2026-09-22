@@ -7,9 +7,9 @@ import CoreGraphics
 
 /// Turns normalized layout data into screen rectangles.
 ///
-/// One function covers every layout the product ships or the user can build. Wins implements the
-/// same idea with 62 `*Calculation` classes; a normalized rect plus a gap rule expresses all of
-/// them, and the grid boundaries are far easier to test than 62 types are to audit.
+/// One function covers every layout the product ships or the user can build. Arrangement families,
+/// thirds, quadrants, and anything the grid selector produces are all the same expression — a
+/// normalized rect plus a gap rule, with boundaries far easier to test than a type per arrangement.
 nonisolated enum SnapGridGeometry {
 
     /// Edge-matching tolerance in points. Rects derived from the same bounds land on the boundary

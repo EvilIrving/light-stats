@@ -11,9 +11,9 @@ import CoreGraphics
 /// selector is drawn in, so a layout is never flipped between the editor, the preview overlay, and
 /// the placement engine.
 ///
-/// Wins stores its layouts with a bottom-left (Cocoa) origin — `top-left` carries `y = 0.5` there.
-/// Reading that data as-is mirrors the entire layout vertically. This project keeps one convention
-/// and states it here so the trap cannot be reintroduced by copying Wins' JSON.
+/// The other convention in circulation is a bottom-left (Cocoa) origin, where `top-left` carries
+/// `y = 0.5`. Reading that data as-is mirrors the entire layout vertically, so the convention
+/// above is stated explicitly here to keep the trap from coming back with imported layouts.
 struct SnapNormalizedRect: Codable, Hashable, Sendable {
 
     var x: Double

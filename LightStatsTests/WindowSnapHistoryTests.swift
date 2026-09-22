@@ -74,7 +74,7 @@ final class WindowSnapHistoryTests: XCTestCase {
     }
 
     /// And the stale record is replaced, so the window's new position becomes the restore point for
-    /// the next snap — that is Wins' `updateRestoreRect`, decided automatically.
+    /// the next snap, decided automatically.
     func testPrepareReplacesAStaleRestorePoint() {
         var history = WindowSnapHistory<String>()
         history.prepare(key: "w", currentFrame: original)
