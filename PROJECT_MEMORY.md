@@ -120,7 +120,7 @@ SuperGrok（`isUnifiedBillingUser: true`）走 `GET https://cli-chat-proxy.grok.
 - **CLI main.swift 顶层 `let` 按声明顺序立即初始化**：`defaultKeyDirectory` 必须声明在使用它的命令 switch 之前，否则读到未初始化内存直接段错误（退出码 139）。
 - 激活码存 UserDefaults（签名载荷非机密，与不绑机器一致），但诊断日志必须将值记为 `<redacted>`；启动时 `LicenseManager` 重新校验，失效/移除立即停服务。`@Published` 在属性赋值前发送，`FindMouseCoordinator` 必须使用 publisher 回调携带的新 payload 同步服务，不能在 sink 里回读 `license.payload`，否则会读到旧授权状态。
 
-长期风险：私钥丢失后旧码仍可由 App 内公钥验证，但无法继续签发匹配该公钥的新码；若轮换密钥，App 应在过渡期同时信任旧、新公钥，不能直接替换导致旧码失效。发码器发现目标目录已有密钥文件时必须拒绝覆盖。开源可被 fork 移除门禁（已接受）；码可分享（不绑机器的代价，已接受）。落地页 `docs/index.html` 仍写 $0 免费，待产品侧决定是否更新。购买渠道未定，设置页 hint 是占位文案。
+长期风险：私钥丢失后旧码仍可由 App 内公钥验证，但无法继续签发匹配该公钥的新码；若轮换密钥，App 应在过渡期同时信任旧、新公钥，不能直接替换导致旧码失效。发码器发现目标目录已有密钥文件时必须拒绝覆盖。开源可被 fork 移除门禁（已接受）；码可分享（不绑机器的代价，已接受）。落地页 `website/index.html` 仍写 $0 免费，待产品侧决定是否更新。购买渠道未定，设置页 hint 是占位文案。
 
 **激活文案基调**：用户要求温暖、有被重视的感觉，但不要过度尊贵。永久赠送状态定稿为标题「一路同行」、副文案「感谢支持，Pro 已永久赠送」；按钮「立即解锁」，错误「激活码没对上，再核对一下」，激活成功弹 toast。文案源语言 zh-Hans，四语言母语化，标签保持简短（翻译原则不变）。
 
@@ -203,7 +203,7 @@ Neon 后续补充：不要荧光。禁止高饱和高亮金 / 柠 / 青 / 粉，
 
 产品决定删除 `ashVeil`（灰纱）与 `bento`（Bento 网格）两个主题，只剩 4 个可见预设：`glass`（默认）/ `film`（霓虹）/ `bar`（夜色酒吧）/ `noir`（墨夜），另有隐藏的 `dataPaper`。
 
-- `bento` 的删除范围包括：`AppTheme.bento` case、`ThemeDefinition.bento`、`UITokens.bento`、`ThemeLayout.bento` 与 `usesBentoLayout` 布局分叉（现已不存在，全产品只有 instrument 布局）、`BentoCard` / `QuickStatCard` 组件、Overview / Cleanup 的 bento 分支、`docs/screenshots/bento/`。
+- `bento` 的删除范围包括：`AppTheme.bento` case、`ThemeDefinition.bento`、`UITokens.bento`、`ThemeLayout.bento` 与 `usesBentoLayout` 布局分叉（现已不存在，全产品只有 instrument 布局）、`BentoCard` / `QuickStatCard` 组件、Overview / Cleanup 的 bento 分支、`website/screenshots/bento/`。
 - 设置窗的 `appThemed` 锁从 `.bento` 换成 `.glass`（同为 vibrant + 系统控件底，视觉等效）。
 - 迁移行为：已存储的 `"ashVeil"` / `"bento"` 偏好经 `AppTheme.resolve` 回落到 `.noir`，有回归测试覆盖。
 - 后续若再加主题，改 `ThemeDefinition` 组合表即可，业务视图（Overview / Cleanup / 行组件）已无布局分叉。

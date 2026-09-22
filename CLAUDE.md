@@ -881,8 +881,12 @@ compare versions when they pick which copy of a bundle to use.
 |----------|---------|--------|
 | `quality.yml` | Reusable (`workflow_call`) | Parallel SwiftLint, localization, and XCTest gates |
 | `build.yml` | Main push / PR / manual | Reuse quality gates, then package an unsigned DMG artifact |
-| `deploy.yml` | Docs change on main / manual | Build and deploy GitHub Pages independently of app CI |
+| `deploy.yml` | Website change on main / manual | Build and deploy GitHub Pages independently of app CI |
 | `release.yml` | `v*` tags | Validate SemVer/main ancestry, reuse quality gates, sign + notarise + verify, publish GitHub Release, upload DMG to R2 |
+
+**GitHub Pages serves `website/` and nothing else** — `website/index.html`, `website/screenshots/`,
+and `website/light-stats-readme.mp4`, which is the whole landing page. `docs/` holds internal notes
+and is never published; anything that must not be downloadable does not belong in `website/`.
 
 Release ordering is mandatory: `prepare + quality` → `notarize` → `publish`. Release notes may run
 in parallel with quality/notarization, but the final GitHub Release depends on both. Apple signing

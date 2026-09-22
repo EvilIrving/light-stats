@@ -19,13 +19,13 @@ Ink Night, the clean-install default, shown in Overview and Memory:
 
 | Overview | Memory |
 |----------|--------|
-| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="Memory cleanup in the Ink Night theme" /> |
+| <img src="website/screenshots/ink-night/popover-overview.png" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="website/screenshots/ink-night/popover-cleanup.png" width="320" alt="Memory cleanup in the Ink Night theme" /> |
 
 Themes (Overview):
 
 | Classic | Golden Hour | Amber | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="Classic theme" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour theme" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="Amber theme" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night theme" /> |
+| <img src="website/screenshots/classic/popover-overview.png" width="160" alt="Classic theme" /> | <img src="website/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour theme" /> | <img src="website/screenshots/amber/popover-overview.png" width="160" alt="Amber theme" /> | <img src="website/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night theme" /> |
 
 ---
 
@@ -250,7 +250,7 @@ swiftlint lint --strict
 ./script/validate_localization.sh
 ```
 
-GitHub Actions runs SwiftLint, localization validation, and XCTest as parallel quality gates. Pull requests and `main` package an unsigned DMG only after those checks pass. Release tags rerun the same gates before signing and notarization; only the verified notarized artifact can be published. GitHub Pages remains an independent docs-only workflow.
+GitHub Actions runs SwiftLint, localization validation, and XCTest as parallel quality gates. Pull requests and `main` package an unsigned DMG only after those checks pass. Release tags rerun the same gates before signing and notarization; only the verified notarized artifact can be published. GitHub Pages remains an independent website-only workflow.
 
 ### Tests
 

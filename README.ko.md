@@ -16,13 +16,13 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 | 개요 | 메모리 |
 |------|--------|
-| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="Ink Night 테마 개요" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="Ink Night 테마 메모리" /> |
+| <img src="website/screenshots/ink-night/popover-overview.png" width="320" alt="Ink Night 테마 개요" /> | <img src="website/screenshots/ink-night/popover-cleanup.png" width="320" alt="Ink Night 테마 메모리" /> |
 
 테마별 개요:
 
 | Classic | Golden Hour | Amber | Ink Night |
 |---------|------|-----------|-----------|
-| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="Classic 테마" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour 테마" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="Amber 테마" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night 테마" /> |
+| <img src="website/screenshots/classic/popover-overview.png" width="160" alt="Classic 테마" /> | <img src="website/screenshots/golden-hour/popover-overview.png" width="160" alt="Golden Hour 테마" /> | <img src="website/screenshots/amber/popover-overview.png" width="160" alt="Amber 테마" /> | <img src="website/screenshots/ink-night/popover-overview.png" width="160" alt="Ink Night 테마" /> |
 
 ---
 

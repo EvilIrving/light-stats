@@ -50,7 +50,7 @@
 - Latest tagged prerelease observed on 2026-09-04: v1.9.2-beta.7.
 - Unreleased working-tree changes observed on 2026-09-14: AI usage covers 15 providers via a compile-time registry, Overview quota rows collapse to the tightest window with tap-to-expand, balance-only providers sink to the bottom without bars, Cursor's primary window follows auto percent; Apple Silicon only (`ARCHS = arm64`); Finder menu adds Word/Excel/PowerPoint blanks and user file templates, move/copy to favorites, and hide/show; window management prefers macOS' own tiling then falls back, surfaces system edge-drag, and uses a traffic-light titlebar heuristic with Fn pointer snap; optional default input source after app switch; diagnostic journal always on with user-exportable ZIP, performance recording kept separate.
 - GitHub Actions build and release workflows exist.
-- Screenshots under `docs/screenshots/{classic,golden-hour,amber,ink-night}/` (overview + cleanup each, PNG).
+- Screenshots under `website/screenshots/{classic,golden-hour,amber,ink-night}/` (overview + cleanup each, PNG).
 - No adoption, testimonial, or benchmark claim is approved for marketing copy; any public count must be rechecked immediately before use.
 
 ## Links

@@ -72,13 +72,13 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 | 概览 | 内存清理 |
 |------|----------|
-| <img src="docs/screenshots/ink-night/popover-overview.png" width="320" alt="概览面板，墨夜主题" /> | <img src="docs/screenshots/ink-night/popover-cleanup.png" width="320" alt="内存清理，墨夜主题" /> |
+| <img src="website/screenshots/ink-night/popover-overview.png" width="320" alt="概览面板，墨夜主题" /> | <img src="website/screenshots/ink-night/popover-cleanup.png" width="320" alt="内存清理，墨夜主题" /> |
 
 四主题概览：
 
 | 经典 | 黄金时刻 | 琥珀 | 墨夜 |
 |------|------|----------|------|
-| <img src="docs/screenshots/classic/popover-overview.png" width="160" alt="经典主题" /> | <img src="docs/screenshots/golden-hour/popover-overview.png" width="160" alt="黄金时刻主题" /> | <img src="docs/screenshots/amber/popover-overview.png" width="160" alt="琥珀主题" /> | <img src="docs/screenshots/ink-night/popover-overview.png" width="160" alt="墨夜主题" /> |
+| <img src="website/screenshots/classic/popover-overview.png" width="160" alt="经典主题" /> | <img src="website/screenshots/golden-hour/popover-overview.png" width="160" alt="黄金时刻主题" /> | <img src="website/screenshots/amber/popover-overview.png" width="160" alt="琥珀主题" /> | <img src="website/screenshots/ink-night/popover-overview.png" width="160" alt="墨夜主题" /> |
 
 ---
 

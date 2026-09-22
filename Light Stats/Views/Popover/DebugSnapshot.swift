@@ -27,7 +27,7 @@ enum DebugSnapshot {
     /// 多出的部分会在导出时按实际内容裁掉。
     private static let canvasHeight: CGFloat = 3000
 
-    /// 导出目录：项目根目录 docs/screenshots（目录不存在则自动创建）。
+    /// 导出目录：项目根目录 website/screenshots（目录不存在则自动创建）。
     private static var outputDirectory: URL {
         let sourceFile = URL(fileURLWithPath: #filePath)
         // DebugSnapshot.swift is at: .../macos-menus-stats/Light Stats/Views/Popover/DebugSnapshot.swift
@@ -37,7 +37,7 @@ enum DebugSnapshot {
             .deletingLastPathComponent()  // Views
             .deletingLastPathComponent()  // Light Stats
             .deletingLastPathComponent()  // macos-menus-stats
-        let dir = projectRoot.appendingPathComponent("docs/screenshots", isDirectory: true)
+        let dir = projectRoot.appendingPathComponent("website/screenshots", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }
