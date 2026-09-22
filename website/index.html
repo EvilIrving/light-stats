@@ -541,6 +541,33 @@
         <section data-panel="changelog" class="prose col" hidden>
           <article class="log-item">
             <div class="log-head">
+              <h2>1.9.6</h2>
+              <span class="log-date">23 Sep 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.6.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>Window management, off by default: drag a window to a screen edge to snap halves, corners, and thirds, or use the layout island on the top edge for halves, thirds, quadrants, sixths, ninths, and stacks.</li>
+              <li>Per-action global shortcuts, an Fn modifier that targets the window under the pointer, and a choice of who owns drag-to-edge: the Light Stats engine or macOS' own tiling.</li>
+              <li>Dock-click collapse: click the frontmost app's Dock icon to put its windows away, click again to bring them back. Shake a dragged window instead to hide other apps, and shake again to restore.</li>
+              <li>A window-control menu in the menu bar, a pinned batch-quit group in Cleanup, and self-explaining support reports.</li>
+              <li>Find My Mouse's diamond presentation pointer, chosen from thumbnails in Settings.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+              <li>An optional status-bar divider, aligned network speeds, and direction-coloured traffic numbers.</li>
+              <li>No fan or battery surfaces on machines that have neither; battery health switches between the design ratio and the system reading.</li>
+              <li>AI usage shows the quota window nearest its reset. A closed panel no longer redraws every frame.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Battery health and temperature read from the nested battery layers, and one snap coordinate reference height on multi-display setups.</li>
+              <li>Status-bar traffic colours stay off until enabled.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
               <h2>1.9.5</h2>
               <span class="log-date">14 Sep 2026</span>
               <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.5.dmg">Get</a>
