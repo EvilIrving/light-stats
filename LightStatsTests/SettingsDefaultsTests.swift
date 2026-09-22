@@ -224,7 +224,6 @@ final class SettingsDefaultsTests: XCTestCase {
         let s = freshSettings()
         XCTAssertFalse(s.showStatusBarSeparator)
         XCTAssertEqual(s.statusBarSeparatorWidth, 4, accuracy: 0.0001)
-        XCTAssertEqual(s.statusBarNetworkColorStyle, .system)
     }
 
     func testCleanupPinnedAppsDefaultEmpty() {

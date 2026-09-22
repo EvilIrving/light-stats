@@ -67,7 +67,7 @@ Light Stats/
 │   ├── WindowPreviewItem.swift      # One window, as every preview surface needs it
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
-│   ├── StatusBarNetworkColorStyle.swift # system template tint | traffic up/down colours
+│   ├── StatusBarNetworkColorStyle.swift # traffic up/down pair kept; status-bar path gated off
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
 │   └── ReleaseInfo.swift            # SemanticVersion + GitHub Release JSON
 ├── Services/                        # System data collection; no View/ViewModel imports

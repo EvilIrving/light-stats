@@ -213,10 +213,7 @@ struct MonitoringDetail: View {
             }
             SettingsSection("settings.statusBar.separator".localized) {
                 SettingsGroup {
-                    SettingsRow(
-                        "settings.statusBar.separator.toggle".localized,
-                        subtitle: "settings.statusBar.separator.hint".localized
-                    ) {
+                    SettingsRow("settings.statusBar.separator.toggle".localized) {
                         SettingsToggle(isOn: $settings.showStatusBarSeparator)
                     }
                     if settings.showStatusBarSeparator {
@@ -233,17 +230,6 @@ struct MonitoringDetail: View {
                                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                                     .foregroundStyle(Color.secondary)
                                     .frame(width: 20, alignment: .trailing)
-                            }
-                        }
-                    }
-                    rowDivider()
-                    SettingsRow("settings.statusBar.networkColor".localized) {
-                        SettingsSegmentedPicker(
-                            selection: $settings.statusBarNetworkColorStyle,
-                            segmentMinWidth: 56
-                        ) {
-                            ForEach(StatusBarNetworkColorStyle.allCases) { style in
-                                SettingsSegmentLabel(title: style.localizationKey.localized).tag(style)
                             }
                         }
                     }

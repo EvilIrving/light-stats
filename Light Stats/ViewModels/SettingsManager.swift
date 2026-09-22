@@ -45,7 +45,6 @@ protocol SettingsManaging: ObservableObject {
     var showHealth: Bool { get set }
     var showStatusBarSeparator: Bool { get set }
     var statusBarSeparatorWidth: Double { get set }
-    var statusBarNetworkColorStyle: StatusBarNetworkColorStyle { get set }
     var cleanupPinnedApps: [String] { get set }
     var healthIncludeCPU: Bool { get set }
     var healthIncludeMemory: Bool { get set }
@@ -124,10 +123,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             save(statusBarSeparatorWidth, for: .statusBarSeparatorWidth)
         }
     }
-    @Published var statusBarNetworkColorStyle: StatusBarNetworkColorStyle {
-        didSet { save(statusBarNetworkColorStyle.rawValue, for: .statusBarNetworkColorStyle) }
-    }
-
     /// Bundle-id (or path) keys for Cleanup's single pinned batch-quit group.
     @Published var cleanupPinnedApps: [String] {
         didSet { save(cleanupPinnedApps, for: .cleanupPinnedApps) }
@@ -462,7 +457,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showHealth = "settings.showHealth"
         case showStatusBarSeparator = "settings.showStatusBarSeparator"
         case statusBarSeparatorWidth = "settings.statusBarSeparatorWidth"
-        case statusBarNetworkColorStyle = "settings.statusBarNetworkColorStyle"
         case cleanupPinnedApps = "settings.cleanupPinnedApps"
         case healthIncludeCPU = "settings.healthIncludeCPU"
         case healthIncludeMemory = "settings.healthIncludeMemory"
@@ -546,8 +540,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         statusBarSeparatorWidth = Self.clampSeparatorWidth(
             defaults.object(forKey: Key.statusBarSeparatorWidth.rawValue) as? Double ?? 4
         )
-        statusBarNetworkColorStyle = defaults.string(forKey: Key.statusBarNetworkColorStyle.rawValue)
-            .flatMap(StatusBarNetworkColorStyle.init(rawValue:)) ?? .system
         cleanupPinnedApps = defaults.stringArray(forKey: Key.cleanupPinnedApps.rawValue) ?? []
 
         // 健康分维度：默认全部参与计算（含 GPU）。

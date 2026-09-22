@@ -36,11 +36,7 @@
 "settings.health" = "건강도";
 "settings.statusBar.separator" = "상태 표시줄 구분선";
 "settings.statusBar.separator.toggle" = "구분선 표시";
-"settings.statusBar.separator.hint" = "지표 사이에 가는 선을 그립니다. 기본값은 끔입니다.";
 "settings.statusBar.separator.width" = "구분선 너비";
-"settings.statusBar.networkColor" = "네트워크 색상";
-"settings.statusBar.networkColor.system" = "시스템";
-"settings.statusBar.networkColor.traffic" = "송수신";
 "settings.healthDimensions" = "건강도 평가 항목";
 "settings.healthDimensions.hint" = "건강도 점수에 반영할 지표를 선택하세요.";
 "settings.healthDimensions.power" = "전원";

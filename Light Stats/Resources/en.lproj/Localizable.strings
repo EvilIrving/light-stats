@@ -36,11 +36,7 @@
 "settings.health" = "Health";
 "settings.statusBar.separator" = "Status Bar Divider";
 "settings.statusBar.separator.toggle" = "Show Divider";
-"settings.statusBar.separator.hint" = "Draw a thin line between status-bar metrics. Off by default.";
 "settings.statusBar.separator.width" = "Divider Width";
-"settings.statusBar.networkColor" = "Network Color";
-"settings.statusBar.networkColor.system" = "System";
-"settings.statusBar.networkColor.traffic" = "Traffic";
 "settings.healthDimensions" = "Health Score Dimensions";
 "settings.healthDimensions.hint" = "Choose which metrics count toward the health score.";
 "settings.healthDimensions.power" = "Power";

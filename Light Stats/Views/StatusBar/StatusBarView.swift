@@ -73,7 +73,12 @@ final class StatusBarView: NSView {
     private var fanRPM: Int?
     private var separatorWidth: CGFloat = Layout.defaultSeparatorWidth
     private var drawsSeparator = false
-    private var networkColorStyle: StatusBarNetworkColorStyle = .system
+
+    /// Status-bar traffic colours (blue↑ / green↓) are intentionally off.
+    /// `.traffic` leaves template tinting and fights the rest of the item; the
+    /// coloured draw path below is kept dormant. Panel network colour is fine.
+    /// Flip this to `.traffic` to re-enable without rediscovering the non-template route.
+    private static let networkColorStyle: StatusBarNetworkColorStyle = .system
 
     // MARK: - Render target
 
@@ -129,7 +134,6 @@ final class StatusBarView: NSView {
         separatorWidth = drawsSeparator
             ? CGFloat(settings.statusBarSeparatorWidth)
             : Layout.defaultSeparatorWidth
-        networkColorStyle = settings.statusBarNetworkColorStyle
     }
 
     private func makeDisplayItems(
@@ -314,15 +318,15 @@ final class StatusBarView: NSView {
     }
 
     private var usesColoredNetwork: Bool {
-        networkColorStyle == .traffic
+        Self.networkColorStyle == .traffic
     }
 
     /// Renders the current items into a template image and hands it to the button. AppKit
     /// then tints it to the menu-bar foreground colour (white on a dark bar, black on a light
     /// one), so text adapts identically to the logo/fan template icons.
     ///
-    /// Traffic-coloured network breaks the template contract (tint would wash out blue/green),
-    /// so that mode draws with appearance-resolved colours instead.
+    /// The dormant traffic-colour path breaks the template contract (tint would wash out
+    /// blue/green), so it draws with appearance-resolved colours instead when re-enabled.
     private func renderAndApply() {
         hostButton?.image = renderImage()
     }

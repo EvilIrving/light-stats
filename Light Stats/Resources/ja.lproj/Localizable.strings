@@ -36,11 +36,7 @@
 "settings.health" = "健康度";
 "settings.statusBar.separator" = "ステータスバー区切り";
 "settings.statusBar.separator.toggle" = "区切りを表示";
-"settings.statusBar.separator.hint" = "指標のあいだに細い線を描きます。初期設定はオフです。";
 "settings.statusBar.separator.width" = "区切りの幅";
-"settings.statusBar.networkColor" = "ネットワークの色";
-"settings.statusBar.networkColor.system" = "システム";
-"settings.statusBar.networkColor.traffic" = "上下行";
 "settings.healthDimensions" = "健康度の評価項目";
 "settings.healthDimensions.hint" = "健康度の計算に含める指標を選択します。";
 "settings.healthDimensions.power" = "電源";
