@@ -126,7 +126,7 @@ struct AppSwitcherView: View {
         if let icon = NSRunningApplication(processIdentifier: group.processID)?.icon {
             Image(nsImage: icon)
                 .resizable()
-                .aspectRatio(contentMode: .fit)
+                .scaledToFit()
         } else {
             Image(systemName: "app.dashed")
                 .font(.system(size: 14))

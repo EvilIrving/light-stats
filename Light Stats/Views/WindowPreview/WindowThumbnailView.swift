@@ -36,7 +36,7 @@ struct WindowThumbnailView: View {
             if let image {
                 Image(decorative: image, scale: 1, orientation: .up)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .transition(.opacity)
             }
         }
@@ -60,7 +60,7 @@ struct WindowThumbnailView: View {
             if let icon = appIcon {
                 Image(nsImage: icon)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: glyphSize, height: glyphSize)
             } else {
                 Image(systemName: "macwindow")
