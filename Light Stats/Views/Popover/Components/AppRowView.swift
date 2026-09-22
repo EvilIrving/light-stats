@@ -15,6 +15,8 @@ struct AppCardView: View {
     let app: RunningApp
     var isTerminating: Bool = false
     let appManager: AppMemoryManager
+    var showsUnpinControl: Bool = false
+    var onUnpin: (() -> Void)?
     let onClose: () -> Void
 
     @Environment(\.theme) private var theme
@@ -106,18 +108,34 @@ struct AppCardView: View {
             ProgressView()
                 .controlSize(.small)
                 .frame(width: 16, height: 16)
-        } else if app.isTerminable {
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
-                    .padding(2)
-                    .contentShape(Rectangle())
+        } else {
+            HStack(spacing: 4) {
+                if showsUnpinControl, let onUnpin {
+                    Button(action: onUnpin) {
+                        Image(systemName: "pin.slash.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(isHovered ? theme.inkSecondary : theme.inkFaint)
+                            .padding(2)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 18, minHeight: 20)
+                    .help("cleanup.pinnedGroup.remove".localized)
+                }
+                if app.isTerminable {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isHovered ? theme.signalBad.opacity(0.9) : theme.inkFaint)
+                            .padding(2)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(minWidth: 20, minHeight: 20)
+                    .allowsHitTesting(true)
+                    .help("关闭应用")
+                }
             }
-            .buttonStyle(.plain)
-            .frame(minWidth: 20, minHeight: 20)
-            .allowsHitTesting(true)
-            .help("关闭应用")
         }
     }
 

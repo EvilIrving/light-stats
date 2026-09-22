@@ -67,6 +67,7 @@ Light Stats/
 │   ├── WindowPreviewItem.swift      # One window, as every preview surface needs it
 │   ├── CoreType.swift
 │   ├── AppGroup.swift
+│   ├── StatusBarNetworkColorStyle.swift # system template tint | traffic up/down colours
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
 │   └── ReleaseInfo.swift            # SemanticVersion + GitHub Release JSON
 ├── Services/                        # System data collection; no View/ViewModel imports
@@ -127,6 +128,9 @@ Light Stats/
 │   ├── ReduceMotionPreference.swift # Reads the system Reduce Motion switch
 │   ├── SceneAnimationPolicy.swift   # Hidden window / lightFlow → pause a scene timeline
 │   ├── FanRotationPolicy.swift      # rpm → revolutions/s; the only fan speed convention
+│   ├── FanHardwarePolicy.swift      # noFanKeys → hide fan surfaces; read failures stay visible
+│   ├── BatteryHardwarePolicy.swift  # no internal battery → hide battery surfaces
+│   ├── CleanupPinnedGroupPolicy.swift # Cleanup pinned batch-quit group: keys, partition, plan
 │   ├── SnapWindowEligibility.swift  # Three-layer "is this a real window" filter
 │   ├── SnapConfigurationBox.swift   # Lock-guarded config for the tap and AX threads
 │   ├── SnapConflictDetector.swift   # Other running window managers
@@ -977,6 +981,10 @@ Suites:
   and bounded, underdamped springs overshooting, duration derived from the decay envelope, plan
   interpolation, hide-only plans keeping their frame, and that Reduce Motion produces a *shorter*
   timeline rather than no transition.
+- `FanHardwarePolicyTests` — fan surfaces hide only on `noFanKeys`; every read-failure reason stays visible.
+- `BatteryHardwarePolicyTests` — battery surfaces hide only when there is no internal battery.
+- `CleanupPinnedGroupTests` — member key preference, pin eligibility, drop validation, idempotent insert,
+  partition of running members, and the serial batch-quit plan.
 - `SceneAnimationPolicyTests` / `FanRotationPolicyTests` / `FanAnimationLayerTests` — the panel's
   animation gates: a hidden host pauses the scene timeline even at full lightFlow, the threshold
   keeps the scene's `>=` semantics, rpm maps to revolutions/s with its 3 rev/s cap, and a hidden fan

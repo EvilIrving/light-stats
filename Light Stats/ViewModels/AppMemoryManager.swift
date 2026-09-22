@@ -27,6 +27,8 @@ final class AppMemoryManager: ObservableObject {
     private(set) var activeTermination: ActiveTermination?
 
     @Published var runningApps: [AppGroup] = []
+    /// Currently running members of the pinned batch-quit group (may be empty).
+    @Published var pinnedRunningApps: [AppGroup] = []
     @Published var totalMemoryUsed: UInt64 = 0
     @Published var totalMemory: UInt64 = 0
     @Published var appCount: Int = 0
@@ -58,6 +60,10 @@ final class AppMemoryManager: ObservableObject {
 
     private lazy var defaultGearIcon: NSImage = {
         NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil) ?? NSImage()
+    }()
+
+    private lazy var defaultPinIcon: NSImage = {
+        NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) ?? NSImage()
     }()
 
     private init(processService: ProcessServiceProtocol? = nil) {
@@ -142,13 +148,14 @@ final class AppMemoryManager: ObservableObject {
         let workspace = NSWorkspace.shared
         let guiApps = workspace.runningApplications
 
-        let appGroups = buildAppGroups(guiApps: guiApps, topProcesses: topProcesses)
+        let built = buildAppGroups(guiApps: guiApps, topProcesses: topProcesses)
         let detailedInfo = MemoryInfo.getDetailedMemoryInfo()
 
         objectWillChange.send()
-        runningApps = appGroups
+        runningApps = built.apps
+        pinnedRunningApps = built.pinnedMembers
         allTopProcesses = topProcesses
-        appCount = appGroups.count
+        appCount = built.apps.filter { $0.id != AppGroup.pinnedGroupId }.count
         detailedMemory = detailedInfo
         totalMemoryUsed = detailedInfo.used
         memoryPressure = detailedInfo.pressureLevel
@@ -156,7 +163,7 @@ final class AppMemoryManager: ObservableObject {
             category: "processMemory",
             action: "collected",
             fields: [
-                "appCount": .privateValue(.integer(Int64(appGroups.count))),
+                "appCount": .privateValue(.integer(Int64(appCount))),
                 "totalBytes": .privateValue(.unsignedInteger(detailedInfo.total)),
                 "usedBytes": .privateValue(.unsignedInteger(detailedInfo.used)),
                 "usagePercent": .privateValue(.double(detailedInfo.usagePercent)),
@@ -198,7 +205,7 @@ final class AppMemoryManager: ObservableObject {
     }
 
     /// Async terminate with reliable two-stage strategy
-    func terminateAppAsync(_ app: AppGroup) async -> Bool {
+    func terminateAppAsync(_ app: AppGroup, refresh: Bool = true) async -> Bool {
         let startedAt = Date()
         activeTermination = Self.makeActiveTermination(app, forced: false)
         defer { activeTermination = nil }
@@ -210,10 +217,93 @@ final class AppMemoryManager: ObservableObject {
             success: success,
             durationMilliseconds: Int(Date().timeIntervalSince(startedAt) * 1_000)
         )
-        if success {
+        if success && refresh {
             await updateRunningApps()
         }
         return success
+    }
+
+    // MARK: - Pinned batch-quit group
+
+    func pinApp(_ app: AppGroup) {
+        guard CleanupPinnedGroupPolicy.canPin(app),
+              let key = CleanupPinnedGroupPolicy.memberKey(for: app) else { return }
+        let result = CleanupPinnedGroupPolicy.inserting(key, into: SettingsManager.shared.cleanupPinnedApps)
+        guard result.changed else { return }
+        SettingsManager.shared.cleanupPinnedApps = result.keys
+        applyPinnedPartition(pinnedKeys: Set(result.keys))
+    }
+
+    func unpinApp(_ app: AppGroup) {
+        guard let key = CleanupPinnedGroupPolicy.memberKey(for: app) else { return }
+        let result = CleanupPinnedGroupPolicy.removing(key, from: SettingsManager.shared.cleanupPinnedApps)
+        guard result.changed else { return }
+        SettingsManager.shared.cleanupPinnedApps = result.keys
+        applyPinnedPartition(pinnedKeys: Set(result.keys))
+    }
+
+    func acceptPinnedDrop(payload: String) -> Bool {
+        let candidates = runningApps + pinnedRunningApps
+        guard let key = CleanupPinnedGroupPolicy.validatedDropKey(payload, among: candidates),
+              let app = candidates.first(where: { CleanupPinnedGroupPolicy.memberKey(for: $0) == key })
+        else { return false }
+        pinApp(app)
+        return true
+    }
+
+    /// Serial batch quit for the pinned group. One refresh at the end; single-slot activeTermination.
+    func terminatePinnedAppsAsync() async -> (requested: Int, failed: Int) {
+        let plan = CleanupPinnedGroupPolicy.batchTerminationPlan(from: pinnedRunningApps)
+        guard !plan.isEmpty else { return (0, 0) }
+        DiagnosticLogService.record(
+            category: "process",
+            action: "pinnedBatchRequested",
+            fields: ["count": String(plan.count)]
+        )
+        var failed = 0
+        for app in plan {
+            let success = await terminateAppAsync(app, refresh: false)
+            if !success {
+                failed += 1
+            }
+        }
+        await updateRunningApps()
+        DiagnosticLogService.record(
+            level: failed == 0 ? .info : .error,
+            category: "process",
+            action: "pinnedBatchCompleted",
+            fields: [
+                "requested": String(plan.count),
+                "failed": String(failed)
+            ]
+        )
+        return (plan.count, failed)
+    }
+
+    private func applyPinnedPartition(pinnedKeys: Set<String>) {
+        let withoutPinnedStub = runningApps.filter { $0.id != AppGroup.pinnedGroupId }
+        let split = CleanupPinnedGroupPolicy.partition(withoutPinnedStub, pinnedKeys: pinnedKeys)
+        var apps = split.top
+        apps.append(makePinnedGroupStub(members: split.pinnedMembers))
+        objectWillChange.send()
+        runningApps = apps
+        pinnedRunningApps = split.pinnedMembers
+    }
+
+    private func makePinnedGroupStub(members: [AppGroup]) -> AppGroup {
+        AppGroup(
+            id: AppGroup.pinnedGroupId,
+            name: "cleanup.pinnedGroup".localized,
+            icon: defaultPinIcon,
+            totalMemoryBytes: members.reduce(0) { $0 + $1.totalMemoryBytes },
+            processCount: members.count,
+            allPids: [],
+            terminablePids: [],
+            isTerminable: false,
+            bundleIdentifier: nil,
+            bundlePath: nil,
+            execPath: nil
+        )
     }
 
     private static func makeActiveTermination(_ app: AppGroup, forced: Bool) -> ActiveTermination {
@@ -279,7 +369,10 @@ final class AppMemoryManager: ObservableObject {
             .sorted { ($0.memoryBytes ?? 0) > ($1.memoryBytes ?? 0) }
     }
 
-    private func buildAppGroups(guiApps: [NSRunningApplication], topProcesses: [TopProcessInfo]) -> [AppGroup] {
+    private func buildAppGroups(
+        guiApps: [NSRunningApplication],
+        topProcesses: [TopProcessInfo]
+    ) -> (apps: [AppGroup], pinnedMembers: [AppGroup]) {
         let monitoredApps = buildMonitoredAppCandidates(from: guiApps)
         var monitoredByKey: [String: MonitoredAppCandidate] = [:]
         var monitoredByPid: [pid_t: String] = [:]
@@ -343,7 +436,11 @@ final class AppMemoryManager: ObservableObject {
         if let backgroundGroup = backgroundAccumulator.makeAppGroup() {
             groups.append(backgroundGroup)
         }
-        return groups
+        let pinnedKeys = Set(SettingsManager.shared.cleanupPinnedApps)
+        let split = CleanupPinnedGroupPolicy.partition(groups, pinnedKeys: pinnedKeys)
+        var apps = split.top
+        apps.append(makePinnedGroupStub(members: split.pinnedMembers))
+        return (apps, split.pinnedMembers)
     }
 
     private func buildMonitoredAppCandidates(from guiApps: [NSRunningApplication]) -> [MonitoredAppCandidate] {

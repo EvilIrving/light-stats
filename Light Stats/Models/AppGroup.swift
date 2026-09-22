@@ -83,6 +83,8 @@ nonisolated struct ProcessBundleInfo: Sendable {
 /// Represents a merged application group (main process + child processes)
 struct AppGroup: Identifiable {
     static let backgroundGroupId: pid_t = -1
+    /// Cleanup「固定分组」伪分组：常驻在列表末尾，成员按 bundle id 持久化。
+    static let pinnedGroupId: pid_t = -2
 
     let id: pid_t  // Main process PID
     let name: String

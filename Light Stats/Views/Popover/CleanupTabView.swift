@@ -13,6 +13,9 @@ struct CleanupTabView: View {
     @State private var showForceTerminateAlert = false
     @State private var appToTerminate: RunningApp?
     @State private var terminatingApps: Set<Int32> = []
+    @State private var isPinnedExpanded = false
+    @State private var isPinnedDropTargeted = false
+    @State private var isPinnedBatchTerminating = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,6 +69,7 @@ struct CleanupTabView: View {
             Text(String(
                 format: "cleanup.appCount".localized,
                 appManager.runningApps.filter(\.isTerminable).count
+                    + appManager.pinnedRunningApps.filter(\.isTerminable).count
             ))
             .font(theme.chromeStyle.compactValueFont)
             .foregroundStyle(theme.inkSecondary)
@@ -77,17 +81,127 @@ struct CleanupTabView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
                 ForEach(appManager.runningApps) { app in
-                    AppCardView(
-                        app: app,
-                        isTerminating: terminatingApps.contains(app.id),
-                        appManager: appManager
-                    ) {
-                        terminateApp(app)
+                    if app.id == AppGroup.pinnedGroupId {
+                        pinnedGroupSection(stub: app)
+                    } else {
+                        draggableAppRow(app)
                     }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
+        }
+    }
+
+    @ViewBuilder
+    private func draggableAppRow(_ app: RunningApp) -> some View {
+        let row = AppCardView(
+            app: app,
+            isTerminating: terminatingApps.contains(app.id),
+            appManager: appManager
+        ) {
+            terminateApp(app)
+        }
+
+        if CleanupPinnedGroupPolicy.canPin(app),
+           let key = CleanupPinnedGroupPolicy.memberKey(for: app) {
+            row.draggable(key)
+        } else {
+            row
+        }
+    }
+
+    private func pinnedGroupSection(stub: RunningApp) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            pinnedGroupHeader(stub: stub)
+            if isPinnedExpanded {
+                ForEach(appManager.pinnedRunningApps) { app in
+                    AppCardView(
+                        app: app,
+                        isTerminating: terminatingApps.contains(app.id),
+                        appManager: appManager,
+                        showsUnpinControl: true,
+                        onUnpin: { appManager.unpinApp(app) }
+                    ) {
+                        terminateApp(app)
+                    }
+                }
+            }
+        }
+    }
+
+    private func pinnedGroupHeader(stub: RunningApp) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: isPinnedExpanded ? "chevron.down" : "chevron.right")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(theme.inkSecondary)
+                .frame(width: 10, height: 10)
+
+            Image(nsImage: stub.icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 22, height: 22)
+
+            Text(stub.name)
+                .font(theme.chromeStyle.compactValueFont)
+                .foregroundStyle(theme.inkPrimary)
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            Text(String(format: "cleanup.appCount".localized, stub.processCount))
+                .font(theme.chromeStyle.compactValueFont)
+                .foregroundStyle(theme.inkSecondary)
+
+            pinnedBatchButton(count: stub.processCount)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(isPinnedDropTargeted ? theme.rowHoverFill.opacity(0.55) : Color.clear)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isPinnedExpanded.toggle()
+            }
+        }
+        .dropDestination(for: String.self, action: { keys, _ in
+            guard let key = keys.first else { return false }
+            let accepted = appManager.acceptPinnedDrop(payload: key)
+            if accepted {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isPinnedExpanded = true
+                }
+            }
+            return accepted
+        }, isTargeted: { targeted in
+            isPinnedDropTargeted = targeted
+        })
+    }
+
+    @ViewBuilder
+    private func pinnedBatchButton(count: Int) -> some View {
+        if isPinnedBatchTerminating {
+            ProgressView()
+                .controlSize(.small)
+                .frame(width: 16, height: 16)
+        } else {
+            Button {
+                terminatePinnedBatch()
+            } label: {
+                Image(systemName: "power.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(
+                        count > 0 ? theme.signalBad.opacity(0.9) : theme.inkFaint.opacity(0.45)
+                    )
+                    .padding(2)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(count == 0)
+            .help("cleanup.pinnedGroup.quitAll".localized)
         }
     }
 
@@ -190,6 +304,34 @@ struct CleanupTabView: View {
 
                 if !success && appManager.isProcessAlive(app.id) {
                     appToTerminate = app
+                    showForceTerminateAlert = true
+                }
+            }
+        }
+    }
+
+    private func terminatePinnedBatch() {
+        guard !isPinnedBatchTerminating else { return }
+        let plan = CleanupPinnedGroupPolicy.batchTerminationPlan(from: appManager.pinnedRunningApps)
+        guard !plan.isEmpty else { return }
+
+        isPinnedBatchTerminating = true
+        for app in plan {
+            terminatingApps.insert(app.id)
+        }
+
+        Task {
+            let result = await appManager.terminatePinnedAppsAsync()
+            await MainActor.run {
+                for app in plan {
+                    terminatingApps.remove(app.id)
+                }
+                isPinnedBatchTerminating = false
+                if result.failed > 0,
+                   let survivor = appManager.pinnedRunningApps.first(where: {
+                       appManager.isProcessAlive($0.id)
+                   }) {
+                    appToTerminate = survivor
                     showForceTerminateAlert = true
                 }
             }
