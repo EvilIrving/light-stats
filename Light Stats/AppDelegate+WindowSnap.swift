@@ -61,6 +61,16 @@ extension AppDelegate {
             // later "restore" cannot claim to have hidden them.
             windowSnappingService.forgetHiddenApplications()
         }
+
+        // The Dock click is a click monitor, not a drag monitor: it runs whenever the feature is on,
+        // including when every drag zone is switched off.
+        dockClickService.update(configuration: configuration)
+        let shouldRunDockClick = settings.windowManagementEnabled && configuration.isDockClickCollapseEnabled
+        if shouldRunDockClick {
+            _ = dockClickService.isRunning || dockClickService.start()
+        } else {
+            dockClickService.stop()
+        }
     }
 
     // MARK: - Drag handling
@@ -148,5 +158,8 @@ extension AppDelegate {
     /// Suspends the drag pipeline while one of our own panels is in front.
     func setWindowSnapPipelineSuspended(_ suspended: Bool) {
         windowDragMonitorService.setSuspended(suspended)
+        // A Dock click is not a drag, but the reason is the same: one of our own panels is in front,
+        // and a click that lands on it must not put another app's windows away behind it.
+        dockClickService.setSuspended(suspended)
     }
 }

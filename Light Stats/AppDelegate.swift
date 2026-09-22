@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     let windowPreviewIndex: WindowPreviewIndex
     let dockHoverMonitor: DockHoverMonitoring
     let dockPreviewController: DockPreviewController
+    let dockClickService: DockClickService
     let appSwitcherService: AppSwitcherControlling
     let appSwitcherController: AppSwitcherController
     let windowSnapHotKeyService: WindowSnapHotKeyControlling
@@ -81,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         self.windowPreviewIndex = WindowPreviewIndex.shared
         self.dockHoverMonitor = DockHoverMonitorService()
         self.dockPreviewController = DockPreviewController()
+        self.dockClickService = DockClickService()
         self.appSwitcherService = AppSwitcherService()
         self.appSwitcherController = AppSwitcherController()
         let findMouseService = FindMouseService(presentationPointer: PresentationPointerService())
