@@ -595,8 +595,9 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         scrollReverseEnabled = defaults.object(forKey: Key.scrollReverseEnabled.rawValue) as? Bool ?? false
         // 窗口管理总开关：默认关闭（opt-in），不迁移旧的快捷键/标题栏手势子开关。
         windowManagementEnabled = defaults.object(forKey: Key.windowManagementEnabled.rawValue) as? Bool ?? false
-        windowSnap = defaults.string(forKey: Key.windowSnap.rawValue)
-            .flatMap(SnapConfiguration.init(json:)) ?? .default
+        windowSnap = (defaults.string(forKey: Key.windowSnap.rawValue)
+            .flatMap(SnapConfiguration.init(json:)) ?? .default)
+            .withProductFixedPreferences()
         // 默认输入法：默认关闭（opt-in）。冷启动不注册 NSWorkspace 激活观察者、不读输入源。
         defaultInputSourceEnabled = defaults.object(forKey: Key.defaultInputSourceEnabled.rawValue) as? Bool ?? false
         defaultInputSourceID = defaults.string(forKey: Key.defaultInputSourceID.rawValue)
@@ -696,7 +697,7 @@ final class SettingsManager: ObservableObject, SettingsManaging {
             "exitNodeDetectionEnabled": String(exitNodeDetectionEnabled),
             "aiEnabled": enabledAIProviders.map(\.rawValue).sorted().joined(separator: ","),
             "windowManagementEnabled": String(windowManagementEnabled),
-            "snapMargins": String(format: "%.0f/%.0f", windowSnap.margins.outer, windowSnap.margins.inner),
+            "snapEdgeOwner": windowSnap.edgeOwner.rawValue,
             "snapTopEdgeMode": windowSnap.zones.topEdgeMode.rawValue,
             "snapShortcuts": String(windowSnap.shortcuts.count),
             "snapExclusions": String(windowSnap.exclusions.count),
@@ -752,9 +753,9 @@ private extension SettingsManager {
 
     /// What goes into the diagnostic journal for a preference change.
     ///
-    /// The window-snap configuration is a JSON blob that changes on every drag of a gap slider;
-    /// logging it verbatim would flood the journal with kilobytes of base64-free JSON per second and
-    /// make the journal useless for the thing it exists for. It is summarised instead.
+    /// The window-snap configuration is a JSON blob holding every window-management choice at once;
+    /// logging it verbatim would flood the journal with kilobytes of JSON per toggle and make the
+    /// journal useless for the thing it exists for. It is summarised instead.
     private static func loggedValue<T>(for key: Key, value: T) -> String {
         switch key {
         case .activationCode:
@@ -764,9 +765,8 @@ private extension SettingsManager {
                 return "<unreadable>"
             }
             return String(
-                format: "margins=%.0f/%.0f zones=%d island=%d shortcuts=%d layouts=%d exclusions=%d",
-                configuration.margins.outer,
-                configuration.margins.inner,
+                format: "edgeOwner=%@ zones=%d island=%d shortcuts=%d layouts=%d exclusions=%d",
+                configuration.edgeOwner.rawValue,
                 configuration.zones.isActive ? 1 : 0,
                 configuration.islandLayoutIDs.count,
                 configuration.shortcuts.count,

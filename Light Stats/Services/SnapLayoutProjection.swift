@@ -9,6 +9,12 @@ import CoreGraphics
 nonisolated enum SnapLayoutProjection {
     static let referenceSize = CGSize(width: 1440, height: 900)
 
+    /// The shape of a reference display. Every simulated desktop is drawn at this ratio, because the
+    /// projection maps normalized coordinates through a centred fit: a box wider than the reference
+    /// ratio letterboxes the screen inside itself and puts a window at the wrong distance from the
+    /// visible edges.
+    static let referenceAspect: CGFloat = referenceSize.width / referenceSize.height
+
     static func viewport(in bounds: CGRect, sourceSize: CGSize) -> CGRect {
         guard sourceSize.width > 0, sourceSize.height > 0, bounds.width > 0, bounds.height > 0 else { return .zero }
         let scale = min(bounds.width / sourceSize.width, bounds.height / sourceSize.height)

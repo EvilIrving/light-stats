@@ -223,7 +223,6 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
               let frame = WindowPlacementEngine.resolvedFrame(
                   for: target,
                   screen: screen,
-                  margins: currentConfiguration().margins,
                   currentSize: current.size,
                   preferredSize: preferredSize(for: window)
               ) else { return nil }
@@ -236,7 +235,6 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
         WindowPlacementEngine.resolvedFrame(
             for: target,
             screen: screen,
-            margins: currentConfiguration().margins,
             currentSize: currentSize
         )
     }
@@ -360,7 +358,6 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
                     window: window,
                     processID: processID,
                     screen: screen,
-                    margins: configuration.margins,
                     preferredSize: record?.size
                 )
             )
@@ -380,7 +377,7 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
 
     /// The system's own tiling item, when the user asked for it and the target has one.
     private func nativeCommand(for target: SnapTarget, configuration: SnapConfiguration) -> NativeTilingCommand? {
-        guard configuration.prefersNativeTiling, configuration.margins == .zero, let action = target.action else { return nil }
+        guard configuration.prefersNativeTiling, let action = target.action else { return nil }
         return NativeTilingCommand.matching(action)
     }
 
@@ -400,7 +397,6 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
                     target: target,
                     window: window,
                     processID: processID,
-                    margins: configuration.margins,
                     preferredSize: preferredSize
                 )
             )
@@ -467,7 +463,6 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
                     target: target,
                     window: window,
                     processID: processID,
-                    margins: configuration.margins,
                     preferredSize: preferredSize
                 )
             )

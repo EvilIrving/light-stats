@@ -19,11 +19,36 @@ struct WindowManagementDetail: View {
     @ObservedObject var settings: SettingsManager
     @State private var hasAccessibility = AccessibilityPermission.isTrusted()
 
+    /// The drag demo is only meaningful while our own pipeline owns the gesture.
+    private var showsDragDemo: Bool {
+        settings.windowManagementEnabled && settings.windowSnap.edgeOwner == .lightStats
+    }
+
     var body: some View {
         SettingsDetailScaffold("settings.windowManagement".localized) {
+            // The master switch keeps the full width at the top: it is the one control that turns the
+            // whole feature on. Splitting the columns below it is also what puts the practice area
+            // level with the drag rows rather than level with the switch.
             SettingsGroup {
                 SettingsRow("settings.windowManagement".localized) {
                     SettingsToggle(isOn: $settings.windowManagementEnabled)
+                }
+            }
+
+            if settings.windowManagementEnabled {
+                // 标题横跨两列：练习场跟左边的设置行是同一件事的两面，所以它的上边缘要跟卡片
+                // 齐平，而不是跟标题齐平，更不能跑到「窗口管理」总开关那一行去。
+                SettingsSection("settings.snap.behaviour".localized) {
+                    HStack(alignment: .top, spacing: 16) {
+                        SnapBehaviourSettingsSection(settings: settings)
+                            .frame(maxWidth: showsDragDemo ? 320 : .infinity, alignment: .topLeading)
+
+                        if showsDragDemo {
+                            // 练习场不是设置项，也永远不带标题；只有代码需要知道它是什么。
+                            SnapInteractionPreview(settings: settings)
+                                .frame(maxWidth: .infinity, alignment: .top)
+                        }
+                    }
                 }
             }
 
@@ -32,11 +57,7 @@ struct WindowManagementDetail: View {
             }
 
             if settings.windowManagementEnabled {
-                SnapInteractionPreview(settings: settings)
-                SnapBehaviourSettingsSection(settings: settings)
-                if settings.windowSnap.zones.topEdgeMode == .island {
-                    SnapIslandSettingsSection(settings: settings)
-                }
+                SnapDockClickSettingsSection(settings: settings)
                 SnapLayoutSettingsSection(settings: settings)
                 SnapWindowPreviewSettingsSection(settings: settings)
                 DisclosureGroup("settings.snap.shortcuts.title".localized) {
@@ -45,7 +66,6 @@ struct WindowManagementDetail: View {
                 DisclosureGroup("settings.snap.exclusions.title".localized) {
                     SnapExclusionSettingsSection(settings: settings).padding(.top, 10)
                 }
-                SnapSystemTilingSettingsSection(settings: settings)
             }
         }
         .onAppear { hasAccessibility = AccessibilityPermission.isTrusted() }
@@ -101,15 +121,41 @@ struct SnapPermissionNotice: View {
 
 // MARK: - Behaviour
 
-/// Drag zones, gaps, the preview overlay, and which implementation places the window.
+/// Who owns drag-to-edge, which zones are live, and which implementation places the window.
+///
+/// Placement preview, island palette, and gaps stay on their defaults — they are product choices,
+/// not preferences the settings page needs to expose. The gap is fixed at zero, so our placement
+/// and the system's cannot disagree about spacing if the user changes their mind.
 struct SnapBehaviourSettingsSection: View {
 
+    @Environment(\.theme) private var theme
     @ObservedObject var settings: SettingsManager
+    @StateObject private var systemTiling = SystemWindowTilingSettings()
+    @State private var otherManagers: [String] = []
 
     var body: some View {
-        SettingsSection("settings.snap.behaviour".localized) {
-            VStack(alignment: .leading, spacing: 10) {
-                SettingsGroup {
+        // 标题在调用方：它要横跨设置列和练习场两列，这里只剩卡片和冲突提示。
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsGroup {
+                // Before macOS 15 there is only one implementation, so there is no choice to
+                // offer — and offering one would let the user pick a side that does not exist.
+                if SystemWindowTilingSetting.isAvailable {
+                    SettingsRow(
+                        "settings.snap.edgeOwner".localized,
+                        subtitle: "settings.snap.edgeOwner.hint".localized,
+                        stacksControl: true
+                    ) {
+                        SettingsSegmentedPicker(selection: $settings.windowSnap.edgeOwner, segmentMinWidth: 76) {
+                            ForEach(SnapEdgeOwner.allCases, id: \.self) { owner in
+                                SettingsSegmentLabel(title: label(for: owner)).tag(owner)
+                            }
+                        }
+                    }
+                }
+                // With macOS owning the gesture these do nothing, so they are not shown: a switch
+                // that is visible and inert is worse than no switch at all.
+                if zonesAreLive {
+                    if SystemWindowTilingSetting.isAvailable { rowDivider() }
                     SettingsRow("settings.snap.edgeSnap".localized) {
                         SettingsToggle(isOn: $settings.windowSnap.zones.edgesEnabled)
                     }
@@ -119,160 +165,68 @@ struct SnapBehaviourSettingsSection: View {
                     }
                     rowDivider()
                     SettingsRow("settings.snap.topEdge".localized) {
-                        SettingsSegmentedPicker(selection: $settings.windowSnap.zones.topEdgeMode, segmentMinWidth: 52) {
+                        SettingsSegmentedPicker(
+                            selection: $settings.windowSnap.zones.topEdgeMode, segmentMinWidth: 52
+                        ) {
                             ForEach(SnapTopEdgeMode.allCases, id: \.self) { mode in
                                 SettingsSegmentLabel(title: label(for: mode)).tag(mode)
                             }
                         }
                     }
-                    rowDivider()
-                    SettingsRow("settings.snap.preview".localized) {
-                        SettingsToggle(isOn: $settings.windowSnap.showsPreview)
-                    }
-                    rowDivider()
-                    SettingsRow("settings.snap.shakeToHide".localized) {
-                        SettingsToggle(isOn: $settings.windowSnap.isShakeToHideEnabled)
-                    }
-                    rowDivider()
-                    SettingsRow(
-                        "settings.snap.nativeTiling".localized,
-                        subtitle: "settings.snap.nativeTiling.hint".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.windowSnap.prefersNativeTiling)
-                    }
                 }
-
-                SettingsGroup {
-                    gapRow("settings.snap.gapInner".localized, kind: .inner)
-                    rowDivider()
-                    gapRow("settings.snap.gapOuter".localized, kind: .outer)
+                rowDivider()
+                SettingsRow("settings.snap.shakeToHide".localized) {
+                    SettingsToggle(isOn: $settings.windowSnap.isShakeToHideEnabled)
                 }
             }
-        }
-    }
 
-    /// Which of the two gaps a row edits.
-    enum GapKind {
-        case inner
-        case outer
-    }
-
-    /// The slider tracks a local value and only writes the configuration when the drag ends.
-    ///
-    /// Writing on every tick would persist the whole JSON blob — and log a settings change — dozens
-    /// of times per second while the user is still choosing a number.
-    private func gapRow(_ title: String, kind: GapKind) -> some View {
-        let bound = kind == .inner ? settings.windowSnap.margins.inner : settings.windowSnap.margins.outer
-        return GapSlider(
-            title: title,
-            value: bound,
-            onCommit: { commit($0, kind: kind) }
-        )
-    }
-
-    private func commit(_ value: CGFloat, kind: GapKind) {
-        var configuration = settings.windowSnap
-        let margins = configuration.margins
-        configuration.margins = kind == .inner
-            ? SnapMargins(outer: margins.outer, inner: value)
-            : SnapMargins(outer: value, inner: margins.inner)
-        guard configuration.margins != margins else { return }
-        settings.windowSnap = configuration
-    }
-
-    private func label(for mode: SnapTopEdgeMode) -> String {
-        switch mode {
-        case .island: return "settings.snap.topEdge.island".localized
-        case .maximize: return "settings.snap.topEdge.maximize".localized
-        case .disabled: return "settings.snap.topEdge.off".localized
-        }
-    }
-}
-
-// MARK: - Island
-
-/// How the layout island looks.
-struct SnapIslandSettingsSection: View {
-
-    @ObservedObject var settings: SettingsManager
-
-    var body: some View {
-        SettingsSection("settings.snap.island".localized) {
-            SettingsGroup {
-                SettingsRow("settings.snap.island.palette".localized) {
-                    SettingsSegmentedPicker(selection: $settings.windowSnap.islandPalette, segmentMinWidth: 56) {
-                        ForEach(SnapIslandMetrics.Palette.allCases, id: \.self) { palette in
-                            Image(systemName: "circle.fill")
-                                .foregroundStyle(palette == .accent ? Color.accentColor : (palette == .vivid ? .white : .gray))
-                                .accessibilityLabel(label(for: palette))
-                                .tag(palette)
-                        }
-                    }
-                }
+            if systemTiling.conflictsWithLightStats, settings.windowSnap.edgeOwner == .lightStats {
+                conflictNotice(
+                    message: "settings.snap.conflict".localized,
+                    actionTitle: "settings.snap.conflict.resolve".localized,
+                    action: { systemTiling.giveGestureBackToLightStats() }
+                )
             }
-        }
-    }
 
-    private func label(for palette: SnapIslandMetrics.Palette) -> String {
-        switch palette {
-        case .neutral: return "settings.snap.island.palette.neutral".localized
-        case .accent: return "settings.snap.island.palette.accent".localized
-        case .vivid: return "settings.snap.island.palette.vivid".localized
-        }
-    }
-}
+            // The other half of the same failure: macOS owns the gesture but has had its own
+            // switches turned off elsewhere, which leaves dragging doing nothing at all.
+            if settings.windowSnap.edgeOwner == .system, !systemTiling.isSystemOwnershipIntact {
+                conflictNotice(
+                    message: "settings.snap.owner.systemOff".localized,
+                    actionTitle: "settings.snap.owner.systemOff.resolve".localized,
+                    action: { systemTiling.reassertSystemOwnership() }
+                )
+            }
 
-// MARK: - System tiling
-
-/// macOS' own drag-to-edge tiling, plus the warning when both implementations are live.
-struct SnapSystemTilingSettingsSection: View {
-
-    @Environment(\.theme) private var theme
-    @ObservedObject var settings: SettingsManager
-    @StateObject private var systemTiling = SystemWindowTilingSettings()
-    @State private var otherManagers: [String] = []
-
-    var body: some View {
-        SettingsSection("settings.systemTiling".localized) {
-            VStack(alignment: .leading, spacing: 10) {
-                SettingsGroup {
-                    SettingsRow(
-                        "settings.systemTiling.edgeDrag".localized,
-                        subtitle: "settings.systemTiling.description".localized
-                    ) {
-                        SettingsToggle(isOn: $systemTiling.edgeDragEnabled)
-                    }
-                    rowDivider()
-                    SettingsRow("settings.systemTiling.topEdgeDrag".localized) {
-                        SettingsToggle(isOn: $systemTiling.topEdgeDragEnabled)
-                    }
-                }
-
-                if systemTiling.edgeDragEnabled && settings.windowSnap.isDragSnappingActive {
-                    conflictNotice(
-                        message: "settings.snap.conflict".localized,
-                        actionTitle: "settings.snap.conflict.resolve".localized,
-                        action: { systemTiling.edgeDragEnabled = false }
-                    )
-                }
-
-                if !otherManagers.isEmpty {
-                    conflictNotice(
-                        message: "settings.snap.conflict.otherApp".localized(otherManagers.joined(separator: ", ")),
-                        actionTitle: nil,
-                        action: nil
-                    )
-                }
+            if !otherManagers.isEmpty {
+                conflictNotice(
+                    message: "settings.snap.conflict.otherApp".localized(otherManagers.joined(separator: ", ")),
+                    actionTitle: nil,
+                    action: nil
+                )
             }
         }
         .onAppear {
             systemTiling.reload()
             otherManagers = SnapConflictDetector.runningConflictNames()
         }
+        .onChange(of: settings.windowSnap.edgeOwner) { _, owner in
+            systemTiling.adoptOwner(owner)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            // The switches behind these notices are edited in System Settings, so re-read on return
+            // instead of making the user restart the app to clear a stale warning.
+            systemTiling.reload()
+        }
+    }
+
+    private var zonesAreLive: Bool {
+        !SystemWindowTilingSetting.isAvailable || settings.windowSnap.edgeOwner == .lightStats
     }
 
     /// Two implementations of one gesture being live is the single most likely cause of "it snapped
-    /// somewhere random", so it is called out rather than left to be discovered.
+    /// somewhere random", so it is called out rather than left to be discovered. It can only happen
+    /// when the user turned the system's switch back on by hand.
     private func conflictNotice(message: String, actionTitle: String?, action: (() -> Void)?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -298,5 +252,20 @@ struct SnapSystemTilingSettingsSection: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(theme.signalWarn.opacity(0.28))
         )
+    }
+
+    private func label(for owner: SnapEdgeOwner) -> String {
+        switch owner {
+        case .lightStats: return "settings.snap.edgeOwner.lightStats".localized
+        case .system: return "settings.snap.edgeOwner.system".localized
+        }
+    }
+
+    private func label(for mode: SnapTopEdgeMode) -> String {
+        switch mode {
+        case .island: return "settings.snap.topEdge.island".localized
+        case .maximize: return "settings.snap.topEdge.maximize".localized
+        case .disabled: return "settings.snap.topEdge.off".localized
+        }
     }
 }

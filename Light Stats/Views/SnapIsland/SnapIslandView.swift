@@ -7,7 +7,6 @@ import SwiftUI
 
 struct SnapIslandView: View {
     @Bindable var model: SnapIslandViewModel
-    let margins: SnapMargins
     let palette: SnapIslandMetrics.Palette
 
     var body: some View {
@@ -22,7 +21,7 @@ struct SnapIslandView: View {
                 .overlay(shape.fill(accent.opacity(palette == .accent ? 0.12 : 0)))
             if model.isExpanded || progress > 0 {
                 ForEach(SnapIslandLayout.tiles(
-                    layouts: model.layouts, panel: bounds, margins: margins, sourceSize: model.screenSize
+                    layouts: model.layouts, panel: bounds, margins: .zero, sourceSize: model.screenSize
                 ), id: \.id) { tile in
                     let selected = model.activeLayoutID == tile.layoutID && model.hoveredSegmentID == tile.segment.id
                     RoundedRectangle(cornerRadius: 5)

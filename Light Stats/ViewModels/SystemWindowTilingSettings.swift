@@ -9,27 +9,20 @@ import Combine
 import Foundation
 import OSLog
 
-/// Observable facade over the system's own window-tiling switches.
+/// Observable read-back of macOS' own window-tiling switches.
 ///
 /// These live in `com.apple.WindowManager`, not in our defaults. The system stays the source of
 /// truth: mirroring the value into `SettingsManager` would let the two drift apart the moment the
 /// user flips the switch in System Settings.
+///
+/// The page no longer offers them as switches — who owns the gesture is a single choice now, written
+/// by `SystemWindowTilingSetting`. This type only reports what the system currently says, so the
+/// conflict notice can name a disagreement the user caused elsewhere.
 @MainActor
 final class SystemWindowTilingSettings: ObservableObject {
 
-    @Published var edgeDragEnabled: Bool {
-        didSet {
-            guard edgeDragEnabled != oldValue else { return }
-            SystemWindowTilingSetting.setEdgeDragEnabled(edgeDragEnabled)
-        }
-    }
-
-    @Published var topEdgeDragEnabled: Bool {
-        didSet {
-            guard topEdgeDragEnabled != oldValue else { return }
-            SystemWindowTilingSetting.setTopEdgeDragEnabled(topEdgeDragEnabled)
-        }
-    }
+    @Published private(set) var edgeDragEnabled: Bool
+    @Published private(set) var topEdgeDragEnabled: Bool
 
     init() {
         edgeDragEnabled = SystemWindowTilingSetting.isEdgeDragEnabled
@@ -42,30 +35,48 @@ final class SystemWindowTilingSettings: ObservableObject {
         topEdgeDragEnabled = SystemWindowTilingSetting.isTopEdgeDragEnabled
     }
 
-    /// Settles the one-time conflict between the system's edge-drag tiling and ours.
+    /// Whether macOS is listening for the gesture while Light Stats owns it.
     ///
-    /// Both act on the same gesture. While both are live, the system tiles the window at the same
-    /// moment the engine places it, and which one wins depends on which finished last — so exactly
-    /// one has to own the gesture, and while our drag pipeline is on that has to be us.
-    ///
-    /// This runs once per install. After that the user's own choice stands, even if it reintroduces
-    /// the conflict: the Settings page says so explicitly rather than silently correcting them.
-    ///
-    /// The bookkeeping flag is deliberately not a `SettingsManager` preference — it has no UI and
-    /// represents a migration, not a choice.
-    static func applyInitialEdgeDragPolicy(ownsEdgeSnapping: Bool, defaults: UserDefaults = .standard) {
-        guard #available(macOS 15.0, *) else { return }
-        let appliedKey = "settings.systemTilingEdgeDragDefaultApplied"
-        guard !defaults.bool(forKey: appliedKey) else { return }
-        defaults.set(true, forKey: appliedKey)
+    /// Always false before macOS 15, where the system has no drag-to-edge tiling to conflict with:
+    /// the preference domain does not exist there, and reading a missing flag would otherwise report
+    /// the system's shipped default as if the user had chosen it.
+    var conflictsWithLightStats: Bool {
+        guard SystemWindowTilingSetting.isAvailable else { return false }
+        return edgeDragEnabled || topEdgeDragEnabled
+    }
 
-        let desired = !ownsEdgeSnapping
-        guard SystemWindowTilingSetting.isEdgeDragEnabled != desired else { return }
-        SystemWindowTilingSetting.setEdgeDragEnabled(desired)
-        DiagnosticLogService.record(
-            category: "windowManagement",
-            action: "systemTilingReconciled",
-            fields: ["edgeDrag": desired ? "true" : "false"]
-        )
+    /// Whether the gesture is live at all while macOS owns it.
+    ///
+    /// The mirror image of the check above: the system's two switches are the *only* implementation
+    /// in that mode, so turning one off in System Settings leaves the drag doing nothing. Reported
+    /// rather than assumed, because "the gesture quietly stopped working" is the worst failure this
+    /// feature has.
+    var isSystemOwnershipIntact: Bool {
+        guard SystemWindowTilingSetting.isAvailable else { return true }
+        return edgeDragEnabled && topEdgeDragEnabled
+    }
+
+    /// Adopts the owner the user just picked.
+    ///
+    /// Called from the picker as well as from the AppDelegate's configuration sink. `reconcile`
+    /// writes only on a transition, so whichever gets there first does the work and the other is a
+    /// no-op — and calling it here is what makes the read-back below the system's real answer instead
+    /// of a guess at whether the write landed.
+    func adoptOwner(_ owner: SnapEdgeOwner) {
+        SystemWindowTilingSetting.reconcile(owner: owner)
+        reload()
+    }
+
+    /// Hands the gesture back to Light Stats and re-reads the result, so the notice disappears only
+    /// once the system really reports the switch off.
+    func giveGestureBackToLightStats() {
+        SystemWindowTilingSetting.apply(.lightStats)
+        reload()
+    }
+
+    /// Re-writes the system's own half of the handover after the user turned it off elsewhere.
+    func reassertSystemOwnership() {
+        SystemWindowTilingSetting.apply(.system)
+        reload()
     }
 }

@@ -23,16 +23,55 @@ final class SnapInteractionTests: XCTestCase {
         XCTAssertEqual(WindowPreviewMatchPolicy.index(windowID: 42, title: "B", frame: frame, candidates: identified), 0)
     }
 
+    func testAHiddenWindowTabIsNeverResolvedToTheVisibleTabSharingItsFrame() {
+        // Fork, measured on this machine: three repository windows, one AXWindow. Every tab reports
+        // the frame of the tab that is showing, so a geometric match hands the click the window the
+        // user is *not* asking for — which is how a preview card came to do nothing visible.
+        let showing = CGRect(x: 399, y: 30, width: 1774, height: 1334)
+        let current = [WindowPreviewMatchPolicy.Candidate(windowID: nil, title: "swift-between-us", frame: showing)]
+        XCTAssertNil(
+            WindowPreviewMatchPolicy.index(windowID: 43064, title: "swift-light-stats", frame: showing, candidates: current),
+            "A candidate that names itself differently is a different window, however equal the frames are"
+        )
+        XCTAssertNil(
+            WindowPreviewMatchPolicy.index(
+                windowID: 43066,
+                title: "go-magic",
+                frame: CGRect(x: 1039, y: 30, width: 1774, height: 1334),
+                candidates: current
+            )
+        )
+        let unnamed = [WindowPreviewMatchPolicy.Candidate(windowID: nil, title: "", frame: showing)]
+        XCTAssertEqual(
+            WindowPreviewMatchPolicy.index(windowID: 43064, title: "swift-light-stats", frame: showing, candidates: unnamed),
+            0,
+            "A candidate that cannot name itself is still matched by the frame it shares with the window"
+        )
+    }
+
+    func testOnlyTheTabThatNamesTheWindowIsSwitchedTo() {
+        let tabs = ["swift-light-stats", "swift-between-us", "go-magic"]
+        XCTAssertEqual(WindowPreviewMatchPolicy.tabIndex(windowTitle: "go-magic", tabTitles: tabs), 2)
+        XCTAssertNil(WindowPreviewMatchPolicy.tabIndex(windowTitle: "somewhere-else", tabTitles: tabs),
+                     "A window with no tab of its own must not switch the user to another document")
+        XCTAssertNil(WindowPreviewMatchPolicy.tabIndex(windowTitle: "", tabTitles: tabs))
+        XCTAssertNil(WindowPreviewMatchPolicy.tabIndex(windowTitle: "untitled", tabTitles: ["untitled", "untitled"]),
+                     "Two tabs under one title cannot be told apart")
+    }
+
     func testPreviewInventoryKeepsRealWindowsAndRejectsWindowServerFurniture() {
         var entry = WindowServerInventory.Entry(windowID: 1, processID: 2,
                                                 bounds: CGRect(x: 0, y: 0, width: 800, height: 600),
-                                                title: nil, layer: 0, isOnScreen: false, ownerName: nil)
+                                                title: nil, layer: 0, alpha: 1, isOnScreen: false, ownerName: nil)
         XCTAssertTrue(WindowPreviewCatalog.isPreviewable(entry), "Offscreen windows remain available for switching")
         entry.layer = 25
         XCTAssertFalse(WindowPreviewCatalog.isPreviewable(entry), "Menu bars and overlays are not application windows")
         entry.layer = 0
         entry.bounds.size = CGSize(width: 10, height: 10)
         XCTAssertFalse(WindowPreviewCatalog.isPreviewable(entry))
+        entry.bounds.size = CGSize(width: 800, height: 600)
+        entry.alpha = 0
+        XCTAssertFalse(WindowPreviewCatalog.isPreviewable(entry), "A fully transparent window is not a window anyone can see")
     }
 
     func testLegacyNarrowTriggerBandsAreUpgradedForAnApproachableEdgeGesture() {
@@ -157,6 +196,67 @@ final class SnapInteractionTests: XCTestCase {
         let decoded = try XCTUnwrap(SnapConfiguration(json: configuration.json))
         XCTAssertTrue(decoded.islandLayoutIDs.isEmpty, "Unpinning every layout is an intentional preference")
         XCTAssertEqual(decoded.effectiveZones.topEdgeMode, .maximize)
+    }
+
+    func testTheDragMonitorNeverHitTestsOneOfOurOwnWindows() {
+        let own = WindowServerInventory.Entry(
+            windowID: 1, processID: 42, bounds: CGRect(x: 100, y: 100, width: 200, height: 200),
+            title: "popover", layer: 25, alpha: 1, isOnScreen: true, ownerName: "Light Stats"
+        )
+        let other = WindowServerInventory.Entry(
+            windowID: 2, processID: 99, bounds: CGRect(x: 0, y: 0, width: 900, height: 700),
+            title: "Editor", layer: 0, alpha: 1, isOnScreen: true, ownerName: "Editor"
+        )
+        XCTAssertTrue(OwnSurfaceHitTest.isOwnWindowOnTop(
+            at: CGPoint(x: 150, y: 150), in: [own, other], processID: 42
+        ), "A hit test over our own popover runs AppKit's Accessibility code on the AX queue")
+        XCTAssertFalse(OwnSurfaceHitTest.isOwnWindowOnTop(
+            at: CGPoint(x: 150, y: 150), in: [other, own], processID: 42
+        ), "Another app's window in front of ours is still snap material")
+        XCTAssertFalse(OwnSurfaceHitTest.isOwnWindowOnTop(
+            at: CGPoint(x: 800, y: 600), in: [own], processID: 42
+        ), "A point outside every listed window belongs to no one")
+
+        var invisible = own
+        invisible.alpha = 0
+        XCTAssertFalse(OwnSurfaceHitTest.isOwnWindowOnTop(
+            at: CGPoint(x: 150, y: 150), in: [invisible, other], processID: 42
+        ), "A window nobody can see cannot be what the pointer hit")
+    }
+
+    func testTheMenuBarBandIsNeverHitTested() {
+        let screen = SnapScreenGeometry(
+            frame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+            visibleFrame: CGRect(x: 0, y: 25, width: 1440, height: 850)
+        )
+        XCTAssertTrue(OwnSurfaceHitTest.isInMenuBarBand(CGPoint(x: 700, y: 12), screen: screen),
+                      "Status items live in the band, and a same-process hit test on one traps")
+        XCTAssertTrue(OwnSurfaceHitTest.isInMenuBarBand(CGPoint(x: 700, y: 0), screen: screen))
+        XCTAssertFalse(OwnSurfaceHitTest.isInMenuBarBand(CGPoint(x: 700, y: 25), screen: screen),
+                       "The first row of the desktop is window territory again")
+        XCTAssertFalse(OwnSurfaceHitTest.isInMenuBarBand(CGPoint(x: 700, y: 500), screen: screen))
+        XCTAssertFalse(OwnSurfaceHitTest.isInMenuBarBand(
+            CGPoint(x: 700, y: 0),
+            screen: SnapScreenGeometry(frame: CGRect(x: -1440, y: -900, width: 1440, height: 900),
+                                       visibleFrame: CGRect(x: -1440, y: -900, width: 1440, height: 900))
+        ), "A display without a menu bar has no band to exclude")
+    }
+
+    func testTheSimulatedDesktopIsDrawnAtTheReferenceScreenShape() {
+        XCTAssertEqual(SnapLayoutProjection.referenceAspect, 1440.0 / 900.0, accuracy: 0.0001,
+                       "A settings-pane-shaped preview is a shape no display has")
+        let bounds = CGRect(x: 0, y: 0, width: 416, height: 416 / SnapLayoutProjection.referenceAspect)
+        let viewport = SnapLayoutProjection.viewport(in: bounds, sourceSize: SnapLayoutProjection.referenceSize)
+        XCTAssertEqual(viewport.width, bounds.width, accuracy: 0.0001,
+                       "The desktop box must be the projection viewport itself, with no letterbox inside it")
+        XCTAssertEqual(viewport.height, bounds.height, accuracy: 0.0001)
+        XCTAssertEqual(viewport.midX, bounds.midX, accuracy: 0.0001)
+        XCTAssertEqual(viewport.midY, bounds.midY, accuracy: 0.0001)
+        let corner = SnapLayoutProjection.frame(for: .topRightQuarter, in: bounds, margins: .zero)
+        XCTAssertEqual(corner.maxX, bounds.maxX, accuracy: 0.0001,
+                       "A tile at the screen's right edge must touch the visible right edge")
+        XCTAssertEqual(corner.minY, bounds.minY, accuracy: 0.0001,
+                       "A tile at the screen's top edge must touch the visible top edge")
     }
 
     func testEveryPreviewIsAUniformProjectionOfTheActualPlacement() {

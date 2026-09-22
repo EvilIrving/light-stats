@@ -28,7 +28,7 @@ struct SnapInteractionPreview: View {
                 if let target, settings.windowSnap.showsPreview,
                    let rect = targetRect(target) {
                     windowShape(frame: SnapLayoutProjection.frame(
-                        for: rect, in: bounds, margins: settings.windowSnap.margins
+                        for: rect, in: bounds, margins: .zero
                     ), isPreview: true)
                         .allowsHitTesting(false)
                 }
@@ -36,7 +36,7 @@ struct SnapInteractionPreview: View {
                     .gesture(windowDrag(in: bounds))
                     .accessibilityLabel("settings.snap.editor.demoWindow".localized)
                 if showsIsland {
-                    SnapIslandView(model: model, margins: settings.windowSnap.margins, palette: settings.windowSnap.islandPalette)
+                    SnapIslandView(model: model, palette: settings.windowSnap.islandPalette)
                         .frame(width: island.width, height: island.height, alignment: .topLeading)
                         .clipped()
                         .offset(x: island.minX, y: island.minY)
@@ -58,9 +58,15 @@ struct SnapInteractionPreview: View {
             .frame(width: bounds.width, height: bounds.height, alignment: .topLeading)
             .coordinateSpace(name: "snap-demo")
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.surfaceStroke, lineWidth: 0.75))
         }
-        .frame(height: 260)
+        // The well is the screen, so it carries the reference display's shape rather than the
+        // settings pane's width. `projected` centres the reference screen inside these bounds, and
+        // the two must agree: a box stretched to the pane leaves the demo window short of the edges
+        // it is supposed to be able to reach.
+        .aspectRatio(SnapLayoutProjection.referenceAspect, contentMode: .fit)
+        // 顶部对齐，不要居中：上限框比投影高出来的那几磅会变成一条无人认领的缝，练习场就再也
+        // 对不上左边设置行的上边缘了。
+        .frame(maxHeight: 260, alignment: .top)
         .onAppear(perform: sync)
         .onChange(of: settings.windowSnap) { _, _ in sync() }
     }
@@ -68,8 +74,9 @@ struct SnapInteractionPreview: View {
     private var motion: Animation { .easeOut(duration: reduceMotion ? 0.08 : 0.22) }
 
     private func projected(_ rect: SnapNormalizedRect, in bounds: CGRect) -> CGRect {
-        // The simulated desktop uses the same reference aspect and screen-space gaps as the thumbnails.
-        SnapLayoutProjection.frame(for: rect, in: bounds, margins: isDragging ? .zero : settings.windowSnap.margins)
+        // The demo window is projected through the same reference screen and gap rule as the
+        // thumbnails; the well around it is the projection's viewport, so the two never disagree.
+        SnapLayoutProjection.frame(for: rect, in: bounds, margins: .zero)
     }
 
     private func windowShape(frame: CGRect, isPreview: Bool) -> some View {
@@ -153,7 +160,7 @@ struct SnapInteractionPreview: View {
         let local = CGPoint(x: point.x - island.minX, y: point.y - island.minY)
         let panel = CGRect(origin: .zero, size: island.size)
         let hit = SnapIslandLayout.hit(
-            at: local, layouts: model.layouts, panel: panel, margins: settings.windowSnap.margins
+            at: local, layouts: model.layouts, panel: panel, margins: .zero
         )
         model.activeLayoutID = hit?.layoutID
         model.hoveredSegmentID = hit?.segment.id

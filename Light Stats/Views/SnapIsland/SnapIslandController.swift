@@ -35,7 +35,7 @@ final class SnapIslandController {
     private var state: SnapIslandState = .collapsed
     private var isVisible = false
     /// Incremented on every dismissal, so an in-flight hide animation cannot be resumed by a show
-    /// that raced it. Wins keeps the same token (`hideAnimationGeneration`).
+    /// that raced it.
     private var generation: UInt64 = 0
 
     init() {
@@ -219,7 +219,7 @@ final class SnapIslandController {
 
         let hit = SnapIslandLayout.hit(
             at: local, layouts: model.layouts, panel: bounds,
-            margins: configuration.margins, sourceSize: model.screenSize
+            margins: .zero, sourceSize: model.screenSize
         )
         model.activeLayoutID = hit?.layoutID
         model.hoveredSegmentID = hit?.segment.id
@@ -235,7 +235,7 @@ final class SnapIslandController {
         let local = CGPoint(x: point.x - panelFrame.minX, y: point.y - panelFrame.minY)
         guard let hit = SnapIslandLayout.hit(
             at: local, layouts: model.layouts, panel: CGRect(origin: .zero, size: model.contentSize),
-            margins: configuration.margins, sourceSize: model.screenSize
+            margins: .zero, sourceSize: model.screenSize
         ) else { return nil }
         DiagnosticLogService.record(
             category: "windowManagement", action: "islandDrop",
@@ -304,7 +304,6 @@ final class SnapIslandController {
     private func rebuildContent() {
         let content = SnapIslandView(
             model: model,
-            margins: configuration.margins,
             palette: configuration.islandPalette
         )
         if let hostingView {

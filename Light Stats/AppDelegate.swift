@@ -581,11 +581,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             ensureWindowControlsStatusItem()
             startWindowSnapHotKeysOrPrompt()
             startTitlebarGesturesOrPrompt()
-            // 系统自带的边缘拖拽与我们自己的拖拽吸附是同一个手势，同时生效会互相打架。
-            // 首次开启窗口管理时按「谁拥有这个手势」settle 一次，之后不再覆盖用户的选择。
-            SystemWindowTilingSettings.applyInitialEdgeDragPolicy(
-                ownsEdgeSnapping: settings.windowSnap.isDragSnappingActive
-            )
         } else {
             windowSnapHotKeyService.stop()
             titlebarGestureService.stop()

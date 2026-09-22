@@ -315,10 +315,6 @@
 "settings.windowControls" = "Window Controls";
 "settings.windowManagement" = "Window Management";
 "settings.windowManagement.description" = "Snap shortcuts, drag-to-edge snapping, the layout island, and the menu bar window list.";
-"settings.systemTiling" = "System Edge Tiling";
-"settings.systemTiling.edgeDrag" = "Drag to Screen Edge to Tile";
-"settings.systemTiling.topEdgeDrag" = "Drag to Menu Bar to Fill";
-"settings.systemTiling.description" = "Built into macOS. Halves and quarters only, with no gaps or layouts — turned off once when window management is first enabled.";
 "settings.finderMenu" = "Right-Click Menu";
 "settings.finderMenu.description" = "Create, organize, and open files in Finder. Available in your home folder, on external drives, and in added favorite folders.";
 "settings.finderMenu.openSettings" = "Enable in System Settings…";
@@ -457,6 +453,10 @@
 "settings.shortcut.none" = "Not Set";
 "settings.shortcut.clear" = "Clear Shortcut";
 "settings.snap.behaviour" = "Dragging";
+"settings.snap.edgeOwner" = "Edge Snapping";
+"settings.snap.edgeOwner.hint" = "One gesture, one owner. Light Stats covers thirds, corners, and custom layouts; macOS covers halves and corners only, and shortcut placements use system commands too.";
+"settings.snap.edgeOwner.lightStats" = "Light Stats";
+"settings.snap.edgeOwner.system" = "macOS";
 "settings.snap.edgeSnap" = "Drag to Screen Edge";
 "settings.snap.edgeSnap.hint" = "Drag a window against a screen edge to tile it there.";
 "settings.snap.cornerSnap" = "Drag to Screen Corner";
@@ -465,19 +465,10 @@
 "settings.snap.topEdge.island" = "Island";
 "settings.snap.topEdge.maximize" = "Fill";
 "settings.snap.topEdge.off" = "Off";
-"settings.snap.preview" = "Show Placement Preview";
-"settings.snap.nativeTiling" = "Let macOS Place the Window";
-"settings.snap.nativeTiling.hint" = "Use macOS' own tiling when it has a command. Smoother, but halves and quarters only, and slower to confirm.";
-"settings.snap.gapInner" = "Gap Between Windows";
-"settings.snap.gapOuter" = "Screen Edge Margin";
-"settings.snap.island" = "Layout Island";
-"settings.snap.island.palette" = "Tile Colour";
-"settings.snap.island.paletteHint" = "Only the highlight changes; the panel stays dark so it reads over any window.";
-"settings.snap.island.palette.neutral" = "Grey";
-"settings.snap.island.palette.accent" = "Accent";
-"settings.snap.island.palette.vivid" = "White";
-"settings.snap.conflict" = "macOS tiles to the same edges. With both on, which one wins depends on which finishes last.";
+"settings.snap.conflict" = "macOS edge tiling is on, so the same drag runs in both places.";
 "settings.snap.conflict.resolve" = "Turn Off System Tiling";
+"settings.snap.owner.systemOff" = "macOS edge tiling is off, so edge snapping does nothing right now.";
+"settings.snap.owner.systemOff.resolve" = "Turn It Back On";
 "settings.snap.shortcuts.hint" = "Click a shortcut to record it. The recording must include a modifier; Escape cancels.";
 "settings.snap.layouts.create" = "Create a Layout";
 "settings.snap.layouts.createHint" = "Drag on the grid to draw the tile, name it, and it joins the list below — ready for the island and for a shortcut.";
@@ -531,7 +522,13 @@
 "window.visibility.hideAll" = "Hide All";
 "window.visibility.restore" = "Restore Hidden";
 "settings.snap.shakeToHide" = "Shake to Hide Others";
-"settings.snap.shakeToHide.hint" = "Shake a window sideways while dragging it to hide every other app.";
+"settings.snap.shakeToHide.hint" = "Shake a window sideways while dragging it to hide every other app; shake again to restore.";
+
+// MARK: - Dock click
+
+"settings.snap.dock.title" = "Dock Click";
+"settings.snap.dock.collapse" = "Click Icon to Collapse Windows";
+"settings.snap.dock.collapse.hint" = "Click the frontmost app's Dock icon to put its windows away; click again to bring them back.";
 
 // MARK: - Window previews
 

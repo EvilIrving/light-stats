@@ -317,10 +317,6 @@
 "settings.windowControls" = "窗口控制";
 "settings.windowManagement" = "窗口管理";
 "settings.windowManagement.description" = "吸附快捷键、拖到边缘吸附、悬浮布局岛，以及菜单栏窗口列表。";
-"settings.systemTiling" = "系统边缘平铺";
-"settings.systemTiling.edgeDrag" = "拖到屏幕边缘平铺";
-"settings.systemTiling.topEdgeDrag" = "拖到菜单栏填充";
-"settings.systemTiling.description" = "macOS 自带。只覆盖对半与四角，没有间距和自定义布局；窗口管理首次开启时会被关闭一次。";
 "settings.finderMenu" = "右键菜单";
 "settings.finderMenu.description" = "在访达中快速新建、整理和打开文件。支持用户主目录、外接磁盘及添加的常用目录。";
 "settings.finderMenu.openSettings" = "在系统设置中启用…";
@@ -459,6 +455,10 @@
 "settings.shortcut.none" = "未设置";
 "settings.shortcut.clear" = "清除快捷键";
 "settings.snap.behaviour" = "拖动";
+"settings.snap.edgeOwner" = "边缘吸附";
+"settings.snap.edgeOwner.hint" = "同一个手势只由一个实现负责。Light Stats 支持三分、四角和自定义布局；macOS 自带只有对半与四角，快捷键摆放也交给系统命令。";
+"settings.snap.edgeOwner.lightStats" = "Light Stats";
+"settings.snap.edgeOwner.system" = "macOS 自带";
 "settings.snap.edgeSnap" = "拖到屏幕边缘";
 "settings.snap.edgeSnap.hint" = "把窗口拖到屏幕边缘即可吸附到该侧。";
 "settings.snap.cornerSnap" = "拖到屏幕角落";
@@ -467,19 +467,10 @@
 "settings.snap.topEdge.island" = "悬浮岛";
 "settings.snap.topEdge.maximize" = "最大化";
 "settings.snap.topEdge.off" = "关闭";
-"settings.snap.preview" = "显示落位预览";
-"settings.snap.nativeTiling" = "交由 macOS 摆放";
-"settings.snap.nativeTiling.hint" = "有系统命令时交给 macOS 自己的分屏。动画更顺，但只覆盖对半与四角，且确认更慢。";
-"settings.snap.gapInner" = "窗口间距";
-"settings.snap.gapOuter" = "屏幕边缘留白";
-"settings.snap.island" = "悬浮布局岛";
-"settings.snap.island.palette" = "卡片配色";
-"settings.snap.island.paletteHint" = "只改变高亮色，面板保持深色，以便压在任何窗口之上。";
-"settings.snap.island.palette.neutral" = "灰";
-"settings.snap.island.palette.accent" = "强调色";
-"settings.snap.island.palette.vivid" = "白";
-"settings.snap.conflict" = "macOS 自带分屏使用同一个手势。两者同时开启时，结果取决于谁最后完成。";
-"settings.snap.conflict.resolve" = "关闭系统分屏";
+"settings.snap.conflict" = "macOS 自带的边缘平铺被打开了，同一个拖拽会两边各执行一次。";
+"settings.snap.conflict.resolve" = "关闭系统平铺";
+"settings.snap.owner.systemOff" = "macOS 自带的边缘平铺被关掉了，边缘吸附现在不会生效。";
+"settings.snap.owner.systemOff.resolve" = "重新打开";
 "settings.snap.shortcuts.hint" = "点按快捷键即可录制，必须包含至少一个修饰键；Esc 取消。";
 "settings.snap.layouts.create" = "创建布局";
 "settings.snap.layouts.createHint" = "在网格上拖出区域并命名，就会加入下面的列表，供悬浮岛和快捷键使用。";
@@ -533,7 +524,13 @@
 "window.visibility.hideAll" = "隐藏全部";
 "window.visibility.restore" = "恢复隐藏";
 "settings.snap.shakeToHide" = "摇动窗口隐藏其他";
-"settings.snap.shakeToHide.hint" = "拖动窗口时左右摇动，即可隐藏其他所有 App。";
+"settings.snap.shakeToHide.hint" = "拖动窗口时左右摇动，即可隐藏其他所有 App；再摇一次即可恢复。";
+
+// MARK: - Dock click
+
+"settings.snap.dock.title" = "Dock 点击";
+"settings.snap.dock.collapse" = "点击图标收起窗口";
+"settings.snap.dock.collapse.hint" = "点最前面 App 的 Dock 图标，把它的窗口全部收起来；再点一次放回来。";
 
 // MARK: - Window previews
 

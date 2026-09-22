@@ -12,10 +12,17 @@ import Foundation
 /// largest file in the project, and turns "reset window management" into a twelve-step operation.
 struct SnapConfiguration: Hashable, Sendable {
 
-    var margins: SnapMargins
+    /// Which implementation owns drag-to-edge: Light Stats' engine, or macOS itself.
+    ///
+    /// Replaced the old pair of raw system-preference toggles. Two independently switchable
+    /// implementations of one gesture could both be live, which is not a state a user can reason
+    /// about — see `SnapEdgeOwner`.
+    var edgeOwner: SnapEdgeOwner
     var zones: SnapZoneConfiguration
     var island: SnapIslandConfiguration
     /// Show the translucent footprint overlay while a drag is armed.
+    ///
+    /// Not a settings toggle — always on for product builds after `withProductFixedPreferences()`.
     var showsPreview: Bool
     /// Honour the built-in list of apps whose windows must not be touched.
     var honorsRestrictedApps: Bool
@@ -32,6 +39,8 @@ struct SnapConfiguration: Hashable, Sendable {
     /// Layout ids shown in the island, in order. Built-in ids and custom ids share one list.
     var islandLayoutIDs: [String]
     /// Tile palette for the island.
+    ///
+    /// Not a settings control — fixed to `.neutral` after `withProductFixedPreferences()`.
     var islandPalette: SnapIslandMetrics.Palette
     /// Show hover previews above the Dock.
     var isDockPreviewEnabled: Bool
@@ -40,15 +49,15 @@ struct SnapConfiguration: Hashable, Sendable {
     /// Capture window pictures. **This is the switch that needs Screen Recording.** Off means the
     /// preview surfaces still work, showing titles and icons instead of images.
     var isWindowThumbnailsEnabled: Bool
-    /// Prefer the system's own Window-menu tiling when it has a command for the target.
+    /// Clicking a running app's Dock icon puts its windows away, and clicking again brings them back.
     ///
-    /// Off by default. The system path animates better but reports success when the app is not
-    /// frontmost and only reveals whether it worked about 600 ms later, so it is an accelerator the
-    /// user opts into rather than the path everything takes.
-    var prefersNativeTiling: Bool
+    /// On by default: the only click it changes is the one macOS leaves doing nothing (the frontmost
+    /// app's own icon), it needs no permission beyond Accessibility, and every effect is reversible
+    /// with the same gesture.
+    var isDockClickCollapseEnabled: Bool
 
     static let `default` = SnapConfiguration(
-        margins: .zero,
+        edgeOwner: .lightStats,
         zones: .default,
         island: .default,
         showsPreview: true,
@@ -63,7 +72,7 @@ struct SnapConfiguration: Hashable, Sendable {
         isDockPreviewEnabled: true,
         isCommandTabPlusEnabled: true,
         isWindowThumbnailsEnabled: false,
-        prefersNativeTiling: false
+        isDockClickCollapseEnabled: true
     )
 
     static let defaultIslandLayoutIDs: [String] = [
@@ -101,21 +110,38 @@ struct SnapConfiguration: Hashable, Sendable {
 
     var exclusionSet: Set<String> { Set(exclusions) }
 
-    /// Whether anything in the drag pipeline is switched on.
-    var isDragSnappingActive: Bool { zones.isActive || isShakeToHideEnabled }
+    /// Whether the drag monitor has anything to do at all.
+    ///
+    /// Reads the *effective* zones, so with macOS owning the gesture this is true only while
+    /// shake-to-hide still needs the monitor.
+    var isDragSnappingActive: Bool { effectiveZones.isActive || isShakeToHideEnabled }
 
     /// The zone rules as the drag pipeline should actually apply them.
+    ///
+    /// With macOS owning the gesture the zones are inert: the system tiles the window itself, so
+    /// arming a zone here would put a second implementation back on the same mouse-up. The monitor
+    /// still runs — shake-to-hide is a different gesture and shares the same pipeline.
     ///
     /// The island can only open if it has something to show. With the user's layouts all deleted,
     /// "island" would otherwise consume the top edge and produce no preview and no placement — a
     /// gesture that visibly does nothing. Falling back to filling the screen keeps the top edge
     /// useful instead of silently dead.
     var effectiveZones: SnapZoneConfiguration {
+        guard edgeOwner == .lightStats else { return .disabled }
         var adjusted = zones
         adjusted.edgeThreshold = max(adjusted.edgeThreshold, 24)
         if zones.topEdgeMode == .island, islandLayouts.isEmpty { adjusted.topEdgeMode = .maximize }
         return adjusted
     }
+
+    /// Whether a placement goes through macOS' own Window-menu tiling command.
+    ///
+    /// Not a preference of its own: choosing macOS as the owner *is* the statement that the system's
+    /// implementation should do the work. A drag resolves to a `.region` target and the system has no
+    /// command for a rectangle, so the old "let macOS place the window" switch could never affect the
+    /// gesture users actually reach for — it only ever governed shortcut- and menu-driven snaps,
+    /// which do carry an action.
+    var prefersNativeTiling: Bool { edgeOwner == .system }
 
     func layout(id: String) -> SnapLayout? {
         SnapLayoutCatalog.layout(id: id) ?? customLayouts.first { $0.id == id }
@@ -169,6 +195,18 @@ struct SnapConfiguration: Hashable, Sendable {
             }
         }
     }
+
+    /// Forces the preferences the settings page no longer exposes back to their product defaults.
+    ///
+    /// Placement preview stays on and the island stays on the neutral palette. Older installs may
+    /// still carry custom values on disk; SettingsManager applies this on load so those values cannot
+    /// leave the user stuck with no UI to reverse them.
+    func withProductFixedPreferences() -> SnapConfiguration {
+        var copy = self
+        copy.showsPreview = true
+        copy.islandPalette = .neutral
+        return copy
+    }
 }
 
 // One JSON string keeps `SettingsManager.save(_:for:)` working unchanged and makes the whole
@@ -201,10 +239,11 @@ extension SnapConfiguration {
 extension SnapConfiguration: Codable {
 
     private enum CodingKeys: String, CodingKey {
-        case margins, zones, island, showsPreview, honorsRestrictedApps, exclusions
+        case edgeOwner, zones, island, showsPreview, honorsRestrictedApps, exclusions
         case shortcuts, customLayouts, savedPlacements, islandLayoutIDs, islandPalette
         case isDockPreviewEnabled, isCommandTabPlusEnabled, isWindowThumbnailsEnabled
-        case isShakeToHideEnabled, prefersNativeTiling
+        case isDockClickCollapseEnabled
+        case isShakeToHideEnabled
     }
 
     /// The wire format, written out rather than synthesized.
@@ -213,7 +252,7 @@ extension SnapConfiguration: Codable {
     /// to read in one place instead of inferring it from the property order.
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(margins, forKey: .margins)
+        try container.encode(edgeOwner, forKey: .edgeOwner)
         try container.encode(zones, forKey: .zones)
         try container.encode(island, forKey: .island)
         try container.encode(showsPreview, forKey: .showsPreview)
@@ -228,13 +267,13 @@ extension SnapConfiguration: Codable {
         try container.encode(isDockPreviewEnabled, forKey: .isDockPreviewEnabled)
         try container.encode(isCommandTabPlusEnabled, forKey: .isCommandTabPlusEnabled)
         try container.encode(isWindowThumbnailsEnabled, forKey: .isWindowThumbnailsEnabled)
-        try container.encode(prefersNativeTiling, forKey: .prefersNativeTiling)
+        try container.encode(isDockClickCollapseEnabled, forKey: .isDockClickCollapseEnabled)
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
-            margins: try container.decodeIfPresent(SnapMargins.self, forKey: .margins) ?? .zero,
+            edgeOwner: try container.decodeIfPresent(SnapEdgeOwner.self, forKey: .edgeOwner) ?? .lightStats,
             zones: try container.decodeIfPresent(SnapZoneConfiguration.self, forKey: .zones) ?? .default,
             island: try container.decodeIfPresent(SnapIslandConfiguration.self, forKey: .island) ?? .default,
             showsPreview: try container.decodeIfPresent(Bool.self, forKey: .showsPreview) ?? true,
@@ -249,7 +288,7 @@ extension SnapConfiguration: Codable {
             isDockPreviewEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDockPreviewEnabled) ?? true,
             isCommandTabPlusEnabled: try container.decodeIfPresent(Bool.self, forKey: .isCommandTabPlusEnabled) ?? true,
             isWindowThumbnailsEnabled: try container.decodeIfPresent(Bool.self, forKey: .isWindowThumbnailsEnabled) ?? false,
-            prefersNativeTiling: try container.decodeIfPresent(Bool.self, forKey: .prefersNativeTiling) ?? false
+            isDockClickCollapseEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDockClickCollapseEnabled) ?? true
         )
         pruneDanglingReferences()
     }

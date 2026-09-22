@@ -39,6 +39,8 @@ extension AppDelegate {
         snapIslandController.update(configuration: configuration)
         if settings.windowManagementEnabled {
             windowSnapHotKeyService.start(shortcuts: configuration.shortcuts)
+            // 拖到边缘只能是「一边负责」：把选择镜像到 macOS 自己的两个开关。
+            SystemWindowTilingSetting.reconcile(owner: configuration.edgeOwner)
         } else {
             windowSnapHotKeyService.stop()
         }

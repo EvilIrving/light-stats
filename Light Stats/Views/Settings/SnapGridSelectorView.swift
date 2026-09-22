@@ -49,7 +49,7 @@ struct SnapGridSelectorView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(theme.surfaceStroke, lineWidth: 1))
             }
-            .aspectRatio(1.6, contentMode: .fit)
+            .aspectRatio(SnapLayoutProjection.referenceAspect, contentMode: .fit)
             .frame(maxHeight: 240)
             HStack(spacing: 12) {
                 Button { draft.selectedID = nil } label: { Image(systemName: "plus") }

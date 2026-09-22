@@ -114,11 +114,14 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
     /// Frame a target resolves to, or `nil` when the target is not a region at all.
     ///
     /// Public so the preview overlay and the island can draw the exact rectangle the engine will
-    /// write — the reason Wins never shows a footprint in one place and drops the window in another.
+    /// write, so the footprint the user aims at is always the rectangle the window becomes.
+    ///
+    /// `margins` defaults to the product's only value: the gap is not a preference, and the system's
+    /// own placement path has no gap setting to mirror.
     static func resolvedFrame(
         for target: SnapTarget,
         screen: SnapScreenGeometry,
-        margins: SnapMargins,
+        margins: SnapMargins = .zero,
         currentSize: CGSize,
         preferredSize: CGSize? = nil
     ) -> CGRect? {

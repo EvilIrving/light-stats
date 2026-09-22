@@ -7,7 +7,6 @@ import SwiftUI
 
 struct SnapLayoutPreview: View {
     let layout: SnapLayout
-    var margins: SnapMargins = .zero
     var sourceSize: CGSize = SnapLayoutProjection.referenceSize
     var selectedID: String?
     var ink: Color = .primary
@@ -18,7 +17,7 @@ struct SnapLayoutPreview: View {
                 ForEach(layout.segments) { segment in
                     let frame = SnapLayoutProjection.frame(
                         for: segment.rect, in: CGRect(origin: .zero, size: proxy.size),
-                        margins: margins, sourceSize: sourceSize
+                        margins: .zero, sourceSize: sourceSize
                     )
                     RoundedRectangle(cornerRadius: min(3, frame.height / 8))
                         .fill(ink.opacity(selectedID == segment.id ? 0.40 : 0.13))

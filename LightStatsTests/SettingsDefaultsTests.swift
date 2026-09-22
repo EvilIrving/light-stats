@@ -93,6 +93,11 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertFalse(freshSettings().windowManagementEnabled)
     }
 
+    func testDockClickCollapseDefaultsOn() {
+        XCTAssertTrue(freshSettings().windowSnap.isDockClickCollapseEnabled,
+                      "The only click it changes is the one macOS leaves doing nothing")
+    }
+
     func testDisplayBrightnessControlDefaultsOff() {
         XCTAssertFalse(freshSettings().displayBrightnessControlEnabled)
     }

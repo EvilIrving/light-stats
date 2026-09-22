@@ -317,10 +317,6 @@
 "settings.windowControls" = "ウインドウ操作";
 "settings.windowManagement" = "ウインドウ管理";
 "settings.windowManagement.description" = "スナップショートカット、画面端へのドラッグ吸着、レイアウトアイランド、メニューバーのウインドウ一覧。";
-"settings.systemTiling" = "システムの端タイル";
-"settings.systemTiling.edgeDrag" = "画面端へドラッグでタイル表示";
-"settings.systemTiling.topEdgeDrag" = "メニューバーへドラッグで全体表示";
-"settings.systemTiling.description" = "macOS 標準。左右・四分割のみで、余白やレイアウトはありません。ウインドウ管理を初めて有効にしたとき一度だけオフにします。";
 "settings.finderMenu" = "右クリックメニュー";
 "settings.finderMenu.description" = "Finder でファイルを作成・整理・オープン。ホームフォルダ、外付けドライブ、追加したよく使うフォルダで利用できます。";
 "settings.finderMenu.openSettings" = "システム設定で有効にする…";
@@ -459,6 +455,10 @@
 "settings.shortcut.none" = "未設定";
 "settings.shortcut.clear" = "ショートカットを消去";
 "settings.snap.behaviour" = "ドラッグ";
+"settings.snap.edgeOwner" = "端スナップ";
+"settings.snap.edgeOwner.hint" = "同じジェスチャはひとつの実装だけが担当します。Light Statsは1/3・四隅・カスタムレイアウトに対応し、macOS標準は半分と四隅のみ、ショートカット配置もシステムコマンドに任せます。";
+"settings.snap.edgeOwner.lightStats" = "Light Stats";
+"settings.snap.edgeOwner.system" = "macOS標準";
 "settings.snap.edgeSnap" = "画面端へドラッグ";
 "settings.snap.edgeSnap.hint" = "ウインドウを画面端へドラッグすると、その側に吸着します。";
 "settings.snap.cornerSnap" = "画面の角へドラッグ";
@@ -467,19 +467,10 @@
 "settings.snap.topEdge.island" = "アイランド";
 "settings.snap.topEdge.maximize" = "最大化";
 "settings.snap.topEdge.off" = "オフ";
-"settings.snap.preview" = "配置プレビューを表示";
-"settings.snap.nativeTiling" = "macOS に配置を任せる";
-"settings.snap.nativeTiling.hint" = "システム側にコマンドがある場合はそちらを使います。滑らかですが左右・四分割のみで、確認も遅れます。";
-"settings.snap.gapInner" = "ウインドウ間隔";
-"settings.snap.gapOuter" = "画面端の余白";
-"settings.snap.island" = "レイアウトアイランド";
-"settings.snap.island.palette" = "タイルの配色";
-"settings.snap.island.paletteHint" = "変わるのは強調色だけです。パネルは暗いままなので、どのウインドウの上でも読めます。";
-"settings.snap.island.palette.neutral" = "グレー";
-"settings.snap.island.palette.accent" = "アクセント";
-"settings.snap.island.palette.vivid" = "白";
-"settings.snap.conflict" = "macOS の分割も同じ操作を使います。両方が有効だと、どちらが勝つかは終わる順で変わります。";
+"settings.snap.conflict" = "macOS標準の端タイルがオンなので、同じドラッグが両方で実行されます。";
 "settings.snap.conflict.resolve" = "システム分割をオフ";
+"settings.snap.owner.systemOff" = "macOS標準の端タイルがオフなので、いま端スナップは動きません。";
+"settings.snap.owner.systemOff.resolve" = "もう一度オン";
 "settings.snap.shortcuts.hint" = "ショートカットをクリックして記録します。修飾キーが 1 つ以上必要で、Esc で取り消せます。";
 "settings.snap.layouts.create" = "レイアウトを作成";
 "settings.snap.layouts.createHint" = "グリッド上でドラッグして範囲を描き、名前を付けると下の一覧に加わり、アイランドとショートカットから使えます。";
@@ -533,7 +524,13 @@
 "window.visibility.hideAll" = "すべて隠す";
 "window.visibility.restore" = "隠したアプリを戻す";
 "settings.snap.shakeToHide" = "振ってほかを隠す";
-"settings.snap.shakeToHide.hint" = "ウインドウをドラッグ中に左右へ振ると、ほかのアプリをすべて隠します。";
+"settings.snap.shakeToHide.hint" = "ウインドウをドラッグ中に左右へ振ると、ほかのアプリをすべて隠します。もう一度振ると元に戻ります。";
+
+// MARK: - Dock click
+
+"settings.snap.dock.title" = "Dockクリック";
+"settings.snap.dock.collapse" = "アイコンクリックでウインドウをしまう";
+"settings.snap.dock.collapse.hint" = "最前面のAppのDockアイコンをクリックするとウインドウをすべてしまいます。もう一度クリックで戻します。";
 
 // MARK: - Window previews
 

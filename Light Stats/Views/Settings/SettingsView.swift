@@ -231,21 +231,30 @@ struct SettingsDetailScaffold<Accessory: View, Content: View>: View {
 }
 
 /// 页面内的语义分组：标题在容器外，相关设置行收进同一个连续面板。
-struct SettingsSection<Content: View>: View {
+/// `accessory` 与标题同行靠右，承载「恢复默认排列」这类作用于整个分组的轻量动作。
+struct SettingsSection<Content: View, Accessory: View>: View {
     @Environment(\.theme) private var theme
     private let title: String
+    private let accessory: Accessory
     private let content: Content
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: String,
+         @ViewBuilder accessory: () -> Accessory = { EmptyView() },
+         @ViewBuilder content: () -> Content) {
         self.title = title
+        self.accessory = accessory()
         self.content = content()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(theme.inkPrimary)
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.inkPrimary)
+                Spacer(minLength: 0)
+                accessory
+            }
             content
         }
     }
@@ -278,41 +287,61 @@ struct SettingsGroup<Content: View>: View {
 }
 
 /// 一行设置：左标签 + 右控件，统一内边距，置于 SettingsGroup 内。
+/// `stacksControl` 把控件移到副文案下面并靠右：窄列里并排会把副文案挤成一条细长的高塔。
 struct SettingsRow<Control: View>: View {
     @Environment(\.theme) private var theme
     private let title: String
     private let subtitle: String?
+    private let stacksControl: Bool
     private let control: Control
 
-    init(_ title: String, subtitle: String? = nil, @ViewBuilder control: () -> Control) {
+    init(_ title: String, subtitle: String? = nil, stacksControl: Bool = false, @ViewBuilder control: () -> Control) {
         self.title = title
         self.subtitle = subtitle
+        self.stacksControl = stacksControl
         self.control = control()
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(theme.inkPrimary)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 10))
-                        .foregroundStyle(theme.inkSecondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+        Group {
+            if stacksControl {
+                VStack(alignment: .leading, spacing: 8) {
+                    label
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        control
+                    }
+                }
+            } else {
+                HStack(alignment: .center, spacing: 16) {
+                    label
+                        // 文案优先占宽，右侧控件保持 intrinsic 宽度，减少副标题折行。
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .layoutPriority(1)
+                    control
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
-            // 文案优先占宽，右侧控件保持 intrinsic 宽度，减少副标题折行。
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(1)
-            control
-                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, subtitle == nil ? 8 : 7)
         .frame(minHeight: 40)
+    }
+
+    private var label: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.inkPrimary)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(theme.inkSecondary)
+                    // 并排时副文案只占控件左侧的一小条，限 2 行避免行高失控；单独一行时放开。
+                    .lineLimit(stacksControl ? nil : 2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

@@ -317,10 +317,6 @@
 "settings.windowControls" = "윈도우 제어";
 "settings.windowManagement" = "윈도우 관리";
 "settings.windowManagement.description" = "스냅 단축키, 가장자리로 끌어 붙이기, 레이아웃 아일랜드, 메뉴 막대 윈도우 목록.";
-"settings.systemTiling" = "시스템 가장자리 타일링";
-"settings.systemTiling.edgeDrag" = "화면 가장자리로 끌어 타일링";
-"settings.systemTiling.topEdgeDrag" = "메뉴 막대로 끌어 채우기";
-"settings.systemTiling.description" = "macOS 기본 기능. 반쪽과 사분면만 지원하고 여백이나 레이아웃이 없습니다. 윈도우 관리를 처음 켤 때 한 번 꺼집니다.";
 "settings.finderMenu" = "우클릭 메뉴";
 "settings.finderMenu.description" = "Finder에서 파일을 만들고 정리하고 여세요. 홈 폴더, 외장 드라이브, 추가한 자주 쓰는 폴더에서 사용할 수 있습니다.";
 "settings.finderMenu.openSettings" = "시스템 설정에서 활성화…";
@@ -459,6 +455,10 @@
 "settings.shortcut.none" = "설정 안 됨";
 "settings.shortcut.clear" = "단축키 지우기";
 "settings.snap.behaviour" = "드래그";
+"settings.snap.edgeOwner" = "가장자리 붙이기";
+"settings.snap.edgeOwner.hint" = "같은 동작의 구현은 항상 하나입니다. Light Stats는 3분할·사분면·사용자 레이아웃을 지원하고, macOS 기본은 반쪽과 사분면만 지원하며 명령이 있는 단축키 배치도 맡습니다.";
+"settings.snap.edgeOwner.lightStats" = "Light Stats";
+"settings.snap.edgeOwner.system" = "macOS 기본";
 "settings.snap.edgeSnap" = "화면 가장자리로 드래그";
 "settings.snap.edgeSnap.hint" = "창을 화면 가장자리로 끌면 그쪽에 붙습니다.";
 "settings.snap.cornerSnap" = "화면 모서리로 드래그";
@@ -467,19 +467,10 @@
 "settings.snap.topEdge.island" = "아일랜드";
 "settings.snap.topEdge.maximize" = "최대화";
 "settings.snap.topEdge.off" = "끔";
-"settings.snap.preview" = "배치 미리보기 표시";
-"settings.snap.nativeTiling" = "macOS가 배치하도록";
-"settings.snap.nativeTiling.hint" = "시스템 명령이 있으면 macOS 타일링을 씁니다. 더 부드럽지만 반쪽·사분면만 되고 확인이 느립니다.";
-"settings.snap.gapInner" = "창 사이 간격";
-"settings.snap.gapOuter" = "화면 가장자리 여백";
-"settings.snap.island" = "레이아웃 아일랜드";
-"settings.snap.island.palette" = "타일 색상";
-"settings.snap.island.paletteHint" = "강조 색만 바뀝니다. 패널은 어두운 상태로 유지되어 어떤 창 위에서도 잘 보입니다.";
-"settings.snap.island.palette.neutral" = "회색";
-"settings.snap.island.palette.accent" = "강조";
-"settings.snap.island.palette.vivid" = "흰색";
-"settings.snap.conflict" = "macOS 타일링도 같은 동작을 씁니다. 둘 다 켜면 어느 쪽이 이기는지는 끝나는 순서에 달렸습니다.";
+"settings.snap.conflict" = "macOS 기본 타일링이 켜져 있어 같은 드래그가 양쪽에서 실행됩니다.";
 "settings.snap.conflict.resolve" = "시스템 타일링 끄기";
+"settings.snap.owner.systemOff" = "macOS 기본 타일링이 꺼져 있어 지금은 가장자리 붙이기가 동작하지 않습니다.";
+"settings.snap.owner.systemOff.resolve" = "다시 켜기";
 "settings.snap.shortcuts.hint" = "단축키를 클릭해 기록합니다. 수정 키가 하나 이상 필요하며 Esc로 취소합니다.";
 "settings.snap.layouts.create" = "레이아웃 만들기";
 "settings.snap.layouts.createHint" = "그리드에서 끌어 영역을 그린 뒤 이름을 붙이면 아래 목록에 추가되어 아일랜드와 단축키에서 쓸 수 있습니다.";
@@ -533,7 +524,13 @@
 "window.visibility.hideAll" = "모두 가리기";
 "window.visibility.restore" = "가린 앱 복원";
 "settings.snap.shakeToHide" = "흔들어 다른 앱 가리기";
-"settings.snap.shakeToHide.hint" = "창을 끄는 중에 좌우로 흔들면 다른 모든 앱을 가립니다.";
+"settings.snap.shakeToHide.hint" = "창을 끄는 중에 좌우로 흔들면 다른 모든 앱을 가립니다. 다시 흔들면 원래대로 돌아옵니다.";
+
+// MARK: - Dock click
+
+"settings.snap.dock.title" = "Dock 클릭";
+"settings.snap.dock.collapse" = "아이콘 클릭으로 윈도우 접기";
+"settings.snap.dock.collapse.hint" = "맨 앞 앱의 Dock 아이콘을 클릭하면 윈도우를 모두 접습니다. 다시 클릭하면 되돌립니다.";
 
 // MARK: - Window previews
 
