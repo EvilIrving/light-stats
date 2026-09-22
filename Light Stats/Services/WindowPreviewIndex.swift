@@ -10,14 +10,14 @@ import OSLog
 ///
 /// The ⌘Tab tap has to answer "what can I switch to?" **inside the event callback**. Doing
 /// Accessibility enumeration there would block the event tap on every keypress — and a slow tap is
-/// one macOS disables. So the enumeration happens here, on the shared AX queue, and the tap only
-/// ever reads an immutable array under a lock.
+/// one macOS disables. So the enumeration happens here, on the shared AX queue and off this
+/// thread, and the tap only ever reads an immutable array under a lock.
 ///
 /// Staleness is handled by refreshing rather than by refusing to answer: a snapshot a few seconds
 /// old still contains the right applications and almost always the right windows, and the very
 /// first ⌘Tab of a session is far better served by a slightly stale list than by a blocked tap.
-/// Wins keeps the same three caches (`appTitleCacheTTL`, `dockAppCacheTTL`, `cacheValidDuration`)
-/// for the same reason.
+/// Three caches with their own lifetimes keep the tap's answers cheap. The alternative —
+/// enumerating inside the event callback — is what makes a tap slow enough for macOS to disable.
 nonisolated final class WindowPreviewIndex: @unchecked Sendable {
 
     static let shared = WindowPreviewIndex()
@@ -122,7 +122,7 @@ nonisolated final class WindowPreviewIndex: @unchecked Sendable {
             let started = ProcessInfo.processInfo.systemUptime
             let enumerated = WindowPreviewCatalog.groups(exclusions: configuration.exclusionSet)
             DiagnosticLogService.record(category: "windowManagement", action: "previewInventory", fields: [
-                "source": "windowServer", "applications": String(enumerated.count),
+                "source": "accessibility", "applications": String(enumerated.count),
                 "windows": String(enumerated.reduce(0) { $0 + $1.windows.count }),
                 "durationMS": String(format: "%.1f", (ProcessInfo.processInfo.systemUptime - started) * 1000)
             ])

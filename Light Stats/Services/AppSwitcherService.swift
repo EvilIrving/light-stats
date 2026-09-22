@@ -34,6 +34,22 @@ protocol AppSwitcherControlling: AnyObject {
     func setSuspended(_ suspended: Bool)
     /// Supplies the applications and windows to switch between, on demand.
     var sessionProvider: (() -> AppSwitcherSession)? { get set }
+    /// The pointer moved onto a row of the panel: make it the selection.
+    func hover(_ target: AppSwitcherPointerTarget)
+    /// The pointer clicked a row: select it and switch to it now.
+    func choose(_ target: AppSwitcherPointerTarget)
+    /// Where the panel is, in screen coordinates. The tap needs it to tell a click on the panel
+    /// from a click anywhere else.
+    func setPanelFrame(_ frame: CGRect?)
+}
+
+/// Which row of the switcher the pointer is on.
+///
+/// The application strip and the window strip are two levels of one session, so the pointer speaks
+/// the same vocabulary as the keyboard: pick one, or take it.
+nonisolated enum AppSwitcherPointerTarget: Equatable {
+    case application(Int)
+    case window(Int)
 }
 
 /// Replaces ⌘Tab with a window-level switcher.
@@ -63,6 +79,7 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
     private var tapThread: Thread?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var panelFrame: CGRect?
 
     var onSessionChanged: ((AppSwitcherSession) -> Void)?
     var onSessionEnded: ((WindowPreviewItem?) -> Void)?
@@ -129,6 +146,51 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
         }
     }
 
+    // MARK: - Pointer
+
+    func setPanelFrame(_ frame: CGRect?) {
+        stateLock.lock()
+        panelFrame = frame
+        stateLock.unlock()
+    }
+
+    /// 指针悬停即选中。和 Tab 走同一条会话变更路径，所以画出来的选中项永远只有一套。
+    func hover(_ target: AppSwitcherPointerTarget) {
+        guard mutateSession({ Self.apply(target, to: &$0) }) else { return }
+        publishSession()
+    }
+
+    /// 点下去就是提交：不再等 ⌘ 抬起。抬起时那一遍会在空会话上返回 nil，什么也不做。
+    func choose(_ target: AppSwitcherPointerTarget) {
+        stateLock.lock()
+        guard running, !suspended, session.isShowing else { stateLock.unlock(); return }
+        Self.apply(target, to: &session)
+        let chosen = session.commit()
+        stateLock.unlock()
+        notifySessionEnded(chosen)
+    }
+
+    /// 一次鼠标按下该不该被吞掉。
+    ///
+    /// 会话开着时鼠标是模态的：点在面板里放给面板处理（悬停、点击都靠它），点在面板外直接
+    /// 吃掉——否则那一下既落到了别的 App 上，又会和 ⌘ 抬起时的提交撞在一起。
+    nonisolated static func swallowsClick(isShowing: Bool, panelFrame: CGRect?, point: CGPoint) -> Bool {
+        guard isShowing, let panelFrame else { return false }
+        return !panelFrame.contains(point)
+    }
+
+    /// 指针目标和键盘走的是同一套会话变更：悬停选中、点击提交，都从这里进。
+    static func apply(_ target: AppSwitcherPointerTarget, to session: inout AppSwitcherSession) {
+        switch target {
+        case .application(let index):
+            // 已经选中的那个 App 不动：鼠标扫过它的图标，不该把已经选好的窗口重置回第一个。
+            guard index != session.groupIndex else { return }
+            session.selectGroup(at: index)
+        case .window(let index):
+            session.selectWindow(at: index)
+        }
+    }
+
     // MARK: - Tap
 
     private func runTapLoop() {
@@ -166,7 +228,12 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
     }
 
     private func makeTap() -> (CFMachPort, CFRunLoopSource)? {
-        let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.flagsChanged.rawValue)
+        let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
+            | (1 << CGEventType.flagsChanged.rawValue)
+            // Mouse-down events so a session can be modal for the pointer as well as the keyboard.
+            | (1 << CGEventType.leftMouseDown.rawValue)
+            | (1 << CGEventType.rightMouseDown.rawValue)
+            | (1 << CGEventType.otherMouseDown.rawValue)
 
         let callback: CGEventTapCallBack = { _, type, event, refcon in
             guard let refcon else { return Unmanaged.passUnretained(event) }
@@ -216,6 +283,9 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
         switch type {
         case .keyDown:
             return handleKeyDown(event: event, isShowing: isShowing)
+        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
+            return Self.swallowsClick(isShowing: isShowing, panelFrame: panelFrame, point: event.location)
+                ? .swallow : .pass
         case .flagsChanged:
             // Command released: the gesture is over and the selection is committed.
             guard isShowing, !event.flags.contains(.maskCommand) else { return .pass }
@@ -328,10 +398,11 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
         return true
     }
 
-    private func mutateSession(_ update: (inout AppSwitcherSession) -> Void) {
+    private func mutateSession(_ update: (inout AppSwitcherSession) -> Void) -> Bool {
         stateLock.lock(); defer { stateLock.unlock() }
-        guard running, !suspended, session.isShowing else { return }
+        guard running, !suspended, session.isShowing else { return false }
         update(&session)
+        return true
     }
 
     private func isCurrentDelivery(_ revision: UInt64) -> Bool {

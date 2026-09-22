@@ -12,8 +12,13 @@ extension AppDelegate {
     /// Wires the callbacks once, at launch.
     func configureWindowPreviewPipeline() {
         windowPreviewIndex.onRefresh = { [weak self] groups in
-            guard let self, self.settings.windowManagementEnabled,
-                  self.settings.windowSnap.isWindowThumbnailsEnabled, ScreenRecordingPermission.isGranted else { return }
+            guard let self,
+                  SnapWindowPreviewPolicy.isActive(
+                      .thumbnails,
+                      configuration: self.settings.windowSnap,
+                      windowManagementEnabled: self.settings.windowManagementEnabled
+                  ),
+                  ScreenRecordingPermission.isGranted else { return }
             let recent = ApplicationOrdering.mostRecentlyUsed(groups: groups, recency: ApplicationActivationTracker.shared.order)
             let firstWindows = recent.compactMap { $0.windows.first }
             let remaining = recent.flatMap { Array($0.windows.dropFirst()) }
@@ -23,6 +28,23 @@ extension AppDelegate {
         // ── Dock hover preview ────────────────────────────────────────────────
         dockHoverMonitor.onHover = { [weak self] target in
             self?.presentDockPreview(for: target)
+        }
+        // The pointer has settled on an icon the panel is not showing yet: load that application's
+        // windows and start their captures now, so the panel — which follows 120 ms later — arrives
+        // with pictures instead of placeholders.
+        dockHoverMonitor.onWarm = { [weak self] target in
+            guard let self,
+                  SnapWindowPreviewPolicy.isActive(
+                      .thumbnails,
+                      configuration: self.settings.windowSnap,
+                      windowManagementEnabled: self.settings.windowManagementEnabled
+                  ),
+                  ScreenRecordingPermission.isGranted else { return }
+            Task { [weak self] in
+                guard let self,
+                      let group = await self.windowPreviewIndex.loadGroup(for: target.processID) else { return }
+                await self.windowThumbnailService.prewarm(group.windows, width: 320)
+            }
         }
         dockHoverMonitor.onExit = { [weak self] in
             self?.dockPreviewController.dismiss()
@@ -63,13 +85,39 @@ extension AppDelegate {
             self.lastExternalApplicationPID = window.processID
             AXCommandQueue.shared.async { _ = WindowListService.reveal(window) }
         }
+        // The pointer half of the switcher: hovering moves the same selection the keyboard moves,
+        // and a click commits it without waiting for ⌘ to come up.
+        appSwitcherController.onHover = { [weak self] target in
+            self?.appSwitcherService.hover(target)
+        }
+        appSwitcherController.onChoose = { [weak self] target in
+            self?.appSwitcherService.choose(target)
+        }
+        appSwitcherController.onFrameChanged = { [weak self] frame in
+            self?.appSwitcherService.setPanelFrame(frame)
+        }
     }
 
     /// Starts or stops everything that depends on Screen Recording, and pushes the configuration in.
+    ///
+    /// Every decision goes through `SnapWindowPreviewPolicy`, so the whole group stays inert while it
+    /// is hidden — the monitors and the ⌘Tab tap are never started, whatever the stored preferences
+    /// say.
     func syncWindowPreviewPipeline(_ configuration: SnapConfiguration) {
+        let windowManagement = settings.windowManagementEnabled
+        let thumbnails = SnapWindowPreviewPolicy.isActive(
+            .thumbnails, configuration: configuration, windowManagementEnabled: windowManagement
+        )
+        let dockPreview = SnapWindowPreviewPolicy.isActive(
+            .dockPreview, configuration: configuration, windowManagementEnabled: windowManagement
+        )
+        let commandTab = SnapWindowPreviewPolicy.isActive(
+            .commandTab, configuration: configuration, windowManagementEnabled: windowManagement
+        )
+
         windowPreviewIndex.update(
             configuration: configuration,
-            enabled: settings.windowManagementEnabled && (configuration.isDockPreviewEnabled || configuration.isCommandTabPlusEnabled)
+            enabled: dockPreview || commandTab
         )
         dockPreviewController.update(
             configuration: configuration,
@@ -80,12 +128,11 @@ extension AppDelegate {
             configuration: configuration
         )
 
-        let enabled = settings.windowManagementEnabled
-        if !enabled || !configuration.isWindowThumbnailsEnabled {
+        if !thumbnails {
             Task { await windowThumbnailService.clearCache() }
         }
 
-        if enabled, configuration.isDockPreviewEnabled {
+        if dockPreview {
             if !dockHoverMonitor.isRunning {
                 _ = dockHoverMonitor.start()
             }
@@ -94,7 +141,7 @@ extension AppDelegate {
             dockPreviewController.dismissImmediately()
         }
 
-        if enabled, configuration.isCommandTabPlusEnabled {
+        if commandTab {
             if !appSwitcherService.isRunning {
                 _ = appSwitcherService.start()
             }
@@ -139,9 +186,12 @@ extension AppDelegate {
         Task { [weak self] in
             guard let self else { return }
             guard let group = await self.windowPreviewIndex.loadGroup(for: target.processID),
-                  self.settings.windowManagementEnabled,
-                  self.settings.windowSnap.isDockPreviewEnabled,
-                  self.dockHoverMonitor.isPreviewing(target.processID) else { return }
+                  SnapWindowPreviewPolicy.isActive(
+                      .dockPreview,
+                      configuration: self.settings.windowSnap,
+                      windowManagementEnabled: self.settings.windowManagementEnabled
+                  ),
+                  self.dockHoverMonitor.isHovering(target.processID) else { return }
             self.dockPreviewController.present(
                 group: group,
                 anchor: target.itemFrame,

@@ -18,7 +18,7 @@ final class DockPreviewController {
 
     private let logger = AppLogger(category: "DockPreview")
     private let window: PreviewOverlayWindow
-    private var hostingView: NSHostingView<DockPreviewView>?
+    private var hostingView: NSHostingView<AnyView>?
 
     private var configuration: SnapConfiguration = .default
     private var group: ApplicationWindowGroup?
@@ -44,15 +44,18 @@ final class DockPreviewController {
 
     // MARK: - Presentation
 
+    /// Shows `group`'s preview — appearing, or moving the panel that is already on screen.
+    ///
+    /// Moving along the Dock is a *transition*, not a second appearance: the panel keeps its place
+    /// and its contents are replaced. A single panel holding a single Dock item at a time is what
+    /// makes the preview read as following the pointer instead of
+    /// blinking between icons.
     func present(group: ApplicationWindowGroup, anchor: CGRect, orientation: DockOrientation) {
         guard configuration.isDockPreviewEnabled else { return }
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(anchor.origin) }) ?? NSScreen.main else {
             return
         }
         guard !group.windows.isEmpty else { return }
-
-        generation += 1
-        self.group = group
 
         let available = screen.visibleFrame
         let metrics = DockPreviewLayout.metrics(
@@ -73,25 +76,55 @@ final class DockPreviewController {
             orientation: orientation
         )
 
-        rebuildContent(metrics: metrics, orientation: orientation)
-        window.setFrame(frame, display: true)
-        if !isShowing {
-            window.alphaValue = 0
-            window.orderFrontRegardless()
+        let isAnotherApplication = isShowing && self.group?.processID != group.processID
+        generation += 1
+        self.group = group
+
+        rebuildContent(metrics: metrics, orientation: orientation, animated: isAnotherApplication)
+
+        if isShowing {
+            move(to: frame, animated: window.frame != frame)
+        } else {
+            appear(at: frame, anchor: anchor)
+            isShowing = true
         }
-        isShowing = true
         onFrameChanged?(frame)
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.12
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            window.animator().alphaValue = 1
-        }
         DiagnosticLogService.record(
             category: "windowManagement",
             action: "dockPreviewShown",
             fields: ["app": group.bundleIdentifier ?? group.displayName, "windows": String(group.windows.count)]
         )
+    }
+
+    /// The first appearance: the panel grows out of its Dock icon, in the same 0.18 s the hover
+    /// delay already waited for. A plain fade over the icon's own label is what made the preview
+    /// look like it was pasted on top of the Dock instead of coming out of it.
+    private func appear(at frame: CGRect, anchor: CGRect) {
+        window.setFrame(DockGeometry.appearanceStartFrame(final: frame, anchor: anchor), display: false)
+        window.alphaValue = 0
+        window.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 0.84, 0.32, 1)
+            window.animator().alphaValue = 1
+            window.animator().setFrame(frame, display: true)
+        }
+    }
+
+    /// Slides and resizes the panel that is already on screen. Adjacent icons move it a little; a
+    /// different window count resizes it, and both are the same animation.
+    private func move(to frame: CGRect, animated: Bool) {
+        guard animated else {
+            window.setFrame(frame, display: true)
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
+            window.animator().setFrame(frame, display: true)
+        }
     }
 
     func dismiss() {
@@ -129,8 +162,14 @@ final class DockPreviewController {
 
     // MARK: - Private
 
-    private func rebuildContent(metrics: DockPreviewLayout.Metrics, orientation: DockOrientation) {
+    private func rebuildContent(
+        metrics: DockPreviewLayout.Metrics,
+        orientation: DockOrientation,
+        animated: Bool
+    ) {
         guard let group else { return }
+        // Identifying the content by application is what lets the swap cross-fade: SwiftUI treats a
+        // changed identity as an insertion and a removal, and the default transition is a fade.
         let content = DockPreviewView(
             group: group,
             metrics: metrics,
@@ -140,11 +179,18 @@ final class DockPreviewController {
                 self?.onSelect?(item)
             }
         )
+        .id(group.processID)
         if let hostingView {
-            hostingView.rootView = content
+            guard animated else {
+                hostingView.rootView = AnyView(content)
+                return
+            }
+            withAnimation(.easeOut(duration: 0.16)) {
+                hostingView.rootView = AnyView(content)
+            }
             return
         }
-        let hosting = NSHostingView(rootView: content)
+        let hosting = NSHostingView(rootView: AnyView(content))
         hosting.sizingOptions = []
         hosting.autoresizingMask = [.width, .height]
         hosting.frame = window.contentLayoutRect

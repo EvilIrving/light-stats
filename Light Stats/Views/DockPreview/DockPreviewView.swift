@@ -57,7 +57,8 @@ struct DockPreviewView: View {
                 ForEach(group.windows) { item in card(for: item) }
             }
         }
-        .scrollIndicators(.automatic)
+        // 面板自己画的窗口条不该带系统滚动条：macOS 上 `.hidden` 在滚动时还会冒出来，`.never` 不会。
+        .scrollIndicators(.never)
         .frame(height: metrics.cardSize.height)
     }
 

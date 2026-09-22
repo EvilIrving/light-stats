@@ -161,6 +161,38 @@ final class DockGeometryTests: XCTestCase {
 
     // MARK: - Orientation
 
+    // MARK: - The appearance motion
+
+    func testThePanelGrowsOutOfTheIconItIsAnchoredTo() {
+        let band = DockGeometry.band(screen: screen, visibleFrame: visible, orientation: .bottom, fallbackDockFrame: nil)
+        let icon = CGRect(x: 1180, y: band.midY - 35, width: 54, height: 70)
+        let final = DockGeometry.previewFrame(
+            anchoredTo: icon,
+            band: band,
+            panelSize: CGSize(width: 900, height: 300),
+            available: visible,
+            orientation: .bottom
+        )
+
+        let start = DockGeometry.appearanceStartFrame(final: final, anchor: icon)
+
+        XCTAssertLessThan(start.width, final.width)
+        XCTAssertLessThan(start.height, final.height)
+        XCTAssertLessThan(start.maxY, final.maxY, "The panel grows upward")
+        XCTAssertGreaterThan(start.minY, band.maxY, "It grows out of the Dock without ever covering it")
+        // The icon's centre is the fixed point of the scale, which is what makes the motion read as
+        // coming out of the icon rather than shrinking toward the middle of the panel.
+        XCTAssertEqual((start.minX - icon.midX) / (final.minX - icon.midX), 0.94, accuracy: 0.0001)
+        XCTAssertEqual((start.midY - icon.midY) / (final.midY - icon.midY), 0.94, accuracy: 0.0001)
+    }
+
+    func testADegenerateGeometryStillReturnsThePanelWhereItBelongs() {
+        let final = CGRect(x: 400, y: 94, width: 900, height: 300)
+        XCTAssertEqual(DockGeometry.appearanceStartFrame(final: final, anchor: .zero), final,
+                       "A Dock item with no frame must not scale the panel into nothing")
+        XCTAssertEqual(DockGeometry.appearanceStartFrame(final: .zero, anchor: CGRect(x: 0, y: 0, width: 10, height: 10)), .zero)
+    }
+
     func testOrientationComesFromTheDockPreferences() {
         let suite = "com.lightstats.tests.dock.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)

@@ -20,6 +20,9 @@ nonisolated enum WindowServerInventory {
         var bounds: CGRect
         var title: String?
         var layer: Int
+        /// Window opacity. Zero is a window nobody can see — an offscreen render surface, not a
+        /// window any preview should offer.
+        var alpha: Double
         var isOnScreen: Bool
         var ownerName: String?
     }
@@ -103,6 +106,7 @@ nonisolated enum WindowServerInventory {
                 bounds: bounds,
                 title: dictionary[kCGWindowName as String] as? String,
                 layer: dictionary[kCGWindowLayer as String] as? Int ?? 0,
+                alpha: dictionary[kCGWindowAlpha as String] as? Double ?? 1,
                 isOnScreen: (dictionary[kCGWindowIsOnscreen as String] as? Bool) ?? false,
                 ownerName: dictionary[kCGWindowOwnerName as String] as? String
             )

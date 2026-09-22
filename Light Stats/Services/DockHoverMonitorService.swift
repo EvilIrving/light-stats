@@ -25,11 +25,15 @@ protocol DockHoverMonitoring: AnyObject {
     var isRunning: Bool { get }
     /// A Dock icon has been hovered long enough to preview.
     var onHover: ((DockHoverTarget) -> Void)? { get set }
+    /// The pointer has settled on an icon that is not being previewed yet — the moment to warm its
+    /// thumbnails, so the panel that follows arrives with pictures.
+    var onWarm: ((DockHoverTarget) -> Void)? { get set }
     /// The pointer left both the Dock and the preview panel.
     var onExit: (() -> Void)? { get set }
     /// The panel the controller is currently showing, so hovering *it* does not count as leaving.
     var previewFrame: CGRect? { get set }
-    func isPreviewing(_ processID: pid_t) -> Bool
+    /// Whether the pointer is resting on this application's icon.
+    func isHovering(_ processID: pid_t) -> Bool
     func start() -> Bool
     func stop()
     func setSuspended(_ suspended: Bool)
@@ -54,10 +58,10 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
     private var running = false
     private var suspended = false
 
-    /// The icon currently under the pointer, and since when — a preview that appears the instant the
-    /// pointer crosses an icon is noise while the user is just travelling along the Dock.
-    private var candidate: DockHoverTarget?
-    private var candidateSince: TimeInterval = 0
+    /// The icon the pointer is resting on and how long it has been there — a preview that appears
+    /// the instant the pointer crosses an icon is noise while the user is just travelling along the
+    /// Dock. Moving to another icon restarts this; it does not dismiss the panel.
+    private var hover = DockHoverPolicy.State.idle
     /// The icon whose preview is on screen.
     private var presented: DockHoverTarget?
     private var retention = DockPreviewRetention()
@@ -66,11 +70,11 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
     private var itemCache: [UInt: DockHoverTarget] = [:]
 
     private let pollInterval: TimeInterval = 1.0 / 30
-    private let hoverDelay: TimeInterval = 0.18
     /// How far outside the Dock's rectangle still counts as hovering it.
     private let dockSlack: CGFloat = 6
 
     var onHover: ((DockHoverTarget) -> Void)?
+    var onWarm: ((DockHoverTarget) -> Void)?
     var onExit: (() -> Void)?
 
     var previewFrame: CGRect? {
@@ -96,9 +100,15 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
     /// Injected so tests can advance the clock instead of waiting for it.
     var clock: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
 
-    func isPreviewing(_ processID: pid_t) -> Bool {
+    /// Whether the pointer is resting on this application's icon.
+    ///
+    /// Deliberately about the icon under the pointer rather than about the panel on screen: while
+    /// the pointer travels from one icon to the next the panel still holds the previous
+    /// application, and a preview that is about to be replaced must not be read as "not hovering
+    /// any more".
+    func isHovering(_ processID: pid_t) -> Bool {
         stateLock.lock(); defer { stateLock.unlock() }
-        return running && !suspended && presented?.processID == processID
+        return running && !suspended && hover.candidate?.processID == processID
     }
 
     var isRunning: Bool {
@@ -117,7 +127,7 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
 
         stateLock.lock()
         running = true
-        candidate = nil
+        hover = .idle
         presented = nil
         stateLock.unlock()
 
@@ -137,7 +147,7 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
         stateLock.lock()
         guard running else { stateLock.unlock(); return }
         running = false
-        candidate = nil
+        hover = .idle
         presented = nil
         presentedPreviewFrame = nil
         previousProbe = nil
@@ -153,7 +163,7 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
         stateLock.lock()
         self.suspended = suspended
         if suspended {
-            candidate = nil
+            hover = .idle
             presented = nil
         }
         stateLock.unlock()
@@ -191,24 +201,26 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
 
         stateLock.lock()
         retention.visit(at: now)
-        if candidate?.processID != target.processID {
-            candidate = target
-            candidateSince = now
-            let hadPresented = presented != nil
-            presented = nil
-            stateLock.unlock()
-            if hadPresented { notifyExit() }
-            return
-        }
-        let shouldPresent = presented?.processID != target.processID && now - candidateSince >= hoverDelay
-        if shouldPresent { presented = target }
+        let action = DockHoverPolicy.settled(&hover, presented: presented, target: target, now: now)
+        if case .show(let shown) = action { presented = shown }
         stateLock.unlock()
 
-        guard shouldPresent else { return }
-        logger.debug("Dock hover preview for \(target.appName)")
-        let callback = onHover
+        switch action {
+        case .idle:
+            break
+        case .warm(let warmed):
+            notify(onWarm, with: warmed)
+        case .show(let shown):
+            logger.debug("Dock hover preview for \(shown.appName)")
+            notify(onHover, with: shown)
+        }
+    }
+
+    /// Delivers a hover callback on the main actor, where every consumer lives.
+    private func notify(_ callback: ((DockHoverTarget) -> Void)?, with target: DockHoverTarget) {
+        guard let callback else { return }
         Task { @MainActor in
-            callback?(target)
+            callback(target)
         }
     }
 
@@ -234,7 +246,7 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
             return
         }
         let hadPresented = presented != nil
-        candidate = nil
+        hover = .idle
         presented = nil
         retention.reset()
         stateLock.unlock()
@@ -308,6 +320,9 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
     private func applicationDockItem(at point: CGPoint) -> AXUIElement? {
         var element: AXUIElement?
         let axPoint = ScreenGeometryProvider.toAccessibility(point)
+        // One of our own panels can sit inside the Dock band. Asking Accessibility about it would be
+        // answered on this thread, where AppKit's Accessibility entry points may not run.
+        guard !OwnSurfaceHitTest.wouldResolveOwnUI(at: axPoint) else { return nil }
         guard AXUIElementCopyElementAtPosition(
             AXUIElementCreateSystemWide(),
             Float(axPoint.x),

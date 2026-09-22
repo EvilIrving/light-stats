@@ -23,17 +23,25 @@ nonisolated enum WindowListService {
 
     /// Windows of `processID`, in the order the preview surfaces show them: on-screen first, then
     /// top-to-bottom, left-to-right.
+    ///
+    /// - Parameter serverWindows: the application's WindowServer entries, when the caller already
+    ///   holds them. Enumerating every running application then costs one snapshot instead of one
+    ///   per application.
     static func windows(
         forApplication processID: pid_t,
         userExclusions: Set<String>,
-        honorsRestrictedList: Bool
+        serverWindows: [WindowServerInventory.Entry]? = nil
     ) -> [WindowPreviewItem] {
         AXCommandQueue.shared.sync {
-            windowsOnQueue(forApplication: processID, userExclusions: userExclusions)
+            windowsOnQueue(forApplication: processID, userExclusions: userExclusions, serverWindows: serverWindows)
         }
     }
 
-    private static func windowsOnQueue(forApplication processID: pid_t, userExclusions: Set<String>) -> [WindowPreviewItem] {
+    private static func windowsOnQueue(
+        forApplication processID: pid_t,
+        userExclusions: Set<String>,
+        serverWindows: [WindowServerInventory.Entry]?
+    ) -> [WindowPreviewItem] {
         let application = AXUIElementCreateApplication(processID)
         let elements = AXElementReader.elements(kAXWindowsAttribute, from: application)
         guard !elements.isEmpty else { return [] }
@@ -42,7 +50,7 @@ nonisolated enum WindowListService {
         let bundleIdentifier = running?.bundleIdentifier
         let appName = running?.localizedName ?? ""
         // One WindowServer snapshot for the whole app, not one per window.
-        let serverWindows = WindowServerInventory.windows(of: processID)
+        let entries = serverWindows ?? WindowServerInventory.windows(of: processID)
 
         var items: [WindowPreviewItem] = []
         for element in elements {
@@ -68,7 +76,7 @@ nonisolated enum WindowListService {
                 element: element,
                 title: title,
                 frame: candidate.frame,
-                serverWindows: serverWindows
+                serverWindows: entries
             )
             items.append(
                 WindowPreviewItem(
@@ -87,32 +95,6 @@ nonisolated enum WindowListService {
         }
 
         return items.sorted(by: ordering)
-    }
-
-    /// Every regular application that currently has windows worth previewing, frontmost first.
-    static func windowGroups(userExclusions: Set<String>, honorsRestrictedList: Bool) -> [ApplicationWindowGroup] {
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        let applications = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && $0.processIdentifier != ownPID }
-
-        var groups: [ApplicationWindowGroup] = []
-        for application in applications {
-            let windows = windows(
-                forApplication: application.processIdentifier,
-                userExclusions: userExclusions,
-                honorsRestrictedList: honorsRestrictedList
-            )
-            guard !windows.isEmpty else { continue }
-            groups.append(
-                ApplicationWindowGroup(
-                    processID: application.processIdentifier,
-                    appName: application.localizedName ?? "",
-                    bundleIdentifier: application.bundleIdentifier,
-                    windows: windows
-                )
-            )
-        }
-        return groups
     }
 
     // MARK: - Window identity
@@ -241,11 +223,96 @@ nonisolated enum WindowListService {
     @discardableResult
     static func reveal(_ item: WindowPreviewItem) -> Bool {
         AXCommandQueue.shared.sync {
-            guard let item = resolved(item) else { return false }
-            if item.isMinimized { _ = deminimize(item) }
-            return focusOnQueue(item)
+            guard let resolved = resolved(item) else {
+                return revealUnresolved(item)
+            }
+            if resolved.isMinimized { _ = deminimize(resolved) }
+            return focusOnQueue(resolved)
         }
     }
+
+    /// A window that Accessibility hands back no element for.
+    ///
+    /// A WindowServer-only window of an application that publishes a partial or empty window list —
+    /// tencent's clients and Swing applications behave this way — still has to be reachable: the
+    /// click meant "show me this window", and activating the application is the part of that intent
+    /// which can be honoured.
+    ///
+    /// Native window tabs are the case where more than that is possible, and Fork is the measured
+    /// example: three repository windows, one `AXWindow`. The two hidden tabs are not windows to
+    /// raise, they are tabs to switch to, and their tab buttons *are* addressable. Pressing one is
+    /// what makes clicking those two preview cards do what the card promised.
+    private static func revealUnresolved(_ item: WindowPreviewItem) -> Bool {
+        if selectWindowTab(titled: item.title, processID: item.processID) {
+            _ = activate(processID: item.processID)
+            return true
+        }
+        logger.debug("Window has no Accessibility element; activating the application")
+        return activate(processID: item.processID)
+    }
+
+    private static func activate(processID: pid_t) -> Bool {
+        guard let application = NSRunningApplication(processIdentifier: processID) else { return false }
+        return application.activate()
+    }
+
+    // MARK: - Window tabs
+
+    /// One tab button and the window title it holds.
+    private struct TabButton {
+        var element: AXUIElement
+        var title: String
+    }
+
+    /// Switches to the window tab named `title`, when the application keeps its windows as tabs.
+    private static func selectWindowTab(titled title: String, processID: pid_t) -> Bool {
+        guard !title.isEmpty else { return false }
+        let buttons = tabButtons(in: AXUIElementCreateApplication(processID))
+        guard let index = WindowPreviewMatchPolicy.tabIndex(windowTitle: title, tabTitles: buttons.map(\.title)),
+              AXUIElementPerformAction(buttons[index].element, kAXPressAction as CFString) == .success else {
+            return false
+        }
+        logger.debug("Switched to a window tab instead of raising a window")
+        return true
+    }
+
+    /// Every tab button of the application's windows.
+    ///
+    /// Bounded twice — by depth and by the number of elements read — because an unbounded walk of an
+    /// application's Accessibility tree is a hang: a browser window's tree contains the whole page.
+    /// A tab bar is chrome, so it sits within a couple of levels of its window, and content
+    /// containers are never descended into.
+    private static func tabButtons(in application: AXUIElement) -> [TabButton] {
+        var buttons: [TabButton] = []
+        var visited = 0
+        for window in AXElementReader.elements(kAXWindowsAttribute, from: application) {
+            var queue: [(element: AXUIElement, depth: Int)] = [(window, 0)]
+            while !queue.isEmpty, visited < 240 {
+                let (element, depth) = queue.removeFirst()
+                visited += 1
+                let role: String? = AXElementReader.attribute(kAXRoleAttribute, from: element)
+                let subrole: String? = AXElementReader.attribute(kAXSubroleAttribute, from: element)
+                if subrole == "AXTabButton" {
+                    let title: String? = AXElementReader.attribute(kAXTitleAttribute, from: element)
+                    if let title, !title.isEmpty {
+                        buttons.append(TabButton(element: element, title: title))
+                    }
+                    continue
+                }
+                guard depth < 5, !contentRoles.contains(role ?? "") else { continue }
+                for child in AXElementReader.elements(kAXChildrenAttribute, from: element) {
+                    queue.append((child, depth + 1))
+                }
+            }
+        }
+        return buttons
+    }
+
+    /// Roles that hold content rather than window chrome. A tab bar is never inside one, and their
+    /// subtrees are the part of an Accessibility tree measured in thousands of elements.
+    private static let contentRoles: Set<String> = [
+        "AXWebArea", "AXScrollArea", "AXTable", "AXOutline", "AXList", "AXTextArea", "AXStaticText"
+    ]
 
     @discardableResult
     static func close(_ item: WindowPreviewItem) -> Bool {

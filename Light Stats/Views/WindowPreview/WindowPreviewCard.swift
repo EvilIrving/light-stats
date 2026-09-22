@@ -11,6 +11,11 @@ import SwiftUI
 /// The same card serves the Dock hover preview and the ⌘Tab switcher, because they show the same
 /// thing and a second implementation would drift: selected state, the minimized badge, the
 /// thumbnail-or-title fallback all behave identically in both.
+///
+/// Selection never grows the card. Both strips are scroll views sized to exactly one card, so a
+/// scaled card draws its own ring outside them and the ring is cut off at the top and bottom — the
+/// emphasis disappears precisely when it is being looked at. The ring is drawn *inside* the card's
+/// bounds instead (`strokeBorder`, not `stroke` + clip), so it is complete however tight the strip is.
 struct WindowPreviewCard: View {
 
     let item: WindowPreviewItem
@@ -29,17 +34,16 @@ struct WindowPreviewCard: View {
         .frame(width: size.width, height: size.height)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(isSelected ? 0.16 : 0.06))
+                .fill(Color.white.opacity(isSelected ? 0.18 : 0.06))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(
+                .strokeBorder(
                     isSelected ? Color.accentColor.opacity(0.95) : Color.white.opacity(0.12),
                     lineWidth: isSelected ? 2 : 0.5
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .scaleEffect(isSelected ? 1.03 : 1)
         .animation(.spring(response: 0.22, dampingFraction: 0.86), value: isSelected)
     }
 

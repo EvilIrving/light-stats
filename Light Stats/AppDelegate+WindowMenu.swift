@@ -141,8 +141,7 @@ extension AppDelegate {
         let configuration = settings.windowSnap
         let windows = WindowListService.windows(
             forApplication: processID,
-            userExclusions: configuration.exclusionSet,
-            honorsRestrictedList: configuration.honorsRestrictedApps
+            userExclusions: configuration.exclusionSet
         )
 
         guard !windows.isEmpty else {

@@ -119,6 +119,22 @@ nonisolated enum DockGeometry {
         )
     }
 
+    /// The rectangle the panel grows out of when it first appears.
+    ///
+    /// The final frame scaled about the Dock icon it is anchored to, so the preview reads as coming
+    /// out of the icon instead of fading in over it. Above a bottom Dock that means it expands
+    /// upward from the icon's centre; the anchor point itself does not move.
+    static func appearanceStartFrame(final: CGRect, anchor: CGRect, scale: CGFloat = 0.94) -> CGRect {
+        guard final.width > 0, final.height > 0, anchor.width > 0, anchor.height > 0 else { return final }
+        let centre = CGPoint(x: anchor.midX, y: anchor.midY)
+        return CGRect(
+            x: centre.x - (centre.x - final.minX) * scale,
+            y: centre.y - (centre.y - final.minY) * scale,
+            width: final.width * scale,
+            height: final.height * scale
+        )
+    }
+
     /// Keeps the panel fully inside the visible area.
     ///
     /// Sliding along the Dock's own axis clips to the edge instead of overflowing, and — because

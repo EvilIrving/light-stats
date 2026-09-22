@@ -11,6 +11,10 @@ import SwiftUI
 /// work with nothing but Accessibility and degrade to titles and icons without a picture; only the
 /// thumbnail switch asks for Screen Recording, and it says so on the row that would trigger it
 /// rather than surprising the user with a system prompt from an unrelated toggle.
+///
+/// The whole group is hidden while `SnapWindowPreviewPolicy.isAvailable` is `false` — the three
+/// surfaces are unfinished. Nothing is constructed in that state, so the Screen Recording preflight
+/// and the row that offers the request are not even read.
 struct SnapWindowPreviewSettingsSection: View {
 
     @ObservedObject var settings: SettingsManager
@@ -18,6 +22,12 @@ struct SnapWindowPreviewSettingsSection: View {
     @State private var authorization: ScreenRecordingAuthorization = .denied
 
     var body: some View {
+        if SnapWindowPreviewPolicy.isAvailable {
+            previews
+        }
+    }
+
+    private var previews: some View {
         SettingsSection("settings.snap.previews".localized) {
             VStack(alignment: .leading, spacing: 10) {
                 SettingsGroup {

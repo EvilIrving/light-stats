@@ -302,7 +302,7 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
             stateLock.unlock()
             return
         }
-        // Wins keeps `windowIdAttempt` + `lastWindowIdAttempt` for the same reason: at mouse-down
+        // The lookup is retried a bounded number of times for the same reason: at mouse-down
         // the Accessibility tree frequently has not caught up with the window under the cursor, and
         // one failed lookup used to mean the whole drag was ignored. Bounded rather than open-ended,
         // so a drag across empty desktop costs a handful of hit tests and then stops.
@@ -422,6 +422,9 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
         let requestedAt = ProcessInfo.processInfo.systemUptime
         AXCommandQueue.shared.async { [weak self] in
             guard let self, self.isCurrent(token) else { return }
+            // A hit test that lands on one of our own surfaces is answered on this very thread, and
+            // AppKit's Accessibility entry points may only run on the main one. See `OwnSurfaceHitTest`.
+            guard !OwnSurfaceHitTest.wouldResolveOwnUI(at: point) else { return }
             let configuration = self.configurationBox.current()
 
             var element: AXUIElement?
