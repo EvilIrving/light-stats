@@ -29,12 +29,46 @@ enum ByteFormatter {
     }
 
     static func formatSpeed(_ bytesPerSecond: Double) -> String {
-        if bytesPerSecond >= 1_000_000 {
-            return String(format: "%.1f MB/s", bytesPerSecond / 1_000_000)
-        } else if bytesPerSecond >= 1_000 {
-            return String(format: "%.0f KB/s", bytesPerSecond / 1_000)
+        formatSpeed(bytesPerSecond, significantDigits: nil)
+    }
+
+    /// Status-bar network speeds: keep three significant digits so up/down stay visually aligned
+    /// as the magnitude crosses unit boundaries (B/s → KB/s → MB/s).
+    static func formatSpeedAligned(_ bytesPerSecond: Double) -> String {
+        formatSpeed(bytesPerSecond, significantDigits: 3)
+    }
+
+    private static func formatSpeed(_ bytesPerSecond: Double, significantDigits: Int?) -> String {
+        let magnitude = max(bytesPerSecond, 0)
+        let (value, unit): (Double, String)
+        if magnitude >= 1_000_000 {
+            value = magnitude / 1_000_000
+            unit = "MB/s"
+        } else if magnitude >= 1_000 {
+            value = magnitude / 1_000
+            unit = "KB/s"
         } else {
-            return String(format: "%.0f B/s", bytesPerSecond)
+            value = magnitude
+            unit = "B/s"
         }
+        guard let significantDigits else {
+            if unit == "MB/s" {
+                return String(format: "%.1f %@", value, unit)
+            }
+            return String(format: "%.0f %@", value, unit)
+        }
+        return "\(formatSignificant(value, digits: significantDigits)) \(unit)"
+    }
+
+    /// Format a positive magnitude with a fixed significant-digit budget.
+    static func formatSignificant(_ value: Double, digits: Int) -> String {
+        let clamped = max(value, 0)
+        guard clamped > 0 else { return digits >= 3 ? "0.00" : "0" }
+        let digits = max(digits, 1)
+        let exponent = floor(log10(clamped))
+        let decimals = max(0, digits - Int(exponent) - 1)
+        let factor = pow(10.0, Double(decimals))
+        let rounded = (clamped * factor).rounded() / factor
+        return String(format: "%.\(decimals)f", rounded)
     }
 }

@@ -197,7 +197,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     private func setupStatusItem() {
         // Calculate initial width based on enabled items
-        let initialWidth = StatusBarView.calculateWidth(settings: settings)
+        let initialWidth = StatusBarView.calculateWidth(
+            settings: settings,
+            hasFanHardware: monitor.hasFanHardware,
+            hasBatteryHardware: monitor.hasBatteryHardware
+        )
 
         statusItem = NSStatusBar.system.statusItem(withLength: initialWidth)
 
@@ -289,16 +293,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             monitor.$diskAvailable
         )
         .combineLatest(
-            Publishers.CombineLatest3(
-                monitor.$networkUpload,
-                monitor.$networkDownload,
-                monitor.$fanSpeed
+            Publishers.CombineLatest(
+                Publishers.CombineLatest3(
+                    monitor.$networkUpload,
+                    monitor.$networkDownload,
+                    monitor.$fanSpeed
+                ),
+                Publishers.CombineLatest(
+                    monitor.$hasFanHardware,
+                    monitor.$hasBatteryHardware
+                )
             )
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] values in
-            let (main, network) = values
+            let (main, networkAndHardware) = values
             let (cpu, gpu, memory, disk) = main
+            let (network, _) = networkAndHardware
             let (upload, download, fan) = network
             self?.updateStatusBarText(
                 cpu: cpu,
@@ -324,20 +335,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     ) {
         // Update status bar view（电池随每周期刷新，直接从 monitor 取最新值）
         statusBarView?.updateValues(
-            cpu: cpu,
-            gpu: gpu,
-            memory: memory,
-            disk: disk,
-            upload: upload,
-            download: download,
-            fan: fan,
-            battery: monitor.battery,
-            health: monitor.health,
+            metrics: StatusBarView.Metrics(
+                cpu: cpu,
+                gpu: gpu,
+                memory: memory,
+                disk: disk,
+                upload: upload,
+                download: download,
+                fan: fan,
+                battery: monitor.battery,
+                health: monitor.health,
+                hasFanHardware: monitor.hasFanHardware,
+                hasBatteryHardware: monitor.hasBatteryHardware
+            ),
             settings: settings
         )
 
         // Update status item width
-        let newWidth = StatusBarView.calculateWidth(settings: settings)
+        let newWidth = StatusBarView.calculateWidth(
+            settings: settings,
+            hasFanHardware: monitor.hasFanHardware,
+            hasBatteryHardware: monitor.hasBatteryHardware
+        )
         statusItem?.length = newWidth
         statusBarView?.frame.size.width = newWidth
     }

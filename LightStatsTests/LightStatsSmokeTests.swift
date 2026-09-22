@@ -54,6 +54,15 @@ final class LightStatsSmokeTests: XCTestCase {
         XCTAssertEqual(ByteFormatter.formatDisk(81_090_000_000), "81.1 GB")
     }
 
+    func testSpeedAlignedKeepsThreeSignificantDigits() {
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(0), "0.00 B/s")
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(12), "12.0 B/s")
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(1_230), "1.23 KB/s")
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(12_300), "12.3 KB/s")
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(123_000), "123 KB/s")
+        XCTAssertEqual(ByteFormatter.formatSpeedAligned(1_230_000), "1.23 MB/s")
+    }
+
     func testLoadAveragePerCoreKeepsOneDecimal() {
         let load = LoadAverage(load1: 3.14, load5: 2.8, load15: 2.5)
         XCTAssertEqual(load.perCoreDisplayString(coreCount: 10), "0.3")

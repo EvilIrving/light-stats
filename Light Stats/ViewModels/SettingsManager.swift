@@ -43,6 +43,10 @@ protocol SettingsManaging: ObservableObject {
     var showFan: Bool { get set }
     var showBattery: Bool { get set }
     var showHealth: Bool { get set }
+    var showStatusBarSeparator: Bool { get set }
+    var statusBarSeparatorWidth: Double { get set }
+    var statusBarNetworkColorStyle: StatusBarNetworkColorStyle { get set }
+    var cleanupPinnedApps: [String] { get set }
     var healthIncludeCPU: Bool { get set }
     var healthIncludeMemory: Bool { get set }
     var healthIncludeLoad: Bool { get set }
@@ -104,6 +108,29 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     @Published var showHealth: Bool {
         didSet { save(showHealth, for: .showHealth) }
+    }
+    /// Optional visible divider between status-bar items. Off by default.
+    @Published var showStatusBarSeparator: Bool {
+        didSet { save(showStatusBarSeparator, for: .showStatusBarSeparator) }
+    }
+    /// Gap (and line) width in points when the separator is on. Clamped 1…10.
+    @Published var statusBarSeparatorWidth: Double {
+        didSet {
+            let clamped = Self.clampSeparatorWidth(statusBarSeparatorWidth)
+            if clamped != statusBarSeparatorWidth {
+                statusBarSeparatorWidth = clamped
+                return
+            }
+            save(statusBarSeparatorWidth, for: .statusBarSeparatorWidth)
+        }
+    }
+    @Published var statusBarNetworkColorStyle: StatusBarNetworkColorStyle {
+        didSet { save(statusBarNetworkColorStyle.rawValue, for: .statusBarNetworkColorStyle) }
+    }
+
+    /// Bundle-id (or path) keys for Cleanup's single pinned batch-quit group.
+    @Published var cleanupPinnedApps: [String] {
+        didSet { save(cleanupPinnedApps, for: .cleanupPinnedApps) }
     }
 
     // MARK: - Health Score Dimensions
@@ -433,6 +460,10 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         case showFan = "settings.showFan"
         case showBattery = "settings.showBattery"
         case showHealth = "settings.showHealth"
+        case showStatusBarSeparator = "settings.showStatusBarSeparator"
+        case statusBarSeparatorWidth = "settings.statusBarSeparatorWidth"
+        case statusBarNetworkColorStyle = "settings.statusBarNetworkColorStyle"
+        case cleanupPinnedApps = "settings.cleanupPinnedApps"
         case healthIncludeCPU = "settings.healthIncludeCPU"
         case healthIncludeMemory = "settings.healthIncludeMemory"
         case healthIncludeLoad = "settings.healthIncludeLoad"
@@ -511,6 +542,13 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         showBattery = defaults.object(forKey: Key.showBattery.rawValue) as? Bool ?? false
         // 健康分：总门面默认关闭，避免改变现有菜单栏宽度。
         showHealth = defaults.object(forKey: Key.showHealth.rawValue) as? Bool ?? false
+        showStatusBarSeparator = defaults.object(forKey: Key.showStatusBarSeparator.rawValue) as? Bool ?? false
+        statusBarSeparatorWidth = Self.clampSeparatorWidth(
+            defaults.object(forKey: Key.statusBarSeparatorWidth.rawValue) as? Double ?? 4
+        )
+        statusBarNetworkColorStyle = defaults.string(forKey: Key.statusBarNetworkColorStyle.rawValue)
+            .flatMap(StatusBarNetworkColorStyle.init(rawValue:)) ?? .system
+        cleanupPinnedApps = defaults.stringArray(forKey: Key.cleanupPinnedApps.rawValue) ?? []
 
         // 健康分维度：默认全部参与计算（含 GPU）。
         healthIncludeCPU = defaults.object(forKey: Key.healthIncludeCPU.rawValue) as? Bool ?? true
@@ -679,10 +717,19 @@ final class SettingsManager: ObservableObject, SettingsManaging {
         ]
     }
 
+}
+
+// MARK: - Helpers
+
+extension SettingsManager {
     /// True when `value` is an optional in its `.none` state.
     static func isNilOptional<T>(_ value: T) -> Bool {
         let mirror = Mirror(reflecting: value)
         return mirror.displayStyle == .optional && mirror.children.isEmpty
+    }
+
+    static func clampSeparatorWidth(_ value: Double) -> Double {
+        min(max(value, 1), 10)
     }
 }
 
@@ -734,6 +781,9 @@ private extension SettingsManager {
                 configuration.customLayouts.count,
                 configuration.exclusions.count
             )
+        case .cleanupPinnedApps:
+            let count = (value as? [String])?.count ?? 0
+            return "count=\(count)"
         default:
             return String(describing: value)
         }

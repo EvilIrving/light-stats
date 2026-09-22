@@ -220,6 +220,17 @@ final class SettingsDefaultsTests: XCTestCase {
         XCTAssertTrue(s.showMemory)
     }
 
+    func testStatusBarSeparatorDefaultsOff() {
+        let s = freshSettings()
+        XCTAssertFalse(s.showStatusBarSeparator)
+        XCTAssertEqual(s.statusBarSeparatorWidth, 4, accuracy: 0.0001)
+        XCTAssertEqual(s.statusBarNetworkColorStyle, .system)
+    }
+
+    func testCleanupPinnedAppsDefaultEmpty() {
+        XCTAssertEqual(freshSettings().cleanupPinnedApps, [])
+    }
+
     func testNoNetworkFeatureIsOnByDefault() {
         let s = freshSettings()
         // Update checks are off until the user enables them.
