@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     let appSwitcherController: AppSwitcherController
     let windowSnapHotKeyService: WindowSnapHotKeyControlling
     let titlebarGestureService: TitlebarGestureControlling
+    private let activationPolicyService = ActivationPolicyService()
     private let findMouseCoordinator: FindMouseCoordinator
     private let defaultInputSourceCoordinator: DefaultInputSourceCoordinator
     private let panelHotKeyService: PanelHotKeyControlling
@@ -114,6 +115,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         _ = CleaningModeOverlayController.shared
 
         observePreferenceChanges()
+
+        // 设置/关于/更新这些真正的窗口打开时，让 app 变回普通 app（Dock 图标 + ⌘Tab），
+        // 最后一个窗口关掉再退回纯菜单栏状态。
+        activationPolicyService.start()
 
         // 启动时按当前设置同步一次（推送配置 + 决定是否启动 tap）。
         syncScrollService()
