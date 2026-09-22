@@ -96,6 +96,14 @@ final class DragShakeDetectorTests: XCTestCase {
         XCTAssertGreaterThan(configuration.cooldown, configuration.window)
     }
 
+    /// A shake that could only hide would strand the user with everything hidden and no way back
+    /// except a shortcut they may never have bound: the gesture toggles.
+    func testShakingAgainBringsBackWhatTheShakeHid() {
+        XCTAssertEqual(ShakeVisibilityPolicy.command(hasHiddenApplications: false), .hideOthers)
+        XCTAssertEqual(ShakeVisibilityPolicy.command(hasHiddenApplications: true), .restore,
+                       "A second shake is the undo for the first")
+    }
+
     private func fireShake(startingAt start: TimeInterval) -> Bool {
         var fired = stroke(1, distance: 80, at: start)
         fired = stroke(-1, distance: 80, at: start + 0.05) || fired

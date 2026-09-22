@@ -281,18 +281,20 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
 
     /// Hides or restores applications. No Accessibility permission, no window, no geometry.
     func performVisibility(_ command: WindowVisibilityCommand, keeping processID: pid_t?) {
-        let performed: Bool
-        switch command {
-        case .hideOthers:
-            performed = visibility.hideOthers(keeping: processID) >= 0
-        case .hideAll:
-            performed = visibility.hideAll() >= 0
-        case .restore:
-            performed = visibility.restore() >= 0
-        }
-        recordResult(.visibility(command), success: performed, reason: command.rawValue)
-        if performed {
-            performHapticFeedback()
+        performVisibilityRequest(command, keeping: processID)
+    }
+
+    func performShake(keeping processID: pid_t) {
+        performVisibilityRequest(nil, keeping: processID)
+    }
+
+    private func performVisibilityRequest(_ command: WindowVisibilityCommand?, keeping processID: pid_t?) {
+        Task { @MainActor [weak self] in
+            guard let self, let outcome = await self.visibility.perform(command, keeping: processID) else { return }
+            self.recordResult(.visibility(outcome.command), success: outcome.succeeded, reason: outcome.reason)
+            if outcome.changed > 0 {
+                self.performHapticFeedback()
+            }
         }
     }
 

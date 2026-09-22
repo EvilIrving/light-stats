@@ -21,9 +21,7 @@ extension AppDelegate {
             self?.tearDownDragOverlays()
         }
         windowDragMonitorService.onShake = { [weak self] window in
-            // Shaking a window hides everything *else*, so the window being dragged is the one that
-            // stays visible — which is what makes the gesture feel like it acted on that window.
-            self?.windowSnappingService.performVisibility(.hideOthers, keeping: window.processID)
+            self?.windowSnappingService.performShake(keeping: window.processID)
         }
     }
 
