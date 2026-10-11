@@ -62,6 +62,13 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
         /// Size to use for `.center`, so centring a window that was just maximized returns it to
         /// its pre-snap size instead of leaving it full-width.
         var preferredSize: CGSize?
+        /// Where the window stood when the drag that asked for this placement began.
+        ///
+        /// The drop path cannot wait for a frame sample to prove the gesture moved a window: a flick
+        /// to the edge can end inside one sample interval. So the proof is made here instead, at the
+        /// frame read this path already performs — a window still sitting where the drag started is
+        /// text selection or a click, not a move, and is refused.
+        var originFrame: CGRect?
 
         init(
             target: SnapTarget,
@@ -69,7 +76,8 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
             processID: pid_t,
             screen: SnapScreenGeometry? = nil,
             margins: SnapMargins = .zero,
-            preferredSize: CGSize? = nil
+            preferredSize: CGSize? = nil,
+            originFrame: CGRect? = nil
         ) {
             self.target = target
             self.window = window
@@ -77,6 +85,7 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
             self.screen = screen
             self.margins = margins
             self.preferredSize = preferredSize
+            self.originFrame = originFrame
         }
     }
 
@@ -160,6 +169,10 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
         guard let current else {
             return .refused(reason: "noFrame")
         }
+        if let originFrame = request.originFrame,
+           WindowSnapGeometry.framesApproximatelyEqual(current, originFrame, tolerance: 2) {
+            return .refused(reason: "unmoved")
+        }
         guard let screen = request.screen ?? ScreenGeometryProvider.screen(containing: current) else {
             return .refused(reason: "noScreen")
         }
@@ -238,11 +251,31 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
 
     // MARK: - Frame writes
 
+    /// How many times a frame is re-asserted before whatever the window will take is accepted.
+    private static let writeAttempts = 6
+    /// Pause before reading the frame back, and between attempts.
+    ///
+    /// Apps animate their own resize, so a reading taken immediately after the write can still be a
+    /// frame in flight. Measured on Grok Bot with the enhanced-UI flag already suspended, the window
+    /// still converged over a few attempts (1345 → 1618 → 1656 → 1662 points of height), so the loop
+    /// needs room; a window that takes the write straight away pays one pause and stops.
+    private static let settleMicros: useconds_t = 90_000
+
     /// Writes a frame and reports what the window actually ended up with.
     ///
-    /// Size is written first and the pair twice: an app that re-clamps its origin after a resize —
-    /// which is most of them — otherwise leaves the window at the right size in the wrong place.
-    /// A window that cannot be resized still gets its position moved.
+    /// Size first, then position, then size again — macOS enforces sizes that fit on the current
+    /// display, so a window moving between displays needs the size re-asserted after it has moved —
+    /// and the frame is read back and re-asserted until the window agrees.
+    ///
+    /// **`AXEnhancedUserInterface` is turned off for the duration of the write.** While that flag is
+    /// on, an app accepts `AXSize` and silently keeps its old size: the position lands, the size does
+    /// not, so the window ends up in a different shape in a different place — or does not move at
+    /// all. Measured on this machine with everything else identical: Finder and Grok Bot both refuse
+    /// the write with the flag on (0,230 787x704 and 0,552 1201x950) and both land exactly on target
+    /// with it off. `WindowFrameResolver.enableEnhancedUserInterface` switches that flag on in order
+    /// to read Electron window trees, which is why real applications were the ones that broke while a
+    /// plain editor never did. Rectangle, which is open source, disables the same flag around every
+    /// adjustment for the same reason and restores it afterwards.
     @discardableResult
     func apply(_ frame: CGRect, to window: AXUIElement) -> CGRect? {
         AXCommandQueue.shared.sync { applyOnQueue(frame, to: window) }
@@ -253,12 +286,63 @@ nonisolated final class WindowPlacementEngine: @unchecked Sendable {
         let movable = AXElementReader.isSettable(kAXPositionAttribute, of: window)
         guard resizable || movable else { return nil }
 
-        if resizable { _ = setSize(frame.size, for: window) }
-        if movable { _ = setPosition(frame.origin, for: window) }
-        if resizable { _ = setSize(frame.size, for: window) }
-        if movable { _ = setPosition(frame.origin, for: window) }
+        let enhancedUI = suspendEnhancedUserInterface(for: window)
+        defer { restoreEnhancedUserInterface(enhancedUI, for: window) }
 
-        return WindowFrameResolver.frameFromAttributes(of: window)
+        var achieved: CGRect?
+        for _ in 0..<Self.writeAttempts {
+            if resizable { _ = setSize(frame.size, for: window) }
+            if movable { _ = setPosition(frame.origin, for: window) }
+            if resizable { _ = setSize(frame.size, for: window) }
+
+            // Some apps animate their own resize, so a reading taken right after the write can still
+            // be a frame in flight. The pause only costs anything when the first attempt did not
+            // land; a window that takes the write straight away is done here.
+            usleep(Self.settleMicros)
+            let previous = achieved
+            achieved = WindowFrameResolver.frameFromAttributes(of: window)
+            guard let achieved else { continue }
+            if WindowSnapGeometry.framesApproximatelyEqual(achieved, frame) { return achieved }
+            // Two readings in a row that agree with each other but not with the target mean the
+            // window has settled somewhere else — it clamps its own size — and re-asserting the same
+            // frame cannot move it.
+            if let previous, WindowSnapGeometry.framesApproximatelyEqual(previous, achieved, tolerance: 1) {
+                return achieved
+            }
+        }
+        return achieved
+    }
+
+    private static let enhancedUserInterfaceAttribute = "AXEnhancedUserInterface"
+
+    /// Turns the app's `AXEnhancedUserInterface` off and reports what it was, so the caller can put
+    /// it back. `nil` means the app does not answer for the attribute.
+    private func suspendEnhancedUserInterface(for window: AXUIElement) -> Bool? {
+        guard let processID = AXElementReader.processIdentifier(of: window) else { return nil }
+        let application = AXUIElementCreateApplication(processID)
+        AXUIElementSetMessagingTimeout(application, 0.2)
+        let enabled: Bool? = AXElementReader.attribute(Self.enhancedUserInterfaceAttribute, from: application)
+        guard enabled == true else { return enabled }
+        _ = AXUIElementSetAttributeValue(
+            application,
+            Self.enhancedUserInterfaceAttribute as CFString,
+            kCFBooleanFalse
+        )
+        return true
+    }
+
+    /// Puts the flag back the way it was found. It stays on for apps whose Accessibility tree only
+    /// becomes usable with it, because the frame reads this placement path depends on would otherwise
+    /// stop resolving; every write suspends it again for the duration of the write itself.
+    private func restoreEnhancedUserInterface(_ enabled: Bool?, for window: AXUIElement) {
+        guard enabled == true, let processID = AXElementReader.processIdentifier(of: window) else { return }
+        let application = AXUIElementCreateApplication(processID)
+        AXUIElementSetMessagingTimeout(application, 0.2)
+        _ = AXUIElementSetAttributeValue(
+            application,
+            Self.enhancedUserInterfaceAttribute as CFString,
+            kCFBooleanTrue
+        )
     }
 
     private func setPosition(_ position: CGPoint, for window: AXUIElement) -> Bool {

@@ -156,13 +156,29 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
     }
 
     /// Places a window the caller has already resolved — the drag pipeline's commit path.
-    func perform(_ target: SnapTarget, on window: AXUIElement, processID: pid_t, screen: SnapScreenGeometry? = nil) {
+    ///
+    /// `originFrame` is where the window stood when the drag began, so a placement that turns out to
+    /// be a click or a text selection is refused at the frame read instead of being cancelled earlier
+    /// on a sample that a fast drag never produced.
+    func perform(
+        _ target: SnapTarget,
+        on window: AXUIElement,
+        processID: pid_t,
+        screen: SnapScreenGeometry? = nil,
+        originFrame: CGRect? = nil
+    ) {
         AXCommandQueue.shared.async { [weak self] in
-            self?.performOnQueue(target, on: window, processID: processID, screen: screen)
+            self?.performOnQueue(target, on: window, processID: processID, screen: screen, originFrame: originFrame)
         }
     }
 
-    private func performOnQueue(_ target: SnapTarget, on window: AXUIElement, processID: pid_t, screen: SnapScreenGeometry?) {
+    private func performOnQueue(
+        _ target: SnapTarget,
+        on window: AXUIElement,
+        processID: pid_t,
+        screen: SnapScreenGeometry?,
+        originFrame: CGRect?
+    ) {
         recordRequest(target)
         if let action = target.action, action.isWindowControl {
             return recordResult(target, success: WindowControlService.perform(action, processID: processID), reason: action.rawValue)
@@ -171,7 +187,7 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
             return recordResult(target, success: false, reason: "permission")
         }
         guard let rejection = rejection(for: window, processID: processID) else {
-            return place(target, on: window, processID: processID, screen: screen)
+            return place(target, on: window, processID: processID, screen: screen, originFrame: originFrame)
         }
         recordResult(target, success: false, reason: rejection)
     }
@@ -315,7 +331,13 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
 
     // MARK: - Placement
 
-    private func place(_ target: SnapTarget, on window: AXUIElement, processID: pid_t, screen: SnapScreenGeometry?) {
+    private func place(
+        _ target: SnapTarget,
+        on window: AXUIElement,
+        processID: pid_t,
+        screen: SnapScreenGeometry?,
+        originFrame: CGRect?
+    ) {
         stateLock.lock()
         placementRevision &+= 1
         stateLock.unlock()
@@ -360,7 +382,8 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
                     window: window,
                     processID: processID,
                     screen: screen,
-                    preferredSize: record?.size
+                    preferredSize: record?.size,
+                    originFrame: originFrame
                 )
             )
         }

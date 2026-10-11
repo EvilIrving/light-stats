@@ -140,7 +140,11 @@ extension AppDelegate {
         )
         guard let target else { return }
         windowSnappingService.perform(
-            target, on: window.element, processID: window.processID, screen: state.zone.screen
+            target,
+            on: window.element,
+            processID: window.processID,
+            screen: state.zone.screen,
+            originFrame: state.initialFrame
         )
     }
 

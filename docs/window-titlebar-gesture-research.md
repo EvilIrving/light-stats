@@ -167,3 +167,23 @@ EnableTiledWindowMargins  = 0
 - BetterTouchTool 社区 "Swish-Style Window Management" 预设（修饰键逃生通道、连续滑动、预览卡住反馈）：<https://community.folivora.ai/t/swish-style-window-management-for-bettertouchtool/46437>
 - Rectangle 官网（快捷键 + snap areas + 循环）：<https://rectangleapp.com/>
 - 本机实测：AX 结构探测脚本输出（`AXTitlebar` / `AXTitleUIElement` / 红绿灯簇坐标 / 顶带命中测试），macOS 26.4；`defaults read com.apple.WindowManager`
+
+## 八、阶段三：纵向滑动不再是手势（2026-10-11）
+
+阶段一二解决了"标题栏在哪"和"起手是不是控件"，但没有解决一个更根本的问题：**触控板的双指纵向滚动与纵向挥手是同一串事件**，任何阈值都分不开。
+
+八天诊断日志（`windowManagement` 类别）里所有走到提交的手势：
+
+```text
+requested 按 zone：titlebar = 103，其余 17
+requested 按目标：maximize = 63，minimize = 40，其余 17
+```
+
+**103 次提交全部是纵向，横向（左右半屏）一次都没有。**那不是"滑动"的分布，是"滚动"的分布——用户滚动页面时指针恰好停在标题栏带上，累计位移越过 60 就触发。真机复现：在标题栏上合成一次双指滚动（手指阶段 + 惯性尾巴），窗口直接从 `900,700 700x500` 变成 `0,30 3008x1662`（最大化）。
+
+两条修改：
+
+1. **惯性阶段不再计入手势。** 手指离开后的滑行尾巴不属于输入；把它累计进去，等于滚动在手指抬起后还在继续加位移。
+2. **纵向需要 Fn。** 左右不需要修饰键（标题栏上没有任何东西消费横向滑动），上下只有在按住 Fn 时才映射到最大化/最小化。
+
+取舍：这删掉了 Swish 模型里"上滑全屏、下滑最小化"的免修饰键版本，因为它在观测数据里 100% 是误触发。想要纵向手势的用户按住 Fn 即可，Fn 本来就是"我是认真的"修饰键。

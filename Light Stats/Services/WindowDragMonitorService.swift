@@ -27,6 +27,17 @@ nonisolated struct WindowDragState: @unchecked Sendable {
     var pointer: CGPoint
     /// The dragged window's frame as last sampled. Used as the origin the footprint grows from.
     var windowFrame: CGRect?
+    /// The window's frame when the drag began.
+    ///
+    /// The drop path cannot prove "this was a window move" from a sample: sampling the frame costs an
+    /// Accessibility round trip, so a flick that reaches the edge and releases inside one sample
+    /// interval has no reading at all — and used to be discarded as if the gesture had never grabbed
+    /// anything. Carrying the starting frame forward lets the placement path make that call at the
+    /// moment it reads the window anyway.
+    var initialFrame: CGRect?
+    /// A frame sample saw the window change size, so the gesture is a resize, not a move.
+    /// Only ever `true` from a reading; `false` means "not observed", not "not a resize".
+    var isResizing: Bool
     var draggedWindow: DraggedWindow?
 
     static let idle = WindowDragState(
@@ -34,6 +45,8 @@ nonisolated struct WindowDragState: @unchecked Sendable {
         zone: .none,
         pointer: .zero,
         windowFrame: nil,
+        initialFrame: nil,
+        isResizing: false,
         draggedWindow: nil
     )
 }
@@ -85,6 +98,13 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
         var frameSamplePending = false
         var resolveAttempts = 0
         var lastResolveAt: TimeInterval = 0
+        /// Why the last eligibility read refused the window, kept until the drag ends.
+        ///
+        /// The refusal used to be logged where it happened, which is once per resolve attempt —
+        /// five or six identical lines for one drag. That is how the journal came to look like
+        /// hundreds of rejected windows when it was tens of rejected drags, and it is the number a
+        /// reader uses to decide whether the filter is too strict.
+        var lastRejection: String?
         var lastPoint: CGPoint?
         var lastFrame: CGRect?
         var lastPublishedPoint: CGPoint?
@@ -375,16 +395,31 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
         shakeDetector.reset()
 
         guard state.downPoint != nil else { return }
+        // One verdict per drag, not one per resolve attempt. A drag that moved far enough to resolve
+        // and ended with no window is the only thing worth a record, and it carries how many reads
+        // it took so a window whose label settles slowly is distinguishable from one that never
+        // became eligible at all.
+        if let reason = state.lastRejection, state.resolveAttempts > 0 {
+            DiagnosticLogService.record(category: "windowManagement", action: "dragRejected", fields: [
+                "reasonCode": reason,
+                "attempts": String(state.resolveAttempts)
+            ])
+        }
         let drop = WindowDragState(
             isMoving: state.isMoving && !state.isResizing,
             zone: zone,
             pointer: point,
             windowFrame: state.lastFrame,
+            initialFrame: state.initialFrame,
+            isResizing: state.isResizing,
             draggedWindow: state.window
         )
         Task { @MainActor [weak self] in
             guard let self, self.isCurrent(token) else { return }
-            if drop.isMoving, drop.draggedWindow != nil {
+            // A resolved window and no observed resize is enough to hand the drop on: whether the
+            // window really moved is decided where its frame is read, not from a sample that a fast
+            // drag may never have produced.
+            if drop.draggedWindow != nil, !drop.isResizing {
                 self.onDrop?(drop)
             } else {
                 self.onCancel?()
@@ -457,7 +492,11 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
             if let reason = SnapWindowEligibility.rejection(
                 for: candidate, userExclusions: configuration.exclusionSet, honorsRestrictedList: configuration.honorsRestrictedApps
             ) {
-                DiagnosticLogService.record(category: "windowManagement", action: "dragRejected", fields: ["reasonCode": reason])
+                self.stateLock.lock()
+                if self.generation == token, self.dragState.downPoint != nil {
+                    self.dragState.lastRejection = reason
+                }
+                self.stateLock.unlock()
                 return
             }
 
@@ -514,6 +553,8 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
                 zone: self.dragState.lastZone,
                 pointer: self.dragState.lastPoint ?? self.dragState.downPoint ?? .zero,
                 windowFrame: frame,
+                initialFrame: initial,
+                isResizing: self.dragState.isResizing,
                 draggedWindow: self.dragState.window
             )
             self.stateLock.unlock()
@@ -542,7 +583,9 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
         let changed = result != dragState.lastZone
         dragState.lastZone = result
         let isMoving = dragState.isMoving
+        let isResizing = dragState.isResizing
         let frame = dragState.lastFrame
+        let initial = dragState.initialFrame
         // Hover feedback needs a steady stream of pointer updates, but only while something is
         // actually being hovered — and only when the pointer really moved. Without this gate the
         // island republished 60 times a second for a pointer that had not budged.
@@ -572,6 +615,8 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
                 zone: result,
                 pointer: pointer,
                 windowFrame: frame,
+                initialFrame: initial,
+                isResizing: isResizing,
                 draggedWindow: window
             )
         )

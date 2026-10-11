@@ -208,6 +208,11 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         let isContinuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
         guard isContinuous else { return }
 
+        // Momentum is the coasting tail after the fingers have left the trackpad, not input. Feeding
+        // it into the accumulator let an ordinary scroll keep adding after the gesture it belongs to
+        // had already been released, which is how scrolling used to end up tiling a window.
+        guard event.getIntegerValueField(.scrollWheelEventMomentumPhase) == 0 else { return }
+
         switch releaseDisposition(for: event) {
         case .ended:
             handleGestureEvent(releaseGesture())
@@ -283,7 +288,8 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         guard let resistanceAction = dominantAction(
             deltaX: gestureState.deltaX,
             deltaY: gestureState.deltaY,
-            threshold: resistanceThreshold
+            threshold: resistanceThreshold,
+            allowsVertical: zone == .pointer
         ) else {
             let shouldCancel = gestureState.thresholdAction != nil || gestureState.readyAction != nil
             if shouldCancel {
@@ -300,7 +306,12 @@ final class TitlebarGestureService: TitlebarGestureControlling {
             return .cancel
         }
 
-        if let action = dominantAction(deltaX: gestureState.deltaX, deltaY: gestureState.deltaY, threshold: hapticThreshold),
+        if let action = dominantAction(
+            deltaX: gestureState.deltaX,
+            deltaY: gestureState.deltaY,
+            threshold: hapticThreshold,
+            allowsVertical: zone == .pointer
+        ),
            gestureState.thresholdAction != action {
             gestureState.thresholdAction = action
             return .threshold(action, point, zone)
@@ -310,7 +321,8 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         guard let action = dominantAction(
             deltaX: gestureState.deltaX,
             deltaY: gestureState.deltaY,
-            threshold: completionThreshold
+            threshold: completionThreshold,
+            allowsVertical: zone == .pointer
         ) else {
             return nil
         }
@@ -372,14 +384,27 @@ final class TitlebarGestureService: TitlebarGestureControlling {
         return .none
     }
 
-    private func dominantAction(deltaX: Double, deltaY: Double, threshold: Double) -> WindowSnapAction? {
+    /// The action a gesture is currently pointing at.
+    ///
+    /// `allowsVertical` is what keeps a scroll from being read as a swipe. A trackpad's vertical
+    /// scroll and its downward flick produce indistinguishable events, and measured over eight days
+    /// every single committed gesture was vertical — maximize and minimize, never a half — which is
+    /// the signature of scrolling, not of a deliberate swipe. So up and down only mean something
+    /// while the **Fn** modifier says the gesture is intended; left and right need no modifier,
+    /// because nothing else in a window's titlebar consumes a horizontal swipe.
+    private func dominantAction(
+        deltaX: Double,
+        deltaY: Double,
+        threshold: Double,
+        allowsVertical: Bool
+    ) -> WindowSnapAction? {
         let absX = abs(deltaX)
         let absY = abs(deltaY)
 
         if absX >= threshold && absX >= absY * dominanceRatio {
             return deltaX > 0 ? .rightHalf : .leftHalf
         }
-        if absY >= threshold && absY >= absX * dominanceRatio {
+        if allowsVertical, absY >= threshold && absY >= absX * dominanceRatio {
             return deltaY > 0 ? .minimize : .maximize
         }
         return nil

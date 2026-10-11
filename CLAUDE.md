@@ -437,6 +437,29 @@ application, and a read that lands mid-write returns a frame from halfway throug
 `WindowFrameResolver.frame` and `WindowPlacementEngine` are the two entry points, and both are
 written so a nested call runs inline instead of deadlocking.
 
+**`AXEnhancedUserInterface` has to be off for the duration of a write, and that is the whole reason
+real applications used to ignore us.** While the flag is on, an app accepts `AXSize` and silently
+keeps its old size: the position lands, the size does not, so the window ends up in a different shape
+in a different place — or does not move at all. The flag is not exotic here, it is ours:
+`WindowFrameResolver.enableEnhancedUserInterface` switches it on so Electron and Java window trees can
+be read, and it was never switched off again. Measured with everything else identical, on Finder and
+Grok Bot: with the flag on, the same four writes left `0,230 787x704` and `0,552 1201x950`; with it
+off, both landed exactly on `0,30 1504x1662`. `WindowPlacementEngine.apply` therefore suspends the flag
+around every write and restores it afterwards, which is also what Rectangle (open source, and the
+reason the flag's effect is known at all) does around every adjustment.
+
+**A write is verified by reading the frame back, never by the write returning success.** `apply` writes
+size, position, size — macOS enforces sizes that fit the current display, so a window moving between
+displays needs the size re-asserted after it moves — then reads the frame and repeats within
+`writeAttempts`, stopping early when two readings agree with each other but not with the target, which
+means the window clamps its own size and further writes cannot move it.
+
+**A window that does not exercise any of this is not evidence.** TextEdit accepts every form of the
+write, so verifying this subsystem against a scratch editor proves nothing about Finder, Chrome, or any
+Electron app — which is exactly how the flag survived this long. `script/verify-window-snap.sh` discovers
+running apps and tests edge regions at configurable drag speeds through `script/ax-probe.sh`. App and
+region filters come from command-line arguments; every restoration is checked by reading the frame.
+
 **The island exposes every layout as directly droppable tiles.** `SnapIslandLayout.tiles` and
 `hit` share the same projected rectangles; there is no separate layout-selection step. The panel
 keeps its expanded frame while a top-centred reveal mask animates from the compact strip. Tile
@@ -576,7 +599,13 @@ window's traffic lights and refuses a gesture that starts on a control the app i
 (`AXButton`, `AXTabGroup`, …; `AXScrollArea`/`AXGroup` are deliberately not controls, since
 Electron reports its whole web content as those). Holding **Fn** switches the gesture to
 `SnapGestureZone.pointer`, which skips both tests and acts on the window under the cursor — the
-only way to reach apps that draw their own titlebar. Rationale, measurements, and the
+only way to reach apps that draw their own titlebar. **Up and down need Fn too.** A trackpad's
+vertical scroll and its downward flick are the same event stream, so no threshold separates them:
+measured over eight days, every one of the 103 gestures that reached a commit was vertical —
+maximize and minimize, never a half — which is the signature of scrolling, not of a swipe. Feed the
+momentum tail in as well and an ordinary scroll keeps accumulating after the fingers have left, which
+is how scrolling tiled windows. So momentum phases are never input, and left/right (which nothing in
+a titlebar consumes) is the only direction that commits without Fn. Rationale, measurements, and the
 alternatives that were rejected are in `docs/window-titlebar-gesture-research.md`.
 
 **Drag-to-edge has exactly one owner, and it is a choice.** Light Stats implements the same
@@ -594,6 +623,15 @@ by a non-preference key, so a user who turns the system's switch back on by hand
 next unrelated toggle. `SnapConfiguration.effectiveZones` returns `.disabled` for `.system`, which
 makes every zone arm nothing in one place: no preview, no island, no second writer at drop time. The
 drag monitor still runs for shake-to-hide, which is a different gesture.
+
+**What a drag commits is decided where the window's frame is read, not from a sample.** Proving the
+gesture moved a window means reading the window, and that read is an Accessibility round trip at
+~30 Hz — so a flick that reaches the edge and releases inside one sample interval has no reading at
+all. Requiring one before the drop discarded exactly the gesture users make most, silently, with no
+diagnostic beyond a `dragResolved` line. `WindowDragState.initialFrame` is therefore carried to the
+drop, and `WindowPlacementEngine` refuses the placement when the window still stands there
+(`unmoved`) — the same proof, made at a read that path already performs. A frame sample is now only
+ever a *hint*: it drives the live preview, and an observed resize vetoes the drop.
 
 Both directions of that handover can be broken by hand in System Settings, and both are reported
 rather than left as a gesture that quietly does nothing: `conflictsWithLightStats` for a system copy
