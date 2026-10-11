@@ -21,7 +21,7 @@ final class UsageWarmupManager: ObservableObject {
 
     static let shared = UsageWarmupManager()
 
-    /// 仅这两家有滚动窗口；Gemini 是每日 quota，不参与。
+    /// 只有这两家有可保活的滚动窗口。
     private static let supported: [AIProvider] = [.claude, .codex]
 
     private static let resetDelay: TimeInterval = 60

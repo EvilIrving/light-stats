@@ -11,7 +11,6 @@ enum AIProvider: String, Codable, CaseIterable, Sendable {
     // Quota / window providers first; balance-only providers last (grouped).
     case claude
     case codex
-    case gemini
     case grok
     case warp
     case trae

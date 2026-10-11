@@ -264,7 +264,6 @@ final class SettingsManager: ObservableObject, SettingsManaging {
     }
     /// 自动续期 5h 窗口（warmup）。默认关闭（opt-in），仅在对应 provider 监控开启时才有意义。
     /// 开 → `UsageWarmupManager` 定时发一条 headless 消息把窗口起点挪进工作时段；关 → 立即停。
-    /// Gemini 无对应开关（每日 quota，非滚动窗口）。
     @Published var autoRefreshClaudeEnabled: Bool {
         didSet { save(autoRefreshClaudeEnabled, for: .autoRefreshClaude) }
     }

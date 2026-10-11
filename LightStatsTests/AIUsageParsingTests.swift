@@ -2,7 +2,7 @@
 //  AIUsageParsingTests.swift
 //  Light Stats Tests
 //
-//  Locks the current behavior of the three AI-usage response parsers against
+//  Locks the current behavior of the Claude and Codex usage parsers against
 //  sanitized JSON fixtures. This is the regression baseline for the P4 service
 //  refactor: the parse functions must keep mapping identical bytes to identical
 //  windows. Fixtures live in ./Fixtures and are loaded straight off disk via
@@ -86,28 +86,5 @@ final class AIUsageParsingTests: XCTestCase {
     func testCodexMalformedThrowsDecoding() throws {
         assertDecodingError(try CodexUsageService.parseUsageJSON(fixture("codex_usage_malformed.json")),
                             "malformed Codex JSON should throw .decoding")
-    }
-
-    // MARK: - Gemini
-
-    func testGeminiParsesProFlashLiteWindows() throws {
-        let snapshot = try GeminiUsageService.parseQuotaResponse(fixture("gemini_quota_full.json"))
-        XCTAssertEqual(snapshot.provider, .gemini)
-        XCTAssertEqual(snapshot.windows.map(\.label), ["Pro", "Flash", "Lite"])
-        // usedPercent = 100 - remainingFraction*100.
-        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 20.0, accuracy: 0.001)  // pro 0.80 left
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 50.0, accuracy: 0.001)  // flash 0.50 left
-        XCTAssertEqual(snapshot.windows[2].usedPercent ?? -1, 5.0, accuracy: 0.001)   // lite 0.95 left
-        XCTAssertNotNil(snapshot.windows[0].resetsAt)
-    }
-
-    func testGeminiEmptyQuotasThrowsDecoding() throws {
-        assertDecodingError(try GeminiUsageService.parseQuotaResponse(fixture("gemini_quota_empty.json")),
-                            "no quotas should throw .decoding")
-    }
-
-    func testGeminiMalformedThrowsDecoding() throws {
-        assertDecodingError(try GeminiUsageService.parseQuotaResponse(fixture("gemini_quota_malformed.json")),
-                            "malformed Gemini JSON should throw .decoding")
     }
 }

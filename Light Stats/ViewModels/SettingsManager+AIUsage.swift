@@ -19,8 +19,7 @@ extension SettingsManager {
     static func migrateAndReadEnabledAIProviders(from defaults: UserDefaults) -> Set<AIProvider> {
         let legacy: [AIProvider: String] = [
             .claude: "settings.aiMonitorClaude",
-            .codex: "settings.aiMonitorCodex",
-            .gemini: "settings.aiMonitorGemini"
+            .codex: "settings.aiMonitorCodex"
         ]
         for id in AIProvider.allCases {
             let newKey = aiMonitorEnabledKey(for: id)

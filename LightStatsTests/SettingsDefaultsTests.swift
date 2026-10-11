@@ -58,7 +58,6 @@ final class SettingsDefaultsTests: XCTestCase {
         }
         XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorClaude"))
         XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorCodex"))
-        XCTAssertNil(cleanDefaults.object(forKey: "settings.aiMonitorGemini"))
     }
 
     func testLegacyClaudeMonitorKeyMigratesWhenNewKeyAbsent() {

@@ -164,7 +164,6 @@
 "aiUsage.window.month" = "月";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
-"aiUsage.gemini" = "Gemini";
 "aiUsage.autoRefresh" = "自动续期窗口";
 "aiUsage.autoRefresh.short" = "续期";
 "aiUsage.fetching" = "获取中...";

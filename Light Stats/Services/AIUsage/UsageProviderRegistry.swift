@@ -30,16 +30,6 @@ enum UsageProviderRegistry {
             reset: { CodexUsageService.resetCredentialCache() }
         ),
         descriptor(
-            id: .gemini,
-            credential: .localDiscovered,
-            iconAssetName: "geminiLogo",
-            symbolFallback: "sparkle",
-            cliName: "gemini",
-            supportsWarmup: false,
-            fetch: { try await GeminiUsageService.fetch() },
-            reset: { GeminiUsageService.resetCredentialCache() }
-        ),
-        descriptor(
             id: .grok,
             credential: .localDiscovered,
             iconAssetName: "grokLogo",
