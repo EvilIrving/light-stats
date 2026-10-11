@@ -271,11 +271,13 @@ nonisolated final class DockHoverMonitorService: DockHoverMonitoring, @unchecked
     private func probeSystemDock(at point: CGPoint) -> (target: DockHoverTarget?, band: CGRect)? {
         guard let screen = screenContaining(cocoaPoint: point) else { return nil }
         let orientation = Self.dockOrientation()
-        let estimatedBand = DockGeometry.band(
-            screen: screen.frame, visibleFrame: screen.visibleFrame, orientation: orientation, fallbackDockFrame: nil
+        // Cheap gate first, and it has to be a superset: an auto-hidden Dock reserves nothing, so the
+        // reserved band is empty and the Dock's own rectangle is the only thing that can answer.
+        let proximity = DockGeometry.proximityBand(
+            screen: screen.frame, visibleFrame: screen.visibleFrame, orientation: orientation
         )
-        guard DockGeometry.isWithinDock(point, band: estimatedBand, slack: dockSlack) else {
-            return (nil, estimatedBand)
+        guard DockGeometry.isWithinDock(point, band: proximity, slack: dockSlack) else {
+            return (nil, proximity)
         }
         let dockFrame = dockAccessibilityFrame()
         let band = DockGeometry.band(

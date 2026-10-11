@@ -75,6 +75,57 @@ final class DockGeometryTests: XCTestCase {
         XCTAssertTrue(band.isEmpty)
     }
 
+    // MARK: - The cheap proximity gate
+
+    /// A Dock that reserves space is covered by a strip at least as tall as the Dock's own band.
+    func testProximityGateCoversTheReservedBandOfADockedDock() {
+        let band = DockGeometry.proximityBand(screen: screen, visibleFrame: visible, orientation: .bottom)
+        XCTAssertGreaterThanOrEqual(band.height, 74)
+        XCTAssertEqual(band.minY, screen.minY, accuracy: 0.01)
+        XCTAssertEqual(band.maxX, screen.maxX, accuracy: 0.01)
+        XCTAssertTrue(DockGeometry.isWithinDock(CGPoint(x: 700, y: 40), band: band, slack: 10))
+    }
+
+    /// The case this gate exists for: auto-hide reserves nothing, so the visible frame cannot produce
+    /// a band and the click would be dropped before anything ever asked the Dock about it.
+    func testProximityGateCoversAnAutoHiddenDock() {
+        let band = DockGeometry.proximityBand(screen: screen, visibleFrame: screen, orientation: .bottom)
+        XCTAssertFalse(band.isEmpty)
+        XCTAssertEqual(band.minY, screen.minY, accuracy: 0.01)
+        XCTAssertEqual(band.width, screen.width, accuracy: 0.01)
+        XCTAssertTrue(DockGeometry.isWithinDock(CGPoint(x: 700, y: 20), band: band, slack: 10))
+    }
+
+    /// A magnified tile is drawn above the plate the Dock reports, so the gate has to be taller than
+    /// the Dock itself — a click on that overhang is still a click on the icon.
+    func testProximityGateReachesAboveTheDockForAMagnifiedTile() {
+        let band = DockGeometry.proximityBand(screen: screen, visibleFrame: visible, orientation: .bottom)
+        XCTAssertGreaterThan(band.height, 74)
+        XCTAssertTrue(DockGeometry.isWithinDock(CGPoint(x: 700, y: 74 + 40), band: band, slack: 10))
+    }
+
+    func testProximityGateStaysOffTheRestOfTheScreen() {
+        let bottom = DockGeometry.proximityBand(screen: screen, visibleFrame: screen, orientation: .bottom)
+        XCTAssertFalse(DockGeometry.isWithinDock(CGPoint(x: 700, y: 600), band: bottom, slack: 10))
+
+        let left = DockGeometry.proximityBand(screen: screen, visibleFrame: screen, orientation: .left)
+        XCTAssertEqual(left.minX, screen.minX, accuracy: 0.01)
+        XCTAssertEqual(left.height, screen.height, accuracy: 0.01)
+        XCTAssertTrue(DockGeometry.isWithinDock(CGPoint(x: 40, y: 500), band: left, slack: 10))
+        XCTAssertFalse(DockGeometry.isWithinDock(CGPoint(x: 600, y: 500), band: left, slack: 10))
+
+        let right = DockGeometry.proximityBand(screen: screen, visibleFrame: screen, orientation: .right)
+        XCTAssertEqual(right.maxX, screen.maxX, accuracy: 0.01)
+        XCTAssertTrue(DockGeometry.isWithinDock(CGPoint(x: 1472, y: 500), band: right, slack: 10))
+    }
+
+    func testProximityGateIsConfigurableForTheTests() {
+        let band = DockGeometry.proximityBand(
+            screen: screen, visibleFrame: screen, orientation: .bottom, extent: 60
+        )
+        XCTAssertEqual(band.height, 60, accuracy: 0.01)
+    }
+
     // MARK: - Panel placement
 
     func testBottomDockPanelSitsAboveTheDockAndCentresOnTheIcon() {

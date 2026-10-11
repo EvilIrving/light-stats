@@ -45,6 +45,14 @@ nonisolated enum DockGeometry {
     /// Distance between the Dock and the preview panel.
     static let panelGap: CGFloat = 10
 
+    /// How far a revealed Dock can reach out from its screen edge.
+    ///
+    /// Needed because an auto-hidden Dock reserves **nothing**: the visible-frame difference is zero,
+    /// so the reserved band says nothing about where the Dock is. A Dock tile is at most 128 pt and
+    /// the plate around the tiles is roughly 1.4× the resting tile, so this bound has room to spare —
+    /// and being generous costs nothing, because it only decides whether a closer look is worth it.
+    static let maximumRevealedExtent: CGFloat = 192
+
     /// The region the Dock occupies on this display, in Cocoa coordinates.
     ///
     /// Normally the difference between the display frame and its visible frame — that is exactly
@@ -80,6 +88,45 @@ nonisolated enum DockGeometry {
             }
         }
         return fallbackDockFrame ?? .zero
+    }
+
+    /// The band a click or a hover can be about the Dock in, without asking Accessibility.
+    ///
+    /// The reserved band answers whenever the Dock reserves space. With auto-hide it is empty — the
+    /// Dock only becomes clickable while it is showing, and it always shows along the edge its
+    /// preference names — so the fallback is the edge strip a revealed Dock fits in.
+    ///
+    /// This is deliberately a **superset** of the Dock: a magnified tile overhangs the plate the Dock
+    /// draws around the tiles, and reading the Dock's own rectangle costs the Accessibility call this
+    /// exists to avoid. The authoritative answer is the hit test that follows, so erring wide costs
+    /// one lookup and erring narrow loses the click.
+    static func proximityBand(
+        screen: CGRect,
+        visibleFrame: CGRect,
+        orientation: DockOrientation,
+        extent: CGFloat = DockGeometry.maximumRevealedExtent
+    ) -> CGRect {
+        let reserved = band(
+            screen: screen,
+            visibleFrame: visibleFrame,
+            orientation: orientation,
+            fallbackDockFrame: nil
+        )
+
+        switch orientation {
+        case .bottom:
+            let thickness = max(reserved.height, extent)
+            return CGRect(x: screen.minX, y: screen.minY, width: screen.width, height: thickness)
+        case .top:
+            let thickness = max(reserved.height, extent)
+            return CGRect(x: screen.minX, y: screen.maxY - thickness, width: screen.width, height: thickness)
+        case .left:
+            let thickness = max(reserved.width, extent)
+            return CGRect(x: screen.minX, y: screen.minY, width: thickness, height: screen.height)
+        case .right:
+            let thickness = max(reserved.width, extent)
+            return CGRect(x: screen.maxX - thickness, y: screen.minY, width: thickness, height: screen.height)
+        }
     }
 
     /// Where the preview panel goes, anchored to the hovered Dock item.

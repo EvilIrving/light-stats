@@ -544,7 +544,9 @@ its frame back to the monitor (`previewFrame`) so that travelling from the icon 
 which is how a card gets clicked — does not read as leaving the Dock. A 180 ms entry delay avoids
 flashing while crossing icons; a 250 ms exit grace covers the gap between icon and preview.
 `DockGeometry` is pure, and
-covers the case a visible-frame calculation cannot: an auto-hidden Dock reserves no space at all.
+covers the case a visible-frame calculation cannot: an auto-hidden Dock reserves no space at all —
+which is why the Dock click and the hover probe both gate on `proximityBand` before they touch
+Accessibility.
 
 **The Dock click is the one gesture macOS leaves unfinished, and only that half is implemented.**
 Clicking a background app's Dock icon already activates it and brings its minimized windows back, so
@@ -554,9 +556,15 @@ system leaves doing nothing. The decision is two facts read at mouse-down
 minimized → restore; otherwise pass), because the Dock changes the world while it handles the click.
 It is a passive `NSEvent` monitor — no tap, nothing swallowed, no permission of its own — and it is
 judged as a click only if the button comes *up* within 6 pt and 0.6 s, since the Dock's icon drag
-starts on exactly the same mouse-down. Windows are minimized by `WindowMinimizeService`
-(`AXMinimized`, then the window's own `AXMinimizeButton`, then one retry wave, because a window that
-is mid-animation accepts the write and stays put), and the collapsed set is remembered by title plus
+starts on exactly the same mouse-down. **Its first test is arithmetic and has to be a superset of the
+Dock.** An auto-hidden Dock reserves nothing, so a band taken from the visible-frame difference is
+zero — and a zero band rejects every click before the Dock is ever asked anything, which is how this
+feature spent its first weeks doing nothing at all. `DockGeometry.proximityBand` is
+`max(reserved band, 192 pt)` along the Dock's edge instead, which also covers a magnified tile drawn
+above the plate the Dock reports; the `AXUIElementCopyElementAtPosition` hit test that follows stays
+the authoritative answer. Windows are minimized by `WindowMinimizeService` (`AXMinimized`, then the
+window's own `AXMinimizeButton`, then one retry wave, because a window that is mid-animation accepts
+the write and stays put), and the collapsed set is remembered by title plus
 `ProcessIdentity` so a reused pid cannot restore the wrong windows. The move-exclusion list is
 deliberately *not* consulted: it exists for actions that break a media player, and minimizing is the
 reversible action the yellow button performs. See `docs/dock-click-collapse.md`.

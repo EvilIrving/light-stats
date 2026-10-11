@@ -132,9 +132,9 @@ final class DockClickService {
     private func beginClick(at point: CGPoint, now: TimeInterval) {
         reset()
         // Cheap rejection first: a click anywhere but the Dock is the overwhelmingly common case, and
-        // it must not cost an Accessibility round trip. The band is derived from the screen's visible
-        // frame and the Dock's own preference, so this is arithmetic.
-        guard Self.isInsideDockBand(point) else { return }
+        // it must not cost an Accessibility round trip. The band is arithmetic over the screen's
+        // visible frame, the Dock's own preference, and the strip a revealed Dock fits in.
+        guard Self.isNearDock(point) else { return }
         gesture.begins(at: point, now: now)
         let generation = clickGeneration
 
@@ -337,37 +337,40 @@ final class DockClickService {
         return nil
     }
 
-    /// Whether a point in Accessibility space lies in the Dock's band on its screen.
+    /// Whether a point in Accessibility space is close enough to the Dock's edge to be worth an
+    /// Accessibility lookup.
     ///
     /// The slack is wider than the hover monitor's: an icon under the pointer magnifies, and the
     /// click that lands on its edge is still a click on that icon.
-    private static func isInsideDockBand(_ point: CGPoint, slack: CGFloat = 10) -> Bool {
-        guard let screen = ScreenGeometryProvider.screen(containing: point) else { return false }
-        let band = DockGeometry.band(
-            screen: ScreenGeometryProvider.toCocoa(screen.frame),
-            visibleFrame: ScreenGeometryProvider.toCocoa(screen.visibleFrame),
-            orientation: DockHoverMonitorService.dockOrientation(),
-            fallbackDockFrame: nil
-        )
+    private static func isNearDock(_ point: CGPoint, slack: CGFloat = 10) -> Bool {
+        guard let band = proximityBand(at: point) else { return false }
         let cocoaPoint = CGPoint(x: point.x, y: ScreenGeometryProvider.flipReferenceMaxY() - point.y)
         return DockGeometry.isWithinDock(cocoaPoint, band: band, slack: slack)
     }
 
-    /// A click inside the Dock's band that resolved to no icon. Worth one debug line: it is the signal
-    /// that the Dock's Accessibility surface changed shape.
-    private func recordUnresolvedClick(at point: CGPoint) {
-        guard let screen = ScreenGeometryProvider.screen(containing: point) else { return }
-        let band = DockGeometry.band(
+    /// The Dock's edge on the display holding a point, in Cocoa coordinates.
+    private static func proximityBand(at point: CGPoint) -> CGRect? {
+        guard let screen = ScreenGeometryProvider.screen(containing: point) else { return nil }
+        return DockGeometry.proximityBand(
             screen: ScreenGeometryProvider.toCocoa(screen.frame),
             visibleFrame: ScreenGeometryProvider.toCocoa(screen.visibleFrame),
-            orientation: DockHoverMonitorService.dockOrientation(),
-            fallbackDockFrame: nil
+            orientation: DockHoverMonitorService.dockOrientation()
         )
-        DiagnosticLogService.recordPrivate(
+    }
+
+    /// A click near the Dock's edge that resolved to no icon. Worth one debug line: it is the signal
+    /// that the Dock's Accessibility surface changed shape. Throttled because an auto-hidden Dock
+    /// shares that band with the bottom of whatever window is up against it, and an ordinary click
+    /// there is not a fault.
+    private func recordUnresolvedClick(at point: CGPoint) {
+        guard let band = Self.proximityBand(at: point) else { return }
+        DiagnosticLogService.recordThrottled(
             level: .debug,
             category: "dockClick",
             action: "unresolvedIcon",
-            fields: ["bandHeight": String(format: "%.0f", band.height)]
+            identity: "unresolvedIcon",
+            interval: 60,
+            fields: ["bandHeight": .privateValue(String(format: "%.0f", band.height))]
         )
     }
 }
