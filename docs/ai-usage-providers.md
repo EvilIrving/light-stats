@@ -1,9 +1,9 @@
 # AI 用量监控 · Provider 路线图与实现规格
 
 > 状态：已落地（选型原则、A/B 档研究与排除名单仍有效；实现状态见本节末尾的「落地记录」）。
-> 已实现 15 个 provider（Claude Code / Codex / Gemini / Grok / Warp / Trae / OpenCode Go / Cursor / Kimi / Qoder / DeepSeek / Z.ai / MiniMax / OpenRouter / MiMo），详见 `Light Stats/Services/AIUsage/UsageProviderRegistry.swift`。
+> 已实现 15 个 provider（Claude Code / Codex / Antigravity / Grok / Warp / Trae / OpenCode Go / Cursor / Kimi / Qoder / DeepSeek / Z.ai / MiniMax / OpenRouter / MiMo），详见 `Light Stats/Services/AIUsage/UsageProviderRegistry.swift`。
 > 取代已删除的 `docs/ai-usage-plan.md`（Phase 1 计划）与 `docs/ai-usage-providers-research.md`（2026-06-17 对标调研）。
-> 对应代码：`Light Stats/Services/{Claude,Codex,Gemini}UsageService.swift`、`Light Stats/Services/AIUsage/`、
+> 对应代码：`Light Stats/Services/{Claude,Codex,Antigravity}UsageService.swift`、`Light Stats/Services/AIUsage/`、
 > `Light Stats/ViewModels/AIUsageMonitor.swift`、`Light Stats/Views/Popover/Components/AIUsageCard.swift`。
 
 ## 目标与硬约束
@@ -35,7 +35,7 @@
 | **OAuth device flow** | 中 | ~250–400 行 + 一次性浏览器授权 UI | 用户要走一次授权 |
 | **浏览器 cookie / localStorage** | 高 | 600–1300 行/家 | 要 Full Disk Access，cookie 名随版本变 |
 
-现有实测行数：`ClaudeUsageService` 660 行、`GeminiUsageService` 515 行、`CodexUsageService` 404 行（都含完整降级链）。**一个纯 API token 型 provider 应该能压到 200 行以内。**
+现有实测行数：`ClaudeUsageService` 660 行、`CodexUsageService` 404 行（都含完整降级链）。**一个纯 API token 型 provider 应该能压到 200 行以内。**
 
 ---
 
@@ -118,9 +118,40 @@ OpenCode 是全仓库 star 第一，实际下载量比 Codex **低一个数量�
 
 外加 `UsageWarmupService`（自动续期窗口，opt-in）。
 
-后续扩到 15 家：Grok（`~/.grok/auth.json` + CLI billing）、Warp（GraphQL）、Trae CN（credit pool，session cookie）、OpenCode Go（usage API）、Cursor（`state.vscdb`，`ideDatabase`）、Kimi（`/coding/v1/usages`，周 + 5h）、Qoder（big-model credits，session cookie）、DeepSeek / Z.ai / MiniMax / OpenRouter（API token，余额型）、MiMo（console balance + Token Plan）。凭证分三类（`CredentialSource`）：`localDiscovered`、`apiToken`（设置页粘贴，经 `KeychainCredentialWriter` 走 `security -i` 存 Keychain）、`ideDatabase`。
+后续扩到 15 家：Grok（`~/.grok/auth.json` + CLI billing）、Warp（GraphQL）、Trae CN（credit pool，session cookie）、OpenCode Go（usage API）、Cursor（`state.vscdb`，`ideDatabase`）、Kimi（`/coding/v1/usages`，周 + 5h）、Qoder（big-model credits，session cookie）、DeepSeek / Z.ai / MiniMax / OpenRouter（API token，余额型）、MiMo（console balance + Token Plan）；其中 Gemini 于 2026-10-11 由 Antigravity 取代（两家同属 Google Code Assist 配额，见下节）。凭证分三类（`CredentialSource`）：`localDiscovered`、`apiToken`（设置页粘贴，经 `KeychainCredentialWriter` 走 `security -i` 存 Keychain）、`ideDatabase`。
 
 Overview 展示规则：多窗口 provider 折叠为一行，只显示最紧的窗口（`AIUsageWindowPicker.mostStrained`），点击展开全部；余额型 provider 沉底、无进度条（`BalanceRow` 只渲染金额）。
+
+## Antigravity CLI 实现规格（2026-10-11 落地）
+
+取代原 Gemini provider。`gemini-cli` 与 `agy` 吃的是同一套 Cloud Code Assist 配额，而 Antigravity CLI 是接替它的入口，所以只留一家：凭据来源从 `~/.gemini/oauth_creds.json` 换成 `agy` 写进 Keychain 的那条。
+
+| 项 | 值（均为实测） |
+|---|---|
+| 凭据 | Keychain generic password，`service=gemini`、`account=antigravity`（`agy` 经 go-keyring 写入），值 = `go-keyring-base64:` + base64(`{"token":{"access_token","refresh_token","expiry"}}`) |
+| 读取 | `/usr/bin/security find-generic-password -s gemini -a antigravity -w`，走共享 `KeychainCredentialReader`，不弹授权框 |
+| 端点 | `POST daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary`，body `{}` |
+| 刷新 | `oauth2.googleapis.com/token` 的 refresh_token grant；client 用两家 CLI 共用的公开 Cloud Code Assist client（`1071006060591-…apps.googleusercontent.com`），换 client 会被拒 |
+| 写回 | **不写回**。刷新结果只留在进程内（`AntigravityTokenCache`），`agy` 是那个 Keychain 条目的唯一写入者 |
+| User-Agent | **必须是 `antigravity-cli`**。配额服务按调用方身份发放许可，UA 里不含 antigravity 一律 403 `not have a valid license of this product`（实测 `Light Stats/1.9.6`、`gemini-cli/0.30.0`、无 UA 都是 403，`antigravity-cli` 200） |
+
+响应结构：
+
+```jsonc
+{
+  "groups": [
+    {"displayName": "Gemini Models",
+     "buckets": [{"bucketId": "gemini-weekly", "window": "weekly",
+                  "resetTime": "2026-10-18T06:30:25Z", "remainingFraction": 0.9878},
+                 {"bucketId": "gemini-5h", "window": "5h",
+                  "resetTime": "2026-10-11T11:30:25Z", "remainingFraction": 0.9271}]},
+    {"displayName": "Claude and GPT models",
+     "buckets": [{"bucketId": "3p-5h", "window": "5h", "remainingFraction": 1.0}]}
+  ]
+}
+```
+
+映射：`window` 的 `5h` / `weekly` → 面板的 `5h` / `7d`；`usedPercent = (1 - remainingFraction) × 100`。**同一订阅被两组模型分别计量**，面板每个窗口只报更紧的那一组（先撞上的那条），因为展开行的标签列宽只有 36pt，装不下「组名 + 窗口」。未知 `window` 直接跳过，不猜。
 
 ## ⚠️ 一个必须先补的架构缺口（已补：随 DeepSeek 落地）
 

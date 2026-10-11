@@ -170,7 +170,7 @@ Public exit-node detection is optional. When enabled, it can query a selected ge
 
 When enabled, Light Stats reads credentials stored locally by each provider's CLI, or an API token you paste in Settings (stored in Keychain), then requests current subscription utilization from that provider. AI monitoring is disabled by default and never transmits credentials to another provider or to the Light Stats developer.
 
-Claude Code and Codex each have a separate, off-by-default usage-window warmup switch. After a rolling window resets, warmup sends the minimal headless prompt `ok` through that provider's CLI from a temporary empty directory, discards normal output, and verifies the new window. Gemini does not use warmup.
+Claude Code and Codex each have a separate, off-by-default usage-window warmup switch. After a rolling window resets, warmup sends the minimal headless prompt `ok` through that provider's CLI from a temporary empty directory, discards normal output, and verifies the new window.
 
 ### Health Score
 

@@ -909,7 +909,7 @@
           <p>When enabled, this feature sends a request to a public geo-IP service and caches the result briefly to avoid repeated lookups. It transmits no personal data beyond the network request itself, which necessarily reveals your IP to that service, the same as visiting any website. Disable it and no such request is ever made.</p>
 
           <h2>AI usage and optional warmup</h2>
-          <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI or an API token pasted in Settings. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory. Gemini has no warmup.</p>
+          <p>When an AI provider is enabled, Light Stats contacts that provider's own usage endpoint using credentials already stored by its CLI or an API token pasted in Settings. Claude Code and Codex also have separate, off-by-default warmup switches; after a rolling window resets, warmup sends the minimal headless prompt “ok” through the selected provider's CLI, discards normal output, and uses a temporary empty working directory.</p>
 
           <h2>Update checks</h2>
           <p>A manual update check, or the off-by-default automatic update setting, reads the Cloudflare R2 channel marker and falls back to GitHub Releases. The update channel can be Stable (final releases only) or Beta (also considers prereleases such as <code>v1.9.0-beta.N</code>); Beta is off by default. Downloaded updates must pass SHA-256 (R2), codesign, notarization, and Team ID verification before installation.</p>

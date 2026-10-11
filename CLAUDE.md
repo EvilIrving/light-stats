@@ -88,7 +88,7 @@ Light Stats/
 │   ├── ProxyDetector.swift          # System proxy + env + tunnel detection
 │   ├── ClaudeUsageService.swift     # Claude Code API usage
 │   ├── CodexUsageService.swift      # Codex CLI usage
-│   ├── GeminiUsageService.swift     # Gemini CLI usage (OAuth refresh flow)
+│   ├── AntigravityUsageService.swift # Antigravity CLI quota (Keychain grant + quota summary)
 │   ├── DeepSeekUsageService.swift   # Official /user/balance
 │   ├── GrokUsageService.swift       # ~/.grok/auth.json + CLI billing
 │   ├── ZAIUsageService.swift        # GLM Coding Plan quota
@@ -1053,11 +1053,15 @@ Suites:
   `SettingsManager(defaults:)`. (Instances are retained for the process: a fresh
   `@MainActor`-isolated `SettingsManager` deinit trips a Swift Concurrency back-deploy
   double-free on macOS 14.x; the production singleton never deallocates, so this is test-only.)
-- `AIUsageParsingTests` — Claude/Codex/Gemini response parsers against sanitized JSON fixtures
+- `AIUsageParsingTests` — Claude/Codex response parsers against sanitized JSON fixtures
 - `AIUsageNewProviderParsingTests` — DeepSeek / Grok / z.ai / MiniMax / Moonshot / OpenRouter / Warp / Trae / Kimi / Qoder / MiMo fixtures
   in `LightStatsTests/Fixtures/` (valid / partial / malformed). This is the P4 regression net;
-  the parse seams (`ClaudeUsageService.parseUsageJSON`, `CodexUsageService.parseUsageJSON`,
-  `GeminiUsageService.parseQuotaResponse`) are `internal` so `@testable` can reach them.
+  the parse seams (`ClaudeUsageService.parseUsageJSON`, `CodexUsageService.parseUsageJSON`)
+  are `internal` so `@testable` can reach them.
+- `AntigravityUsageTests` — the `agy` Keychain grant (`go-keyring-base64:` decode, foreign blob,
+  missing access token, empty refresh token) and the quota summary collapsing two model groups
+  into the panel's 5h / 7d rows, including that the more consumed group wins and a window kind
+  the panel has no row for is skipped rather than guessed at.
 - `PTYProbeTests` — drives the shared `PTYProbe` capture engine with a synthetic shell
   script (no claude/codex CLI needed): completion predicate, timeout, buffer reset, ANSI
   stripping. The live CLI TUI paths can't run under the test host, so this is their net.

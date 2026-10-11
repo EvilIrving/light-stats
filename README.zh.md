@@ -207,7 +207,7 @@ Light Stats 把**实时压力信号**固定在菜单栏:一个 0-100 的健康�
 
 ### AI 用量窗口保活
 
-- Claude Code 与 Codex 各有独立开关,默认关闭;Gemini 不使用此功能
+- Claude Code 与 Codex 各有独立开关,默认关闭
 - 滚动窗口重置后,通过对应 CLI 在临时空目录发送最小提示词 `ok`
 - 丢弃正常输出,用量窗口验证完成后继续等待下一次重置
 
@@ -238,7 +238,7 @@ Light Stats 本地系统指标、本地代理检测、进程列表、滚动行�
 
 - **出口节点探测。** 开启后向所选 geo-IP provider 查询当前公网 IP、位置、ASN 和 ISP,结果缓存 60 秒。
 - **AI 用量监控。** 开启后只请求对应 provider 自己的用量接口,使用该 provider CLI 已保存在本机的凭据,不会发送给其他 provider 或 Light Stats 开发者。
-- **用量窗口保活。** 单独开启后,会在 Claude Code 或 Codex 滚动窗口重置后通过对应 CLI 发送最小提示词 `ok`;Gemini 不参与。
+- **用量窗口保活。** 单独开启后,会在 Claude Code 或 Codex 滚动窗口重置后通过对应 CLI 发送最小提示词 `ok`。
 - **更新检查。** 手动检查或选择开启的自动检查会访问 Cloudflare R2,GitHub Releases 作为回退;下载后仍需通过 SHA-256(R2)、签名、公证和 Team ID 校验。
 - **诊断日志。** 故障日志始终写在本机,可由用户导出诊断报告;性能记录是另一套可选的 48 小时会话。两者都不会发送给 Light Stats 开发者。
 
