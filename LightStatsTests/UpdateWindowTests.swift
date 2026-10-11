@@ -21,7 +21,7 @@ final class UpdateWindowTests: XCTestCase {
         manager.handle(release: release, userInitiated: true)
         try await Task.sleep(for: .milliseconds(150))
         let window = try XCTUnwrap(manager.window)
-        let frame = window.frame
+        let frame = try await settledFrame(of: window)
         XCTAssertNotNil(window.contentViewController)
         try capture(window, name: "available")
 
@@ -77,6 +77,21 @@ final class UpdateWindowTests: XCTestCase {
         XCTAssertNotNil(manager.window)
         let pending = try await attempts.pending(for: Bundle.main.bundleURL)
         XCTAssertNil(pending)
+    }
+
+    /// Window 第一次上屏时 AppKit 还会自己做一次尺寸收敛，收敛前后的差值随机器快慢而不同
+    /// （CI 上实测差 2pt，本机差 0）。基线必须取收敛后的帧，否则这里每次都在比「刚创建」
+    /// 和「已就位」两个不同状态，而不是在比「阶段切换有没有改变窗口」。
+    private func settledFrame(of window: NSWindow, timeout: Duration = .seconds(2)) async throws -> NSRect {
+        var previous = window.frame
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+            let current = window.frame
+            if current == previous { return current }
+            previous = current
+        }
+        return previous
     }
 
     private func capture(_ window: NSWindow, name: String) throws {
