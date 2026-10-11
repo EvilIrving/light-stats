@@ -1,0 +1,82 @@
+name: Scheduled stable release
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: scheduled-stable-release
+  cancel-in-progress: false
+
+jobs:
+  release-after-soak:
+    name: Release after two-day soak
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source and history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Tag and dispatch release when due
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
+          if [ -z "$latest_tag" ]; then
+            echo 'No stable release tag found.'
+            exit 0
+          fi
+
+          candidate_sha="$(git rev-list --reverse "${latest_tag}..HEAD" | head -1 || true)"
+          if [ -z "$candidate_sha" ]; then
+            echo "No commits after ${latest_tag}."
+            exit 0
+          fi
+
+          candidate_epoch="$(git show -s --format=%ct "$candidate_sha")"
+          due_epoch=$((candidate_epoch + 172800))
+          now_epoch="$(date -u +%s)"
+          printf 'Candidate %s: %s\n' "$candidate_sha" "$(git show -s --format=%s "$candidate_sha")"
+          printf 'Release due at %s UTC; current time is %s UTC.\n' \
+            "$(date -u -r "$due_epoch" '+%Y-%m-%d %H:%M:%S')" \
+            "$(date -u '+%Y-%m-%d %H:%M:%S')"
+
+          if [ "$now_epoch" -lt "$due_epoch" ]; then
+            echo 'Two-day soak is not complete.'
+            exit 0
+          fi
+
+          IFS=. read -r major minor patch <<< "${latest_tag#v}"
+          next_tag="v${major}.${minor}.$((patch + 1))"
+          while git show-ref --tags --verify --quiet "refs/tags/${next_tag}"; do
+            patch=$((patch + 1))
+            next_tag="v${major}.${minor}.${patch}"
+          done
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${next_tag}" >/dev/null 2>&1; then
+            echo "${next_tag} already exists remotely. Nothing to do."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$next_tag" -m "Light Stats ${next_tag#v}" "$GITHUB_SHA"
+          git push origin "$next_tag"
+
+          # A tag pushed with GITHUB_TOKEN does not emit a new push workflow event.
+          # Dispatch the existing release workflow explicitly at the new tag.
+          gh workflow run release.yml --repo "$REPOSITORY" --ref "$next_tag"
+          echo "Dispatched release workflow for ${next_tag}."
