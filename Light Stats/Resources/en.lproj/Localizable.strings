@@ -9,7 +9,7 @@
 "tab.settings" = "Settings";
 
 // MARK: - Settings View
-"settings.statusBar" = "Status Bar Display";
+"settings.statusBar" = "Menu Bar Display";
 "settings.appearance" = "Appearance";
 "settings.theme" = "Theme";
 "settings.theme.film" = "Golden Hour";
@@ -18,7 +18,7 @@
 "settings.theme.noir" = "Ink Night";
 "settings.theme.dataPaper" = "Data Paper";
 "settings.theme.film.grain" = "Film grain";
-"settings.theme.film.grain.hint" = "Off keeps light shapes, cleaner surface";
+"settings.theme.film.grain.hint" = "Keep light shapes without grain texture";
 "settings.theme.film.lightFlow" = "Light dynamics";
 "settings.theme.film.flow.paused" = "Still";
 "settings.theme.film.flow.gentle" = "Gentle";
@@ -34,7 +34,7 @@
 "settings.fan" = "Fan";
 "settings.battery" = "Battery";
 "settings.health" = "Health";
-"settings.statusBar.separator" = "Status Bar Divider";
+"settings.statusBar.separator" = "Menu Bar Divider";
 "settings.statusBar.separator.toggle" = "Show Divider";
 "settings.statusBar.separator.width" = "Divider Width";
 "settings.healthDimensions" = "Health Score Dimensions";
@@ -82,7 +82,7 @@
 "battery.na" = "—";
 "battery.cycles" = "Cycles";
 "battery.health" = "Health";
-"battery.health.hint" = "Click to switch: measured capacity ratio / system-reported value";
+"battery.health.hint" = "Click to switch: measured capacity / system health report";
 "battery.power" = "Power";
 "battery.temp" = "Temp";
 "battery.timeLeft" = "%@ left";
@@ -123,12 +123,12 @@
 "cleanup.noApps" = "No running apps";
 "cleanup.backgroundProcesses" = "Background Processes";
 "cleanup.pinnedGroup" = "Pinned Group";
-"cleanup.pinnedGroup.quitAll" = "Quit Apps in Group";
+"cleanup.pinnedGroup.quitAll" = "Quit All Apps in Group";
 "cleanup.pinnedGroup.remove" = "Remove from Pinned Group";
 "cleanup.appNotResponding" = "App Not Responding";
 "cleanup.forceQuit" = "Force Quit";
 "cleanup.cancel" = "Cancel";
-"cleanup.forceQuitMessage" = "The app is not responding. Force quit?\nUnsaved data may be lost.";
+"cleanup.forceQuitMessage" = "Force quit this app?\nUnsaved data may be lost.";
 
 // MARK: - Core Topology
 "core.suffix" = " cores";
@@ -136,7 +136,7 @@
 // MARK: - Network / Proxy / Exit Node
 "network.proxy.title" = "Proxy";
 "network.proxy.none" = "Not set";
-"network.proxy.tun" = "Tunnel detected";
+"network.proxy.tun" = "Tunnel / VPN active";
 "network.exit.title" = "Exit Node";
 "network.exit.failed" = "Probe failed";
 "network.route.direct" = "Direct";
@@ -200,7 +200,7 @@
 "aiUsage.tokenExpired.token" = "Token expired or rejected";
 "aiUsage.noLimit" = "No limit";
 "aiUsage.expandWindows" = "Show all quota windows";
-"aiUsage.collapseWindows" = "Show the tightest window";
+"aiUsage.collapseWindows" = "Show primary quota only";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "Color Indicator";
@@ -235,7 +235,7 @@
 "settings.update.channel.beta" = "Beta";
 "settings.update.channel.hint" = "Stable receives only final releases. Beta also includes prerelease builds.";
 "update.available.title" = "Light Stats %@ available";
-"update.available.message" = "Signed, notarized update. Settings preserved.";
+"update.available.message" = "A new version is ready. Your settings will be preserved.";
 "update.action.install" = "Update Now";
 "update.action.later" = "Later";
 "update.action.skip" = "Skip This Version";
@@ -267,14 +267,14 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "Input Devices";
-"settings.findMouse" = "Find My Mouse";
-"settings.findMouse.hint" = "Double-tap to find the pointer; triple-tap to toggle Presentation Pointer";
+"settings.findMouse" = "Locate Pointer";
+"settings.findMouse.hint" = "Double-tap to highlight pointer; triple-tap to toggle Presentation Pointer";
 "settings.findMouseTriggerKey" = "Trigger Key";
 "settings.findMouseTriggerKey.left" = "Left";
 "settings.findMouseTriggerKey.right" = "Right";
 "settings.findMouseTriggerKey.recording" = "Press Shortcut";
 "settings.findMouse.permissionTitle" = "Accessibility Access Needed";
-"settings.findMouse.permissionMessage" = "Find My Mouse needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
+"settings.findMouse.permissionMessage" = "Locate Pointer needs Accessibility permission to listen for the trigger key. Enable it in System Settings to use this feature.";
 "settings.presentationCursor.style" = "Pointer Style";
 "settings.presentationCursor.style.holographicSilver" = "Holographic Silver";
 "settings.presentationCursor.style.iceCrystal" = "Ice Crystal";
@@ -290,14 +290,14 @@
 "settings.activation.issuedAt" = "Issued";
 "settings.activation.enterCode" = "Paste your activation code";
 "settings.activation.activate" = "Unlock";
-"settings.activation.invalid" = "That code doesn't match — give it another look?";
+"settings.activation.invalid" = "Invalid activation code. Please check and try again.";
 "settings.activation.hint" = "Paste your code to unlock every premium feature";
-"settings.activation.grandfathered" = "Together";
-"settings.activation.grandfathered.hint" = "Thanks for your support — Pro is yours for life";
+"settings.activation.grandfathered" = "Early Supporter";
+"settings.activation.grandfathered.hint" = "Thanks for being with us — Pro is unlocked for life";
 "settings.activation.remove" = "Remove Activation";
-"settings.activation.feature.findMouse" = "Find My Mouse";
+"settings.activation.feature.findMouse" = "Locate Pointer";
 "settings.activation.successToast" = "Activated — premium features unlocked!";
-"settings.findMouse.lockedHint" = "Unlock: double-tap to find the pointer; triple-tap for Presentation Pointer";
+"settings.findMouse.lockedHint" = "Unlock: double-tap to highlight pointer; triple-tap for Presentation Pointer";
 "settings.defaultInputSource" = "Default Input Source";
 "settings.defaultInputSource.hint" = "Return to this input source after switching apps";
 "settings.defaultInputSource.none" = "Not Selected";
@@ -311,7 +311,7 @@
 "settings.scrollReverse.on" = "Scroll Reverse: On";
 "settings.scrollReverse.off" = "Scroll Reverse: Off";
 "settings.scrollReverse.permissionTitle" = "Accessibility Access Needed";
-"settings.scrollReverse.permissionMessage" = "Scroll direction and acceleration controls need Accessibility permission to intercept scroll events. Enable it in System Settings to use these features.";
+"settings.scrollReverse.permissionMessage" = "Scroll direction and acceleration controls need Accessibility permission. Enable it in System Settings to use these features.";
 "settings.windowControls" = "Window Controls";
 "settings.windowManagement" = "Window Management";
 "settings.windowManagement.description" = "Snap shortcuts, drag-to-edge snapping, the layout island, and the menu bar window list.";
@@ -412,7 +412,7 @@
 "display.builtIn" = "Built-in Display";
 "display.external" = "External Display";
 "settings.displayControl" = "Display Brightness";
-"settings.displayControl.hint" = "KVM/docks often block DDC; hardware brightness unavailable.";
+"settings.displayControl.hint" = "Adjusts the brightness of an external display.";
 "display.role.builtIn" = "Built-in";
 "display.role.external" = "External";
 
@@ -432,8 +432,8 @@
 "window.segment.firstThird" = "First 1/3";
 "window.segment.middleThird" = "Middle 1/3";
 "window.segment.lastThird" = "Last 1/3";
-"window.segment.twoThirds" = "Two Thirds";
-"window.segment.oneThird" = "One Third";
+"window.segment.twoThirds" = "2/3";
+"window.segment.oneThird" = "1/3";
 "window.segment.topLeft" = "Top Left";
 "window.segment.topRight" = "Top Right";
 "window.segment.bottomLeft" = "Bottom Left";
@@ -454,7 +454,7 @@
 "settings.shortcut.clear" = "Clear Shortcut";
 "settings.snap.behaviour" = "Dragging";
 "settings.snap.edgeOwner" = "Edge Snapping";
-"settings.snap.edgeOwner.hint" = "One gesture, one owner. Light Stats covers thirds, corners, and custom layouts; macOS covers halves and corners only, and shortcut placements use system commands too.";
+"settings.snap.edgeOwner.hint" = "Choose whether Light Stats or macOS manages edge snapping. Light Stats adds support for thirds, corners, and custom layouts.";
 "settings.snap.edgeOwner.lightStats" = "Light Stats";
 "settings.snap.edgeOwner.system" = "macOS";
 "settings.snap.edgeSnap" = "Drag to Screen Edge";
@@ -465,9 +465,9 @@
 "settings.snap.topEdge.island" = "Island";
 "settings.snap.topEdge.maximize" = "Fill";
 "settings.snap.topEdge.off" = "Off";
-"settings.snap.conflict" = "macOS edge tiling is on, so the same drag runs in both places.";
+"settings.snap.conflict" = "System edge tiling is currently on, which may cause conflicting gesture triggers.";
 "settings.snap.conflict.resolve" = "Turn Off System Tiling";
-"settings.snap.owner.systemOff" = "macOS edge tiling is off, so edge snapping does nothing right now.";
+"settings.snap.owner.systemOff" = "System edge tiling is currently off, so edge snapping is not active.";
 "settings.snap.owner.systemOff.resolve" = "Turn It Back On";
 "settings.snap.shortcuts.hint" = "Click a shortcut to record it. The recording must include a modifier; Escape cancels.";
 "settings.snap.layouts.create" = "Create a Layout";
@@ -501,7 +501,7 @@
 "window.action.quitApplication" = "Quit App";
 "settings.snap.defaultLayoutName" = "Layout %ld";
 "settings.snap.exclusions.restricted" = "Respect the Built-in List";
-"settings.snap.exclusions.restrictedHint" = "Never move windows of media players, games, remote desktops, or Wine apps.";
+"settings.snap.exclusions.restrictedHint" = "Automatically skip windows of media players, games, remote desktops, and fullscreen apps.";
 "settings.snap.exclusions.hint" = "Excluded apps keep their shortcuts, but their windows are never moved.";
 "settings.snap.exclusions.title" = "Excluded Apps";
 "settings.snap.exclusions.addRecommended" = "Add Recommended";
@@ -509,7 +509,7 @@
 
 // MARK: - Window management (extended)
 
-"settings.snap.conflict.otherApp" = "Another window manager is running (%@). Two of them listening for the same drag will fight over the result.";
+"settings.snap.conflict.otherApp" = "Another window manager is running (%@). Listening to the same drag gesture concurrently may cause conflicts.";
 
 // MARK: - Window management (permission)
 
@@ -528,7 +528,7 @@
 
 "settings.snap.dock.title" = "Dock Click";
 "settings.snap.dock.collapse" = "Click Icon to Collapse Windows";
-"settings.snap.dock.collapse.hint" = "Click the frontmost app's Dock icon to put its windows away; click again to bring them back.";
+"settings.snap.dock.collapse.hint" = "Click the active app's Dock icon to minimize all its windows, and click again to restore.";
 
 // MARK: - Window previews
 
@@ -541,8 +541,8 @@
 "settings.snap.commandTab.hint" = "Replace the system app switcher with a window-level one.";
 "settings.snap.commandTab.warning" = "While this is on, Light Stats handles ⌘Tab and the system switcher no longer appears. Turning it off restores the system behaviour immediately.";
 "settings.snap.screenRecording.needed" = "Screen Recording Access Needed";
-"settings.snap.screenRecording.denied" = "Only Light Stats' own thumbnails use it; nothing is recorded or uploaded.";
-"settings.snap.screenRecording.requiresRestart" = "The permission is on in System Settings, but this process has not picked it up yet. Restart Light Stats to start capturing.";
+"settings.snap.screenRecording.denied" = "Used solely to generate window thumbnails locally. Never records, stores, or uploads screen content.";
+"settings.snap.screenRecording.requiresRestart" = "Light Stats has not detected this permission yet. Restart Light Stats to begin.";
 "settings.snap.screenRecording.relaunch" = "Restart Now";
 "settings.permission.relaunchFailed" = "Couldn't restart automatically. Quit and reopen Light Stats.";
 "window.preview.minimized" = "Minimized";

@@ -9,7 +9,7 @@
 "tab.settings" = "設定";
 
 // MARK: - Settings View
-"settings.statusBar" = "ステータスバー表示";
+"settings.statusBar" = "メニューバー表示";
 "settings.appearance" = "外観";
 "settings.theme" = "テーマ";
 "settings.theme.film" = "ゴールデンアワー";
@@ -34,7 +34,7 @@
 "settings.fan" = "ファン";
 "settings.battery" = "バッテリー";
 "settings.health" = "健康度";
-"settings.statusBar.separator" = "ステータスバー区切り";
+"settings.statusBar.separator" = "メニューバー区切り";
 "settings.statusBar.separator.toggle" = "区切りを表示";
 "settings.statusBar.separator.width" = "区切りの幅";
 "settings.healthDimensions" = "健康度の評価項目";
@@ -130,7 +130,7 @@
 "cleanup.appNotResponding" = "アプリが応答しません";
 "cleanup.forceQuit" = "強制終了";
 "cleanup.cancel" = "キャンセル";
-"cleanup.forceQuitMessage" = "アプリが応答しません。強制終了しますか？\n保存されていないデータが失われる可能性があります。";
+"cleanup.forceQuitMessage" = "強制終了しますか？\n保存されていないデータが失われる可能性があります。";
 
 // MARK: - Core Topology
 "core.suffix" = "コア";
@@ -147,8 +147,8 @@
 
 // MARK: - Settings: Exit Node
 "settings.exitNode.section" = "出口ノード";
-"settings.exitNode.toggle" = "公開IPを表示";
-"settings.exitNode.toggleHint" = "リフレッシュ毎に照会";
+"settings.exitNode.toggle" = "出口ノードを表示";
+"settings.exitNode.toggleHint" = "更新ごとに公開IPを照会します。";
 "settings.exitNode.provider" = "プロバイダ";
 "settings.exitNode.privacyTitle" = "有効にする前に";
 "settings.exitNode.privacyMessage" = "選択したサービスに公開IPと推定位置を照会します。認証情報は送信されず、結果はこのマシン上にのみ表示されます。続行しますか？";
@@ -197,12 +197,12 @@
 "aiUsage.token.copied" = "コピー済";
 "aiUsage.token.save" = "保存";
 "aiUsage.token.saveFailed" = "保存できませんでした";
-"aiUsage.token.clear" = "削除";
+"aiUsage.token.clear" = "消去";
 "aiUsage.credentialsMissing.token" = "設定で API token を貼り付けてください";
 "aiUsage.tokenExpired.token" = "トークンが無効です";
 "aiUsage.noLimit" = "制限なし";
 "aiUsage.expandWindows" = "すべての枠を表示";
-"aiUsage.collapseWindows" = "最も逼迫した枠だけ表示";
+"aiUsage.collapseWindows" = "直近の利用枠のみ表示";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "カラーインジケーター";
@@ -237,7 +237,7 @@
 "settings.update.channel.beta" = "ベータ";
 "settings.update.channel.hint" = "正式は安定版のみ。ベータはプレリリースも含みます。";
 "update.available.title" = "Light Stats %@ が利用可能";
-"update.available.message" = "署名・公証済みの新バージョンです。設定はそのまま維持されます。";
+"update.available.message" = "新しいバージョンをご利用いただけます。現在の設定は維持されます。";
 "update.action.install" = "今すぐ更新";
 "update.action.later" = "後で";
 "update.action.skip" = "このバージョンをスキップ";
@@ -269,14 +269,14 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "入力デバイス";
-"settings.findMouse" = "マウスを探す";
-"settings.findMouse.hint" = "2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
+"settings.findMouse" = "ポインタをハイライト";
+"settings.findMouse.hint" = "2回押すとポインタをハイライト、3回押すとプレゼン用ポインタを切り替え";
 "settings.findMouseTriggerKey" = "トリガーキー";
 "settings.findMouseTriggerKey.left" = "左";
 "settings.findMouseTriggerKey.right" = "右";
 "settings.findMouseTriggerKey.recording" = "キーを入力";
 "settings.findMouse.permissionTitle" = "アクセシビリティ権限が必要です";
-"settings.findMouse.permissionMessage" = "「マウスを探す」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
+"settings.findMouse.permissionMessage" = "「ポインタをハイライト」はトリガーキーの検出にアクセシビリティ権限が必要です。システム設定で有効にしてからご利用ください。";
 "settings.presentationCursor.style" = "ポインタのスタイル";
 "settings.presentationCursor.style.holographicSilver" = "ホログラムシルバー";
 "settings.presentationCursor.style.iceCrystal" = "アイスクリスタル";
@@ -285,21 +285,21 @@
 "settings.presentationCursor.style.obsidian" = "オブシディアン";
 "settings.cleanupHotKey" = "クリーンアップのショートカット";
 "settings.cleanupHotKey.hint" = "ポインタ位置にクリーンアップを開く";
-"settings.cleanupHotKey.registerFailed" = "ショートカットは使用中。別のキーを指定";
+"settings.cleanupHotKey.registerFailed" = "ショートカットは使用中です。別のキーを指定してください。";
 "settings.activation" = "ライセンス認証";
 "settings.activation.owner" = "所有者";
 "settings.activation.features" = "有効な機能";
 "settings.activation.issuedAt" = "発行日";
 "settings.activation.enterCode" = "アクティベーションコードを貼り付け";
 "settings.activation.activate" = "ロック解除";
-"settings.activation.invalid" = "コードが一致しません。もう一度ご確認ください";
+"settings.activation.invalid" = "アクティベーションコードが無効です。内容をご確認のうえ再度お試しください。";
 "settings.activation.hint" = "コードを貼り付けると、すべてのプレミアム機能が使えます";
-"settings.activation.grandfathered" = "ともに歩んで";
-"settings.activation.grandfathered.hint" = "応援ありがとうございます。Pro をずっとお使いいただけます";
+"settings.activation.grandfathered" = "早期サポーター";
+"settings.activation.grandfathered.hint" = "応援ありがとうございます。Pro 機能を永久にご利用いただけます";
 "settings.activation.remove" = "認証を解除";
-"settings.activation.feature.findMouse" = "マウスを探す";
+"settings.activation.feature.findMouse" = "ポインタをハイライト";
 "settings.activation.successToast" = "認証完了！プレミアム機能が使えるようになりました";
-"settings.findMouse.lockedHint" = "認証後、2回押すとマウスを表示、3回押すとプレゼン用ポインタを切り替え";
+"settings.findMouse.lockedHint" = "有効化後に利用可能：2回押すとポインタをハイライト、3回押すとプレゼン用ポインタを切り替え";
 "settings.defaultInputSource" = "デフォルトの入力ソース";
 "settings.defaultInputSource.hint" = "アプリを切り替えたらこの入力ソースに戻す";
 "settings.defaultInputSource.none" = "未選択";
@@ -329,7 +329,7 @@
 "settings.finderMenu.defaultTerminal" = "デフォルトのターミナル";
 "settings.finderMenu.cmuxActions" = "cmux アクションを表示";
 "settings.finderMenu.directories" = "よく使うフォルダ";
-"settings.finderMenu.apps" = "このアプリで開く";
+"settings.finderMenu.apps" = "「このアプリで開く」アプリ";
 "settings.finderMenu.addDirectory" = "フォルダを追加…";
 "settings.finderMenu.addApp" = "アプリを追加…";
 "settings.finderMenu.usingDefaults" = "未設定 — デフォルトを使用";
@@ -414,7 +414,7 @@
 "display.builtIn" = "内蔵ディスプレイ";
 "display.external" = "外部ディスプレイ";
 "settings.displayControl" = "ディスプレイの明るさ";
-"settings.displayControl.hint" = "KVM / ドックは DDC を遮断しやすく、輝度は変えられません。";
+"settings.displayControl.hint" = "外付けディスプレイの明るさを調整します。";
 "display.role.builtIn" = "内蔵";
 "display.role.external" = "外部";
 
@@ -440,7 +440,7 @@
 "window.segment.topRight" = "右上";
 "window.segment.bottomLeft" = "左下";
 "window.segment.bottomRight" = "右下";
-"window.segment.cell" = "セル";
+"window.segment.cell" = "分割";
 "window.list.untitled" = "タイトルなし";
 "window.menu.windows" = "ウインドウ";
 "window.menu.noApp" = "対象アプリがありません";
@@ -456,7 +456,7 @@
 "settings.shortcut.clear" = "ショートカットを消去";
 "settings.snap.behaviour" = "ドラッグ";
 "settings.snap.edgeOwner" = "端スナップ";
-"settings.snap.edgeOwner.hint" = "同じジェスチャはひとつの実装だけが担当します。Light Statsは1/3・四隅・カスタムレイアウトに対応し、macOS標準は半分と四隅のみ、ショートカット配置もシステムコマンドに任せます。";
+"settings.snap.edgeOwner.hint" = "画面端スナップの処理を Light Stats と macOS のどちらに任せるかを選択します。Light Stats は 1/3 分割や四隅、カスタムレイアウトに対応しています。";
 "settings.snap.edgeOwner.lightStats" = "Light Stats";
 "settings.snap.edgeOwner.system" = "macOS標準";
 "settings.snap.edgeSnap" = "画面端へドラッグ";
@@ -467,9 +467,9 @@
 "settings.snap.topEdge.island" = "アイランド";
 "settings.snap.topEdge.maximize" = "最大化";
 "settings.snap.topEdge.off" = "オフ";
-"settings.snap.conflict" = "macOS標準の端タイルがオンなので、同じドラッグが両方で実行されます。";
-"settings.snap.conflict.resolve" = "システム分割をオフ";
-"settings.snap.owner.systemOff" = "macOS標準の端タイルがオフなので、いま端スナップは動きません。";
+"settings.snap.conflict" = "システム標準の画面端タイル機能が有効になっているため、ジェスチャが重複する可能性があります。";
+"settings.snap.conflict.resolve" = "システムの画面端タイルをオフ";
+"settings.snap.owner.systemOff" = "システム標準の画面端タイル機能が無効になっているため、現在端スナップは動作しません。";
 "settings.snap.owner.systemOff.resolve" = "もう一度オン";
 "settings.snap.shortcuts.hint" = "ショートカットをクリックして記録します。修飾キーが 1 つ以上必要で、Esc で取り消せます。";
 "settings.snap.layouts.create" = "レイアウトを作成";
@@ -483,7 +483,7 @@
 "settings.snap.placements.delete" = "位置を削除";
 "settings.snap.newLayoutName" = "名前";
 "settings.snap.grid.hint" = "ドラッグして選択";
-"settings.snap.grid.clear" = "クリア";
+"settings.snap.grid.clear" = "消去";
 "settings.snap.editor.title" = "レイアウト編集";
 "settings.snap.editor.add" = "領域を追加";
 "settings.snap.editor.undo" = "元に戻す";
@@ -503,7 +503,7 @@
 "window.action.quitApplication" = "アプリを終了";
 "settings.snap.defaultLayoutName" = "レイアウト %ld";
 "settings.snap.exclusions.restricted" = "内蔵の除外リストを使う";
-"settings.snap.exclusions.restrictedHint" = "再生アプリ、ゲーム、リモートデスクトップ、Wine のウインドウは動かしません。";
+"settings.snap.exclusions.restrictedHint" = "メディア再生アプリ、ゲーム、リモートデスクトップ、フルスクリーンウインドウは自動的にスキップします。";
 "settings.snap.exclusions.hint" = "除外したアプリでもショートカットは使えますが、ウインドウは動きません。";
 "settings.snap.exclusions.title" = "除外するアプリ";
 "settings.snap.exclusions.addRecommended" = "推奨リストを追加";
@@ -511,7 +511,7 @@
 
 // MARK: - Window management (extended)
 
-"settings.snap.conflict.otherApp" = "別のウインドウ管理アプリが動作しています（%@）。同じドラッグを両方が監視すると結果が競合します。";
+"settings.snap.conflict.otherApp" = "他のウインドウ管理ツールが動作しています（%@）。同一のドラッグジェスチャで競合が発生する可能性があります。";
 
 // MARK: - Window management (permission)
 
@@ -529,8 +529,8 @@
 // MARK: - Dock click
 
 "settings.snap.dock.title" = "Dockクリック";
-"settings.snap.dock.collapse" = "アイコンクリックでウインドウをしまう";
-"settings.snap.dock.collapse.hint" = "最前面のAppのDockアイコンをクリックするとウインドウをすべてしまいます。もう一度クリックで戻します。";
+"settings.snap.dock.collapse" = "アイコンクリックでウインドウを最小化";
+"settings.snap.dock.collapse.hint" = "最前面の App の Dock アイコンをクリックしてウインドウを最小化し、再度クリックで元に戻します。";
 
 // MARK: - Window previews
 
@@ -543,8 +543,8 @@
 "settings.snap.commandTab.hint" = "システムのアプリ切替を、ウインドウ単位の切替に置き換えます。";
 "settings.snap.commandTab.warning" = "オンの間は ⌘Tab を Light Stats が扱い、システムの切替は表示されません。オフにすると元に戻ります。";
 "settings.snap.screenRecording.needed" = "画面収録の権限が必要です";
-"settings.snap.screenRecording.denied" = "使うのは Light Stats 自身のサムネイルだけです。録画や送信は行いません。";
-"settings.snap.screenRecording.requiresRestart" = "システム設定ではオンですが、このプロセスにはまだ反映されていません。Light Stats を再起動すると取得を始めます。";
+"settings.snap.screenRecording.denied" = "ローカルでのウインドウサムネイル生成のみに使用されます。画面の録画や保存、送信は一切行いません。";
+"settings.snap.screenRecording.requiresRestart" = "Light Stats はこの権限をまだ認識していません。Light Stats を再起動すると開始できます。";
 "settings.snap.screenRecording.relaunch" = "今すぐ再起動";
 "settings.permission.relaunchFailed" = "自動で再起動できませんでした。Light Stats を終了して開き直してください。";
 "window.preview.minimized" = "最小化";

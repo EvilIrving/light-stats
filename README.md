@@ -3,7 +3,7 @@
 [![Build](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/build.yml)
 [![Release](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml/badge.svg)](https://github.com/EvilIrving/light-stats/actions/workflows/release.yml)
 
-Light Stats is a native macOS menu bar instrument that shows whether your Mac is **under pressure right now**, not just how full it is. A 0-100 health score and live CPU, GPU, and memory-pressure signals sit in the menu bar; optional developer tools add AI CLI usage, proxy and exit-node context, Finder actions, window placement, a default input source, display brightness, and display keep-awake. The popover can wear one of four visual themes, with Ink Night selected on a clean install, while Settings stays a plain system-white tool panel. Apple Silicon only.
+Light Stats is a native macOS menu bar monitor that surfaces real-time system pressure rather than resource capacity. A 0–100 health score combines CPU saturation, memory pressure, load average, thermal state, and GPU utilization, dropping only when the system encounters bottlenecks. Optional features include AI subscription tracking, proxy and exit-node detection, Finder actions, window management, pointer location, and display controls. Apple Silicon only (macOS 14+).
 
 **English** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -15,11 +15,11 @@ https://github.com/user-attachments/assets/f167325d-e972-42fe-a54f-17a8a7a40834
 
 ## Screenshots
 
-Ink Night, the clean-install default, shown in Overview and Memory:
+Ink Night, the clean-install default, shown in Overview and Cleanup:
 
-| Overview | Memory |
-|----------|--------|
-| <img src="website/screenshots/ink-night/popover-overview.png" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="website/screenshots/ink-night/popover-cleanup.png" width="320" alt="Memory cleanup in the Ink Night theme" /> |
+| Overview | Cleanup |
+|----------|---------|
+| <img src="website/screenshots/ink-night/popover-overview.png" width="320" alt="Overview panel in the Ink Night theme" /> | <img src="website/screenshots/ink-night/popover-cleanup.png" width="320" alt="Cleanup panel in the Ink Night theme" /> |
 
 Themes (Overview):
 
@@ -54,7 +54,7 @@ The app uses native macOS APIs for routine sampling. Monitoring is the read-only
 - Battery status, charge level, cycle count, health, power draw, and temperature when available
 - Disk capacity and aggregate disk I/O speed
 - Network speed, local proxy state, and optional public exit-node information
-- Optional hardware brightness for built-in and external displays (DDC; off by default)
+- Optional hardware brightness for external displays (off by default)
 - Temperature, fan, thermal state, and disk status strip
 - System health score with dimension-level summary and toggles
 - AI subscription usage for 15 providers (quota windows and prepaid balances) when AI monitoring is enabled
@@ -69,7 +69,6 @@ The app uses native macOS APIs for routine sampling. Monitoring is the read-only
   - **Amber**: espresso-black cocktail bar with warm amber light and a cool teal neon accent
   - **Ink Night** (clean-install default): ink-black grain with cool charcoal surfaces
 - Golden Hour, Amber, and Ink Night each provide film-grain and five-step light-dynamics controls (Still, Gentle, Natural, Smooth, Lively)
-- The Settings window stays system white and does not follow the display theme, so configuration remains a calm tool panel
 
 ### Memory Cleanup
 
@@ -94,15 +93,18 @@ The app uses native macOS APIs for routine sampling. Monitoring is the read-only
 
 ### Window Management
 
-- A single **Window Management** switch (off by default) turns everything on together: the menu bar window-control icon, the global snap shortcuts, and the titlebar gestures — there are no separate sub-toggles
-- Placement prefers macOS' own Window-menu tiling, matched by `AXIdentifier` rather than localized title; only thirds, display moves, and minimize use the app's own geometry
-- Menu bar window-control menu with designer-provided action icons
+- A single **Window Management** switch (off by default) turns on the menu bar window-control icon, global snap shortcuts, and titlebar gestures together, with no separate sub-toggles
+- On top of a single Edge Snapping ownership choice between Light Stats and macOS native tiling, the engine provides thirds, corners, custom layouts, and cross-display movement
+- Menu bar window-control menu with custom action icons
 - Left, right, top, and bottom half shortcuts for high-frequency window placement
 - `Control + Option + Return` maximizes the current window; `Control + Option + C` centers it
 - Additional menu actions for corners, thirds, display movement, maximize, center, restore, and minimize
 - Titlebar trackpad swipe: the titlebar band is measured from the window's traffic lights, and a swipe that starts on a control the app itself reacts to is ignored. Hold **Fn** to snap the window under the pointer instead — the way to reach apps that draw their own titlebar
-- Settings also surfaces macOS' own drag-to-edge tiling switches (macOS 15+); the edge-drag switch is turned on once the first time window management is enabled
-- Turning the switch off removes the icon and stops all window-control event taps immediately; Accessibility permission is requested only when you turn it on
+- Top layout island: drag a window to the top screen edge to drop into halves, thirds, quadrants, sixths, ninths, or custom layouts
+- Dock-click collapse: click the frontmost app's Dock icon to minimize its windows, and click again to restore them
+- Drag shake: shake a dragged window to hide all other applications, and shake again to bring them back
+- Edge Snapping ownership has a single selector: Light Stats or macOS native tiling. By default, Light Stats handles placement and turns off macOS's two tiling switches; if either is re-enabled manually, the app detects the conflict and offers a one-click fix
+- Turning the switch off removes the icon and stops all background listeners immediately; Accessibility permission is requested only when enabled
 
 ### Default Input Source
 
@@ -117,13 +119,13 @@ The app uses native macOS APIs for routine sampling. Monitoring is the read-only
 - Traditional mouse wheels are affected by default; trackpads and Magic Mouse can be included explicitly
 - Optional mouse-wheel acceleration disablement with a fixed 1 to 10 lines per wheel step
 - Step multiplier for fine-tuning reversed wheel movement
-- Uses an Accessibility event tap only when reversal or acceleration control is enabled, and rebuilds the tap after wake when needed
+- Background monitoring runs only while reversal or acceleration control is enabled, and restores itself after system wake when needed
 
-### Find My Mouse
+### Locate Pointer & Presentation Mode
 
-- Record the trigger you prefer (left or right modifier, Fn, an F-key, a regular key, or a combination). Double-tap to dim every display and spotlight the pointer; triple-tap to toggle a persistent Presentation Pointer
+- Record the trigger you prefer (left or right modifier, Fn, an F-key, a regular key, or a combination). Double-tap to spotlight the pointer; triple-tap to toggle a persistent Presentation Pointer
 - The spotlight follows the pointer and fades on any click or key press, with a 4-second safety timeout; triple-tap again to hide Presentation Pointer
-- No extra shortcut or separate setting; the listen-only event tap never intercepts or rewrites events, requires Accessibility permission, and is off by default
+- Operates strictly locally without intercepting normal inputs, requires Accessibility permission, and is off by default
 - Pro features: anyone who launches the app during the current gift period keeps Pro for life. After the first paid release, new users unlock Pro with an activation code (Settings → General). The app stays MIT-licensed; codes are verified offline with Ed25519 and make no network call
 
 ### Cleanup Shortcut
@@ -137,7 +139,7 @@ The app uses native macOS APIs for routine sampling. Monitoring is the read-only
 - 60-second keyboard lock for safe keyboard cleaning
 - Full-screen translucent overlay with countdown timer
 - Mouse-only exit button, while keyboard input is suppressed
-- Uses CGEventTap with Accessibility permission
+- Requires Accessibility permission; locks keyboard input for 60 seconds
 
 ### Keep Awake and Launch at Login
 
@@ -212,13 +214,13 @@ Requirements: macOS 14 or later on an Apple Silicon Mac. Intel Macs are not supp
 - AI monitoring for 15 providers, plus separate Claude/Codex warmup switches
 - Vertical and horizontal reversal, optional trackpad and Magic Mouse inclusion, wheel-acceleration control, fixed line count, and step multiplier
 - Default input source after switching apps
-- Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures), plus macOS' own edge-tiling switches
-- Hardware display brightness (DDC)
+- Window management (a single toggle for the menu bar icon, snap shortcuts, and titlebar gestures), Edge Snapping ownership, and conflict resolution
+- Hardware display brightness for external monitors
 - Finder menu, terminal selection, cmux actions, favorite directories, apps, and file templates
 - Health score dimension toggles
 - Language: English, Simplified Chinese, Japanese, Korean, or system language
 
-The Settings sidebar links directly to **General**, **Monitoring**, **Input Devices**, **Window Management**, **AI Usage**, and **Right-Click Menu**. It is navigation-only and does not show runtime status dots. The window uses a fixed system-white canvas with a light sidebar; only the monitoring popover and related product surfaces follow the selected theme.
+The Settings sidebar links directly to **General**, **Monitoring**, **Input Devices**, **Window Management**, **AI Usage**, and **Right-Click Menu**. It is navigation-only and does not show runtime status dots.
 
 ---
 
@@ -283,12 +285,12 @@ Cached or asynchronous collectors, such as exit-node lookup and AI usage provide
 ### Project Layout
 
 - `Light Stats/Models/`: metric data structures, health score, release info, `AppTheme`, snap actions, input-source options
-- `Light Stats/Services/`: system collectors, scoring, update, scroll reversal, native-first window snapping, hotkeys, titlebar gestures, keyboard lock, AI usage, Finder menu, display brightness, diagnostic journal
+- `Light Stats/Services/`: system collectors, scoring, update, scroll reversal, window placement and edge snapping, hotkeys, titlebar gestures, keyboard lock, AI usage, Finder menu, display brightness, diagnostic journal
 - `Light Stats/ViewModels/`: app state, sampling, settings, cleaning mode, update coordination, Finder menu, display control
 - `Light Stats/Views/StatusBar/`: menu bar rendering
 - `Light Stats/Views/Popover/`: floating panel UI and reusable components
 - `Light Stats/Views/Theme/`: theme tokens, mesh backgrounds, grain, picker, appearance presets
-- `Light Stats/Views/Settings/`: settings UI (system-white tool panel)
+- `Light Stats/Views/Settings/`: settings UI
 - `Light Stats/Views/About/`: about window
 - `Light Stats/Views/CleaningMode/`: cleaning mode overlay
 - `Light Stats/Views/Update/`: update progress window

@@ -933,25 +933,26 @@ VStack { ... }.focusable(false)        // Popover root
 
 ## Localization
 
-Four languages: en, zh-Hans, ja, ko. zh-Hans is the source language; en/ja/ko are translations.
+Four languages: en, zh-Hans, ja, ko.
 
 User-facing strings: `String(localized:)` or `NSLocalizedString`. Adding a key means
 updating all four `Resources/<lang>.lproj/Localizable.strings`. Coverage check:
 `./script/validate_localization.sh`. `LocalizationManager` broadcasts language changes so
 views reload.
 
-### Translation principles
+### Localization principles
 
-- **Match the source's conciseness.** A short Chinese term stays a short term in every
-  language. Never expand a term into a sentence or long phrase — e.g. 「右键菜单」is
+- **Native expression over literal translation.** Each language must read naturally according
+  to macOS conventions (Apple HIG terminology) and platform culture. Never perform word-for-word
+  gloss or mechanical translation.
+- **Match the source's conciseness.** A short term stays a short term in every language.
+  Never expand a term into a sentence or long phrase — e.g. 「右键菜单」is
   `Right-Click Menu` / `右クリックメニュー` / `우클릭 메뉴`, not "Finder Right-Click Menu".
-- **No over-translation.** Don't add qualifiers or explanation the Chinese source doesn't
-  carry (e.g. no "(Mouse Only)" suffix on a label). Clarification goes in a separate
+- **No defensive or apologetic engineer copy.** Hints and descriptions explain the feature's value
+  and user action directly. Do not leak internal engineering monologues, complaints about hardware/OS
+  limitations, or implementation mechanics (e.g. event taps, AX APIs).
+- **No over-translation.** Don't add unnecessary qualifiers. Clarification goes in a separate
   `*.hint` / description string, never inside the label itself.
-- **Native-speaker phrasing in every language.** en, ja, ko, and zh-Hans must each read
-  as if written by a native speaker — idiomatic and natural, never translationese. Follow
-  each language's own convention (e.g. 「退出软件」→ "Quit Light Stats"), not a literal
-  word-for-word gloss of the Chinese source.
 
 ## Build
 

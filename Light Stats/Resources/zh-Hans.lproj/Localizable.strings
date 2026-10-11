@@ -9,7 +9,7 @@
 "tab.settings" = "设置";
 
 // MARK: - Settings View
-"settings.statusBar" = "状态栏显示";
+"settings.statusBar" = "菜单栏显示";
 "settings.appearance" = "外观";
 "settings.theme" = "主题";
 "settings.theme.film" = "黄金时刻";
@@ -18,7 +18,7 @@
 "settings.theme.noir" = "墨夜";
 "settings.theme.dataPaper" = "数据纸";
 "settings.theme.film.grain" = "胶片颗粒";
-"settings.theme.film.grain.hint" = "关闭后保留光影，表面更干净";
+"settings.theme.film.grain.hint" = "仅保留动态光影，移除噪点颗粒";
 "settings.theme.film.lightFlow" = "光影动态";
 "settings.theme.film.flow.paused" = "静止";
 "settings.theme.film.flow.gentle" = "舒缓";
@@ -34,9 +34,9 @@
 "settings.fan" = "风扇";
 "settings.battery" = "电池";
 "settings.health" = "健康分";
-"settings.statusBar.separator" = "状态栏隔离栏";
-"settings.statusBar.separator.toggle" = "显示隔离栏";
-"settings.statusBar.separator.width" = "隔离栏宽度";
+"settings.statusBar.separator" = "菜单栏分隔线";
+"settings.statusBar.separator.toggle" = "显示分隔线";
+"settings.statusBar.separator.width" = "分隔线宽度";
 "settings.healthDimensions" = "健康分维度";
 "settings.healthDimensions.hint" = "选择哪些指标参与健康分计算。";
 "settings.healthDimensions.power" = "电源";
@@ -46,7 +46,7 @@
 "settings.units" = "单位设置";
 "settings.temperatureUnit" = "温度单位";
 "settings.language" = "语言";
-"settings.minimumItemAlert" = "状态栏至少需要显示一个系统状态";
+"settings.minimumItemAlert" = "至少需要显示一个菜单栏项目";
 "settings.ok" = "确定";
 
 // MARK: - Refresh Rate
@@ -76,15 +76,15 @@
 "overview.processes" = "进程";
 "overview.diskIO" = "磁盘 I/O";
 "popover.action.settings" = "设置";
-"popover.action.about" = "关于软件";
-"popover.action.quit" = "退出软件";
+"popover.action.about" = "关于 Light Stats";
+"popover.action.quit" = "退出 Light Stats";
 
 // MARK: - Battery
 "battery.title" = "电池";
 "battery.na" = "—";
 "battery.cycles" = "循环次数";
 "battery.health" = "健康度";
-"battery.health.hint" = "点击切换：实测容量比 / 系统报告值";
+"battery.health.hint" = "点击切换：实测容量 / 系统健康度";
 "battery.power" = "功耗";
 "battery.temp" = "温度";
 "battery.timeLeft" = "剩余 %@";
@@ -95,7 +95,7 @@
 "battery.state.acNotCharging" = "已接电源";
 
 // MARK: - Health
-"health.title" = "健康";
+"health.title" = "健康分";
 "health.grade.excellent" = "极佳";
 "health.grade.good" = "良好";
 "health.grade.fair" = "一般";
@@ -125,12 +125,12 @@
 "cleanup.noApps" = "没有运行中的应用";
 "cleanup.backgroundProcesses" = "后台进程";
 "cleanup.pinnedGroup" = "固定分组";
-"cleanup.pinnedGroup.quitAll" = "关闭分组内应用";
+"cleanup.pinnedGroup.quitAll" = "退出分组内所有应用";
 "cleanup.pinnedGroup.remove" = "移出固定分组";
 "cleanup.appNotResponding" = "应用未响应";
-"cleanup.forceQuit" = "强制关闭";
+"cleanup.forceQuit" = "强制退出";
 "cleanup.cancel" = "取消";
-"cleanup.forceQuitMessage" = "应用未响应，是否强制关闭？\n可能导致未保存的数据丢失。";
+"cleanup.forceQuitMessage" = "是否强制退出该应用？\n可能导致未保存的数据丢失。";
 
 // MARK: - Core Topology
 "core.suffix" = "核";
@@ -138,7 +138,7 @@
 // MARK: - Network / Proxy / Exit Node
 "network.proxy.title" = "代理";
 "network.proxy.none" = "未配置";
-"network.proxy.tun" = "检测到隧道";
+"network.proxy.tun" = "检测到 VPN / 隧道";
 "network.exit.title" = "出口节点";
 "network.exit.failed" = "探测失败";
 "network.route.direct" = "直连";
@@ -199,10 +199,10 @@
 "aiUsage.token.saveFailed" = "保存失败";
 "aiUsage.token.clear" = "清除";
 "aiUsage.credentialsMissing.token" = "在设置里粘贴 API token";
-"aiUsage.tokenExpired.token" = "Token 失效或被拒绝";
+"aiUsage.tokenExpired.token" = "令牌失效或被拒绝";
 "aiUsage.noLimit" = "无上限";
 "aiUsage.expandWindows" = "展开全部额度";
-"aiUsage.collapseWindows" = "收起为最紧额度";
+"aiUsage.collapseWindows" = "仅显示主额度";
 
 // MARK: - Accessibility
 "settings.accessibility.section" = "颜色指示器";
@@ -225,10 +225,10 @@
 "settings.performanceRecording.start" = "开始 48 小时";
 "settings.performanceRecording.stop" = "停止";
 "settings.performanceRecording.view" = "查看记录";
-"settings.launchAtLogin" = "开机启动";
+"settings.launchAtLogin" = "登录时启动";
 "settings.update.section" = "软件更新";
 "settings.update.autoCheck" = "自动检查更新";
-"settings.update.autoCheckHint" = "启动及每日检查";
+"settings.update.autoCheckHint" = "启动及每日自动检查";
 "settings.update.manualCheck" = "检查更新";
 "settings.update.manualCheckHint" = "手动检查是否有新版本";
 "settings.update.installVersion" = "更新至 %@";
@@ -237,7 +237,7 @@
 "settings.update.channel.beta" = "尝鲜";
 "settings.update.channel.hint" = "正式版只接收稳定发布；尝鲜会纳入 Beta 预发布版本。";
 "update.available.title" = "Light Stats %@ 可更新";
-"update.available.message" = "已签公证，设置保留。";
+"update.available.message" = "新版本已准备就绪，更新会保留你的所有设置。";
 "update.action.install" = "立即更新";
 "update.action.later" = "稍后";
 "update.action.skip" = "忽略此版本";
@@ -259,30 +259,30 @@
 "update.error.verification" = "安全校验失败，更新已丢弃。";
 
 // MARK: - Cleaning Mode
-"cleaning.action.start" = "擦屏模式";
-"cleaning.overlay.title" = "擦屏模式 — 键盘已锁定";
+"cleaning.action.start" = "清洁模式";
+"cleaning.overlay.title" = "清洁模式 — 键盘已锁定";
 "cleaning.overlay.remaining" = "%d 秒后自动退出";
-"cleaning.overlay.stop" = "结束擦屏模式";
+"cleaning.overlay.stop" = "结束清洁模式";
 "cleaning.permission.title" = "需要辅助功能权限";
 "cleaning.permission.message" = "锁定键盘需要辅助功能权限。请前往系统设置开启后重试。";
 "cleaning.permission.openSettings" = "打开系统设置";
 
 // MARK: - Input Devices
 "settings.inputDevices" = "输入设备";
-"settings.findMouse" = "找到我的鼠标";
-"settings.findMouse.hint" = "双按定位鼠标，三按切换演示指针";
+"settings.findMouse" = "快速定位光标";
+"settings.findMouse.hint" = "双按高亮指针，三按切换演示指针";
 "settings.findMouseTriggerKey" = "触发键";
 "settings.findMouseTriggerKey.left" = "左";
 "settings.findMouseTriggerKey.right" = "右";
 "settings.findMouseTriggerKey.recording" = "请按快捷键";
 "settings.findMouse.permissionTitle" = "需要辅助功能权限";
-"settings.findMouse.permissionMessage" = "「找到我的鼠标」需要辅助功能权限来监听触发键。请在系统设置中开启后使用。";
+"settings.findMouse.permissionMessage" = "「快速定位光标」需要辅助功能权限来监听触发键。请在系统设置中开启后使用。";
 "settings.presentationCursor.style" = "演示指针样式";
-"settings.presentationCursor.style.holographicSilver" = "全息银钻";
-"settings.presentationCursor.style.iceCrystal" = "冰蓝水晶";
-"settings.presentationCursor.style.rosePink" = "玫瑰粉钻";
-"settings.presentationCursor.style.aurora" = "极光彩钻";
-"settings.presentationCursor.style.obsidian" = "曜石黑钻";
+"settings.presentationCursor.style.holographicSilver" = "全息银";
+"settings.presentationCursor.style.iceCrystal" = "冰蓝";
+"settings.presentationCursor.style.rosePink" = "晨粉";
+"settings.presentationCursor.style.aurora" = "极光";
+"settings.presentationCursor.style.obsidian" = "曜石黑";
 "settings.cleanupHotKey" = "清理快捷键";
 "settings.cleanupHotKey.hint" = "在指针处打开清理页";
 "settings.cleanupHotKey.registerFailed" = "快捷键被占用，换一组再试";
@@ -292,14 +292,14 @@
 "settings.activation.issuedAt" = "签发日期";
 "settings.activation.enterCode" = "在此粘贴激活码";
 "settings.activation.activate" = "立即解锁";
-"settings.activation.invalid" = "激活码没对上，再核对一下";
+"settings.activation.invalid" = "激活码无效，请检查后重新输入";
 "settings.activation.hint" = "粘贴激活码，解锁全部高级功能";
-"settings.activation.grandfathered" = "一路同行";
-"settings.activation.grandfathered.hint" = "感谢支持，Pro 已永久赠送";
+"settings.activation.grandfathered" = "早期支持者";
+"settings.activation.grandfathered.hint" = "感谢支持，已为你永久解锁 Pro 功能";
 "settings.activation.remove" = "解除激活";
-"settings.activation.feature.findMouse" = "找到我的鼠标";
+"settings.activation.feature.findMouse" = "快速定位光标";
 "settings.activation.successToast" = "激活成功，高级功能已解锁！";
-"settings.findMouse.lockedHint" = "激活后可用：双按找到鼠标，三按切换演示指针";
+"settings.findMouse.lockedHint" = "激活后可用：双按高亮指针，三按切换演示指针";
 "settings.defaultInputSource" = "默认输入法";
 "settings.defaultInputSource.hint" = "切换 App 后自动回到这个输入法";
 "settings.defaultInputSource.none" = "未选择";
@@ -313,7 +313,7 @@
 "settings.scrollReverse.on" = "滚动反转：开";
 "settings.scrollReverse.off" = "滚动反转：关";
 "settings.scrollReverse.permissionTitle" = "需要辅助功能权限";
-"settings.scrollReverse.permissionMessage" = "滚动方向与加速度控制需要辅助功能权限来拦截滚动事件。请前往系统设置开启后使用。";
+"settings.scrollReverse.permissionMessage" = "滚动方向与加速度控制需要辅助功能权限。请前往系统设置开启后使用。";
 "settings.windowControls" = "窗口控制";
 "settings.windowManagement" = "窗口管理";
 "settings.windowManagement.description" = "吸附快捷键、拖到边缘吸附、悬浮布局岛，以及菜单栏窗口列表。";
@@ -345,7 +345,7 @@
 "findermenu.menu.openTerminalHere" = "在此打开终端";
 "findermenu.menu.newFile" = "新建文件";
 "findermenu.menu.moveTo" = "移动到";
-"findermenu.menu.copyTo" = "复制到";
+"findermenu.menu.copyTo" = "拷贝到";
 "findermenu.menu.openWithApp" = "打开方式";
 "findermenu.menu.toggleHidden" = "隐藏/取消隐藏选中项";
 "findermenu.menu.openDirectory" = "常用目录";
@@ -358,7 +358,7 @@
 "findermenu.toast.openTerminalFailed" = "无法打开所选终端，请在设置中选择其他终端。";
 "findermenu.toast.newFileFailed" = "无法在此处新建文件，请检查文件夹权限。";
 "findermenu.toast.moveFailed" = "部分项目移动失败。";
-"findermenu.toast.copyFailed" = "部分项目复制失败。";
+"findermenu.toast.copyFailed" = "部分项目拷贝失败。";
 "findermenu.toast.openWithFailed" = "无法用该 App 打开所选项目。";
 "findermenu.toast.toggleHiddenFailed" = "部分项目无法切换隐藏状态。";
 "findermenu.toast.cmuxFailed" = "无法调用 cmux 服务，请确认已安装 cmux 并启用它的服务。";
@@ -373,7 +373,7 @@
 "settings.finderMenu.addItem" = "添加";
 "settings.finderMenu.removeItem" = "移除";
 "findermenu.choose.move" = "移动到这里";
-"findermenu.choose.copy" = "复制到这里";
+"findermenu.choose.copy" = "拷贝到这里";
 "findermenu.choose.destination" = "选择目标文件夹";
 "findermenu.toast.transferPartial" = "已完成 %ld 项，%ld 项失败。请检查目标位置和文件权限。";
 "findermenu.toast.openDirectoryFailed" = "无法打开该目录，请确认磁盘已连接、目录仍存在。";
@@ -388,7 +388,7 @@
 "settings.section.general" = "通用";
 "settings.section.monitoring" = "监控";
 "settings.windowControl.permissionTitle" = "需要辅助功能权限";
-"settings.windowControl.permissionMessage" = "窗口控制需要辅助功能权限来移动和调整其他 App 的窗口。请前往系统设置开启后使用分屏快捷键和标题栏滑动分屏。";
+"settings.windowControl.permissionMessage" = "窗口控制需要辅助功能权限来移动和调整其他 App 的窗口。请前往系统设置开启后使用吸附快捷键和标题栏滑动吸附。";
 "window.action.left" = "左";
 "window.action.right" = "右";
 "window.action.top" = "上";
@@ -414,7 +414,7 @@
 "display.builtIn" = "内建显示器";
 "display.external" = "外接显示器";
 "settings.displayControl" = "显示器亮度";
-"settings.displayControl.hint" = "KVM / 扩展坞常拦截 DDC，无法调硬件亮度。";
+"settings.displayControl.hint" = "调节外接显示器的亮度。";
 "display.role.builtIn" = "内建屏";
 "display.role.external" = "外接屏";
 
@@ -434,13 +434,13 @@
 "window.segment.firstThird" = "前 1/3";
 "window.segment.middleThird" = "中 1/3";
 "window.segment.lastThird" = "后 1/3";
-"window.segment.twoThirds" = "三分之二";
-"window.segment.oneThird" = "三分之一";
+"window.segment.twoThirds" = "2/3";
+"window.segment.oneThird" = "1/3";
 "window.segment.topLeft" = "左上";
 "window.segment.topRight" = "右上";
 "window.segment.bottomLeft" = "左下";
 "window.segment.bottomRight" = "右下";
-"window.segment.cell" = "格子";
+"window.segment.cell" = "区域";
 "window.list.untitled" = "无标题";
 "window.menu.windows" = "窗口";
 "window.menu.noApp" = "没有目标 App";
@@ -456,7 +456,7 @@
 "settings.shortcut.clear" = "清除快捷键";
 "settings.snap.behaviour" = "拖动";
 "settings.snap.edgeOwner" = "边缘吸附";
-"settings.snap.edgeOwner.hint" = "同一个手势只由一个实现负责。Light Stats 支持三分、四角和自定义布局；macOS 自带只有对半与四角，快捷键摆放也交给系统命令。";
+"settings.snap.edgeOwner.hint" = "选择由 Light Stats 还是系统处理边缘吸附。Light Stats 额外支持三等分、四角及自定义布局。";
 "settings.snap.edgeOwner.lightStats" = "Light Stats";
 "settings.snap.edgeOwner.system" = "macOS 自带";
 "settings.snap.edgeSnap" = "拖到屏幕边缘";
@@ -467,9 +467,9 @@
 "settings.snap.topEdge.island" = "悬浮岛";
 "settings.snap.topEdge.maximize" = "最大化";
 "settings.snap.topEdge.off" = "关闭";
-"settings.snap.conflict" = "macOS 自带的边缘平铺被打开了，同一个拖拽会两边各执行一次。";
+"settings.snap.conflict" = "检测到系统自带的边缘平铺已开启，可能导致手势重复触发。";
 "settings.snap.conflict.resolve" = "关闭系统平铺";
-"settings.snap.owner.systemOff" = "macOS 自带的边缘平铺被关掉了，边缘吸附现在不会生效。";
+"settings.snap.owner.systemOff" = "系统自带的边缘平铺已被关闭，边缘吸附当前暂未生效。";
 "settings.snap.owner.systemOff.resolve" = "重新打开";
 "settings.snap.shortcuts.hint" = "点按快捷键即可录制，必须包含至少一个修饰键；Esc 取消。";
 "settings.snap.layouts.create" = "创建布局";
@@ -502,8 +502,8 @@
 "window.action.closeWindow" = "关闭窗口";
 "window.action.quitApplication" = "退出应用";
 "settings.snap.defaultLayoutName" = "布局 %ld";
-"settings.snap.exclusions.restricted" = "遵循内置风险清单";
-"settings.snap.exclusions.restrictedHint" = "不移动播放器、游戏、远程桌面和 Wine 应用的窗口。";
+"settings.snap.exclusions.restricted" = "遵循内置清单";
+"settings.snap.exclusions.restrictedHint" = "自动跳过媒体播放器、游戏、远程桌面及全屏窗口。";
 "settings.snap.exclusions.hint" = "被排除的 App 仍可使用快捷键，但其窗口不会被移动。";
 "settings.snap.exclusions.title" = "排除的 App";
 "settings.snap.exclusions.addRecommended" = "添加推荐清单";
@@ -511,7 +511,7 @@
 
 // MARK: - Window management (extended)
 
-"settings.snap.conflict.otherApp" = "检测到另一个窗口管理工具正在运行（%@）。两个工具同时监听同一个拖拽手势会互相抢夺结果。";
+"settings.snap.conflict.otherApp" = "检测到其他窗口管理工具正在运行（%@），同时监听同一拖拽手势可能会产生冲突。";
 
 // MARK: - Window management (permission)
 
@@ -524,13 +524,13 @@
 "window.visibility.hideAll" = "隐藏全部";
 "window.visibility.restore" = "恢复隐藏";
 "settings.snap.shakeToHide" = "摇动窗口隐藏其他";
-"settings.snap.shakeToHide.hint" = "拖动窗口时左右摇动，即可隐藏其他所有 App；再摇一次即可恢复。";
+"settings.snap.shakeToHide.hint" = "拖动窗口时左右晃动，即可隐藏其他所有 App；再次晃动即可恢复。";
 
 // MARK: - Dock click
 
 "settings.snap.dock.title" = "Dock 点击";
 "settings.snap.dock.collapse" = "点击图标收起窗口";
-"settings.snap.dock.collapse.hint" = "点最前面 App 的 Dock 图标，把它的窗口全部收起来；再点一次放回来。";
+"settings.snap.dock.collapse.hint" = "点击当前活跃 App 的 Dock 图标最小化其所有窗口，再次点击恢复。";
 
 // MARK: - Window previews
 
@@ -543,8 +543,8 @@
 "settings.snap.commandTab.hint" = "用窗口级切换器替换系统切换器。";
 "settings.snap.commandTab.warning" = "开启期间 ⌘Tab 由 Light Stats 接管，系统切换器不再出现。关闭后立即恢复系统行为。";
 "settings.snap.screenRecording.needed" = "需要屏幕录制权限";
-"settings.snap.screenRecording.denied" = "只有 Light Stats 自己的缩略图会用到它，不会录制或上传任何内容。";
-"settings.snap.screenRecording.requiresRestart" = "系统设置里已打开，但当前进程还没生效。重启 Light Stats 后即可开始截取。";
+"settings.snap.screenRecording.denied" = "仅用于在本地生成窗口缩略图，绝不录制、存储或上传屏幕内容。";
+"settings.snap.screenRecording.requiresRestart" = "Light Stats 还没有读到这个权限。重启 Light Stats 即可开始。";
 "settings.snap.screenRecording.relaunch" = "立即重启";
 "settings.permission.relaunchFailed" = "无法自动重启，请手动退出并重新打开 Light Stats。";
 "window.preview.minimized" = "已最小化";

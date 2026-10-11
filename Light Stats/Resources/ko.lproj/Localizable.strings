@@ -34,7 +34,7 @@
 "settings.fan" = "팬";
 "settings.battery" = "배터리";
 "settings.health" = "건강도";
-"settings.statusBar.separator" = "상태 표시줄 구분선";
+"settings.statusBar.separator" = "메뉴 막대 구분선";
 "settings.statusBar.separator.toggle" = "구분선 표시";
 "settings.statusBar.separator.width" = "구분선 너비";
 "settings.healthDimensions" = "건강도 평가 항목";
@@ -130,7 +130,7 @@
 "cleanup.appNotResponding" = "앱이 응답하지 않음";
 "cleanup.forceQuit" = "강제 종료";
 "cleanup.cancel" = "취소";
-"cleanup.forceQuitMessage" = "앱이 응답하지 않습니다. 강제 종료할까요?\n저장하지 않은 데이터가 손실될 수 있습니다.";
+"cleanup.forceQuitMessage" = "강제 종료할까요?\n저장하지 않은 데이터가 손실될 수 있습니다.";
 
 // MARK: - Core Topology
 "core.suffix" = " 코어";
@@ -147,7 +147,7 @@
 
 // MARK: - Settings: Exit Node
 "settings.exitNode.section" = "출구 노드";
-"settings.exitNode.toggle" = "공개 IP 표시";
+"settings.exitNode.toggle" = "출구 노드 표시";
 "settings.exitNode.toggleHint" = "새로 고침마다 공개 IP를 조회합니다.";
 "settings.exitNode.provider" = "공급자";
 "settings.exitNode.privacyTitle" = "활성화하기 전에";
@@ -158,7 +158,7 @@
 // MARK: - AI Usage
 "settings.aiUsage" = "AI 사용량";
 "aiUsage.title" = "AI 사용량";
-"aiUsage.window.quota" = "할당";
+"aiUsage.window.quota" = "쿼터";
 "aiUsage.window.usage" = "사용량";
 "aiUsage.window.overage" = "초과";
 "aiUsage.window.month" = "월";
@@ -197,15 +197,15 @@
 "aiUsage.token.copied" = "복사됨";
 "aiUsage.token.save" = "저장";
 "aiUsage.token.saveFailed" = "저장하지 못했습니다";
-"aiUsage.token.clear" = "삭제";
+"aiUsage.token.clear" = "지우기";
 "aiUsage.credentialsMissing.token" = "설정에 API token을 붙여넣으세요";
 "aiUsage.tokenExpired.token" = "토큰이 만료되었거나 거부됨";
 "aiUsage.noLimit" = "제한 없음";
-"aiUsage.expandWindows" = "모든 할당 표시";
-"aiUsage.collapseWindows" = "가장 부족한 할당만 표시";
+"aiUsage.expandWindows" = "모든 쿼터 표시";
+"aiUsage.collapseWindows" = "주요 쿼터만 표시";
 
 // MARK: - Accessibility
-"settings.accessibility.section" = "색상 표시";
+"settings.accessibility.section" = "색상 표시기";
 "settings.colorIndicator" = "색상 표시기";
 "settings.accessibility.colorIndicator.hint" = "건강도 수준을 색상 점으로 표시합니다. 끄면 낮음 / 중간 / 높음 텍스트를 사용합니다.";
 
@@ -237,7 +237,7 @@
 "settings.update.channel.beta" = "베타";
 "settings.update.channel.hint" = "정식은 안정 버전만, 베타는 프리릴리스도 포함합니다.";
 "update.available.title" = "Light Stats %@ 사용 가능";
-"update.available.message" = "서명 및 공증된 업데이트입니다. 설정은 유지됩니다.";
+"update.available.message" = "새 버전을 사용할 수 있습니다. 기존 설정은 유지됩니다.";
 "update.action.install" = "지금 업데이트";
 "update.action.later" = "나중에";
 "update.action.skip" = "이 버전 건너뛰기";
@@ -246,7 +246,7 @@
 "update.upToDate.title" = "최신 상태";
 "update.upToDate.message" = "최신 버전을 사용하고 있습니다.";
 "update.progress.downloading" = "다운로드 중…";
-"update.progress.installing" = "확인 중…";
+"update.progress.installing" = "검증 중…";
 "update.error.title" = "업데이트 실패";
 "update.error.network" = "업데이트 서버에 연결할 수 없습니다. 네트워크를 확인하세요.";
 "update.error.noRelease" = "릴리스를 찾을 수 없습니다.";
@@ -269,14 +269,14 @@
 
 // MARK: - Input Devices
 "settings.inputDevices" = "입력 장치";
-"settings.findMouse" = "마우스 찾기";
-"settings.findMouse.hint" = "두 번 누르면 마우스 찾기, 세 번 누르면 프레젠테이션 포인터 전환";
+"settings.findMouse" = "포인터 위치 찾기";
+"settings.findMouse.hint" = "두 번 누르면 포인터 강조, 세 번 누르면 프레젠테이션 포인터 전환";
 "settings.findMouseTriggerKey" = "트리거 키";
 "settings.findMouseTriggerKey.left" = "왼쪽";
 "settings.findMouseTriggerKey.right" = "오른쪽";
 "settings.findMouseTriggerKey.recording" = "단축키 입력";
 "settings.findMouse.permissionTitle" = "손쉬운 사용 권한 필요";
-"settings.findMouse.permissionMessage" = "마우스 찾기는 트리거 키 감지를 위해 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
+"settings.findMouse.permissionMessage" = "「포인터 위치 찾기」는 트리거 키 감지를 위해 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 활성화한 후 사용하세요.";
 "settings.presentationCursor.style" = "포인터 스타일";
 "settings.presentationCursor.style.holographicSilver" = "홀로그램 실버";
 "settings.presentationCursor.style.iceCrystal" = "아이스 크리스탈";
@@ -292,14 +292,14 @@
 "settings.activation.issuedAt" = "발급일";
 "settings.activation.enterCode" = "활성화 코드를 붙여넣으세요";
 "settings.activation.activate" = "잠금 해제";
-"settings.activation.invalid" = "코드가 맞지 않아요. 다시 확인해 주세요";
-"settings.activation.hint" = "코드를 붙여넣으면 모든 프리미엄 기능을 이용할 수 있어요";
-"settings.activation.grandfathered" = "함께한 시간";
-"settings.activation.grandfathered.hint" = "응원해 주셔서 감사합니다. Pro를 평생 이용하실 수 있어요";
+"settings.activation.invalid" = "활성화 코드가 올바르지 않습니다. 확인 후 다시 시도해 주세요.";
+"settings.activation.hint" = "코드를 붙여넣으면 모든 프리미엄 기능을 이용할 수 있습니다";
+"settings.activation.grandfathered" = "초기 서포터";
+"settings.activation.grandfathered.hint" = "초기부터 함께해 주셔서 감사합니다. Pro 기능이 평생 잠금 해제되었습니다.";
 "settings.activation.remove" = "활성화 해제";
-"settings.activation.feature.findMouse" = "마우스 찾기";
-"settings.activation.successToast" = "활성화 완료! 모든 프리미엄 기능을 이용할 수 있어요";
-"settings.findMouse.lockedHint" = "활성화 후 두 번 누르면 마우스 찾기, 세 번 누르면 프레젠테이션 포인터 전환";
+"settings.activation.feature.findMouse" = "포인터 위치 찾기";
+"settings.activation.successToast" = "활성화 완료! 모든 프리미엄 기능을 이용할 수 있습니다";
+"settings.findMouse.lockedHint" = "활성화 후 사용 가능: 두 번 누르면 포인터 강조, 세 번 누르면 프레젠테이션 포인터 전환";
 "settings.defaultInputSource" = "기본 입력 소스";
 "settings.defaultInputSource.hint" = "앱을 전환하면 이 입력 소스로 돌아갑니다";
 "settings.defaultInputSource.none" = "선택 안 함";
@@ -407,14 +407,14 @@
 "window.action.maximize" = "최대화";
 "window.action.center" = "가운데";
 "window.action.restore" = "복원";
-"settings.keepAwake" = "화면 켜짐 유지";
+"settings.keepAwake" = "잠자기 방지";
 "display.section" = "디스플레이";
 "display.brightness" = "밝기";
 "display.unsupported" = "지원 안 함";
 "display.builtIn" = "내장 디스플레이";
 "display.external" = "외장 디스플레이";
 "settings.displayControl" = "디스플레이 밝기";
-"settings.displayControl.hint" = "KVM/독은 DDC를 막는 경우가 많아 밝기를 조절할 수 없습니다.";
+"settings.displayControl.hint" = "외장 디스플레이의 밝기를 조절합니다.";
 "display.role.builtIn" = "내장";
 "display.role.external" = "외장";
 
@@ -455,8 +455,8 @@
 "settings.shortcut.none" = "설정 안 됨";
 "settings.shortcut.clear" = "단축키 지우기";
 "settings.snap.behaviour" = "드래그";
-"settings.snap.edgeOwner" = "가장자리 붙이기";
-"settings.snap.edgeOwner.hint" = "같은 동작의 구현은 항상 하나입니다. Light Stats는 3분할·사분면·사용자 레이아웃을 지원하고, macOS 기본은 반쪽과 사분면만 지원하며 명령이 있는 단축키 배치도 맡습니다.";
+"settings.snap.edgeOwner" = "가장자리 스냅";
+"settings.snap.edgeOwner.hint" = "화면 가장자리 스냅을 Light Stats와 macOS 중 어디서 처리할지 선택합니다. Light Stats는 3분할, 사분면 및 사용자 지정 레이아웃을 추가로 지원합니다.";
 "settings.snap.edgeOwner.lightStats" = "Light Stats";
 "settings.snap.edgeOwner.system" = "macOS 기본";
 "settings.snap.edgeSnap" = "화면 가장자리로 드래그";
@@ -467,15 +467,15 @@
 "settings.snap.topEdge.island" = "아일랜드";
 "settings.snap.topEdge.maximize" = "최대화";
 "settings.snap.topEdge.off" = "끔";
-"settings.snap.conflict" = "macOS 기본 타일링이 켜져 있어 같은 드래그가 양쪽에서 실행됩니다.";
+"settings.snap.conflict" = "시스템 기본 가장자리 타일링이 켜져 있어 제스처가 중복 실행될 수 있습니다.";
 "settings.snap.conflict.resolve" = "시스템 타일링 끄기";
-"settings.snap.owner.systemOff" = "macOS 기본 타일링이 꺼져 있어 지금은 가장자리 붙이기가 동작하지 않습니다.";
+"settings.snap.owner.systemOff" = "시스템 기본 가장자리 타일링이 꺼져 있어 현재 가장자리 스냅이 동작하지 않습니다.";
 "settings.snap.owner.systemOff.resolve" = "다시 켜기";
 "settings.snap.shortcuts.hint" = "단축키를 클릭해 기록합니다. 수정 키가 하나 이상 필요하며 Esc로 취소합니다.";
 "settings.snap.layouts.create" = "레이아웃 만들기";
 "settings.snap.layouts.createHint" = "그리드에서 끌어 영역을 그린 뒤 이름을 붙이면 아래 목록에 추가되어 아일랜드와 단축키에서 쓸 수 있습니다.";
 "settings.snap.layouts.title" = "레이아웃";
-"settings.snap.layouts.segments" = "%ld개 영역";
+"settings.snap.layouts.segments" = "%ld개 칸";
 "settings.snap.layouts.delete" = "레이아웃 삭제";
 "settings.snap.layouts.createAction" = "만들기";
 "settings.snap.placements.title" = "저장한 위치";
@@ -503,7 +503,7 @@
 "window.action.quitApplication" = "앱 종료";
 "settings.snap.defaultLayoutName" = "레이아웃 %ld";
 "settings.snap.exclusions.restricted" = "내장 제외 목록 사용";
-"settings.snap.exclusions.restrictedHint" = "재생 앱, 게임, 원격 데스크톱, Wine 창은 움직이지 않습니다.";
+"settings.snap.exclusions.restrictedHint" = "미디어 재생 앱, 게임, 원격 데스크톱 및 전체 화면 윈도우는 자동으로 건너뜁니다.";
 "settings.snap.exclusions.hint" = "제외한 앱도 단축키는 쓸 수 있지만 창은 움직이지 않습니다.";
 "settings.snap.exclusions.title" = "제외할 앱";
 "settings.snap.exclusions.addRecommended" = "권장 목록 추가";
@@ -511,7 +511,7 @@
 
 // MARK: - Window management (extended)
 
-"settings.snap.conflict.otherApp" = "다른 윈도우 관리 앱이 실행 중입니다(%@). 같은 드래그를 둘 다 감시하면 결과가 충돌합니다.";
+"settings.snap.conflict.otherApp" = "다른 윈도우 관리 앱이 실행 중입니다(%@). 동일한 드래그 제스처를 동시에 감지하면 충돌이 발생할 수 있습니다.";
 
 // MARK: - Window management (permission)
 
@@ -529,8 +529,8 @@
 // MARK: - Dock click
 
 "settings.snap.dock.title" = "Dock 클릭";
-"settings.snap.dock.collapse" = "아이콘 클릭으로 윈도우 접기";
-"settings.snap.dock.collapse.hint" = "맨 앞 앱의 Dock 아이콘을 클릭하면 윈도우를 모두 접습니다. 다시 클릭하면 되돌립니다.";
+"settings.snap.dock.collapse" = "아이콘 클릭으로 윈도우 최소화";
+"settings.snap.dock.collapse.hint" = "활성 앱의 Dock 아이콘을 클릭하여 모든 윈도우를 최소화하고, 다시 클릭하여 복원합니다.";
 
 // MARK: - Window previews
 
@@ -543,8 +543,8 @@
 "settings.snap.commandTab.hint" = "시스템 앱 전환기를 윈도우 단위 전환기로 바꿉니다.";
 "settings.snap.commandTab.warning" = "켜져 있는 동안 ⌘Tab은 Light Stats가 처리하며 시스템 전환기는 나타나지 않습니다. 끄면 즉시 원래대로 돌아갑니다.";
 "settings.snap.screenRecording.needed" = "화면 기록 권한 필요";
-"settings.snap.screenRecording.denied" = "Light Stats 자체 썸네일에만 사용합니다. 녹화하거나 전송하지 않습니다.";
-"settings.snap.screenRecording.requiresRestart" = "시스템 설정에서는 켜져 있지만 이 프로세스에는 아직 반영되지 않았습니다. Light Stats를 재시작하면 캡처를 시작합니다.";
+"settings.snap.screenRecording.denied" = "로컬 윈도우 썸네일 생성에만 사용됩니다. 화면 내용을 녹화, 저장 또는 업로드하지 않습니다.";
+"settings.snap.screenRecording.requiresRestart" = "Light Stats가 이 권한을 아직 인식하지 못했습니다. Light Stats를 재시작하면 캡처를 시작합니다.";
 "settings.snap.screenRecording.relaunch" = "지금 재시작";
 "settings.permission.relaunchFailed" = "자동으로 재시작하지 못했습니다. Light Stats를 종료한 뒤 다시 열어 주세요.";
 "window.preview.minimized" = "최소화됨";

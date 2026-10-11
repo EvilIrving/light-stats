@@ -63,9 +63,11 @@ final class AIUsageNewProviderParsingTests: XCTestCase {
     }
 
     func testGrokLedgerMonthlyPercentFillsMissingCreditsPercent() throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-15T00:00:00Z"))
         let snapshot = try GrokUsageService.parseBillingJSON(
             fixture("grok_billing_period_only.json"),
-            ledger: fixture("grok_billing_monthly.json")
+            ledger: fixture("grok_billing_monthly.json"),
+            now: now
         )
         XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 17, accuracy: 0.001)
         XCTAssertEqual(snapshot.windows[0].label, UsageWindowLabel.month.key)

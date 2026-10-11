@@ -245,7 +245,7 @@
         "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://download.onecat.dev/stable",
-        "softwareVersion": "1.9.1",
+        "softwareVersion": "1.9.7",
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -282,10 +282,10 @@
           },
           {
             "@type": "Question",
-            "name": "How do Find My Mouse and Presentation Pointer work?",
+            "name": "How do Locate Pointer and Presentation Pointer work?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled."
+              "text": "Enable Locate Pointer and record the trigger key you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent presentation halo. The tool is off by default and requests Accessibility access only when enabled."
             }
           },
           {
@@ -293,7 +293,7 @@
             "name": "What visual themes are available?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Light Stats includes Classic, Golden Hour, Amber, and Ink Night. Ink Night is selected on a clean install. Settings stays a system-white tool panel."
+              "text": "Light Stats includes Classic, Golden Hour, Amber, and Ink Night. Ink Night is selected on a clean install."
             }
           }
         ]
@@ -349,7 +349,7 @@
             <div>
               <div class="eyebrow reveal">Free · Open source · macOS 14+ · Apple Silicon</div>
               <h1 class="reveal d1">Know if your Mac is <em>actually</em> struggling.</h1>
-              <p class="lede reveal d2">Live pressure signals folded into one health score, with optional AI, network, and Finder context.</p>
+              <p class="lede reveal d2">A 0–100 health score computed from CPU, memory pressure, thermals, and GPU. The score drops only when the Mac is under real pressure.</p>
               <div class="actions reveal d3">
                 <div class="seg">
                   <a href="https://download.onecat.dev/stable">
@@ -376,7 +376,7 @@
           <div class="shots">
             <div class="shots-head">
               <h2>The panel</h2>
-              <span class="eyebrow count">Ink Night · Overview · Memory</span>
+              <span class="eyebrow count">Ink Night · Overview · Cleanup</span>
             </div>
             <div class="shots-grid">
               <figure>
@@ -384,8 +384,8 @@
                 <figcaption>Overview · Ink Night</figcaption>
               </figure>
               <figure>
-                <img src="screenshots/ink-night/popover-cleanup.png" width="385" height="816" alt="Light Stats Memory tab in the Ink Night theme, showing a sample app list sorted by memory footprint.">
-                <figcaption>Memory · Ink Night</figcaption>
+                <img src="screenshots/ink-night/popover-cleanup.png" width="385" height="816" alt="Light Stats Cleanup tab in the Ink Night theme, showing a sample app list sorted by memory footprint.">
+                <figcaption>Cleanup · Ink Night</figcaption>
               </figure>
             </div>
           </div>
@@ -420,7 +420,7 @@
           <div class="readout">
             <div class="readout-head">
               <h2>What it reads</h2>
-              <span class="eyebrow count">11 signals · 1 score</span>
+              <span class="eyebrow count">16 readings · 1 score</span>
             </div>
             <div class="specs">
               <div class="spec">
@@ -477,18 +477,17 @@
             <div class="feature">
               <div class="idx">01 / Health</div>
               <div>
-                <h3>One number for "is it sluggish right now"</h3>
-                <p>The 0–100 score reads live pressure, not capacity. CPU saturation, memory pressure and swap, load average per core, temperature and thermal throttling, GPU. A Mac with 30 GB used and many apps open stays green if it isn't actually struggling. The score only drops when the system is.</p>
-                <p>A single saturated dimension caps the total, so the number tracks the bottleneck you feel, not a flattering average.</p>
+                <h3>One number for system pressure</h3>
+                <p>The 0–100 score evaluates real-time pressure rather than resource capacity: CPU saturation, memory pressure and swap rate, per-core load average, temperature and thermal throttling, and GPU utilization. A Mac using 30 GB of RAM remains green when pressure is normal; the score drops only when contention or throttling occurs.</p>
+                <p>A single saturated dimension caps the total score, tracking the active bottleneck rather than an unweighted average.</p>
               </div>
             </div>
 
             <div class="feature">
               <div class="idx">02 / Network</div>
               <div>
-                <span class="tag">Differentiator</span>
                 <h3>Network truth, not just speed</h3>
-                <p>Throughput is the easy part. Light Stats also detects whether you are behind a proxy and, when you opt in, which exit node you are actually leaving through, with its geo-location and AS number.</p>
+                <p>Beyond live bandwidth, Light Stats detects proxy routing and optional exit nodes so you always know how your traffic is flowing.</p>
                 <p>Exit lookup is off by default, and the first time you enable it the app explains exactly what it sends. See the <a href="#privacy">privacy policy</a> for every optional network behavior.</p>
               </div>
             </div>
@@ -497,7 +496,7 @@
               <div class="idx">03 / Agents</div>
               <div>
                 <h3>AI subscription usage for 15 providers</h3>
-                <p>When enabled, Light Stats reads credentials stored locally by each provider's CLI, or an API token you paste in Settings, to request current quota windows and prepaid balances from that provider. Multi-window rows collapse to the tightest quota; balances never render as progress bars. Optional Claude and Codex warmup can send a minimal headless message after a rolling window resets; it has a separate switch and is off by default.</p>
+                <p>When enabled, Light Stats reads credentials stored locally by each provider's CLI, or an API token you paste in Settings, to request current quota windows and prepaid balances. Multi-window rows display primary quotas clearly. Optional Claude and Codex warmup can send a minimal headless message after a rolling window resets; it has a separate switch and is off by default.</p>
               </div>
             </div>
 
@@ -510,27 +509,36 @@
             </div>
 
             <div class="feature">
-              <div class="idx">05 / Pointer</div>
+              <div class="idx">05 / Windows</div>
+              <div>
+                <h3>Snapping you can aim at</h3>
+                <p>On top of a single Edge Snapping ownership choice between Light Stats and macOS native tiling, the engine provides thirds, corners, custom layouts, and cross-display movement. Drag a window to a screen edge, or drop it into the top layout island for halves, thirds, quadrants, sixths, ninths, and stacks. Every action supports global shortcuts, and holding Fn targets the window under the pointer.</p>
+                <p>When Light Stats owns edge snapping, it turns off the system's conflicting tiling toggles and reports conflicts if they are re-enabled. Dock-click collapse puts an active app's windows away and restores them on the next click, while shaking a dragged window hides other applications. Window management is off by default and runs no background monitors until enabled.</p>
+              </div>
+            </div>
+
+            <div class="feature">
+              <div class="idx">06 / Pointer</div>
               <div>
                 <h3>Find the pointer, then keep it visible</h3>
                 <p>Record the trigger you prefer: keep the default left Control, choose a left or right modifier, use Fn or an F-key, press a regular key, or record a key combination. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through presentation halo.</p>
-                <p>Find My Mouse is off by default. Its Accessibility event tap starts only after you enable the feature and stops when you turn it off.</p>
+                <p>Locate Pointer is off by default, requests Accessibility access only when enabled, and leaves no background activity when turned off.</p>
               </div>
             </div>
 
             <div class="feature">
-              <div class="idx">06 / Defaults</div>
+              <div class="idx">07 / Defaults</div>
               <div>
                 <h3>Nothing extra runs until you ask</h3>
-                <p>Monitoring stays read-only. AI requests, exit-node lookup, update checks, the Beta update channel, Finder actions, Find My Mouse, window and scroll event taps, default input source, display brightness, and display keep-awake are all opt-in.</p>
+                <p>Monitoring stays read-only. AI requests, exit-node lookup, update checks, the Beta update channel, Finder actions, Locate Pointer, window and scroll gestures, default input source, display brightness, and display keep-awake are all opt-in.</p>
               </div>
             </div>
 
             <div class="feature">
-              <div class="idx">07 / Appearance</div>
+              <div class="idx">08 / Appearance</div>
               <div>
-                <h3>Four looks for the instrument, not the settings sheet</h3>
-                <p><strong>Ink Night</strong> is selected on a clean install. <strong>Classic</strong> uses system materials, <strong>Golden Hour</strong> uses warm brass over amber and coral light, <strong>Amber</strong> uses warm bar lamplight with a teal neon accent, and <strong>Ink Night</strong> uses cool charcoal grain. The three dynamic themes provide grain and light-dynamics controls. Settings stays a plain white tool panel.</p>
+                <h3>Four tailored looks for the dashboard</h3>
+                <p><strong>Ink Night</strong> is selected on a clean install. <strong>Classic</strong> uses system materials, <strong>Golden Hour</strong> uses warm brass over amber and coral light, <strong>Amber</strong> uses warm bar lamplight with a teal neon accent, and <strong>Ink Night</strong> uses cool charcoal grain. The three dynamic themes provide grain and light-dynamics controls.</p>
               </div>
             </div>
           </div>
@@ -539,6 +547,23 @@
         <!-- ══════════ CHANGELOG ══════════ -->
         <!-- Stable releases only. New official versions go at the top. Do not list betas. -->
         <section data-panel="changelog" class="prose col" hidden>
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.7</h2>
+              <span class="log-date">11 Oct 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.7.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>AI usage tracking for the Antigravity CLI, reading existing Keychain authorization and highlighting the tighter model group across 5-hour and weekly windows.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+              <li>Removed Gemini CLI usage, which shared the same backend quota pool and produced duplicate readings.</li>
+              <li>Rewrote interface copy across English, Simplified Chinese, Japanese, and Korean to standardize terminology and focus tooltips on features rather than implementation details.</li>
+            </ul>
+          </article>
+
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.6</h2>
@@ -551,7 +576,7 @@
               <li>Per-action global shortcuts, an Fn modifier that targets the window under the pointer, and a choice of who owns drag-to-edge: the Light Stats engine or macOS' own tiling.</li>
               <li>Dock-click collapse: click the frontmost app's Dock icon to put its windows away, click again to bring them back. Shake a dragged window instead to hide other apps, and shake again to restore.</li>
               <li>A window-control menu in the menu bar, a pinned batch-quit group in Cleanup, and self-explaining support reports.</li>
-              <li>Find My Mouse's diamond presentation pointer, chosen from thumbnails in Settings.</li>
+              <li>Locate Pointer's diamond presentation pointer, chosen from thumbnails in Settings.</li>
             </ul>
             <h3>Changed</h3>
             <ul>
@@ -625,7 +650,7 @@
             </div>
             <h3>Added</h3>
             <ul>
-              <li>Find My Mouse: record your trigger; double-tap spotlights the pointer, triple-tap toggles a presentation halo.</li>
+              <li>Locate Pointer: record your trigger; double-tap spotlights the pointer, triple-tap toggles a presentation halo.</li>
               <li>Offline activation codes and a lifetime Pro gift for anyone who launched during the gift period.</li>
               <li>In-app updates read the Cloudflare R2 channel marker, with GitHub Releases as fallback.</li>
             </ul>
@@ -897,7 +922,7 @@
             <li>Disk capacity and disk I/O throughput</li>
             <li>Network up/down throughput and local proxy configuration</li>
             <li>Battery, temperature, and fan RPM (supported Macs)</li>
-            <li>Running applications and their memory footprint (Memory tab)</li>
+            <li>Running applications and their memory footprint (Cleanup tab)</li>
             <li>Credentials and local state already stored by each AI provider's CLI, or an API token pasted in Settings, only when the matching AI provider is enabled</li>
             <li>Selected Finder paths and Finder-menu preferences, only when the Finder extension is enabled</li>
           </ul>
@@ -921,7 +946,7 @@
           <p>A separate, off-by-default 48-hour session records this app's CPU, memory, wakeup, and disk plus companion system load. It uses its own schema and directory, is never mixed into the diagnostic journal, and is not included in the exported report.</p>
 
           <h2>Third parties</h2>
-          <p>Depending on the switches you enable, requests may go to the selected geo-IP service, Anthropic, OpenAI, Google, Cloudflare R2, or GitHub. Credentials are never sent to a different provider or to the Light Stats developer.</p>
+          <p>Requests go only to the services a switch you enabled actually needs: the selected geo-IP service, the usage endpoint of each AI provider you turned on, the update channel on Cloudflare R2 or GitHub Releases, and the terminal or app you asked the Finder extension to open. Credentials are never sent to a different provider, and never to the Light Stats developer.</p>
 
           <h2>Open source</h2>
           <p>The full source is on <a href="https://github.com/EvilIrving/light-stats" target="_blank" rel="noopener">GitHub</a>. You can inspect exactly what the app does, including every network call.</p>
@@ -929,7 +954,7 @@
           <h2>Changes</h2>
           <p>Any change to this policy will appear here and in the app's release notes. Data handling will never change silently.</p>
 
-          <p class="updated">Last updated: September 13, 2026</p>
+          <p class="updated">Last updated: October 11, 2026</p>
         </section>
 
         <!-- ══════════ SUPPORT ══════════ -->
@@ -968,16 +993,20 @@
                   <dd>No. System metrics and process lists stay on the Mac. Exit-node lookup, AI usage requests, usage-window warmup, and automatic update checks are opt-in or user-initiated.</dd>
                 </div>
                 <div>
-                  <dt>How do Find My Mouse and Presentation Pointer work?</dt>
-                  <dd>Enable Find My Mouse and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled.</dd>
+                  <dt>How do Locate Pointer and Presentation Pointer work?</dt>
+                  <dd>Enable Locate Pointer and record the trigger you prefer. Double-tap it to spotlight the pointer; triple-tap it to toggle a persistent, click-through halo. The tool is off by default and requests Accessibility access only when enabled.</dd>
                 </div>
                 <div>
                   <dt>How do I change what shows in the menu bar?</dt>
-                  <dd>Click the ellipsis (…) in the panel to open Settings, then toggle items under Status Bar Items. You can also choose which dimensions feed the health score.</dd>
+                  <dd>Click the gear icon in the panel to open Settings, then toggle items under Status Bar Display. You can also choose which dimensions feed the health score.</dd>
+                </div>
+                <div>
+                  <dt>Does window management fight with macOS' own window tiling?</dt>
+                  <dd>No, because only one of them runs at a time. The Edge Snapping control picks the owner: the Light Stats engine, which adds thirds, corners, custom layouts, and per-action shortcuts, or macOS' built-in tiling. The other side's switches are turned off, and the app reports a conflict with a one-click fix if they are turned back on by hand.</dd>
                 </div>
                 <div>
                   <dt>What are the visual themes?</dt>
-                  <dd>Settings → General → Theme. Choose Classic, Golden Hour, Amber, or Ink Night. Ink Night is selected on a clean install. The Settings window stays white and does not follow the panel theme.</dd>
+                  <dd>Settings → General → Theme. Choose Classic, Golden Hour, Amber, or Ink Night. Ink Night is selected on a clean install.</dd>
                 </div>
                 <div>
                   <dt>Does exit-node detection cost me privacy?</dt>
@@ -985,7 +1014,7 @@
                 </div>
                 <div>
                   <dt>Why do some readings show N/A?</dt>
-                  <dd>GPU, fan, and battery require supported hardware. A desktop Mac with no battery, or a Mac without those sensors, shows N/A and drops that dimension from the score.</dd>
+                  <dd>Light Stats never displays N/A. Machines without a battery or fan sensors hide those surfaces entirely. When an active sensor reading is temporarily unavailable, the app displays a dash (—) and drops that dimension from the health score until it recovers.</dd>
                 </div>
                 <div>
                   <dt>Does it affect battery life?</dt>
