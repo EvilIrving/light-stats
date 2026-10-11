@@ -48,6 +48,9 @@ SKIP_SIGNING="${SKIP_SIGNING:-0}"
 SKIP_DMG="${SKIP_DMG:-0}"
 SKIP_NOTARIZATION="${SKIP_NOTARIZATION:-0}"
 INSTALL_TO_APPLICATIONS="${INSTALL_TO_APPLICATIONS:-0}"
+# 等待 Apple 公证结果的短轮询节奏（总预算 / 间隔秒），可用环境变量覆盖。
+NOTARY_POLL_BUDGET="${NOTARY_POLL_BUDGET:-1800}"
+NOTARY_POLL_INTERVAL="${NOTARY_POLL_INTERVAL:-30}"
 NOTARIZATION_ENABLED=0
 if [ "$SKIP_SIGNING" != "1" ] \
     && [ "$SKIP_NOTARIZATION" != "1" ] \
@@ -91,34 +94,60 @@ notarize_file() {
     local submission_id
     local submission_result
     local notary_status
+    local info
+    local waited
 
     echo "📤 公证 $label..."
+    # 提交与等待分开做。`notarytool submit --wait` 把上传和轮询握在同一个长连接上，
+    # 而 notarytool 在拿到 submission id 后立刻做的那次状态查询会以内建的 URLSession
+    # 超时收场（HTTPClientError.deadlineExceeded）——包已经在 Apple 队列里，构建却失败。
+    # 所以只取 id，然后自己用 `notarytool info` 短轮询：每次一个新的短请求，Apple 排
+    # 队多久都不影响我们拿到结果。
     set +e
     xcrun notarytool submit "$target" \
       --key-id "$APPLE_API_KEY_ID" \
       --issuer "$APPLE_API_ISSUER_ID" \
       --key "$API_KEY_FILE" \
-      --wait 2>&1 | tee "$submit_log"
+      --no-wait 2>&1 | tee "$submit_log"
     notary_status=${PIPESTATUS[0]}
     set -e
 
     submission_id="$(sed -n 's/^[[:space:]]*id: //p' "$submit_log" | tail -1)"
     submission_result="$(sed -n 's/^[[:space:]]*status: //p' "$submit_log" | tail -1)"
 
-    if [ "$notary_status" -ne 0 ] || [ "$submission_result" != "Accepted" ]; then
+    if [ -z "$submission_id" ]; then
+        echo ""
+        echo "❌ $label 公证提交失败（未拿到 submission id，exit $notary_status）"
+        cat "$submit_log"
+        rm -f "$API_KEY_FILE" "$APP_NOTARY_ARCHIVE"
+        exit 1
+    fi
+
+    waited=0
+    while [ "$submission_result" != "Accepted" ] \
+        && [ "$submission_result" != "Invalid" ] \
+        && [ "$submission_result" != "Rejected" ] \
+        && [ "$waited" -lt "$NOTARY_POLL_BUDGET" ]; do
+        sleep "$NOTARY_POLL_INTERVAL"
+        waited=$((waited + NOTARY_POLL_INTERVAL))
+        info="$(xcrun notarytool info "$submission_id" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --key "$API_KEY_FILE" 2>&1 || true)"
+        submission_result="$(printf '%s' "$info" | sed -n 's/^[[:space:]]*status: //p' | tail -1)"
+        printf '  %s: %s (%ss)\n' "$label" "${submission_result:-unknown}" "$waited"
+    done
+
+    if [ "$submission_result" != "Accepted" ]; then
         echo ""
         echo "❌ $label 公证失败${submission_result:+: $submission_result}"
-        if [ -n "$submission_id" ]; then
-            echo "📄 获取公证详情: $submission_id"
-            xcrun notarytool log "$submission_id" \
-              --key-id "$APPLE_API_KEY_ID" \
-              --issuer "$APPLE_API_ISSUER_ID" \
-              --key "$API_KEY_FILE" \
-              "$detail_log" || true
-            [ -f "$detail_log" ] && cat "$detail_log"
-        else
-            cat "$submit_log"
-        fi
+        echo "📄 获取公证详情: $submission_id"
+        xcrun notarytool log "$submission_id" \
+          --key-id "$APPLE_API_KEY_ID" \
+          --issuer "$APPLE_API_ISSUER_ID" \
+          --key "$API_KEY_FILE" \
+          "$detail_log" || true
+        [ -f "$detail_log" ] && cat "$detail_log"
         rm -f "$API_KEY_FILE" "$APP_NOTARY_ARCHIVE"
         exit 1
     fi
