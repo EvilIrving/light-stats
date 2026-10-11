@@ -164,6 +164,7 @@
 "aiUsage.window.month" = "月";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
+"aiUsage.antigravity" = "Antigravity";
 "aiUsage.autoRefresh" = "枠の自動更新";
 "aiUsage.autoRefresh.short" = "更新";
 "aiUsage.fetching" = "取得中...";

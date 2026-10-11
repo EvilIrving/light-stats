@@ -164,6 +164,7 @@
 "aiUsage.window.month" = "월";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
+"aiUsage.antigravity" = "Antigravity";
 "aiUsage.autoRefresh" = "윈도우 자동 갱신";
 "aiUsage.autoRefresh.short" = "갱신";
 "aiUsage.fetching" = "가져오는 중...";

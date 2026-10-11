@@ -30,6 +30,16 @@ enum UsageProviderRegistry {
             reset: { CodexUsageService.resetCredentialCache() }
         ),
         descriptor(
+            id: .antigravity,
+            credential: .localDiscovered,
+            iconAssetName: "antigravityLogo",
+            symbolFallback: "arrow.up.forward.circle",
+            cliName: "agy",
+            supportsWarmup: false,
+            fetch: { try await AntigravityUsageService.fetch() },
+            reset: { AntigravityUsageService.resetCredentialCache() }
+        ),
+        descriptor(
             id: .grok,
             credential: .localDiscovered,
             iconAssetName: "grokLogo",

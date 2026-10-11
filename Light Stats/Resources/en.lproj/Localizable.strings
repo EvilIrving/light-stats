@@ -162,6 +162,7 @@
 "aiUsage.window.month" = "Month";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
+"aiUsage.antigravity" = "Antigravity";
 "aiUsage.autoRefresh" = "Auto-refresh window";
 "aiUsage.autoRefresh.short" = "Renew";
 "aiUsage.fetching" = "Fetching...";
