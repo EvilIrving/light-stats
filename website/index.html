@@ -245,7 +245,7 @@
         "description": "Free, open-source native macOS menu bar instrument for live system pressure, AI CLI usage, network context, and optional Finder workflows.",
         "url": "https://evilirving.github.io/light-stats/",
         "downloadUrl": "https://download.onecat.dev/stable",
-        "softwareVersion": "1.9.7",
+        "softwareVersion": "1.9.10",
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -547,6 +547,54 @@
         <!-- ══════════ CHANGELOG ══════════ -->
         <!-- Stable releases only. New official versions go at the top. Do not list betas. -->
         <section data-panel="changelog" class="prose col" hidden>
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.10</h2>
+              <span class="log-date">25 Oct 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.10.dmg">Get</a>
+            </div>
+            <h3>Added</h3>
+            <ul>
+              <li>Background processes in Cleanup are grouped under the installed application behind them, each group carrying its process count and memory subtotal. Anything no installed application claims stays under one Unattributed section.</li>
+              <li>Attribution reads both the bundle the process lives in and the launchd job that starts it, so a privileged helper installed outside every bundle still shows the product it belongs to.</li>
+            </ul>
+            <h3>Changed</h3>
+            <ul>
+              <li>Member lines in an expanded row: a nested helper bundle names the member, a helper with no bundle of its own is named by its executable, and only same-named members carry a PID. Hovering a line shows its full path.</li>
+              <li>Group memory subtotals keep the app-wide rule: <code>≥</code> or <code>—</code> when readings are missing, never 0 as a stand-in.</li>
+            </ul>
+            <h3>Fixed</h3>
+            <ul>
+              <li>An expanded list includes the application's own process, so it matches the count on the row.</li>
+              <li>Name-based background exclusions such as <code>watchman</code> were matched against a full path, so they never applied.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.9</h2>
+              <span class="log-date">13 Oct 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.9.dmg">Get</a>
+            </div>
+            <h3>Fixed</h3>
+            <ul>
+              <li>Dock-click collapse and restore now work with an auto-hidden Dock, and with a magnified tile drawn beyond the Dock's own plate.</li>
+            </ul>
+          </article>
+
+          <article class="log-item">
+            <div class="log-head">
+              <h2>1.9.8</h2>
+              <span class="log-date">11 Oct 2026</span>
+              <a class="log-get" href="https://download.onecat.dev/Light-Stats-1.9.8.dmg">Get</a>
+            </div>
+            <h3>Fixed</h3>
+            <ul>
+              <li>More reliable window snapping when dragging to screen edges.</li>
+              <li>Scrolling on titlebars no longer accidentally triggers window actions.</li>
+            </ul>
+          </article>
+
           <article class="log-item">
             <div class="log-head">
               <h2>1.9.7</h2>
