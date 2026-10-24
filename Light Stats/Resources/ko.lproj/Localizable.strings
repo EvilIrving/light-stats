@@ -124,6 +124,7 @@
 "cleanup.appCount" = "%d개";
 "cleanup.noApps" = "실행 중인 앱이 없습니다";
 "cleanup.backgroundProcesses" = "백그라운드 프로세스";
+"cleanup.backgroundUnowned" = "소속 없음";
 "cleanup.pinnedGroup" = "고정 그룹";
 "cleanup.pinnedGroup.quitAll" = "그룹 앱 종료";
 "cleanup.pinnedGroup.remove" = "고정 그룹에서 제거";

@@ -122,6 +122,7 @@
 "cleanup.appCount" = "%d apps";
 "cleanup.noApps" = "No running apps";
 "cleanup.backgroundProcesses" = "Background Processes";
+"cleanup.backgroundUnowned" = "Unattributed";
 "cleanup.pinnedGroup" = "Pinned Group";
 "cleanup.pinnedGroup.quitAll" = "Quit All Apps in Group";
 "cleanup.pinnedGroup.remove" = "Remove from Pinned Group";

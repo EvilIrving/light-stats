@@ -124,6 +124,7 @@
 "cleanup.appCount" = "%d 个";
 "cleanup.noApps" = "没有运行中的应用";
 "cleanup.backgroundProcesses" = "后台进程";
+"cleanup.backgroundUnowned" = "无归属";
 "cleanup.pinnedGroup" = "固定分组";
 "cleanup.pinnedGroup.quitAll" = "退出分组内所有应用";
 "cleanup.pinnedGroup.remove" = "移出固定分组";

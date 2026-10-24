@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct AppCardView: View {
-    /// 展开按钮列宽度，无子进程时用等宽占位保持对齐
+    /// 展开按钮列宽度，无成员明细时用等宽占位保持对齐
     private static let expandColumnWidth: CGFloat = 10
 
     let app: RunningApp
@@ -22,7 +22,7 @@ struct AppCardView: View {
     @Environment(\.theme) private var theme
     @State private var isHovered = false
     @State private var isExpanded = false
-    @State private var cachedChildProcesses: [TopProcessInfo] = []
+    @State private var cachedMembers: [TopProcessInfo] = []
 
     private var iconSize: CGFloat { 22 }
     private var rowHSpacing: CGFloat { 10 }
@@ -32,14 +32,14 @@ struct AppCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             mainRow
             if isExpanded {
-                childProcessList
+                memberList
             }
         }
         .onAppear {
-            updateChildProcesses()
+            updateGroupMembers()
         }
         .onChange(of: app.allPids) { _, _ in
-            updateChildProcesses()
+            updateGroupMembers()
         }
     }
 
@@ -79,7 +79,7 @@ struct AppCardView: View {
     private var expandCluster: some View {
         HStack(spacing: clusterSpacing) {
             Group {
-                if !childProcesses.isEmpty {
+                if isExpandable {
                     expandButton
                 } else {
                     Color.clear
@@ -97,7 +97,7 @@ struct AppCardView: View {
         .padding(.vertical, 2)
         .contentShape(Rectangle())
         .onTapGesture {
-            guard !childProcesses.isEmpty else { return }
+            guard isExpandable else { return }
             withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() }
         }
     }
@@ -185,10 +185,10 @@ struct AppCardView: View {
             .frame(width: Self.expandColumnWidth, height: Self.expandColumnWidth)
     }
 
-    // MARK: - Children
+    // MARK: - Members
 
     @ViewBuilder
-    private var childProcessList: some View {
+    private var memberList: some View {
         HStack(alignment: .top, spacing: 0) {
             // Rail under the icon cluster — film instrument tree cue.
             Rectangle()
@@ -198,18 +198,16 @@ struct AppCardView: View {
                 .padding(.vertical, 2)
 
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(childProcesses, id: \.pid) { process in
-                    ChildProcessRowView(
-                        command: process.command,
-                        memoryBytes: process.memoryBytes,
-                        indentation: 8,
-                        compact: true
-                    )
-                    if process.pid != childProcesses.last?.pid {
-                        Rectangle()
-                            .fill(theme.lineHairline.opacity(0.7))
-                            .frame(height: 1)
-                            .padding(.leading, 8)
+                if app.ownerSections.isEmpty {
+                    ForEach(entries, id: \.pid) { entry in
+                        memberRow(entry, isLast: entry.pid == entries.last?.pid)
+                    }
+                } else {
+                    ForEach(app.ownerSections, id: \.id) { section in
+                        ownerHeader(section)
+                        ForEach(entries(for: section), id: \.pid) { entry in
+                            memberRow(entry, isLast: entry.pid == entries(for: section).last?.pid)
+                        }
                     }
                 }
             }
@@ -222,12 +220,53 @@ struct AppCardView: View {
 
     // MARK: - Helpers
 
-    private var childProcesses: [TopProcessInfo] {
-        cachedChildProcesses
+    /// Detail lines, derived from the whole list so repeated labels can be told apart by pid.
+    private var entries: [ChildProcessDisplayPolicy.Entry] {
+        ChildProcessDisplayPolicy.entries(for: cachedMembers, ownerName: app.name)
     }
 
-    private func updateChildProcesses() {
-        cachedChildProcesses = appManager.childProcesses(for: app)
+    private func entries(for section: BackgroundOwnerSection) -> [ChildProcessDisplayPolicy.Entry] {
+        let pids = Set(section.pids)
+        return ChildProcessDisplayPolicy.entries(
+            for: cachedMembers.filter { pids.contains($0.pid) },
+            ownerName: app.name
+        )
+    }
+
+    @ViewBuilder
+    private func memberRow(_ entry: ChildProcessDisplayPolicy.Entry, isLast: Bool) -> some View {
+        ProcessDetailRowView(entry: entry, indentation: 8, compact: true)
+        if !isLast {
+            Rectangle()
+                .fill(theme.lineHairline.opacity(0.7))
+                .frame(height: 1)
+                .padding(.leading, 8)
+        }
+    }
+
+    /// One owner inside the background row: the product's name over its members.
+    private func ownerHeader(_ section: BackgroundOwnerSection) -> some View {
+        HStack(spacing: 6) {
+            Color.clear.frame(width: 8)
+            Text(section.name)
+                .font(theme.chromeStyle.compactValueFont)
+                .foregroundStyle(theme.inkSecondary)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            Text(section.memoryFormatted)
+                .font(theme.chromeStyle.compactLabelFont)
+                .foregroundStyle(theme.inkFaint)
+        }
+        .padding(.trailing, 4)
+        .padding(.vertical, 5)
+    }
+
+    private var isExpandable: Bool {
+        cachedMembers.count > 1
+    }
+
+    private func updateGroupMembers() {
+        cachedMembers = appManager.groupMembers(for: app)
     }
 }
 

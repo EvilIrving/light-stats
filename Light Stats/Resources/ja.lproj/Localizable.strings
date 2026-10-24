@@ -124,6 +124,7 @@
 "cleanup.appCount" = "%d 個";
 "cleanup.noApps" = "実行中のアプリはありません";
 "cleanup.backgroundProcesses" = "バックグラウンドプロセス";
+"cleanup.backgroundUnowned" = "帰属なし";
 "cleanup.pinnedGroup" = "固定グループ";
 "cleanup.pinnedGroup.quitAll" = "グループ内のAppを終了";
 "cleanup.pinnedGroup.remove" = "固定グループから外す";

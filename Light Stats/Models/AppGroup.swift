@@ -99,6 +99,8 @@ struct AppGroup: Identifiable {
     let execPath: String?         // 可执行文件路径
     var processIdentities: [pid_t: ProcessIdentity] = [:]
     var unavailableMemoryCount: Int = 0
+    /// Background rows only: members grouped by the installed application behind them.
+    var ownerSections: [BackgroundOwnerSection] = []
 
     /// Display name: shows process count if multiple processes
     var displayName: String {

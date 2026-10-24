@@ -27,6 +27,7 @@ Light Stats/
 │   ├── ProxyInfo.swift
 │   ├── BatteryInfo.swift
 │   ├── TopProcess.swift             # CPU ranking row (collector lives in Services)
+│   ├── BackgroundOwnerSection.swift # Background row members grouped under their owner
 │   ├── AIProvider.swift             # Usage provider id; display names are localized keys
 │   ├── UsageWindow.swift            # 5h / weekly used-percent window
 │   ├── UsageWindowLabel.swift       # Language-neutral window label token
@@ -80,6 +81,9 @@ Light Stats/
 │   ├── ProcessService.swift         # Native footprint sampling + identity-checked process control
 │   ├── ProcessSampler.swift         # All-PID footprint snapshot; unavailable is never RSS
 │   ├── ProcessStats.swift           # CPU ranking via system ps (setuid coverage)
+│   ├── ChildProcessDisplayPolicy.swift # Member label + order for an expanded app row
+│   ├── BackgroundOwnerPolicy.swift  # Installed app behind a process no running app claims
+│   ├── LaunchdJobRegistry.swift     # Installed launchd jobs: program path → job label
 │   ├── MemoryInfo.swift             # host_statistics64 + pressure/swap collection
 │   ├── MemoryUsagePolicy.swift      # Anonymous - purgeable + wired + physical compressor
 │   ├── ExitNodeService.swift        # Geo-IP exit-node (actor)
@@ -212,7 +216,7 @@ Light Stats/
 │   │   ├── DebugSnapshot.swift
 │   │   └── Components/
 │   │       ├── AppRowView.swift
-│   │       ├── ChildProcessRowView.swift
+│   │       ├── ProcessDetailRowView.swift  # One member line of an expanded app row
 │   │       ├── AIUsageCard.swift
 │   │       ├── Sparkline.swift             # SwiftUI trend mini-chart
 │   │       ├── SpinningFanIcon.swift       # Fan icon; rotation runs on a Core Animation layer
@@ -829,6 +833,20 @@ System used RAM is non-purgeable anonymous memory + wired + physical compressor 
 active/inactive are not ownership categories. `free_count` already includes speculative pages.
 See `docs/process-memory-collection.md` for the evidence, limitations and regression coverage.
 
+An expanded row lists every sampled member of its group, the owning process first: that is the
+process the row's count and close button refer to, so leaving it out made the detail list one short
+of the count. A background process that no running application claims is attributed through
+*installed* applications instead, which is why a helper shows up under the product it belongs to
+rather than under its executable. Two sources are offered in order: the bundle the process lives in,
+then the label of the launchd job that starts it (`LaunchdJobRegistry` scans the three install
+directories, gated on their modification dates, and never indexes a shared interpreter —
+`/bin/bash` belongs to one job, and every shell on the machine would otherwise carry that job's
+name). `BackgroundOwnerPolicy` asks about the identifier as-is and then with each trailing role
+(`…mac.helper`, `…chargelimiter.daemon`) removed, because a job label names a role as well as a
+product, while the process's own bundle is the stronger evidence. Members with no installed owner
+stay together under one unattributed section, and the background row stays a single row: a section
+labels processes, it is not another closable application.
+
 ## Cleaning Mode
 
 Locks the keyboard for 60 seconds so the user can wipe the keyboard without spurious input.
@@ -1159,6 +1177,19 @@ Suites:
 - `BatteryHardwarePolicyTests` — battery surfaces hide only when there is no internal battery.
 - `CleanupPinnedGroupTests` — member key preference, pin eligibility, drop validation, idempotent insert,
   partition of running members, and the serial batch-quit plan.
+- `BackgroundOwnerPolicyTests` — which installed application owns a background process: the
+  process's own bundle offered before its job label, each trailing job role removed until an
+  identifier resolves, a product identifier that is not shortened further, repeated identifiers
+  collapsing to one probe, and a process nothing installed owns staying unattributed.
+- `ChildProcessDisplayPolicyTests` — the line an expanded row shows: a nested helper bundle names
+  the member while a helper with no bundle of its own is named by its executable, the owner's name
+  prefix is dropped only on a whole word, a bare name survives, the pid appears only when two
+  members share a label, the tooltip keeps the full path, and the owning process is listed first so
+  the detail count matches the row count.
+- `LaunchdJobRegistryTests` — the program-path → job-label table over a temporary directory:
+  `ProgramArguments[0]` when `Program` is absent, `Program` winning when both are present, shared
+  interpreters never indexed, a job without a program skipped, a job installed inside an
+  application out of reach, and the rescan happening only when a directory changes.
 - `SceneAnimationPolicyTests` / `FanRotationPolicyTests` / `FanAnimationLayerTests` — the panel's
   animation gates: a hidden host pauses the scene timeline even at full lightFlow, the threshold
   keeps the scene's `>=` semantics, rpm maps to revolutions/s with its 3 rev/s cap, and a hidden fan

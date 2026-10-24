@@ -53,6 +53,9 @@ final class AppMemoryManager: ObservableObject {
     /// ProcessService 实例
     private let processService: ProcessServiceProtocol
 
+    /// Installed launchd jobs, for the background processes that carry no application bundle.
+    private let launchdJobRegistry: LaunchdJobRegistry
+
     /// 默认图标（缓存）
     private lazy var defaultAppIcon: NSImage = {
         NSImage(systemSymbolName: "app", accessibilityDescription: nil) ?? NSImage()
@@ -68,6 +71,7 @@ final class AppMemoryManager: ObservableObject {
 
     private init(processService: ProcessServiceProtocol? = nil) {
         self.processService = processService ?? ProcessService.shared
+        self.launchdJobRegistry = LaunchdJobRegistry.shared
         totalMemory = ProcessInfo.processInfo.physicalMemory
     }
 
@@ -360,13 +364,16 @@ final class AppMemoryManager: ObservableObject {
         processService.isProcessAlive(pid)
     }
 
-    /// Get child processes for an app group (excluding the main process)
+    /// Every sampled member of an app group, the owning process first.
+    ///
+    /// The expanded list is the group's own detail, so it must include the process the row's
+    /// count and close button refer to; excluding it left the list one short of the count.
     /// - Parameter app: The app group
-    /// - Returns: Array of TopProcessInfo for child processes
-    func childProcesses(for app: AppGroup) -> [TopProcessInfo] {
+    /// - Returns: Array of TopProcessInfo for the group's members
+    func groupMembers(for app: AppGroup) -> [TopProcessInfo] {
         let pidSet = Set(app.allPids)
-        return allTopProcesses.filter { pidSet.contains($0.pid) && $0.pid != app.id }
-            .sorted { ($0.memoryBytes ?? 0) > ($1.memoryBytes ?? 0) }
+        let members = allTopProcesses.filter { pidSet.contains($0.pid) }
+        return ChildProcessDisplayPolicy.orderedMembers(members, ownerPID: app.id)
     }
 
     private func buildAppGroups(
@@ -420,8 +427,11 @@ final class AppMemoryManager: ObservableObject {
                     accumulators[groupKey] = AppGroupAccumulator(candidate: candidate)
                 }
                 accumulators[groupKey]?.add(process, attributionSource: resolution.source)
-            } else if shouldShowProcess(processBundleInfo, processName: process.command) {
-                backgroundAccumulator.add(process)
+            } else if shouldShowProcess(
+                processBundleInfo,
+                processName: ChildProcessDisplayPolicy.executableName(forCommand: process.command)
+            ) {
+                backgroundAccumulator.add(process, owner: backgroundOwner(for: process))
             }
         }
 
@@ -441,6 +451,24 @@ final class AppMemoryManager: ObservableObject {
         var apps = split.top
         apps.append(makePinnedGroupStub(members: split.pinnedMembers))
         return (apps, split.pinnedMembers)
+    }
+
+    /// The installed application behind a process that no running application claims.
+    ///
+    /// A background process is attributed through the applications that are installed, not only the
+    /// ones that are running: a helper's executable lives inside its application bundle, and a
+    /// privileged helper names its product in its launchd job label.
+    private func backgroundOwner(for process: TopProcessInfo) -> BackgroundOwnerPolicy.Owner? {
+        let label = launchdJobRegistry.label(forProgramPath: process.command)
+        return BackgroundOwnerPolicy.owner(for: process, launchdLabel: label) { bundleIdentifier in
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier)
+            else { return nil }
+            let name = FileManager.default.displayName(atPath: url.path)
+            return BackgroundOwnerPolicy.Owner(
+                key: bundleIdentifier,
+                name: name.hasSuffix(".app") ? String(name.dropLast(4)) : name
+            )
+        }
     }
 
     private func buildMonitoredAppCandidates(from guiApps: [NSRunningApplication]) -> [MonitoredAppCandidate] {
@@ -592,13 +620,17 @@ private struct AppGroupAccumulator {
 private struct BackgroundProcessAccumulator {
     private let defaultIcon: NSImage
     private var processes: [TopProcessInfo] = []
+    private var ownerByPid: [pid_t: BackgroundOwnerPolicy.Owner] = [:]
 
     init(defaultIcon: NSImage) {
         self.defaultIcon = defaultIcon
     }
 
-    mutating func add(_ process: TopProcessInfo) {
+    mutating func add(_ process: TopProcessInfo, owner: BackgroundOwnerPolicy.Owner?) {
         processes.append(process)
+        if let owner {
+            ownerByPid[process.pid] = owner
+        }
     }
 
     func makeAppGroup() -> AppGroup? {
@@ -624,7 +656,42 @@ private struct BackgroundProcessAccumulator {
             bundleIdentifier: nil,
             bundlePath: nil,
             execPath: nil,
-            unavailableMemoryCount: memory.unavailableCount
+            unavailableMemoryCount: memory.unavailableCount,
+            ownerSections: ownerSections(from: sortedProcesses)
         )
+    }
+
+    /// One section per owner, then everything nothing installed owns. This stays inside the single
+    /// background row: a section is a label for the processes, not another closable application.
+    private func ownerSections(from processes: [TopProcessInfo]) -> [BackgroundOwnerSection] {
+        var membersByKey: [String: [TopProcessInfo]] = [:]
+        var nameByKey: [String: String] = [:]
+        for process in processes {
+            let owner = ownerByPid[process.pid]
+            let key = owner?.key ?? BackgroundOwnerSection.unownedKey
+            membersByKey[key, default: []].append(process)
+            if let owner {
+                nameByKey[key] = owner.name
+            }
+        }
+        return membersByKey.map { key, members in
+            let memory = ProcessMemorySummary(members.map(\.memoryBytes))
+            return BackgroundOwnerSection(
+                id: key,
+                name: nameByKey[key] ?? "cleanup.backgroundUnowned".localized,
+                totalMemoryBytes: memory.knownBytes,
+                pids: members.map(\.pid),
+                unavailableMemoryCount: memory.unavailableCount
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.isUnowned != rhs.isUnowned {
+                return rhs.isUnowned
+            }
+            if lhs.totalMemoryBytes == rhs.totalMemoryBytes {
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            return lhs.totalMemoryBytes > rhs.totalMemoryBytes
+        }
     }
 }
