@@ -45,10 +45,12 @@ nonisolated enum AntigravityUsageService: UsageProviding {
     private static let tokenRefreshURL = URL(string: "https://oauth2.googleapis.com/token")!
     private static let userAgent = "antigravity-cli"
 
-    /// The two independent quota pools the panel shows as separate rows.
-    private static let geminiPool = "Gemini"
-    private static let claudeGPTPool = "Claude/GPT"
-    private static let poolOrder = [geminiPool, claudeGPTPool]
+    /// The two independent quota pools. Each has its own 5h and weekly window, so
+    /// a row is identified by pool plus window, never by window alone.
+    private static let geminiPool = "aiUsage.pool.gemini"
+    private static let otherPool = "aiUsage.pool.other"
+    private static let poolOrder = [geminiPool, otherPool]
+    private static let windowOrder = ["5h", "7d"]
 
     private static let oauthClient = OAuthClient(
         id: "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
@@ -235,7 +237,12 @@ nonisolated enum AntigravityUsageService: UsageProviding {
 
     /// Testable seam (also the live parse path): decode a `retrieveUserQuota`
     /// body with no network. Collapses per-model buckets into one row per model
-    /// family, using each family's most-consumed bucket.
+    /// pool, using the pool's most-consumed bucket.
+    ///
+    /// This endpoint reports no window kind — every bucket carries only its own
+    /// reset, and the reset it reports is the short one (hours away, not days),
+    /// so those buckets are the pool's `5h` row. The weekly row comes from the
+    /// summary, which is the only body that names a window.
     static func parseQuota(_ data: Data) throws -> [UsageWindow] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let buckets = json["buckets"] as? [[String: Any]] else {
@@ -251,73 +258,92 @@ nonisolated enum AntigravityUsageService: UsageProviding {
 
             let usedPercent = min(100, max(0, (1 - remaining) * 100))
             guard usedPercent > (tightest[pool]?.usedPercent ?? -1) else { continue }
-            tightest[pool] = UsageWindow(label: pool, usedPercent: usedPercent, resetsAt: reset)
+            tightest[pool] = UsageWindow(
+                label: "5h",
+                pool: pool,
+                usedPercent: usedPercent,
+                resetsAt: reset
+            )
         }
 
         return poolOrder.compactMap { tightest[$0] }
     }
 
-    /// The panel reports one row per model pool and picks that pool's
-    /// most-consumed window. The summary supplies the pool structure (and the
-    /// weekly window); per-model supplies pools the summary omitted.
+    /// Every window that exists gets a row: the two bodies overlap only on the
+    /// short window, and each pool meters both of its windows separately. A
+    /// repeated window is merged by taking the more-consumed reading, which is
+    /// the same value read twice rather than a choice between two answers.
     static func merge(_ summary: [UsageWindow], _ perModel: [UsageWindow]) -> [UsageWindow] {
         var tightest: [String: UsageWindow] = [:]
         for window in summary + perModel {
             guard let used = window.usedPercent else { continue }
-            if used > (tightest[window.label]?.usedPercent ?? -1) {
-                tightest[window.label] = window
+            let key = rowKey(pool: window.pool, window: window.label)
+            if used > (tightest[key]?.usedPercent ?? -1) {
+                tightest[key] = window
             }
         }
-        return poolOrder.compactMap { tightest[$0] }
+        return ordered(tightest)
     }
 
-    /// `gemini-*` and `claude-*`/`gpt-*` are the two model families; `chat_*`
+    /// Pool order, then window order, so a row never moves because a body
+    /// happened to list its buckets differently.
+    private static func ordered(_ rows: [String: UsageWindow]) -> [UsageWindow] {
+        var ordered: [UsageWindow] = []
+        for pool in poolOrder {
+            for window in windowOrder {
+                if let row = rows[rowKey(pool: pool, window: window)] {
+                    ordered.append(row)
+                }
+            }
+        }
+        return ordered
+    }
+
+    private static func rowKey(pool: String?, window: String) -> String {
+        "\(pool ?? "")|\(window)"
+    }
+
+    /// `gemini-*` and `claude-*`/`gpt-*` are the two model pools; `chat_*`
     /// (assistant chat) and `tab_*` (tab autocomplete) are separate products.
     private static func modelFamily(of modelId: String) -> String? {
         let lower = modelId.lowercased()
         if lower.hasPrefix("gemini") { return geminiPool }
-        if lower.hasPrefix("claude") || lower.hasPrefix("gpt") { return claudeGPTPool }
+        if lower.hasPrefix("claude") || lower.hasPrefix("gpt") { return otherPool }
         return nil
     }
 
-    /// The body meters one subscription in two independent pools — Gemini and
-    /// Claude/GPT — each with a 5h and a weekly bucket. The panel shows one row
-    /// per pool, reporting that pool's most-consumed bucket.
+    /// The body meters one subscription in two independent pools — Gemini and the
+    /// third-party models — each with a 5h and a weekly bucket. Every bucket that
+    /// names a window is its own row.
     private static func poolWindows(in groups: [[String: Any]]) -> [UsageWindow] {
-        var rows: [UsageWindow] = []
+        var rows: [String: UsageWindow] = [:]
 
         for group in groups {
             guard let buckets = group["buckets"] as? [[String: Any]],
                   let pool = poolLabel(of: group) else { continue }
 
-            var tightest: UsageWindow?
             for bucket in buckets {
-                guard windowKind(of: bucket) != nil,
+                guard let window = windowKind(of: bucket),
                       let remaining = double(bucket["remainingFraction"]) else { continue }
 
-                let usedPercent = min(100, max(0, (1 - remaining) * 100))
-                guard usedPercent > (tightest?.usedPercent ?? -1) else { continue }
-
-                tightest = UsageWindow(
-                    label: pool,
-                    usedPercent: usedPercent,
+                rows[rowKey(pool: pool, window: window)] = UsageWindow(
+                    label: window,
+                    pool: pool,
+                    usedPercent: min(100, max(0, (1 - remaining) * 100)),
                     resetsAt: date(bucket["resetTime"])
                 )
             }
-            if let tightest {
-                rows.append(tightest)
-            }
         }
 
-        return rows
+        return ordered(rows)
     }
 
-    /// Maps a summary group's `displayName` to its pool label. Unknown groups
-    /// are skipped rather than labelled with a guess.
+    /// Maps a summary group's `displayName` to its pool. Unknown groups are
+    /// skipped rather than labelled with a guess.
     private static func poolLabel(of group: [String: Any]) -> String? {
         guard let displayName = (group["displayName"] as? String)?.lowercased() else { return nil }
         if displayName.contains("gemini") { return geminiPool }
-        if displayName.contains("claude") || displayName.contains("gpt") { return claudeGPTPool }
+        if displayName.contains("claude") || displayName.contains("gpt") { return otherPool }
         return nil
     }
 

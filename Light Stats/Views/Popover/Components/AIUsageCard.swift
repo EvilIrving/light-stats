@@ -98,6 +98,14 @@ private struct WindowRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if let pool = window.pool {
+                Text(pool.localized)
+                    .font(theme.chromeStyle.compactLabelFont)
+                    .foregroundStyle(theme.inkSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(width: 40, alignment: .leading)
+            }
             Text(window.label.localized)
                 .font(theme.chromeStyle.compactLabelFont)
                 .foregroundStyle(theme.inkMuted)

@@ -29,7 +29,7 @@ Light Stats/
 │   ├── TopProcess.swift             # CPU ranking row (collector lives in Services)
 │   ├── BackgroundOwnerSection.swift # Background row members grouped under their owner
 │   ├── AIProvider.swift             # Usage provider id; display names are localized keys
-│   ├── UsageWindow.swift            # 5h / weekly used-percent window
+│   ├── UsageWindow.swift            # Window label + pool + used percent
 │   ├── UsageWindowLabel.swift       # Language-neutral window label token
 │   ├── AIUsageWindowPicker.swift      # nearestReset header + expanded detail windows
 │   ├── UsageBalance.swift           # Prepaid remaining amount (DeepSeek / OpenRouter)

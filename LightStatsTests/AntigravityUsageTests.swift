@@ -80,25 +80,39 @@ final class AntigravityUsageTests: XCTestCase {
 
     // MARK: - Quota summary
 
-    func testSummaryReportsTheTighterWindowOfEachPool() throws {
+    func testSummaryReportsEveryWindowOfEveryPool() throws {
         let snapshot = try AntigravityUsageService.parseQuotaSummary(fixture("antigravity_quota_summary.json"))
 
         XCTAssertEqual(snapshot.provider, .antigravity)
-        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini", "Claude/GPT"])
-        // Gemini pool: 5h (0.927 left) is more consumed than weekly (0.988 left).
+        XCTAssertEqual(
+            snapshot.windows.map(\.label),
+            ["5h", "7d", "5h", "7d"],
+            "every window that exists is a row, not one collapsed row per pool"
+        )
+        XCTAssertEqual(
+            snapshot.windows.map { $0.pool ?? "" },
+            ["aiUsage.pool.gemini", "aiUsage.pool.gemini", "aiUsage.pool.other", "aiUsage.pool.other"]
+        )
+        // Gemini: 0.9270784 left on 5h, 0.9878464 left on weekly.
         XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 7.292, accuracy: 0.001)
-        // Claude/GPT pool: both buckets full (1.0 left), so nothing consumed.
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 1.215, accuracy: 0.001)
+        // Claude/GPT: both buckets full.
+        XCTAssertEqual(snapshot.windows[2].usedPercent ?? -1, 0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[3].usedPercent ?? -1, 0, accuracy: 0.001)
         XCTAssertEqual(
             snapshot.windows[0].resetsAt,
             ISO8601DateFormatter().date(from: "2026-10-11T11:30:25Z"),
-            "the Gemini row keeps its most-consumed bucket's own reset"
+            "each row keeps its own bucket's reset"
+        )
+        XCTAssertEqual(
+            snapshot.windows[1].resetsAt,
+            ISO8601DateFormatter().date(from: "2026-10-18T06:30:25Z")
         )
     }
 
-    /// The two pools are independent allowances; each row reports its own pool's
-    /// bucket rather than collapsing the two pools into one number.
-    func testSummaryKeepsBothPoolsSeparate() throws {
+    /// The two pools are independent allowances, and each pool meters both of its
+    /// windows separately. A row is identified by pool plus window.
+    func testSummaryKeepsPoolsAndWindowsApart() throws {
         let payload = """
         {
           "groups": [
@@ -106,7 +120,9 @@ final class AntigravityUsageTests: XCTestCase {
               "displayName": "Gemini Models",
               "buckets": [
                 {"bucketId": "gemini-5h", "window": "5h", "remainingFraction": 0.9,
-                 "resetTime": "2026-10-11T11:30:25Z"}
+                 "resetTime": "2026-10-11T11:30:25Z"},
+                {"bucketId": "gemini-weekly", "window": "weekly", "remainingFraction": 0.7,
+                 "resetTime": "2026-10-18T06:30:25Z"}
               ]
             },
             {
@@ -122,11 +138,15 @@ final class AntigravityUsageTests: XCTestCase {
 
         let snapshot = try AntigravityUsageService.parseQuotaSummary(Data(payload.utf8))
 
-        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini", "Claude/GPT"])
+        XCTAssertEqual(snapshot.windows.map(\.pool), [
+            "aiUsage.pool.gemini", "aiUsage.pool.gemini", "aiUsage.pool.other"
+        ])
+        XCTAssertEqual(snapshot.windows.map(\.label), ["5h", "7d", "5h"])
         XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 10.0, accuracy: 0.001)
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 60.0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 30.0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[2].usedPercent ?? -1, 60.0, accuracy: 0.001)
         XCTAssertEqual(
-            snapshot.windows[1].resetsAt,
+            snapshot.windows[2].resetsAt,
             ISO8601DateFormatter().date(from: "2026-10-11T11:50:39Z")
         )
     }
@@ -135,14 +155,14 @@ final class AntigravityUsageTests: XCTestCase {
         let snapshot = try AntigravityUsageService.parseQuotaSummary(fixture("antigravity_quota_summary.json"))
         XCTAssertEqual(
             AIUsageWindowPicker.nearestReset(in: snapshot.windows)?.label,
-            "Gemini",
-            "the header leads with the pool that resets soonest"
+            "5h",
+            "the header leads with the window that resets soonest"
         )
     }
 
     // MARK: - Per-model quota
 
-    func testQuotaParsesPerModelBucketsIntoFamilyWindows() throws {
+    func testQuotaParsesPerModelBucketsIntoTheShortWindowOfEachPool() throws {
         let payload = """
         {
           "buckets": [
@@ -155,13 +175,18 @@ final class AntigravityUsageTests: XCTestCase {
 
         let windows = try AntigravityUsageService.parseQuota(Data(payload.utf8))
 
-        XCTAssertEqual(windows.map(\.label), ["Gemini", "Claude/GPT"], "one row per model family")
+        XCTAssertEqual(windows.map(\.pool), ["aiUsage.pool.gemini", "aiUsage.pool.other"])
+        XCTAssertEqual(
+            windows.map(\.label),
+            ["5h", "5h"],
+            "this endpoint names no window; its buckets carry the short reset, so they are the 5h row"
+        )
         XCTAssertEqual(windows[0].usedPercent ?? -1, 13.0, accuracy: 0.001)
         XCTAssertEqual(windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
         XCTAssertEqual(
             windows[0].resetsAt,
             ISO8601DateFormatter().date(from: "2026-10-28T12:56:11Z"),
-            "the gemini family reports its most-consumed bucket (0.87), not 0.90"
+            "the gemini pool reports its most-consumed bucket (0.87), not 0.90"
         )
     }
 
@@ -180,30 +205,53 @@ final class AntigravityUsageTests: XCTestCase {
         let windows = try AntigravityUsageService.parseQuota(Data(payload.utf8))
 
         XCTAssertEqual(windows.count, 1)
-        XCTAssertEqual(windows[0].label, "Gemini")
+        XCTAssertEqual(windows[0].pool, "aiUsage.pool.gemini")
         XCTAssertEqual(windows[0].usedPercent ?? -1, 50.0, accuracy: 0.001)
     }
 
-    func testMergeTakesTheMoreConsumedWindowPerPool() throws {
+    /// The two bodies overlap only on the short window. The merged panel keeps
+    /// every window of every pool, ordered, with the overlap reported once.
+    func testMergeKeepsEveryWindowAndDeduplicatesTheOverlap() throws {
         let summary = [
-            UsageWindow(label: "Gemini", usedPercent: 7.3, resetsAt: nil),
-            UsageWindow(label: "Claude/GPT", usedPercent: 0, resetsAt: nil)
+            UsageWindow(label: "5h", pool: "aiUsage.pool.other", usedPercent: 0, resetsAt: nil),
+            UsageWindow(label: "7d", pool: "aiUsage.pool.other", usedPercent: 49.8, resetsAt: nil)
         ]
         let perModel = [
-            UsageWindow(label: "Gemini", usedPercent: 12.6, resetsAt: nil),
-            UsageWindow(label: "Claude/GPT", usedPercent: 0, resetsAt: nil)
+            UsageWindow(label: "5h", pool: "aiUsage.pool.gemini", usedPercent: 12.6, resetsAt: nil),
+            UsageWindow(label: "5h", pool: "aiUsage.pool.other", usedPercent: 0, resetsAt: nil)
         ]
 
         let merged = AntigravityUsageService.merge(summary, perModel)
 
-        XCTAssertEqual(merged.map(\.label), ["Gemini", "Claude/GPT"])
+        XCTAssertEqual(merged.map(\.pool), [
+            "aiUsage.pool.gemini", "aiUsage.pool.other", "aiUsage.pool.other"
+        ])
+        XCTAssertEqual(merged.map(\.label), ["5h", "5h", "7d"])
         XCTAssertEqual(merged[0].usedPercent ?? -1, 12.6, accuracy: 0.001)
         XCTAssertEqual(merged[1].usedPercent ?? -1, 0, accuracy: 0.001)
+        XCTAssertEqual(merged[2].usedPercent ?? -1, 49.8, accuracy: 0.001)
+    }
+
+    /// A pool that reports two windows of the same kind — it should not happen —
+    /// resolves to the more consumed reading rather than to whichever arrived last.
+    func testMergeTakesTheMoreConsumedReadingOfARepeatedWindow() {
+        let summary = [UsageWindow(label: "5h", pool: "aiUsage.pool.gemini", usedPercent: 10, resetsAt: nil)]
+        let perModel = [UsageWindow(label: "5h", pool: "aiUsage.pool.gemini", usedPercent: 40, resetsAt: nil)]
+
+        let merged = AntigravityUsageService.merge(summary, perModel)
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].usedPercent ?? -1, 40, accuracy: 0.001)
     }
 
     func testMergeKeepsSummaryWhenPerModelIsEmpty() {
-        let summary = [UsageWindow(label: "Gemini", usedPercent: 7.3, resetsAt: nil)]
-        XCTAssertEqual(AntigravityUsageService.merge(summary, []).map(\.label), ["Gemini"])
+        let summary = [
+            UsageWindow(label: "5h", pool: "aiUsage.pool.other", usedPercent: 7.3, resetsAt: nil)
+        ]
+        XCTAssertEqual(
+            AntigravityUsageService.merge(summary, []).map(\.pool),
+            ["aiUsage.pool.other"]
+        )
     }
 
     // MARK: - Rejections

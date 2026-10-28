@@ -165,6 +165,8 @@
 "aiUsage.window.month" = "月";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
+"aiUsage.pool.gemini" = "Gemini";
+"aiUsage.pool.other" = "その他";
 "aiUsage.antigravity" = "Antigravity";
 "aiUsage.autoRefresh" = "枠の自動更新";
 "aiUsage.autoRefresh.short" = "更新";

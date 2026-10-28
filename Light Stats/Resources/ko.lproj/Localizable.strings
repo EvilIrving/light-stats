@@ -165,6 +165,8 @@
 "aiUsage.window.month" = "월";
 "aiUsage.claude" = "Claude Code";
 "aiUsage.codex" = "ChatGPT";
+"aiUsage.pool.gemini" = "Gemini";
+"aiUsage.pool.other" = "기타";
 "aiUsage.antigravity" = "Antigravity";
 "aiUsage.autoRefresh" = "윈도우 자동 갱신";
 "aiUsage.autoRefresh.short" = "갱신";
