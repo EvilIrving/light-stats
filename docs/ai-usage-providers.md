@@ -130,7 +130,7 @@ Overview 展示规则：多窗口 provider 折叠为一行，只显示最紧的�
 |---|---|
 | 凭据 | Keychain generic password，`service=gemini`、`account=antigravity`（`agy` 经 go-keyring 写入），值 = `go-keyring-base64:` + base64(`{"token":{"access_token","refresh_token","expiry"}}`) |
 | 读取 | `/usr/bin/security find-generic-password -s gemini -a antigravity -w`，走共享 `KeychainCredentialReader`，不弹授权框 |
-| 端点 | `POST daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary`，body `{}` |
+| 端点 | `POST daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary`，body `{}`；并用 `POST …/v1internal:retrieveUserQuota`（body `{}`）补齐组摘要里缺失的模型族 |
 | 刷新 | `oauth2.googleapis.com/token` 的 refresh_token grant；client 用两家 CLI 共用的公开 Cloud Code Assist client（`1071006060591-…apps.googleusercontent.com`），换 client 会被拒 |
 | 写回 | **不写回**。刷新结果只留在进程内（`AntigravityTokenCache`），`agy` 是那个 Keychain 条目的唯一写入者 |
 | User-Agent | **必须是 `antigravity-cli`**。配额服务按调用方身份发放许可，UA 里不含 antigravity 一律 403 `not have a valid license of this product`（实测 `Light Stats/1.9.6`、`gemini-cli/0.30.0`、无 UA 都是 403，`antigravity-cli` 200） |
@@ -151,7 +151,9 @@ Overview 展示规则：多窗口 provider 折叠为一行，只显示最紧的�
 }
 ```
 
-映射：`window` 的 `5h` / `weekly` → 面板的 `5h` / `7d`；`usedPercent = (1 - remainingFraction) × 100`。**同一订阅被两组模型分别计量**，面板每个窗口只报更紧的那一组（先撞上的那条），因为展开行的标签列宽只有 36pt，装不下「组名 + 窗口」。未知 `window` 直接跳过，不猜。
+映射：`usedPercent = (1 - remainingFraction) × 100`。**同一订阅被两个独立配额池分别计量**——Gemini 一组、Claude/GPT 一组，各算各的、互不占用。面板按**池**显示：每池一行，报该池里更吃紧的那个窗口（5h 或 weekly 中已用比例更高者）。展开行的标签列宽只有 36pt，装不下「组名 + 窗口」，所以标签用池名（`Gemini` / `Claude/GPT`），窗口远近由倒计时体现。未知 `window` 直接跳过，不猜。
+
+**组摘要不再返回 Gemini 组（2026-10 起实测，与订阅档位无关）**：`retrieveUserQuotaSummary` 现在只回 Claude/GPT 组，Gemini 的计量只在 `retrieveUserQuota` 的按模型桶里（`gemini-*` 模型族共享同一 `remainingFraction` 与 `resetTime`，`claude-*`/`gpt-*` 同理）。因此 fetch 同时打两个接口：`retrieveUserQuota` 的 `gemini-*`/`claude-*`/`gpt-*` 按池取最紧的桶补进组摘要；`chat_*`（助手对话）与 `tab_*`（Tab 补全）不是模型配额，跳过。合并仍是每池取更紧者，per-model 拉取失败时退回组摘要。
 
 ## ⚠️ 一个必须先补的架构缺口（已补：随 DeepSeek 落地）
 

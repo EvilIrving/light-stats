@@ -80,25 +80,25 @@ final class AntigravityUsageTests: XCTestCase {
 
     // MARK: - Quota summary
 
-    func testSummaryReportsTheTighterBucketOfEachWindow() throws {
+    func testSummaryReportsTheTighterWindowOfEachPool() throws {
         let snapshot = try AntigravityUsageService.parseQuotaSummary(fixture("antigravity_quota_summary.json"))
 
         XCTAssertEqual(snapshot.provider, .antigravity)
-        XCTAssertEqual(snapshot.windows.map(\.label), ["5h", "7d"])
-        // Gemini group: 0.9270784 / 0.9878464 left, Claude+GPT group: 1.0 left.
+        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini", "Claude/GPT"])
+        // Gemini pool: 5h (0.927 left) is more consumed than weekly (0.988 left).
         XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 7.292, accuracy: 0.001)
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 1.215, accuracy: 0.001)
+        // Claude/GPT pool: both buckets full (1.0 left), so nothing consumed.
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
         XCTAssertEqual(
             snapshot.windows[0].resetsAt,
             ISO8601DateFormatter().date(from: "2026-10-11T11:30:25Z"),
-            "the 5h row keeps the tighter bucket's own reset"
+            "the Gemini row keeps its most-consumed bucket's own reset"
         )
     }
 
-    /// The two groups are separate allowances: whichever is more consumed is the
-    /// one the user hits first, so the row must follow the used percent, not the
-    /// group order.
-    func testSummaryFollowsTheMoreConsumedGroup() throws {
+    /// The two pools are independent allowances; each row reports its own pool's
+    /// bucket rather than collapsing the two pools into one number.
+    func testSummaryKeepsBothPoolsSeparate() throws {
         let payload = """
         {
           "groups": [
@@ -122,10 +122,11 @@ final class AntigravityUsageTests: XCTestCase {
 
         let snapshot = try AntigravityUsageService.parseQuotaSummary(Data(payload.utf8))
 
-        XCTAssertEqual(snapshot.windows.map(\.label), ["5h"])
-        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 60.0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows.map(\.label), ["Gemini", "Claude/GPT"])
+        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 10.0, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 60.0, accuracy: 0.001)
         XCTAssertEqual(
-            snapshot.windows[0].resetsAt,
+            snapshot.windows[1].resetsAt,
             ISO8601DateFormatter().date(from: "2026-10-11T11:50:39Z")
         )
     }
@@ -134,9 +135,75 @@ final class AntigravityUsageTests: XCTestCase {
         let snapshot = try AntigravityUsageService.parseQuotaSummary(fixture("antigravity_quota_summary.json"))
         XCTAssertEqual(
             AIUsageWindowPicker.nearestReset(in: snapshot.windows)?.label,
-            "5h",
-            "the header leads with the window that resets soonest"
+            "Gemini",
+            "the header leads with the pool that resets soonest"
         )
+    }
+
+    // MARK: - Per-model quota
+
+    func testQuotaParsesPerModelBucketsIntoFamilyWindows() throws {
+        let payload = """
+        {
+          "buckets": [
+            {"modelId": "gemini-2.5-flash", "remainingFraction": 0.87, "resetTime": "2026-10-28T12:56:11Z"},
+            {"modelId": "gemini-3-flash", "remainingFraction": 0.90, "resetTime": "2026-10-28T12:56:11Z"},
+            {"modelId": "claude-sonnet-4-6", "remainingFraction": 1, "resetTime": "2026-10-28T14:05:00Z"}
+          ]
+        }
+        """
+
+        let windows = try AntigravityUsageService.parseQuota(Data(payload.utf8))
+
+        XCTAssertEqual(windows.map(\.label), ["Gemini", "Claude/GPT"], "one row per model family")
+        XCTAssertEqual(windows[0].usedPercent ?? -1, 13.0, accuracy: 0.001)
+        XCTAssertEqual(windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
+        XCTAssertEqual(
+            windows[0].resetsAt,
+            ISO8601DateFormatter().date(from: "2026-10-28T12:56:11Z"),
+            "the gemini family reports its most-consumed bucket (0.87), not 0.90"
+        )
+    }
+
+    func testQuotaSkipsNonModelAndResetlessBuckets() throws {
+        let payload = """
+        {
+          "buckets": [
+            {"modelId": "gemini-2.5-flash", "remainingFraction": 0.5, "resetTime": "2026-10-28T12:56:11Z"},
+            {"modelId": "chat_20706", "remainingFraction": 0.1, "resetTime": "2026-10-28T12:00:00Z"},
+            {"modelId": "tab_flash_lite_preview", "remainingFraction": 0.1, "resetTime": "2026-10-28T12:00:00Z"},
+            {"modelId": "gemini-3-flash", "remainingFraction": 0.2}
+          ]
+        }
+        """
+
+        let windows = try AntigravityUsageService.parseQuota(Data(payload.utf8))
+
+        XCTAssertEqual(windows.count, 1)
+        XCTAssertEqual(windows[0].label, "Gemini")
+        XCTAssertEqual(windows[0].usedPercent ?? -1, 50.0, accuracy: 0.001)
+    }
+
+    func testMergeTakesTheMoreConsumedWindowPerPool() throws {
+        let summary = [
+            UsageWindow(label: "Gemini", usedPercent: 7.3, resetsAt: nil),
+            UsageWindow(label: "Claude/GPT", usedPercent: 0, resetsAt: nil)
+        ]
+        let perModel = [
+            UsageWindow(label: "Gemini", usedPercent: 12.6, resetsAt: nil),
+            UsageWindow(label: "Claude/GPT", usedPercent: 0, resetsAt: nil)
+        ]
+
+        let merged = AntigravityUsageService.merge(summary, perModel)
+
+        XCTAssertEqual(merged.map(\.label), ["Gemini", "Claude/GPT"])
+        XCTAssertEqual(merged[0].usedPercent ?? -1, 12.6, accuracy: 0.001)
+        XCTAssertEqual(merged[1].usedPercent ?? -1, 0, accuracy: 0.001)
+    }
+
+    func testMergeKeepsSummaryWhenPerModelIsEmpty() {
+        let summary = [UsageWindow(label: "Gemini", usedPercent: 7.3, resetsAt: nil)]
+        XCTAssertEqual(AntigravityUsageService.merge(summary, []).map(\.label), ["Gemini"])
     }
 
     // MARK: - Rejections

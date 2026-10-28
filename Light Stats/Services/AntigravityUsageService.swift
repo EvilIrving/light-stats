@@ -15,6 +15,9 @@
 //  3. The refresh token is bound to the Cloud Code Assist OAuth client both
 //     CLIs ship; a grant from any other client is rejected. That client is
 //     public — every install embeds it — not a user credential.
+//  4. The group summary stopped returning the Gemini group (backend change);
+//     Gemini metering now only exists in `retrieveUserQuota`'s per-model
+//     buckets, which the panel reads to keep the Gemini pool visible.
 //
 //  The Keychain item stays `agy`'s: a token refreshed here lives in this
 //  process only, never written back.
@@ -36,8 +39,16 @@ nonisolated enum AntigravityUsageService: UsageProviding {
     private static let quotaSummaryURL = URL(
         string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary"
     )!
+    private static let quotaURL = URL(
+        string: "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+    )!
     private static let tokenRefreshURL = URL(string: "https://oauth2.googleapis.com/token")!
     private static let userAgent = "antigravity-cli"
+
+    /// The two independent quota pools the panel shows as separate rows.
+    private static let geminiPool = "Gemini"
+    private static let claudeGPTPool = "Claude/GPT"
+    private static let poolOrder = [geminiPool, claudeGPTPool]
 
     private static let oauthClient = OAuthClient(
         id: "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
@@ -53,12 +64,12 @@ nonisolated enum AntigravityUsageService: UsageProviding {
         let token = try await accessToken(from: credential)
 
         do {
-            return try await fetchSummary(accessToken: token)
+            return try await fetchQuota(accessToken: token)
         } catch AIUsageError.tokenExpired {
             // The server rejected a token our stored expiry still called valid
             // (revoked early, or `agy` refreshed the item behind us).
             let refreshed = try await refreshAccessToken(credential)
-            return try await fetchSummary(accessToken: refreshed)
+            return try await fetchQuota(accessToken: refreshed)
         }
     }
 
@@ -66,6 +77,23 @@ nonisolated enum AntigravityUsageService: UsageProviding {
     /// wrote. Called on manual retry; the fetch path also self-recovers on 401.
     static func resetCredentialCache() {
         Task { await tokenCache.invalidate() }
+    }
+
+    /// The group-window summary is the primary shape; per-model buckets fill in
+    /// pools the summary omits. The summary stopped returning the Gemini group,
+    /// whose metering now only exists in `retrieveUserQuota`.
+    private static func fetchQuota(accessToken: String) async throws -> ProviderUsageSnapshot {
+        let summary = try await fetchSummary(accessToken: accessToken)
+        let perModel: [UsageWindow]
+        do {
+            perModel = try await fetchPerModel(accessToken: accessToken)
+        } catch {
+            // Per-model is a supplement; degrade to the summary alone.
+            return summary
+        }
+        let windows = merge(summary.windows, perModel)
+        guard !windows.isEmpty else { return summary }
+        return ProviderUsageSnapshot(provider: id, windows: windows, fetchedAt: Date())
     }
 
     private static func fetchSummary(accessToken: String) async throws -> ProviderUsageSnapshot {
@@ -77,6 +105,17 @@ nonisolated enum AntigravityUsageService: UsageProviding {
         request.httpBody = Data("{}".utf8)
 
         return try parseQuotaSummary(try await UsageHTTPClient.send(request))
+    }
+
+    private static func fetchPerModel(accessToken: String) async throws -> [UsageWindow] {
+        var request = URLRequest(url: quotaURL, timeoutInterval: UsageHTTPClient.defaultTimeout)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        request.httpBody = Data("{}".utf8)
+
+        return try parseQuota(try await UsageHTTPClient.send(request))
     }
 
     // MARK: - Credential
@@ -188,40 +227,102 @@ nonisolated enum AntigravityUsageService: UsageProviding {
             throw AIUsageError.decoding
         }
 
-        let windows = tightestWindows(in: groups)
+        let windows = poolWindows(in: groups)
         guard !windows.isEmpty else { throw AIUsageError.decoding }
 
         return ProviderUsageSnapshot(provider: id, windows: windows, fetchedAt: Date())
     }
 
-    /// The body meters one subscription twice — a Gemini group and a
-    /// Claude/GPT group, a 5h and a weekly bucket each. The row reports the
-    /// tighter bucket per window, which is the allowance that runs out first.
-    private static func tightestWindows(in groups: [[String: Any]]) -> [UsageWindow] {
+    /// Testable seam (also the live parse path): decode a `retrieveUserQuota`
+    /// body with no network. Collapses per-model buckets into one row per model
+    /// family, using each family's most-consumed bucket.
+    static func parseQuota(_ data: Data) throws -> [UsageWindow] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let buckets = json["buckets"] as? [[String: Any]] else {
+            throw AIUsageError.decoding
+        }
+
         var tightest: [String: UsageWindow] = [:]
+        for bucket in buckets {
+            guard let modelId = bucket["modelId"] as? String,
+                  let pool = modelFamily(of: modelId),
+                  let remaining = double(bucket["remainingFraction"]),
+                  let reset = date(bucket["resetTime"]) else { continue }
+
+            let usedPercent = min(100, max(0, (1 - remaining) * 100))
+            guard usedPercent > (tightest[pool]?.usedPercent ?? -1) else { continue }
+            tightest[pool] = UsageWindow(label: pool, usedPercent: usedPercent, resetsAt: reset)
+        }
+
+        return poolOrder.compactMap { tightest[$0] }
+    }
+
+    /// The panel reports one row per model pool and picks that pool's
+    /// most-consumed window. The summary supplies the pool structure (and the
+    /// weekly window); per-model supplies pools the summary omitted.
+    static func merge(_ summary: [UsageWindow], _ perModel: [UsageWindow]) -> [UsageWindow] {
+        var tightest: [String: UsageWindow] = [:]
+        for window in summary + perModel {
+            guard let used = window.usedPercent else { continue }
+            if used > (tightest[window.label]?.usedPercent ?? -1) {
+                tightest[window.label] = window
+            }
+        }
+        return poolOrder.compactMap { tightest[$0] }
+    }
+
+    /// `gemini-*` and `claude-*`/`gpt-*` are the two model families; `chat_*`
+    /// (assistant chat) and `tab_*` (tab autocomplete) are separate products.
+    private static func modelFamily(of modelId: String) -> String? {
+        let lower = modelId.lowercased()
+        if lower.hasPrefix("gemini") { return geminiPool }
+        if lower.hasPrefix("claude") || lower.hasPrefix("gpt") { return claudeGPTPool }
+        return nil
+    }
+
+    /// The body meters one subscription in two independent pools — Gemini and
+    /// Claude/GPT — each with a 5h and a weekly bucket. The panel shows one row
+    /// per pool, reporting that pool's most-consumed bucket.
+    private static func poolWindows(in groups: [[String: Any]]) -> [UsageWindow] {
+        var rows: [UsageWindow] = []
 
         for group in groups {
-            guard let buckets = group["buckets"] as? [[String: Any]] else { continue }
+            guard let buckets = group["buckets"] as? [[String: Any]],
+                  let pool = poolLabel(of: group) else { continue }
+
+            var tightest: UsageWindow?
             for bucket in buckets {
-                guard let kind = windowKind(of: bucket),
+                guard windowKind(of: bucket) != nil,
                       let remaining = double(bucket["remainingFraction"]) else { continue }
 
                 let usedPercent = min(100, max(0, (1 - remaining) * 100))
-                guard usedPercent > (tightest[kind]?.usedPercent ?? -1) else { continue }
+                guard usedPercent > (tightest?.usedPercent ?? -1) else { continue }
 
-                tightest[kind] = UsageWindow(
-                    label: kind,
+                tightest = UsageWindow(
+                    label: pool,
                     usedPercent: usedPercent,
                     resetsAt: date(bucket["resetTime"])
                 )
             }
+            if let tightest {
+                rows.append(tightest)
+            }
         }
 
-        return ["5h", "7d"].compactMap { tightest[$0] }
+        return rows
     }
 
-    /// `weekly` is the panel's `7d` row. An unrecognized window is skipped
-    /// rather than labelled with a guess.
+    /// Maps a summary group's `displayName` to its pool label. Unknown groups
+    /// are skipped rather than labelled with a guess.
+    private static func poolLabel(of group: [String: Any]) -> String? {
+        guard let displayName = (group["displayName"] as? String)?.lowercased() else { return nil }
+        if displayName.contains("gemini") { return geminiPool }
+        if displayName.contains("claude") || displayName.contains("gpt") { return claudeGPTPool }
+        return nil
+    }
+
+    /// Recognizes the two metered window kinds; an unrecognized window is
+    /// skipped rather than treated as pool data.
     private static func windowKind(of bucket: [String: Any]) -> String? {
         guard let window = (bucket["window"] as? String)?.lowercased() else { return nil }
         switch window {
