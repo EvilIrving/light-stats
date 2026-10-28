@@ -106,6 +106,7 @@ Light Stats/
 │   ├── QoderUsageService.swift      # qoder.com/.cn big-model credits (session cookie)
 │   ├── MiMoUsageService.swift       # Xiaomi MiMo console balance + Token Plan
 │   ├── UpdateService.swift          # R2 channel marker → download → verify → install (GitHub fallback)
+│   ├── UpdateWindowGeometry.swift   # The update window's height, pinned after hosting replaces it
 │   ├── LicenseCodec.swift           # Base32 + activation-code wire format (mirrored by script/license-tool)
 │   ├── LicenseValidator.swift       # Offline Ed25519 signature validation (embedded public key)
 │   ├── KeyboardLockService.swift    # CGEventTap key suppression (cleaning mode)

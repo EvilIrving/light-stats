@@ -263,10 +263,21 @@ final class UpdateManager: ObservableObject {
             window?.makeKeyAndOrderFront(nil)
             return
         }
-        let height = min(500, (NSScreen.main?.visibleFrame.height ?? 800) * 0.85)
+        let styleMask: NSWindow.StyleMask = [.titled, .closable]
+        let chrome = Self.chromeHeight(for: styleMask)
+        let visibleHeight = (NSScreen.main ?? NSScreen.screens.first)?.visibleFrame.height ?? 800
+        let contentHeight = UpdateWindowGeometry.contentHeight(
+            visibleHeight: visibleHeight,
+            chromeHeight: chrome
+        )
         let w = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 408, height: height),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: UpdateWindowGeometry.contentWidth,
+                height: contentHeight
+            ),
+            styleMask: styleMask,
             backing: .buffered,
             defer: false
         )
@@ -285,14 +296,36 @@ final class UpdateManager: ObservableObject {
         w.delegate = delegate
         windowDelegate = delegate
         // Cap hard max so even a preferred-size glitch can't push past the screen.
-        if let screen = NSScreen.main {
-            let maxH = screen.visibleFrame.height * 0.85
-            w.maxSize = NSSize(width: 480, height: maxH)
-        }
+        // The height is derived from the same margin the content was sized with, so
+        // it never falls below the frame we pin below.
+        w.maxSize = NSSize(
+            width: UpdateWindowGeometry.maximumWidth,
+            height: UpdateWindowGeometry.maximumFrameHeight(
+                visibleHeight: visibleHeight,
+                chromeHeight: chrome
+            )
+        )
+        // Assigning `contentViewController` replaces the window's size with the
+        // hosting view's fitting size — `sizingOptions = []` stops later content
+        // changes from resizing it, but not that first assignment. Without an
+        // explicit size the window ends up wherever the SwiftUI view happened to
+        // lay out, and a second layout pass (or the `maxSize` clamp) moves it again.
+        // Pin the size we decided on so the frame is the frame. Done before the
+        // window is on screen, so this is one deliberate resize, not the
+        // content-driven recursion that aborts on macOS 26.
+        w.setContentSize(
+            NSSize(width: UpdateWindowGeometry.contentWidth, height: contentHeight)
+        )
         w.center()
         window = w
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Title bar plus any other chrome `frameRect` adds around a content rect.
+    private static func chromeHeight(for styleMask: NSWindow.StyleMask) -> CGFloat {
+        let probe = NSRect(x: 0, y: 0, width: UpdateWindowGeometry.contentWidth, height: 100)
+        return NSWindow.frameRect(forContentRect: probe, styleMask: styleMask).height - probe.height
     }
 }
 

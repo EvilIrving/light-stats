@@ -23,6 +23,19 @@ final class UpdateWindowTests: XCTestCase {
         let window = try XCTUnwrap(manager.window)
         let frame = try await settledFrame(of: window)
         XCTAssertNotNil(window.contentViewController)
+        // The window must be the size the geometry decided on, not whatever size
+        // the hosting view's fitting pass happened to leave behind — assigning
+        // `contentViewController` resizes the window to that fitting size, and a
+        // later pass (or the `maxSize` clamp) used to move it by 2 pt.
+        let chrome = Self.chromeHeight(for: window.styleMask)
+        let visibleHeight = (window.screen ?? NSScreen.main ?? NSScreen.screens[0]).visibleFrame.height
+        XCTAssertEqual(
+            window.contentLayoutRect.height,
+            UpdateWindowGeometry.contentHeight(visibleHeight: visibleHeight, chromeHeight: chrome),
+            accuracy: 1,
+            "the update window keeps the content height the geometry chose"
+        )
+        XCTAssertEqual(window.contentLayoutRect.width, UpdateWindowGeometry.contentWidth, accuracy: 1)
         try capture(window, name: "available")
 
         manager.startInstall(release)
@@ -79,19 +92,37 @@ final class UpdateWindowTests: XCTestCase {
         XCTAssertNil(pending)
     }
 
-    /// Window 第一次上屏时 AppKit 还会自己做一次尺寸收敛，收敛前后的差值随机器快慢而不同
-    /// （CI 上实测差 2pt，本机差 0）。基线必须取收敛后的帧，否则这里每次都在比「刚创建」
-    /// 和「已就位」两个不同状态，而不是在比「阶段切换有没有改变窗口」。
-    private func settledFrame(of window: NSWindow, timeout: Duration = .seconds(2)) async throws -> NSRect {
+    /// Window 的帧在创建阶段会被 AppKit 改两次：给 `contentViewController` 赋值会把窗口改成
+    /// hosting view 的 fitting size，随后 AppKit 再布局一次，还可能被 `maxSize` 夹一次。三者
+    /// 的时机关机器快慢而不同（CI 上实测差 2pt，本机差 0），所以基线必须取真正停下来的帧。
+    ///
+    /// 产品侧已把尺寸在赋值之后显式钉住（`UpdateManager.showUpdateWindow`），这里仍要求
+    /// 「连续若干次采样都不变且窗口已上屏」：单次相等会把布局过程里的停顿当成已就位。
+    private func settledFrame(
+        of window: NSWindow,
+        quietSamples: Int = 4,
+        timeout: Duration = .seconds(3)
+    ) async throws -> NSRect {
         var previous = window.frame
+        var stable = 0
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(50))
             let current = window.frame
-            if current == previous { return current }
+            if current == previous, window.isVisible {
+                stable += 1
+                if stable >= quietSamples { return current }
+            } else {
+                stable = 0
+            }
             previous = current
         }
         return previous
+    }
+
+    private static func chromeHeight(for styleMask: NSWindow.StyleMask) -> CGFloat {
+        let probe = NSRect(x: 0, y: 0, width: UpdateWindowGeometry.contentWidth, height: 100)
+        return NSWindow.frameRect(forContentRect: probe, styleMask: styleMask).height - probe.height
     }
 
     private func capture(_ window: NSWindow, name: String) throws {
