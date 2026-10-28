@@ -29,6 +29,14 @@ enum CLIBinaryResolver {
         )
     }
 
+    static func resolveAntigravityBinary() -> String? {
+        resolveBinary(
+            name: "agy",
+            overrideKey: "AGY_CLI_PATH",
+            wellKnownPaths: antigravityWellKnownPaths()
+        )
+    }
+
     static func enrichedEnvironment() -> [String: String] {
         var environment = ProcessInfo.processInfo.environment
         environment["PATH"] = effectivePath().joined(separator: ":")
@@ -122,6 +130,16 @@ enum CLIBinaryResolver {
             "/Applications/Codex.app/Contents/Resources/codex",
             "/opt/homebrew/bin/codex",
             "/usr/local/bin/codex",
+        ]
+    }
+
+    private static func antigravityWellKnownPaths() -> [String] {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return [
+            "\(home)/.local/bin/agy",
+            "/opt/homebrew/bin/agy",
+            "/usr/local/bin/agy",
+            "/Applications/cmux.app/Contents/Resources/bin/agy",
         ]
     }
 

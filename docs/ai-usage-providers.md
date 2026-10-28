@@ -151,7 +151,13 @@ Overview 展示规则：多窗口 provider 折叠为一行，只显示最紧的�
 }
 ```
 
-映射：`usedPercent = (1 - remainingFraction) × 100`。**同一订阅被两个独立配额池分别计量**——Gemini 一组、Claude/GPT 一组，各算各的、互不占用。面板按**池**显示：每池一行，报该池里更吃紧的那个窗口（5h 或 weekly 中已用比例更高者）。展开行的标签列宽只有 36pt，装不下「组名 + 窗口」，所以标签用池名（`Gemini` / `Claude/GPT`），窗口远近由倒计时体现。未知 `window` 直接跳过，不猜。
+映射：`usedPercent = (1 - remainingFraction) × 100`。**同一订阅被两个独立配额池分别计量**——Gemini 一组，Claude/GPT 一组，各算各的、互不占用。每个窗口各占一行，行首标出所属池（`Gemini` / `Other`）；行是「池 + 窗口」的组合，所以同一个 5h 在两个池下是两条。
+
+**组摘要不再返回 Gemini 组（2026-10 起实测，与订阅档位无关）**：`retrieveUserQuotaSummary` 只回 Claude/GPT 组；`retrieveUserQuota` 的按模型桶里 `gemini-*` / `claude-*` / `gpt-*` 各自共享一个 `remainingFraction` 与 `resetTime`，且只覆盖短窗口（`chat_*`、`tab_*` 不是模型配额，跳过）。**Gemini 的 weekly 只在 CLI 自己的 `/usage` 面板里**——REST 无论换 host、版本、UA、`project`、刷新 token、重复请求都不返回，实测只有 agy 的本地 LanguageServer 路径能拿到。
+
+所以 fetch 合成三路：组摘要（唯一带 weekly 名字的 REST 响应）+ 按模型（补 Gemini 的 5h）+ `agy -p "/usage"` 的 PTY 抓取（补 Gemini 的 7d）。抓取是未公开 TUI 的解析，失败只保留前两路；它按 10 分钟 TTL 缓存并单飞，因为起一次 CLI 要几秒到十几秒。
+
+表格行形如 `Gemini Models    Weekly Limit Remaining    94%    2026-11-02 22:20 CST`：列之间是制表符或对齐空格两种，百分比是**剩余**份额（面板存的是已用），时间在管道里是 ISO-8601（带秒）、在终端里是本机时区无秒，两种都要认。
 
 **组摘要不再返回 Gemini 组（2026-10 起实测，与订阅档位无关）**：`retrieveUserQuotaSummary` 现在只回 Claude/GPT 组，Gemini 的计量只在 `retrieveUserQuota` 的按模型桶里（`gemini-*` 模型族共享同一 `remainingFraction` 与 `resetTime`，`claude-*`/`gpt-*` 同理）。因此 fetch 同时打两个接口：`retrieveUserQuota` 的 `gemini-*`/`claude-*`/`gpt-*` 按池取最紧的桶补进组摘要；`chat_*`（助手对话）与 `tab_*`（Tab 补全）不是模型配额，跳过。合并仍是每池取更紧者，per-model 拉取失败时退回组摘要。
 

@@ -244,6 +244,82 @@ final class AntigravityUsageTests: XCTestCase {
         XCTAssertEqual(merged[0].usedPercent ?? -1, 40, accuracy: 0.001)
     }
 
+    // MARK: - CLI quota table
+
+    /// The panel `agy` paints is the only place the Gemini weekly window appears.
+    /// Real captured output, one row per pool per window.
+    func testUsageTableParsesEveryPoolAndWindow() throws {
+        let table = """
+        Gemini Models\tWeekly Limit Remaining\t94%\t2026-11-02T14:20:34Z
+        Gemini Models\tFive Hour Limit Remaining\t85%\t2026-10-28T12:56:11Z
+        Claude and GPT models\tWeekly Limit Remaining\t50%\t2026-11-02T15:42:57Z
+        Claude and GPT models\tFive Hour Limit Remaining\t100%\t2026-10-28T15:18:12Z
+        """
+
+        let rows = AntigravityUsageService.parseUsageTable(table)
+
+        XCTAssertEqual(rows.map(\.pool), [
+            "aiUsage.pool.gemini", "aiUsage.pool.gemini", "aiUsage.pool.other", "aiUsage.pool.other"
+        ])
+        XCTAssertEqual(rows.map(\.label), ["5h", "7d", "5h", "7d"])
+        // The CLI prints the remaining share; the panel stores what was used.
+        XCTAssertEqual(rows[0].usedPercent ?? -1, 15.0, accuracy: 0.001)
+        XCTAssertEqual(rows[1].usedPercent ?? -1, 6.0, accuracy: 0.001)
+        XCTAssertEqual(rows[2].usedPercent ?? -1, 0.0, accuracy: 0.001)
+        XCTAssertEqual(rows[3].usedPercent ?? -1, 50.0, accuracy: 0.001)
+        XCTAssertEqual(
+            rows[1].resetsAt,
+            ISO8601DateFormatter().date(from: "2026-11-02T14:20:34Z"),
+            "the weekly row keeps its own reset"
+        )
+    }
+
+    /// The TUI pads columns with spaces when it is not emitting tabs.
+    func testUsageTableParsesSpaceAlignedColumns() {
+        let table = "Gemini Models    Weekly Limit Remaining    94%    2026-11-02T14:20:34Z"
+
+        let rows = AntigravityUsageService.parseUsageTable(table)
+
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].label, "7d")
+        XCTAssertEqual(rows[0].pool, "aiUsage.pool.gemini")
+        XCTAssertEqual(rows[0].usedPercent ?? -1, 6.0, accuracy: 0.001)
+    }
+
+    /// Borders, headings and prose are not rows.
+    func testUsageTableIgnoresEverythingThatIsNotAQuotaRow() {
+        let table = """
+        Model Quotas
+        ────────────────────────────────
+        Gemini 3.8 Flash (High)
+        Esc to close
+        """
+
+        XCTAssertTrue(AntigravityUsageService.parseUsageTable(table).isEmpty)
+    }
+
+    /// A terminal render writes the reset in local time with no seconds, which is
+    /// what the PTY capture actually receives.
+    func testUsageTableReadsALocalResetStamp() throws {
+        let table = "Gemini Models    Weekly Limit Remaining    94%    2026-11-02 22:20 CST"
+
+        let rows = AntigravityUsageService.parseUsageTable(table)
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        let expected = try XCTUnwrap(formatter.date(from: "2026-11-02 22:20"))
+        XCTAssertEqual(rows[0].resetsAt, expected, "the local stamp resolves in this machine's zone")
+    }
+
+    func testUsageTableWithoutAResetTimeStillReportsTheWindow() {
+        let rows = AntigravityUsageService.parseUsageTable("Gemini Models\tWeekly Limit Remaining\t40%")
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertNil(rows[0].resetsAt)
+        XCTAssertEqual(rows[0].usedPercent ?? -1, 60.0, accuracy: 0.001)
+    }
+
     func testMergeKeepsSummaryWhenPerModelIsEmpty() {
         let summary = [
             UsageWindow(label: "5h", pool: "aiUsage.pool.other", usedPercent: 7.3, resetsAt: nil)

@@ -58,6 +58,7 @@ nonisolated enum AntigravityUsageService: UsageProviding {
     )
 
     private static let tokenCache = AntigravityTokenCache()
+    private static let tableCache = AntigravityTableCache()
 
     // MARK: - Fetch
 
@@ -81,21 +82,85 @@ nonisolated enum AntigravityUsageService: UsageProviding {
         Task { await tokenCache.invalidate() }
     }
 
-    /// The group-window summary is the primary shape; per-model buckets fill in
-    /// pools the summary omits. The summary stopped returning the Gemini group,
-    /// whose metering now only exists in `retrieveUserQuota`.
+    /// Three sources, in the order they help:
+    ///
+    /// - the group summary is the only body that names a weekly window;
+    /// - the per-model body still reports the Gemini pool the summary dropped;
+    /// - the CLI's own `/usage` panel is the only place the Gemini **weekly**
+    ///   window appears at all. It is a scraper of an undocumented TUI, so it is
+    ///   cached and refreshed on a long interval, and every failure simply leaves
+    ///   the REST rows in place.
     private static func fetchQuota(accessToken: String) async throws -> ProviderUsageSnapshot {
         let summary = try await fetchSummary(accessToken: accessToken)
-        let perModel: [UsageWindow]
-        do {
-            perModel = try await fetchPerModel(accessToken: accessToken)
-        } catch {
-            // Per-model is a supplement; degrade to the summary alone.
-            return summary
-        }
-        let windows = merge(summary.windows, perModel)
+        let perModel = (try? await fetchPerModel(accessToken: accessToken)) ?? []
+        let scraped = await scrapedWindows()
+
+        let windows = merge(merge(summary.windows, perModel), scraped)
         guard !windows.isEmpty else { return summary }
         return ProviderUsageSnapshot(provider: id, windows: windows, fetchedAt: Date())
+    }
+
+    /// The CLI panel's rows, refreshed when the cached set is older than the
+    /// probe interval. A warm cache is returned immediately and the scrape runs
+    /// behind it, because launching the CLI takes seconds.
+    private static func scrapedWindows() async -> [UsageWindow] {
+        if let fresh = await tableCache.fresh() { return fresh }
+
+        let stale = await tableCache.lastKnown()
+        guard await tableCache.beginRefresh() else { return stale ?? [] }
+
+        if let stale {
+            Task.detached { await refreshTable() }
+            return stale
+        }
+        await refreshTable()
+        return await tableCache.lastKnown() ?? []
+    }
+
+    private static func refreshTable() async {
+        do {
+            let rows = try await scrapeUsageTable()
+            await tableCache.store(rows)
+        } catch {
+            log.notice("Antigravity /usage probe unavailable: \(error)")
+            await tableCache.fail()
+        }
+    }
+
+    /// Runs `agy -p "/usage"` in a PTY and captures the quota table it paints.
+    /// Throws when the CLI is absent or never prints the panel.
+    private static func scrapeUsageTable() async throws -> [UsageWindow] {
+        guard let binary = CLIBinaryResolver.resolveAntigravityBinary() else {
+            throw AIUsageError.endpointNotFound
+        }
+
+        let text = try await PTYProbe.capture(
+            binary: binary,
+            timeout: 75,
+            config: PTYProbe.Config(
+                arguments: ["-p", "/usage"],
+                winsize: Self.ptyWinsize(rows: 40, columns: 120),
+                initialDelay: 1,
+                command: "",
+                pollInterval: 0.3,
+                settleDelay: 0.8,
+                workDirPrefix: "lightstats-agy-",
+                onOutput: { text, _ in
+                    let clean = text.lowercased()
+                    let complete = clean.contains("weekly limit remaining")
+                        && clean.contains("five hour limit remaining")
+                    return complete ? .complete : .keepReading
+                }
+            )
+        )
+
+        let rows = parseUsageTable(text)
+        guard !rows.isEmpty else { throw AIUsageError.network }
+        return rows
+    }
+
+    private static func ptyWinsize(rows: UInt16, columns: UInt16) -> winsize {
+        winsize(ws_row: rows, ws_col: columns, ws_xpixel: 0, ws_ypixel: 0)
     }
 
     private static func fetchSummary(accessToken: String) async throws -> ProviderUsageSnapshot {
@@ -358,6 +423,87 @@ nonisolated enum AntigravityUsageService: UsageProviding {
         }
     }
 
+    /// Testable seam: parse the quota table `agy` prints for `/usage`. Rows look
+    /// like `Gemini Models  Weekly Limit Remaining  94%  2026-11-02T14:20:34Z`,
+    /// separated by tabs or by aligned columns of spaces. The percentage is the
+    /// remaining share, which the panel stores as used.
+    static func parseUsageTable(_ text: String) -> [UsageWindow] {
+        var rows: [String: UsageWindow] = [:]
+
+        for rawLine in text.components(separatedBy: .newlines) {
+            let fields = tableFields(rawLine)
+            guard fields.count >= 3,
+                  let pool = poolLabel(named: fields[0]),
+                  let window = windowKind(named: fields[1]),
+                  let percent = firstPercent(in: fields) else { continue }
+
+            let resetsAt = fields.compactMap(tableDate).first
+            rows[rowKey(pool: pool, window: window)] = UsageWindow(
+                label: window,
+                pool: pool,
+                usedPercent: min(100, max(0, 100 - percent)),
+                resetsAt: resetsAt
+            )
+        }
+
+        return ordered(rows)
+    }
+
+    /// Splits a rendered table row into cells, whether the CLI separated them
+    /// with tabs or with runs of spaces for column alignment.
+    private static func tableFields(_ line: String) -> [String] {
+        let tabSeparated = line.components(separatedBy: "\t")
+        let cells = tabSeparated.count > 1
+            ? tabSeparated
+            : line.components(separatedBy: "  ")
+        return cells
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    private static func firstPercent(in fields: [String]) -> Double? {
+        for field in fields where field.hasSuffix("%") {
+            if let value = Double(field.dropLast()) { return value }
+        }
+        return nil
+    }
+
+    /// The same instant arrives in two shapes: an ISO-8601 stamp with seconds
+    /// when the CLI writes to a pipe, and a `yyyy-MM-dd HH:mm` local stamp when
+    /// it paints a terminal (which is what the PTY capture sees). The local shape
+    /// carries no seconds, so it resolves to the start of that minute.
+    private static func tableDate(_ text: String) -> Date? {
+        if text.contains("T"), text.hasSuffix("Z") {
+            return ISO8601DateFormatter().date(from: text)
+        }
+
+        let head = text.split(separator: " ").prefix(2).joined(separator: " ")
+        guard head.count == "yyyy-MM-dd HH:mm".count else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.date(from: head)
+    }
+
+    /// The panel's group name mapped to a pool. Matched case-insensitively on a
+    /// substring, because the CLI prints the server's `displayName` verbatim.
+    private static func poolLabel(named name: String) -> String? {
+        let lower = name.lowercased()
+        if lower.contains("gemini") { return geminiPool }
+        if lower.contains("claude") || lower.contains("gpt") { return otherPool }
+        return nil
+    }
+
+    /// The panel's bucket label mapped to the row's window kind.
+    private static func windowKind(named name: String) -> String? {
+        let lower = name.lowercased()
+        if lower.contains("weekly") { return "7d" }
+        if lower.contains("hour") { return "5h" }
+        return nil
+    }
+
     private static func double(_ value: Any?) -> Double? {
         if let value = value as? Double { return value }
         if let value = value as? Int { return Double(value) }
@@ -375,6 +521,44 @@ nonisolated enum AntigravityUsageService: UsageProviding {
 
 /// Holds a token refreshed during this process. `agy` remains the Keychain
 /// item's only writer, so nothing here is persisted.
+private actor AntigravityTableCache {
+    /// The CLI panel changes slowly and takes seconds to launch, so it is read on
+    /// this interval rather than on every poll.
+    private let interval: TimeInterval = 600
+    private var rows: [UsageWindow] = []
+    private var fetchedAt: Date?
+    private var isRefreshing = false
+
+    func fresh() -> [UsageWindow]? {
+        guard let fetchedAt, Date().timeIntervalSince(fetchedAt) < interval, !rows.isEmpty else {
+            return nil
+        }
+        return rows
+    }
+
+    func lastKnown() -> [UsageWindow]? {
+        rows.isEmpty ? nil : rows
+    }
+
+    /// Returns false when a scrape is already running, so concurrent polls do not
+    /// each launch the CLI.
+    func beginRefresh() -> Bool {
+        guard !isRefreshing else { return false }
+        isRefreshing = true
+        return true
+    }
+
+    func store(_ rows: [UsageWindow]) {
+        self.rows = rows
+        fetchedAt = Date()
+        isRefreshing = false
+    }
+
+    func fail() {
+        isRefreshing = false
+    }
+}
+
 private actor AntigravityTokenCache {
     private var token: String?
     private var expiresAt: Date?
