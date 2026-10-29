@@ -8,12 +8,10 @@
 import Foundation
 import AppKit
 
-// MARK: - Responsibility Framework
-
-/// Import the responsibility framework for process grouping
-/// responsibility_get_pid_responsible_for_pid returns the PID of the "responsible" process
+#if !APP_STORE
 @_silgen_name("responsibility_get_pid_responsible_for_pid")
 func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
+#endif
 
 // MARK: - Process Service
 

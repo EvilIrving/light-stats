@@ -81,6 +81,11 @@ enum AppDistribution {
 
 UI and AppDelegate consult `AppDistribution` (or `#if APP_STORE`) so Direct builds keep today’s behavior with zero runtime cost.
 
+App Review scans the binary for private C symbols. Runtime gates (`includesScrollReverse`, `includesProcessCleanup`) do not strip `@_silgen_name` imports. Those declarations and their call sites sit behind `#if !APP_STORE`:
+
+- `CGEventCopyIOHIDEvent` / `IOHIDEventGetFloatValue` / `IOHIDEventSetFloatValue` in `ScrollDirectionService`
+- `responsibility_get_pid_responsible_for_pid` in `ProcessService` / `AppMemoryManager`
+
 ### Build settings (AppStore*)
 
 - `SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) APP_STORE`
@@ -167,6 +172,7 @@ Status bar: no window-controls item; no fan RPM when SMC absent; temperature UI 
 - [x] MAS drops Cleanup tab + Finder menu (`includesProcessCleanup` / `includesFinderMenu`); appex omitted on AppStore*
 - [x] AGENTS.md / CLAUDE.md note on dual distribution
 - [x] Verify Direct Debug + AppStoreDebug compile (sandbox on for MAS; AppleSMC / private display symbols absent)
+- [x] `#if !APP_STORE` around IOHID / responsibility `@_silgen_name` (Guideline 2.5.1)
 - [x] Listing runbook: `docs/mac-app-store-listing.md`
 - [x] Screenshot set: `docs/app-store-screenshots/mas-1440x900/`
 - [ ] TestFlight / App Review submission (follow-up; prefer AppStore-build overview shots without Pro/keep-awake/cleaning chrome)

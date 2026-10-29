@@ -34,24 +34,19 @@ import CoreFoundation
 import CoreGraphics
 import OSLog
 
-// MARK: - IOHIDEvent Bridge (private SPI)
-
-/// IOHIDEvent scroll 字段索引。kIOHIDEventTypeScroll = 6，base = 6 << 16。
+#if !APP_STORE
 private let kIOHIDEventFieldScrollX: UInt32 = 0x0006_0000
 private let kIOHIDEventFieldScrollY: UInt32 = 0x0006_0001
 
-/// `CGEventCopyIOHIDEvent` —— 返回 CGEvent 底层的 IOHIDEvent（Copy 语义，+1 引用）。
-/// 取回后用 `takeRetainedValue()` 交给 ARC 释放，不会过度释放。
 @_silgen_name("CGEventCopyIOHIDEvent")
 private func CGEventCopyIOHIDEvent(_ event: CGEvent?) -> Unmanaged<CFTypeRef>?
 
-/// `IOHIDEventGetFloatValue` —— 读 IOHIDEvent 浮点字段。IOHIDFloat 在 64 位上是 double。
 @_silgen_name("IOHIDEventGetFloatValue")
 private func IOHIDEventGetFloatValue(_ event: CFTypeRef, _ field: UInt32) -> Double
 
-/// `IOHIDEventSetFloatValue` —— 写 IOHIDEvent 浮点字段。
 @_silgen_name("IOHIDEventSetFloatValue")
 private func IOHIDEventSetFloatValue(_ event: CFTypeRef, _ field: UInt32, _ value: Double)
+#endif
 
 // MARK: - Config & Protocol
 
@@ -420,22 +415,23 @@ final class ScrollDirectionService: ScrollReversing {
             fallback: vmul
         )
         let hLine = hmul
+        #if !APP_STORE
         let changesEvent = vLine != 1.0 || hLine != 1.0 || vmul != 1.0 || hmul != 1.0
         let hidBefore = changesEvent ? CGEventCopyIOHIDEvent(event)?.takeRetainedValue() : nil
         let origHidY = hidBefore.map { IOHIDEventGetFloatValue($0, kIOHIDEventFieldScrollY) } ?? 0
         let origHidX = hidBefore.map { IOHIDEventGetFloatValue($0, kIOHIDEventFieldScrollX) } ?? 0
+        #endif
 
-        // 用预读的原始值写回 CGEvent 字段（行步进 → 定点数 → 点数）。
         writeAxis(event, fields: Self.verticalFields, sample: vSample, lineFactor: vLine, rawFactor: vmul)
         writeAxis(event, fields: Self.horizontalFields, sample: hSample, lineFactor: hLine, rawFactor: hmul)
 
-        // 改完 CGEvent 后「重新」拷贝一份 IOHID 写入原始值 × 方向/倍率。即使只改
-        // DeltaAxis1，也必须恢复两个 HID 轴，避免系统重建事件后不同字段语义分叉。
+        #if !APP_STORE
         let hidAfter = changesEvent ? CGEventCopyIOHIDEvent(event)?.takeRetainedValue() : nil
         if let hidAfter {
             IOHIDEventSetFloatValue(hidAfter, kIOHIDEventFieldScrollY, origHidY * vmul)
             IOHIDEventSetFloatValue(hidAfter, kIOHIDEventFieldScrollX, origHidX * hmul)
         }
+        #endif
         return Unmanaged.passUnretained(event)
     }
 

@@ -310,7 +310,11 @@ final class AppMemoryManager: ObservableObject {
         }
 
         for process in topProcesses {
+            #if APP_STORE
+            let responsiblePid = process.pid
+            #else
             let responsiblePid = responsibility_get_pid_responsible_for_pid(process.pid)
+            #endif
             let processBundleInfo = bundleInfo(for: process.pid)
             let responsibleBundleInfo = responsiblePid > 0 ? bundleInfo(for: responsiblePid) : nil
 
