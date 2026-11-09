@@ -127,6 +127,7 @@ extension AppDelegate {
             thumbnailService: windowThumbnailService,
             configuration: configuration
         )
+        appSwitcherService.setMode(configuration.switcherMode)
 
         if !thumbnails {
             Task { await windowThumbnailService.clearCache() }

@@ -55,6 +55,21 @@ final class SnapConfigurationTests: XCTestCase {
         XCTAssertEqual(decoded.edgeOwner, .system)
     }
 
+    /// The switcher's layout is a stored choice: a build that never wrote it opens in the system's
+    /// two-level shape, and a chosen grid survives the next launch.
+    func testTheSwitcherModeRoundTripsAndDefaultsToTwoLevel() throws {
+        let legacy = try XCTUnwrap(SnapConfiguration(json: #"{"isCommandTabPlusEnabled":true}"#))
+        XCTAssertEqual(
+            legacy.switcherMode,
+            .twoLevel,
+            "an install from before the choice existed keeps the system's shape"
+        )
+        var configuration = SnapConfiguration.default
+        configuration.switcherMode = .grid
+        let decoded = try XCTUnwrap(SnapConfiguration(json: configuration.json))
+        XCTAssertEqual(decoded.switcherMode, .grid)
+    }
+
     func testAnEmptyObjectDecodesToTheDefaults() throws {
         let decoded = try XCTUnwrap(SnapConfiguration(json: "{}"))
         XCTAssertEqual(decoded, SnapConfiguration.default)

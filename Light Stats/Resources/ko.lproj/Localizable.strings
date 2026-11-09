@@ -545,6 +545,10 @@
 "settings.snap.commandTab" = "Cmd-Tab Plus";
 "settings.snap.commandTab.hint" = "시스템 앱 전환기를 윈도우 단위 전환기로 바꿉니다.";
 "settings.snap.commandTab.warning" = "켜져 있는 동안 ⌘Tab은 Light Stats가 처리하며 시스템 전환기는 나타나지 않습니다. 끄면 즉시 원래대로 돌아갑니다.";
+"settings.snap.switcherMode" = "전환기 레이아웃";
+"settings.snap.switcherMode.hint" = "앱을 먼저 고른 뒤 윈도우를 고르거나, 모든 윈도우를 하나의 그리드로 배치합니다.";
+"settings.snap.switcherMode.twoLevel" = "앱 + 윈도우";
+"settings.snap.switcherMode.grid" = "그리드";
 "settings.snap.screenRecording.needed" = "화면 기록 권한 필요";
 "settings.snap.screenRecording.denied" = "로컬 윈도우 썸네일 생성에만 사용됩니다. 화면 내용을 녹화, 저장 또는 업로드하지 않습니다.";
 "settings.snap.screenRecording.requiresRestart" = "Light Stats가 이 권한을 아직 인식하지 못했습니다. Light Stats를 재시작하면 캡처를 시작합니다.";

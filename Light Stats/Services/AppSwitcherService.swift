@@ -32,6 +32,8 @@ protocol AppSwitcherControlling: AnyObject {
     func start() -> Bool
     func stop()
     func setSuspended(_ suspended: Bool)
+    /// Which panel shape the next session uses. Set from the main thread when settings change.
+    func setMode(_ mode: AppSwitcherMode)
     /// Supplies the applications and windows to switch between, on demand.
     var sessionProvider: (() -> AppSwitcherSession)? { get set }
     /// The pointer moved onto a row of the panel: make it the selection.
@@ -73,6 +75,7 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
     private var running = false
     private var suspended = false
     private var session = AppSwitcherSession(groups: [])
+    private var switcherMode: AppSwitcherMode = .twoLevel
     private var deliveryRevision: UInt64 = 0
 
     private var tapRunLoop: CFRunLoop?
@@ -132,6 +135,12 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
             CFRunLoopStop(loop)
         }
         tapThread = nil
+    }
+
+    func setMode(_ mode: AppSwitcherMode) {
+        stateLock.lock()
+        switcherMode = mode
+        stateLock.unlock()
     }
 
     func setSuspended(_ suspended: Bool) {
@@ -385,16 +394,39 @@ nonisolated final class AppSwitcherService: AppSwitcherControlling, @unchecked S
 
     // MARK: - Session
 
-    private func beginSession(backwards: Bool) -> Bool {
-        guard let provider = sessionProvider else { return false }
-        var candidate = provider()
-        guard candidate.selectedWindow != nil else { return false }
+    /// The session a start would install, or `nil` when there is nothing to switch to.
+    ///
+    /// Not `private`: the provider hands back its own `AppSwitcherSession` (which is `.twoLevel` by
+    /// default), so what makes the user's choice reach the panel is this function overriding that
+    /// mode from `setMode`. A test cannot start a real session — that needs the event tap and its
+    /// Accessibility grant — so the decision itself is reachable from here.
+    func candidateSession(backwards: Bool) -> AppSwitcherSession? {
+        guard let provider = sessionProvider else { return nil }
+        let listed = provider()
+        guard !listed.flatWindows.isEmpty else { return nil }
+        stateLock.lock()
+        let mode = switcherMode
+        stateLock.unlock()
+        var candidate = AppSwitcherSession(groups: listed.groups, mode: mode)
+        guard candidate.selectedWindow != nil else { return nil }
         candidate.selectInitialGroup(backwards: backwards)
+        return candidate
+    }
+
+    private func beginSession(backwards: Bool) -> Bool {
+        guard let candidate = candidateSession(backwards: backwards) else { return false }
 
         stateLock.lock()
         guard running, !suspended else { stateLock.unlock(); return false }
         session = candidate
         stateLock.unlock()
+        // Which shape the panel was actually told to draw, and what it was told to draw it from —
+        // the one question a live report of "the wrong mode appeared" cannot answer any other way.
+        DiagnosticLogService.record(category: "appSwitcher", action: "switcherSession", fields: [
+            "mode": .publicValue(candidate.mode.rawValue),
+            "groups": .publicValue(String(candidate.groups.count)),
+            "flatWindows": .publicValue(String(candidate.flatWindows.count))
+        ])
         return true
     }
 

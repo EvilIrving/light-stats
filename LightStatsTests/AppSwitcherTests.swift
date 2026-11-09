@@ -137,6 +137,219 @@ final class AppSwitcherSessionTests: XCTestCase {
         subject.selectWindow(at: 9)
         XCTAssertEqual(subject.windowIndex, 0)
     }
+
+    /// The default shape is the system's two-level one, and it stays two-level: the flat list exists
+    /// for the grid mode and must not move the selection here.
+    func testTheDefaultModeIsTwoLevelAndIgnoresTheFlatList() {
+        let subject = session(groups: [(1, 2), (2, 2)])
+        XCTAssertEqual(subject.mode, .twoLevel)
+        XCTAssertEqual(subject.selectedGroup?.processID, 2)
+        XCTAssertEqual(subject.selectedWindow?.processID, 2, "the second application's first window")
+        XCTAssertEqual(subject.selectedWindow?.title, "w0")
+        XCTAssertEqual(subject.flatIndex, 1, "the flat list is built, but it does not select anything here")
+    }
+}
+
+/// The grid mode: one flat list of every window, ordered by recency.
+///
+/// The same session serves both shapes, so what has to be pinned down is that in this mode every
+/// movement — Tab, the arrows, the pointer — walks `flatWindows`, and that a commit returns what the
+/// grid has highlighted.
+final class AppSwitcherGridSessionTests: XCTestCase {
+
+    private func item(_ processID: pid_t, _ title: String) -> WindowPreviewItem {
+        WindowPreviewItem(
+            id: "\(processID)-\(title)",
+            title: title,
+            isMinimized: false,
+            isOnScreen: true,
+            frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+            element: AXUIElementCreateSystemWide(),
+            processID: processID,
+            appName: "App \(processID)",
+            bundleIdentifier: "com.example.app\(processID)",
+            windowID: nil
+        )
+    }
+
+    private func session(groups: [(pid_t, Int)], backwards: Bool = false) -> AppSwitcherSession {
+        var subject = AppSwitcherSession(
+            groups: groups.map { processID, count in
+                ApplicationWindowGroup(
+                    processID: processID,
+                    appName: "App \(processID)",
+                    bundleIdentifier: "com.example.app\(processID)",
+                    windows: (0..<count).map { item(processID, "w\($0)") }
+                )
+            },
+            mode: .grid
+        )
+        subject.selectInitialGroup(backwards: backwards)
+        return subject
+    }
+
+    /// One ⌘Tab still goes somewhere else: the grid opens on the window that was used before the
+    /// current one, which is the second entry of the flat list.
+    func testOpeningSelectsTheSecondWindowInTheFlatOrder() {
+        let subject = session(groups: [(1, 2), (2, 2)])
+        XCTAssertEqual(subject.mode, .grid)
+        XCTAssertEqual(subject.flatWindows.count, 4)
+        XCTAssertEqual(subject.flatIndex, 1)
+        XCTAssertEqual(subject.selectedWindow?.id, "1-w1")
+    }
+
+    func testReverseOpeningStartsAtTheLastWindow() {
+        let subject = session(groups: [(1, 2), (2, 2)], backwards: true)
+        XCTAssertEqual(subject.flatIndex, 3)
+        XCTAssertEqual(subject.selectedWindow?.id, "2-w1")
+    }
+
+    /// Tab wraps through the flat list, including across applications, which is the whole difference
+    /// from the two-level mode.
+    func testTabWrapsThroughEveryWindow() {
+        var subject = session(groups: [(1, 2), (2, 2)])
+        subject.advance(by: 1)
+        XCTAssertEqual(subject.selectedWindow?.id, "2-w0", "Tab crossed from one application to the next")
+        subject.advance(by: 1)
+        subject.advance(by: 1)
+        XCTAssertEqual(subject.selectedWindow?.id, "1-w0", "past the last window it wraps to the first")
+        subject.advance(by: -1)
+        XCTAssertEqual(subject.selectedWindow?.id, "2-w1", "and backwards it wraps the other way")
+    }
+
+    /// The arrows move the same selection as Tab in this mode: there is only one level to move on.
+    func testTheArrowsMoveTheSameSelectionAsTab() {
+        var byTab = session(groups: [(1, 3), (2, 1)])
+        var byArrow = byTab
+        byTab.advance(by: 1)
+        byArrow.moveWindow(by: 1)
+        XCTAssertEqual(byArrow.flatIndex, byTab.flatIndex)
+        XCTAssertEqual(byArrow.selectedWindow?.id, byTab.selectedWindow?.id)
+    }
+
+    /// A pointer's index addresses the flat list here, not an application's own window list.
+    func testPointerIndexAddressesTheFlatList() {
+        var subject = session(groups: [(1, 2), (2, 2)])
+        subject.selectWindow(at: 2)
+        XCTAssertEqual(subject.selectedWindow?.id, "2-w0")
+        XCTAssertEqual(subject.selectedWindow?.processID, 2)
+        subject.selectWindow(at: 9)
+        XCTAssertEqual(subject.flatIndex, 2, "an index off the end changes nothing")
+    }
+
+    func testCommitReturnsTheFlatSelectionAndEndsTheSession() {
+        var subject = session(groups: [(1, 2), (2, 2)])
+        subject.selectWindow(at: 3)
+        XCTAssertEqual(subject.commit()?.id, "2-w1")
+        XCTAssertFalse(subject.isShowing)
+        XCTAssertTrue(subject.flatWindows.isEmpty)
+        XCTAssertNil(subject.commit())
+    }
+
+    func testCancelReturnsNothingInGridModeToo() {
+        var subject = session(groups: [(1, 2), (2, 2)])
+        subject.advance(by: 1)
+        subject.cancel()
+        XCTAssertFalse(subject.isShowing)
+        XCTAssertNil(subject.commit())
+    }
+
+    /// Applications without windows never contribute to the flat list, so the grid cannot show a
+    /// card that has nothing behind it.
+    func testWindowlessApplicationsContributeNothingToTheGrid() {
+        let subject = session(groups: [(1, 0), (2, 2)])
+        XCTAssertEqual(subject.flatWindows.map(\.id), ["2-w0", "2-w1"])
+        XCTAssertEqual(subject.selectedWindow?.id, "2-w1")
+    }
+}
+
+/// The mode has to survive the trip from the setting into the session the panel is handed.
+///
+/// The ⌘Tab provider in the app returns its own `AppSwitcherSession` — built without a mode, so
+/// `.twoLevel` — and the only thing that overrides it is the value `setMode` stored. Losing that
+/// override is invisible in the session and layout tests, which pass a mode straight to the
+/// initializer, and it is exactly what a user reports as "I chose the grid and got the rail".
+///
+/// The service here is the real one. `candidateSession` is the seam `beginSession` uses, because a
+/// real session needs an active event tap and an Accessibility grant, and a test may create neither.
+final class AppSwitcherModePlumbingTests: XCTestCase {
+
+    private func item(_ processID: pid_t, _ title: String) -> WindowPreviewItem {
+        WindowPreviewItem(
+            id: "\(processID)-\(title)",
+            title: title,
+            isMinimized: false,
+            isOnScreen: true,
+            frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+            element: AXUIElementCreateSystemWide(),
+            processID: processID,
+            appName: "App \(processID)",
+            bundleIdentifier: "com.example.app\(processID)",
+            windowID: nil
+        )
+    }
+
+    private func groups(_ counts: [(pid_t, Int)]) -> [ApplicationWindowGroup] {
+        counts.map { processID, count in
+            ApplicationWindowGroup(
+                processID: processID,
+                appName: "App \(processID)",
+                bundleIdentifier: "com.example.app\(processID)",
+                windows: (0..<count).map { item(processID, "w\($0)") }
+            )
+        }
+    }
+
+    /// A service whose provider looks like the app's: groups in, and a session built with the default
+    /// mode — the shape the plumbing has to correct.
+    private func service(_ counts: [(pid_t, Int)]) -> AppSwitcherService {
+        let listed = groups(counts)
+        let service = AppSwitcherService()
+        service.sessionProvider = { AppSwitcherSession(groups: listed) }
+        return service
+    }
+
+    func testTheSettingDecidesTheModeTheSessionOpensIn() {
+        let subject = service([(1, 2), (2, 1), (3, 1)])
+        subject.setMode(.grid)
+
+        let session = subject.candidateSession(backwards: false)
+
+        XCTAssertEqual(
+            session?.mode, .grid,
+            "the provider's own two-level session must not decide the shape the panel draws"
+        )
+        XCTAssertEqual(session?.flatIndex, 1, "the grid opens on the window used before the current one")
+        XCTAssertEqual(session?.selectedWindow?.id, "1-w1")
+    }
+
+    /// The other direction, on the same service: the setting reaches the next session, and the
+    /// two-level selection keeps meaning `groupIndex` / `windowIndex` rather than the flat list.
+    func testSwitchingTheSettingBackAppliesToTheNextSession() {
+        let subject = service([(1, 2), (2, 2), (3, 1)])
+        subject.setMode(.grid)
+        XCTAssertEqual(subject.candidateSession(backwards: false)?.mode, .grid)
+
+        subject.setMode(.twoLevel)
+        let session = subject.candidateSession(backwards: false)
+
+        XCTAssertEqual(session?.mode, .twoLevel)
+        XCTAssertEqual(session?.groupIndex, 1, "one Command-Tab still lands on the previous application")
+        XCTAssertEqual(session?.windowIndex, 0)
+        XCTAssertEqual(session?.selectedWindow?.id, "2-w0")
+    }
+
+    /// Nothing to switch to means no session at all, in either mode: the tap then passes the event
+    /// through so the system switcher appears instead of an empty panel.
+    func testWithoutWindowsThereIsNoSession() {
+        let subject = AppSwitcherService()
+        subject.setMode(.grid)
+        XCTAssertNil(subject.candidateSession(backwards: false), "no provider")
+
+        let windowless = groups([(1, 0), (2, 0)])
+        subject.sessionProvider = { AppSwitcherSession(groups: windowless, mode: .grid) }
+        XCTAssertNil(subject.candidateSession(backwards: false), "two applications without windows")
+    }
 }
 
 final class AppSwitcherKeyTests: XCTestCase {
@@ -266,6 +479,175 @@ final class AppSwitcherLayoutTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(metrics.cardSize.width, DockPreviewLayout.minimumCardWidth)
         XCTAssertLessThanOrEqual(metrics.panelSize.width, min(wide.width, DockPreviewLayout.maximumPanelWidth))
         XCTAssertEqual(metrics.visibleWindowCount + metrics.overflowCount, 20)
+    }
+}
+
+/// The grid mode's arithmetic: every window on the panel at once, so there is no overflow chip and
+/// nothing to scroll — the panel wraps into rows and shrinks the tiles instead.
+///
+/// `WindowPreviewCard` draws its picture at this aspect above a fixed title line, so a tile that does
+/// not keep it is a different card, not a smaller one.
+final class AppSwitcherGridLayoutTests: XCTestCase {
+
+    private let wide = CGSize(width: 1_600, height: 900)
+    private let laptop = CGSize(width: 1_024, height: 640)
+    private let screenFraction: CGFloat = 0.9
+    private let cardAspect: CGFloat = 0.62
+
+    /// Three windows are the common case: one row, the preferred tile size, and no room reserved for
+    /// anything that would have to scroll.
+    func testThreeWindowsSitInOneRowAtThePreferredTileSize() {
+        let metrics = AppSwitcherGridLayout.metrics(windowCount: 3, available: wide)
+        XCTAssertEqual(metrics.columns, 3)
+        XCTAssertEqual(metrics.tileSize.width, AppSwitcherGridLayout.preferredTileWidth, accuracy: 0.5)
+        XCTAssertEqual(
+            metrics.panelSize.width,
+            3 * metrics.tileSize.width + 2 * AppSwitcherGridLayout.spacing + AppSwitcherGridLayout.padding * 2,
+            accuracy: 0.5
+        )
+        XCTAssertEqual(
+            metrics.panelSize.height,
+            metrics.tileSize.height + AppSwitcherGridLayout.padding * 2,
+            accuracy: 0.5,
+            "one row: the height is a single tile plus the panel's padding"
+        )
+    }
+
+    /// Six columns is the ceiling whatever the window count — past that the tiles would be too narrow
+    /// to read, so the panel grows rows instead.
+    func testColumnsNeverExceedTheCap() {
+        for count in 1...40 {
+            let metrics = AppSwitcherGridLayout.metrics(windowCount: count, available: wide)
+            XCTAssertGreaterThanOrEqual(metrics.columns, 1, "count \(count)")
+            XCTAssertLessThanOrEqual(metrics.columns, AppSwitcherGridLayout.maximumColumns, "count \(count)")
+            XCTAssertLessThanOrEqual(metrics.columns, count, "count \(count)")
+        }
+    }
+
+    func testTheGridWrapsIntoRowsRatherThanGrowingWide() {
+        let metrics = AppSwitcherGridLayout.metrics(windowCount: 7, available: wide)
+        XCTAssertEqual(metrics.columns, 4, "seven windows wrap at four rather than adding columns")
+        XCTAssertEqual(
+            metrics.panelSize.height,
+            2 * metrics.tileSize.height + AppSwitcherGridLayout.spacing + AppSwitcherGridLayout.padding * 2,
+            accuracy: 0.5
+        )
+    }
+
+    /// The panel never takes more than 90% of the screen in either direction, on a desktop display and
+    /// on a laptop one, for any count a person actually has open.
+    func testThePanelStaysInsideNinetyPercentOfTheScreen() {
+        for available in [wide, laptop] {
+            for count in 1...24 {
+                let metrics = AppSwitcherGridLayout.metrics(windowCount: count, available: available)
+                XCTAssertLessThanOrEqual(
+                    metrics.panelSize.width, available.width * screenFraction + 0.5, "\(count) on \(available)"
+                )
+                XCTAssertLessThanOrEqual(
+                    metrics.panelSize.height, available.height * screenFraction + 0.5, "\(count) on \(available)"
+                )
+            }
+        }
+    }
+
+    /// Shrinking stops at a readable width: a tile is never narrower than the minimum, and its height
+    /// follows the same aspect the card draws with.
+    func testEveryTileKeepsItsMinimumWidthAndTheCardAspect() {
+        for available in [wide, laptop] {
+            for count in 1...24 {
+                let metrics = AppSwitcherGridLayout.metrics(windowCount: count, available: available)
+                XCTAssertGreaterThanOrEqual(
+                    metrics.tileSize.width,
+                    AppSwitcherGridLayout.minimumTileWidth - 0.001,
+                    "\(count) on \(available)"
+                )
+                XCTAssertLessThanOrEqual(
+                    metrics.tileSize.width,
+                    AppSwitcherGridLayout.preferredTileWidth + 0.001,
+                    "\(count) on \(available)"
+                )
+                XCTAssertEqual(
+                    metrics.tileSize.height,
+                    metrics.tileSize.width * cardAspect + AppSwitcherLayout.cardTitleHeight,
+                    accuracy: 0.5,
+                    "a narrow tile must be a smaller card, not a taller one — \(count) on \(available)"
+                )
+            }
+        }
+    }
+
+    /// Past the point where rows stop helping, the tiles floor at the readable minimum and the grid
+    /// runs past its budget rather than becoming illegible. This is the documented degradation, so it
+    /// is asserted rather than left to be rediscovered. The overrun is what `isScrollable` reports;
+    /// the panel itself is still capped at 90% of the screen (see the next test).
+    func testAnAbsurdNumberOfWindowsFloorsAtTheReadableTile() {
+        let metrics = AppSwitcherGridLayout.metrics(windowCount: 60, available: wide)
+        XCTAssertEqual(metrics.columns, AppSwitcherGridLayout.maximumColumns)
+        XCTAssertEqual(metrics.tileSize.width, AppSwitcherGridLayout.minimumTileWidth, accuracy: 0.5)
+    }
+
+    /// The panel is never larger than 90% of the screen, whatever the window count — the counts here
+    /// are the ones that actually broke it: 60 windows on a 1512×900 display produced a panel taller
+    /// than the screen, so it ran off the display and the selected tile went with it.
+    func testThePanelIsCappedAtNinetyPercentOfTheScreenForEveryWindowCount() {
+        let screens = [CGSize(width: 1_512, height: 900), CGSize(width: 1_280, height: 720), wide, laptop]
+        for available in screens {
+            for count in [1, 2, 13, 60, 200] {
+                let metrics = AppSwitcherGridLayout.metrics(windowCount: count, available: available)
+                XCTAssertLessThanOrEqual(
+                    metrics.panelSize.width, available.width * screenFraction + 0.5, "\(count) on \(available)"
+                )
+                XCTAssertLessThanOrEqual(
+                    metrics.panelSize.height, available.height * screenFraction + 0.5, "\(count) on \(available)"
+                )
+                XCTAssertGreaterThanOrEqual(metrics.columns, 1, "\(count) on \(available)")
+                XCTAssertGreaterThanOrEqual(metrics.tileSize.width, 0, "\(count) on \(available)")
+                XCTAssertGreaterThanOrEqual(metrics.tileSize.height, 0, "\(count) on \(available)")
+                XCTAssertGreaterThan(metrics.contentWidth, 0, "\(count) on \(available)")
+            }
+        }
+    }
+
+    /// The grid scrolls exactly when its rows do not fit the panel, and not before: the two-level
+    /// strip's rule, applied to the other axis.
+    func testTheGridScrollsOnlyOnceTheRowsOutgrowThePanel() {
+        let display = CGSize(width: 1_512, height: 900)
+        let three = AppSwitcherGridLayout.metrics(windowCount: 3, available: display)
+        XCTAssertFalse(three.isScrollable, "three windows fit: there is nothing to scroll to")
+        XCTAssertEqual(three.contentHeight, three.panelSize.height, accuracy: 0.5)
+
+        let many = AppSwitcherGridLayout.metrics(windowCount: 60, available: display)
+        XCTAssertTrue(many.isScrollable, "ten rows of readable tiles do not fit a 900pt display")
+        XCTAssertGreaterThan(many.contentHeight, many.panelSize.height)
+        XCTAssertEqual(
+            many.panelSize.height, display.height * screenFraction, accuracy: 0.5,
+            "the panel takes its whole budget instead of following the grid off the screen"
+        )
+    }
+
+    /// Adding windows never *removes* columns: choosing a column count is a search for the narrowest
+    /// panel that fits, and a count that needed six columns cannot need four once it grows.
+    func testColumnsNeverShrinkAsWindowsAreAdded() {
+        for available in [wide, laptop] {
+            var previous = 0
+            for count in 1...200 {
+                let metrics = AppSwitcherGridLayout.metrics(windowCount: count, available: available)
+                XCTAssertGreaterThanOrEqual(metrics.columns, previous, "\(count) on \(available)")
+                previous = metrics.columns
+            }
+        }
+    }
+
+    /// Content width is the panel minus its padding, and it is never zero or negative — the grid is
+    /// laid out against it.
+    func testContentWidthIsThePanelMinusItsPadding() {
+        let metrics = AppSwitcherGridLayout.metrics(windowCount: 2, available: wide)
+        XCTAssertEqual(
+            metrics.contentWidth,
+            metrics.panelSize.width - AppSwitcherGridLayout.padding * 2,
+            accuracy: 0.5
+        )
+        XCTAssertGreaterThan(metrics.contentWidth, 0)
     }
 }
 

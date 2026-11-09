@@ -52,6 +52,15 @@ struct SnapWindowPreviewSettingsSection: View {
                     ) {
                         SettingsToggle(isOn: $settings.windowSnap.isCommandTabPlusEnabled)
                     }
+                    if settings.windowSnap.isCommandTabPlusEnabled {
+                        rowDivider()
+                        SettingsRow(
+                            "settings.snap.switcherMode".localized,
+                            subtitle: "settings.snap.switcherMode.hint".localized
+                        ) {
+                            switcherModePicker
+                        }
+                    }
                 }
 
                 if settings.windowSnap.isWindowThumbnailsEnabled, authorization != .authorized {
@@ -71,6 +80,19 @@ struct SnapWindowPreviewSettingsSection: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshAuthorization()
         }
+    }
+
+    /// Two modes, so a segmented control: the choice is binary and both labels are short.
+    private var switcherModePicker: some View {
+        Picker("", selection: $settings.windowSnap.switcherMode) {
+            ForEach(AppSwitcherMode.allCases) { mode in
+                Text(mode.titleKey.localized).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 190)
+        .focusable(false)
     }
 
     // MARK: - Thumbnails and the permission

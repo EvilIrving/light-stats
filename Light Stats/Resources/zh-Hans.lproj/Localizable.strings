@@ -545,6 +545,10 @@
 "settings.snap.commandTab" = "Cmd-Tab Plus";
 "settings.snap.commandTab.hint" = "用窗口级切换器替换系统切换器。";
 "settings.snap.commandTab.warning" = "开启期间 ⌘Tab 由 Light Stats 接管，系统切换器不再出现。关闭后立即恢复系统行为。";
+"settings.snap.switcherMode" = "切换器布局";
+"settings.snap.switcherMode.hint" = "先选 App 再选窗口，或所有窗口排成一个网格。";
+"settings.snap.switcherMode.twoLevel" = "App + 窗口";
+"settings.snap.switcherMode.grid" = "网格";
 "settings.snap.screenRecording.needed" = "需要屏幕录制权限";
 "settings.snap.screenRecording.denied" = "仅用于在本地生成窗口缩略图，绝不录制、存储或上传屏幕内容。";
 "settings.snap.screenRecording.requiresRestart" = "Light Stats 还没有读到这个权限。重启 Light Stats 即可开始。";

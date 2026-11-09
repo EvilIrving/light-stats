@@ -545,6 +545,10 @@
 "settings.snap.commandTab" = "Cmd-Tab Plus";
 "settings.snap.commandTab.hint" = "システムのアプリ切替を、ウインドウ単位の切替に置き換えます。";
 "settings.snap.commandTab.warning" = "オンの間は ⌘Tab を Light Stats が扱い、システムの切替は表示されません。オフにすると元に戻ります。";
+"settings.snap.switcherMode" = "切替レイアウト";
+"settings.snap.switcherMode.hint" = "アプリを選んでからウインドウを選ぶか、すべてのウインドウを 1 つのグリッドに並べます。";
+"settings.snap.switcherMode.twoLevel" = "アプリ + ウインドウ";
+"settings.snap.switcherMode.grid" = "グリッド";
 "settings.snap.screenRecording.needed" = "画面収録の権限が必要です";
 "settings.snap.screenRecording.denied" = "ローカルでのウインドウサムネイル生成のみに使用されます。画面の録画や保存、送信は一切行いません。";
 "settings.snap.screenRecording.requiresRestart" = "Light Stats はこの権限をまだ認識していません。Light Stats を再起動すると開始できます。";

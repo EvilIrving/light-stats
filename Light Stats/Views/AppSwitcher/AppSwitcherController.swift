@@ -18,7 +18,7 @@ final class AppSwitcherController {
 
     private let logger = AppLogger(category: "AppSwitcher")
     private let window: PreviewOverlayWindow
-    private var hostingView: NSHostingView<AppSwitcherView>?
+    private var hostingView: NSHostingView<AnyView>?
     private var thumbnailService: WindowThumbnailService?
 
     private var generation: UInt64 = 0
@@ -52,26 +52,55 @@ final class AppSwitcherController {
 
     /// Draws `session`. Called on every Tab, so it must be cheap after the first frame.
     func show(session: AppSwitcherSession, on screen: NSScreen?) {
-        guard let group = session.selectedGroup else {
-            dismiss()
-            return
-        }
         let screen = screen ?? NSScreen.main
         guard let screen else { return }
 
-        // Sized to the application being shown, not to the widest one in the list. Reserving room for
-        // the widest app left a panel that was mostly empty whenever the selected app had fewer
-        // windows — the empty rectangle read as a broken panel. The cost is that Tab can resize the
-        // panel, which is what the short frame animation below is for.
-        let metrics = AppSwitcherLayout.metrics(
-            windowCount: group.windows.count,
-            appCount: session.groups.count,
-            available: screen.visibleFrame.size,
-            showsAppRow: session.groups.count > 1
-        )
-        let frame = AppSwitcherLayout.panelFrame(size: metrics.panelSize, available: screen.visibleFrame)
+        let frame: CGRect
+        let content: AnyView
+        switch session.mode {
+        case .twoLevel:
+            guard let group = session.selectedGroup else {
+                dismiss()
+                return
+            }
+            // Sized to the application being shown, not to the widest one in the list. Reserving room
+            // for the widest app left a panel that was mostly empty whenever the selected app had
+            // fewer windows — the empty rectangle read as a broken panel. The cost is that Tab can
+            // resize the panel, which is what the short frame animation below is for.
+            let metrics = AppSwitcherLayout.metrics(
+                windowCount: group.windows.count,
+                appCount: session.groups.count,
+                available: screen.visibleFrame.size,
+                showsAppRow: session.groups.count > 1
+            )
+            frame = AppSwitcherLayout.panelFrame(size: metrics.panelSize, available: screen.visibleFrame)
+            content = AnyView(AppSwitcherView(
+                session: session,
+                metrics: metrics,
+                thumbnailService: thumbnailService,
+                onHover: { [weak self] target in self?.onHover?(target) },
+                onChoose: { [weak self] target in self?.onChoose?(target) }
+            ))
+        case .grid:
+            guard !session.flatWindows.isEmpty else {
+                dismiss()
+                return
+            }
+            let metrics = AppSwitcherGridLayout.metrics(
+                windowCount: session.flatWindows.count,
+                available: screen.visibleFrame.size
+            )
+            frame = AppSwitcherLayout.panelFrame(size: metrics.panelSize, available: screen.visibleFrame)
+            content = AnyView(AppSwitcherGridView(
+                session: session,
+                metrics: metrics,
+                thumbnailService: thumbnailService,
+                onHover: { [weak self] target in self?.onHover?(target) },
+                onChoose: { [weak self] target in self?.onChoose?(target) }
+            ))
+        }
 
-        rebuildContent(session: session, metrics: metrics)
+        rebuildContent(content)
 
         let wasShowing = isShowing
         if !isShowing {
@@ -129,14 +158,7 @@ final class AppSwitcherController {
         hostingView = nil
     }
 
-    private func rebuildContent(session: AppSwitcherSession, metrics: AppSwitcherLayout.Metrics) {
-        let content = AppSwitcherView(
-            session: session,
-            metrics: metrics,
-            thumbnailService: thumbnailService,
-            onHover: { [weak self] target in self?.onHover?(target) },
-            onChoose: { [weak self] target in self?.onChoose?(target) }
-        )
+    private func rebuildContent(_ content: AnyView) {
         if let hostingView {
             hostingView.rootView = content
             return

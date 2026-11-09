@@ -46,6 +46,8 @@ struct SnapConfiguration: Hashable, Sendable {
     var isDockPreviewEnabled: Bool
     /// Replace the system application switcher with a window-level one.
     var isCommandTabPlusEnabled: Bool
+    /// How that switcher lays its windows out: the system's two-level rail, or one flat grid.
+    var switcherMode: AppSwitcherMode
     /// Capture window pictures. **This is the switch that needs Screen Recording.** Off means the
     /// preview surfaces still work, showing titles and icons instead of images.
     var isWindowThumbnailsEnabled: Bool
@@ -71,6 +73,7 @@ struct SnapConfiguration: Hashable, Sendable {
         islandPalette: .neutral,
         isDockPreviewEnabled: true,
         isCommandTabPlusEnabled: true,
+        switcherMode: .twoLevel,
         isWindowThumbnailsEnabled: false,
         isDockClickCollapseEnabled: true
     )
@@ -241,7 +244,7 @@ extension SnapConfiguration: Codable {
     private enum CodingKeys: String, CodingKey {
         case edgeOwner, zones, island, showsPreview, honorsRestrictedApps, exclusions
         case shortcuts, customLayouts, savedPlacements, islandLayoutIDs, islandPalette
-        case isDockPreviewEnabled, isCommandTabPlusEnabled, isWindowThumbnailsEnabled
+        case isDockPreviewEnabled, isCommandTabPlusEnabled, isWindowThumbnailsEnabled, switcherMode
         case isDockClickCollapseEnabled
         case isShakeToHideEnabled
     }
@@ -266,6 +269,7 @@ extension SnapConfiguration: Codable {
         try container.encode(islandPalette, forKey: .islandPalette)
         try container.encode(isDockPreviewEnabled, forKey: .isDockPreviewEnabled)
         try container.encode(isCommandTabPlusEnabled, forKey: .isCommandTabPlusEnabled)
+        try container.encode(switcherMode, forKey: .switcherMode)
         try container.encode(isWindowThumbnailsEnabled, forKey: .isWindowThumbnailsEnabled)
         try container.encode(isDockClickCollapseEnabled, forKey: .isDockClickCollapseEnabled)
     }
@@ -287,6 +291,7 @@ extension SnapConfiguration: Codable {
             islandPalette: try container.decodeIfPresent(SnapIslandMetrics.Palette.self, forKey: .islandPalette) ?? .neutral,
             isDockPreviewEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDockPreviewEnabled) ?? true,
             isCommandTabPlusEnabled: try container.decodeIfPresent(Bool.self, forKey: .isCommandTabPlusEnabled) ?? true,
+            switcherMode: try container.decodeIfPresent(AppSwitcherMode.self, forKey: .switcherMode) ?? .twoLevel,
             isWindowThumbnailsEnabled: try container.decodeIfPresent(Bool.self, forKey: .isWindowThumbnailsEnabled) ?? false,
             isDockClickCollapseEnabled: try container.decodeIfPresent(Bool.self, forKey: .isDockClickCollapseEnabled) ?? true
         )

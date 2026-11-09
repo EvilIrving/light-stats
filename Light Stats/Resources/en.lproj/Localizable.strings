@@ -543,6 +543,10 @@
 "settings.snap.commandTab" = "Cmd-Tab Plus";
 "settings.snap.commandTab.hint" = "Replace the system app switcher with a window-level one.";
 "settings.snap.commandTab.warning" = "While this is on, Light Stats handles ⌘Tab and the system switcher no longer appears. Turning it off restores the system behaviour immediately.";
+"settings.snap.switcherMode" = "Switcher Layout";
+"settings.snap.switcherMode.hint" = "Pick an app, then a window — or lay every window out in one grid.";
+"settings.snap.switcherMode.twoLevel" = "App + Windows";
+"settings.snap.switcherMode.grid" = "Grid";
 "settings.snap.screenRecording.needed" = "Screen Recording Access Needed";
 "settings.snap.screenRecording.denied" = "Used solely to generate window thumbnails locally. Never records, stores, or uploads screen content.";
 "settings.snap.screenRecording.requiresRestart" = "Light Stats has not detected this permission yet. Restart Light Stats to begin.";
