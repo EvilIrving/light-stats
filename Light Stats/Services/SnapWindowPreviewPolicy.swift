@@ -36,8 +36,21 @@ enum SnapWindowPreviewPolicy {
         }
     }
 
-    /// `false` until the three surfaces are finished.
-    static let isAvailable = false
+    /// Whether a surface is offered at all.
+    ///
+    /// The ⌘Tab switcher and thumbnails ship; the Dock hover preview is still unfinished, so its
+    /// switch is not drawn and its poll never starts whatever a stored preference says.
+    static func isAvailable(_ surface: Surface) -> Bool {
+        switch surface {
+        case .thumbnails, .commandTab: return true
+        case .dockPreview: return false
+        }
+    }
+
+    /// Whether any surface is offered — the settings group is drawn only when one is.
+    static var hasAvailableSurface: Bool {
+        Surface.allCases.contains(where: isAvailable)
+    }
 
     /// Whether a surface should actually run.
     ///
@@ -47,9 +60,9 @@ enum SnapWindowPreviewPolicy {
         _ surface: Surface,
         configuration: SnapConfiguration,
         windowManagementEnabled: Bool,
-        available: Bool = isAvailable
+        available: Bool? = nil
     ) -> Bool {
-        guard available, windowManagementEnabled else { return false }
+        guard available ?? isAvailable(surface), windowManagementEnabled else { return false }
         return surface.isEnabled(in: configuration)
     }
 }

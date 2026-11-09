@@ -12,9 +12,8 @@ import SwiftUI
 /// thumbnail switch asks for Screen Recording, and it says so on the row that would trigger it
 /// rather than surprising the user with a system prompt from an unrelated toggle.
 ///
-/// The whole group is hidden while `SnapWindowPreviewPolicy.isAvailable` is `false` — the three
-/// surfaces are unfinished. Nothing is constructed in that state, so the Screen Recording preflight
-/// and the row that offers the request are not even read.
+/// The group is drawn only while `SnapWindowPreviewPolicy.hasAvailableSurface`; a surface that is
+/// still unfinished gets no row at all, and a stored preference cannot start it either.
 struct SnapWindowPreviewSettingsSection: View {
 
     @ObservedObject var settings: SettingsManager
@@ -22,7 +21,7 @@ struct SnapWindowPreviewSettingsSection: View {
     @State private var authorization: ScreenRecordingAuthorization = .denied
 
     var body: some View {
-        if SnapWindowPreviewPolicy.isAvailable {
+        if SnapWindowPreviewPolicy.hasAvailableSurface {
             previews
         }
     }
@@ -37,12 +36,14 @@ struct SnapWindowPreviewSettingsSection: View {
                     ) {
                         SettingsToggle(isOn: thumbnailsBinding)
                     }
-                    rowDivider()
-                    SettingsRow(
-                        "settings.snap.dockPreview".localized,
-                        subtitle: "settings.snap.dockPreview.hint".localized
-                    ) {
-                        SettingsToggle(isOn: $settings.windowSnap.isDockPreviewEnabled)
+                    if SnapWindowPreviewPolicy.isAvailable(.dockPreview) {
+                        rowDivider()
+                        SettingsRow(
+                            "settings.snap.dockPreview".localized,
+                            subtitle: "settings.snap.dockPreview.hint".localized
+                        ) {
+                            SettingsToggle(isOn: $settings.windowSnap.isDockPreviewEnabled)
+                        }
                     }
                     rowDivider()
                     SettingsRow(
