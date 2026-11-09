@@ -27,6 +27,9 @@ nonisolated enum WindowPreviewCatalog {
             grouping: WindowServerInventory.allWindows().filter(isPreviewable),
             by: \.processID
         )
+        // One Space query for the whole enumeration, not one per application, and asked once rather
+        // than per window: it is answered by the WindowServer over IPC.
+        let inactiveSpaceWindowIDs = PrivateWindowServerAPI.shared.windowIDsOnInactiveSpaces()
         return applications.compactMap { app in
             let entries = serverWindows[app.processIdentifier] ?? []
             let accessibility = WindowListService.windows(
@@ -37,6 +40,7 @@ nonisolated enum WindowPreviewCatalog {
             let items = WindowPreviewMerge.items(
                 accessibility: accessibility,
                 serverWindows: entries,
+                inactiveSpaceWindowIDs: inactiveSpaceWindowIDs,
                 application: WindowPreviewMerge.Application(
                     processID: app.processIdentifier,
                     appName: app.localizedName ?? "",

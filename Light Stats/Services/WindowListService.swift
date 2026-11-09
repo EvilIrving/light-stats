@@ -188,7 +188,27 @@ nonisolated enum WindowListService {
         }
     }
 
+    /// The whole sequence a switch owes the user, in the order it has to happen:
+    ///
+    /// 1. a minimised window has to be ordered back in first — fronting it does not restore it, so
+    ///    without this the Dock keeps its copy and the user arrives at nothing;
+    /// 2. the WindowServer fronts the process *at that window*, which for another Space also moves
+    ///    the user there (`frontWindowServer`);
+    /// 3. the synthetic down makes it key — `AXMain` and `AXRaise` only move z-order, they do not
+    ///    give a background window keyboard focus;
+    /// 4. `AXMain`/`AXRaise`, which put the window on top of its own application's stack;
+    /// 5. the Space the user left gets its front process back, or it comes back showing our window.
     private static func focusOnQueue(_ item: WindowPreviewItem) -> Bool {
+        if item.isMinimized {
+            _ = AXUIElementSetAttributeValue(item.element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        }
+        // Read before step 2: once the switch has moved the user, the target window is on the active
+        // Space and the Space that needs repairing is the one we are no longer looking at.
+        let origin = item.windowID.flatMap { spaceReturn(processID: item.processID, windowID: $0) }
+        var fronted = false
+        if let windowID = item.windowID {
+            fronted = frontWindowServer(processID: item.processID, windowID: windowID)
+        }
         var focused = false
         if AXUIElementSetAttributeValue(item.element, kAXMainAttribute as CFString, kCFBooleanTrue) == .success {
             focused = true
@@ -196,11 +216,51 @@ nonisolated enum WindowListService {
         if AXUIElementPerformAction(item.element, kAXRaiseAction as CFString) == .success {
             focused = true
         }
-        NSRunningApplication(processIdentifier: item.processID)?.activate()
+        restore(origin)
+        if !fronted {
+            // The private symbols are what move key focus and cross Spaces. Without them — the App
+            // Store build, or a machine where a symbol is gone — activating the application is
+            // everything that is left.
+            NSRunningApplication(processIdentifier: item.processID)?.activate()
+        }
         if !focused {
             logger.debug("Window refused both main and raise")
         }
-        return focused
+        return focused || fronted
+    }
+
+    /// What a cross-Space switch owes the Space it is leaving.
+    private struct SpaceReturn {
+        var spaceID: UInt64
+        var frontProcessID: pid_t
+    }
+
+    /// The Space a switch on `windowID` is about to leave, or `nil` when the window is on the Space
+    /// the user is already looking at (and nothing is owed).
+    private static func spaceReturn(processID: pid_t, windowID: CGWindowID) -> SpaceReturn? {
+        let api = PrivateWindowServerAPI.shared
+        guard api.isOnInactiveSpace(windowID: windowID),
+              let spaceID = api.activeSpaceID(),
+              let frontProcessID = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              frontProcessID != processID else { return nil }
+        return SpaceReturn(spaceID: spaceID, frontProcessID: frontProcessID)
+    }
+
+    /// Fronts `processID` at `windowID` and makes that window key. `false` when the private symbols
+    /// are unavailable or the WindowServer refused, which is the only case that falls back to
+    /// activating the application.
+    private static func frontWindowServer(processID: pid_t, windowID: CGWindowID) -> Bool {
+        let api = PrivateWindowServerAPI.shared
+        guard let switchToWindow = api.frontProcess(processID: processID, windowID: windowID) else { return false }
+        api.makeKeyWindow(switchToWindow)
+        return true
+    }
+
+    private static func restore(_ space: SpaceReturn?) {
+        guard let space else { return }
+        PrivateWindowServerAPI.shared.restoreFrontProcess(
+            spaceID: space.spaceID, processID: space.frontProcessID
+        )
     }
 
     @discardableResult
@@ -226,7 +286,7 @@ nonisolated enum WindowListService {
             guard let resolved = resolved(item) else {
                 return revealUnresolved(item)
             }
-            if resolved.isMinimized { _ = deminimize(resolved) }
+            // `focusOnQueue` restores a minimised window itself, before anything fronts it.
             return focusOnQueue(resolved)
         }
     }
@@ -246,6 +306,16 @@ nonisolated enum WindowListService {
         if selectWindowTab(titled: item.title, processID: item.processID) {
             _ = activate(processID: item.processID)
             return true
+        }
+        // The window still names a WindowServer id, which is enough to front its process *at that
+        // window* and make it key — the part of "show me this window" that also moves to its Space.
+        // No `AXMain`/`AXRaise`: there is no element to send them to.
+        if let windowID = item.windowID {
+            let origin = spaceReturn(processID: item.processID, windowID: windowID)
+            if frontWindowServer(processID: item.processID, windowID: windowID) {
+                restore(origin)
+                return true
+            }
         }
         logger.debug("Window has no Accessibility element; activating the application")
         return activate(processID: item.processID)

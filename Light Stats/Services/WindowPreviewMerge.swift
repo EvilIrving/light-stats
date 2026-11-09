@@ -18,14 +18,18 @@ import CoreGraphics
 ///
 /// Accessibility is not complete either. Tencent's clients and Swing applications publish a partial
 /// list — WeChat's own main window is missing from it entirely — and an application whose
-/// Accessibility is unavailable is missing from it altogether. So the WindowServer entries are
-/// *added*, never substituted, and only on three conditions:
+/// Accessibility is unavailable is missing from it altogether. Its list is also **Space-scoped**:
+/// measured on macOS 26, a two-window TextEdit publishes the window on the active Space and nothing
+/// about the one on the other desktop, so every application without this merge loses a whole window
+/// per other Space it has work on. So the WindowServer entries are *added*, never substituted, and
+/// only on three conditions:
 ///
 /// 1. the window names itself. An untitled layer-0 window is indistinguishable from a shadow, a
 ///    full-width screen strip, or an offscreen render surface, and every one of those is in the
 ///    WindowServer's list for some application on this machine;
 /// 2. Accessibility does not already account for it, by window number or by title;
-/// 3. the user can actually reach it — it is on screen, or it is a hidden window tab (see below).
+/// 3. the user can actually reach it — it is on screen, it is a hidden window tab, or it lives on
+///    another Space (see below).
 nonisolated enum WindowPreviewMerge {
 
     struct Application {
@@ -37,9 +41,14 @@ nonisolated enum WindowPreviewMerge {
         var element: AXUIElement
     }
 
+    /// - Parameter inactiveSpaceWindowIDs: windows the WindowServer places on a Space that is not
+    ///   showing. The list comes from `PrivateWindowServerAPI`, because no public API answers it and
+    ///   `isOnScreen` cannot stand in for it — measured on macOS 26, a window on another desktop
+    ///   reports `false` and is unreachable from the active Space until the Space changes.
     static func items(
         accessibility: [WindowPreviewItem],
         serverWindows: [WindowServerInventory.Entry],
+        inactiveSpaceWindowIDs: Set<CGWindowID>,
         application: Application
     ) -> [WindowPreviewItem] {
         let accountedWindowIDs = Set(accessibility.compactMap(\.windowID))
@@ -55,7 +64,9 @@ nonisolated enum WindowPreviewMerge {
             }
             if accountedWindowIDs.contains(entry.windowID) { continue }
             if accountedTitles.contains(title) { continue }
-            guard entry.isOnScreen || isHiddenWindowTab(entry.bounds, siblings: accountedFrames) else {
+            guard entry.isOnScreen
+                    || isHiddenWindowTab(entry.bounds, siblings: accountedFrames)
+                    || inactiveSpaceWindowIDs.contains(entry.windowID) else {
                 continue
             }
 
@@ -97,12 +108,17 @@ nonisolated enum WindowPreviewMerge {
         return (accessibility + supplements).filter { seen.insert($0.id).inserted }
     }
 
-    /// A window the user can reach is one of two things, and the WindowServer says which.
+    /// A window the user can reach is one of three things, and the WindowServer says which.
     ///
     /// **On screen** is the ordinary case: the tencent clients and Swing applications have windows
     /// the user is looking at that Accessibility does not name, which is the whole reason this merge
-    /// exists. A window that is neither on screen nor in Accessibility is not something the user is
-    /// looking at, and a card for it can only ever activate the application.
+    /// exists. A window that is neither on screen, on another Space, nor in Accessibility is not
+    /// something the user is looking at, and a card for it can only ever activate the application.
+    ///
+    /// **On another Space** is the case Accessibility cannot answer at all, because it is
+    /// Space-scoped. Those windows are what the switcher is for — "switch to the window I was
+    /// working on", not "the window that is already in front of me" — and focusing one moves to its
+    /// Space (`WindowListService.focus`), so the card is one the user can act on.
     ///
     /// **A hidden window tab** is the one off-screen window that is reachable, and it is offered
     /// through the application's own tab buttons (`WindowListService.reveal` presses the matching

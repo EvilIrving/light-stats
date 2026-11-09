@@ -70,11 +70,13 @@ final class WindowPreviewMergeTests: XCTestCase {
 
     private func merged(
         accessibility: [WindowPreviewItem] = [],
-        serverWindows: [WindowServerInventory.Entry]
+        serverWindows: [WindowServerInventory.Entry],
+        inactiveSpaceWindowIDs: Set<CGWindowID> = []
     ) -> [WindowPreviewItem] {
         WindowPreviewMerge.items(
             accessibility: accessibility,
             serverWindows: serverWindows,
+            inactiveSpaceWindowIDs: inactiveSpaceWindowIDs,
             application: application
         )
     }
@@ -130,6 +132,49 @@ final class WindowPreviewMergeTests: XCTestCase {
             ["com.colliderli.iina"],
             "A titled off-screen window Accessibility never named is furniture, not a card"
         )
+    }
+
+    /// The rule this merge exists for beyond the partial-Accessibility apps: **Accessibility is
+    /// Space-scoped**. Measured on macOS 26, a two-window TextEdit published exactly one `AXWindow`
+    /// — the window on the active Space — and reported the other one only to the WindowServer, off
+    /// screen. Without the Space rule the switcher hides a whole window per other desktop.
+    func testAWindowOnAnotherSpaceIsOffered() {
+        let items = merged(
+            accessibility: [accessibilityItem(15083, title: "b1doc2.txt")],
+            serverWindows: [
+                entry(15083, title: "b1doc2.txt", width: 656, height: 422, x: 181, y: 102),
+                entry(15064, title: "b1doc.txt", width: 656, height: 422, x: 152, y: 73, onScreen: false)
+            ],
+            inactiveSpaceWindowIDs: [15064]
+        )
+        XCTAssertEqual(items.map(\.title), ["b1doc2.txt", "b1doc.txt"])
+        XCTAssertTrue(items[1].needsElementResolution, "Accessibility never named it, so it resolves on use")
+        XCTAssertFalse(items[1].isOnScreen, "It is on another Space: the card is honest about that")
+    }
+
+    /// The Space list is the only new evidence, so it may not open the door to furniture: IINA's
+    /// never-shown windows are windows of the *current* Space, and a window id that is not in the
+    /// inactive list is still judged by the old rule.
+    func testTheSpaceRuleDoesNotReadmitFurnitureOnTheCurrentSpace() {
+        let items = merged(
+            accessibility: [accessibilityItem(63976, title: "com.colliderli.iina")],
+            serverWindows: [
+                entry(63975, title: "Window — OpenSubtitles", width: 600, height: 432, x: 980, y: 256, onScreen: false),
+                entry(63974, title: "User Scripts — User Scripts", width: 600, height: 432, x: 980, y: 256, onScreen: false)
+            ],
+            inactiveSpaceWindowIDs: [40001]
+        )
+        XCTAssertEqual(items.map(\.title), ["com.colliderli.iina"])
+    }
+
+    func testAWindowOnAnotherSpaceIsNotOfferedTwiceWhenAccessibilityAlsoNamesIt() {
+        let items = merged(
+            accessibility: [accessibilityItem(15064, title: "b1doc.txt")],
+            serverWindows: [entry(15064, title: "b1doc.txt", width: 656, height: 422, onScreen: false)],
+            inactiveSpaceWindowIDs: [15064]
+        )
+        XCTAssertEqual(items.count, 1, "one window is one card, whichever layer found it")
+        XCTAssertFalse(items[0].needsElementResolution)
     }
 
     func testAnOffscreenWindowThatIsNotAWindowTabOfAListedWindowIsNotOffered() {

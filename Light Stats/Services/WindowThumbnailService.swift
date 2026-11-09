@@ -117,9 +117,12 @@ actor WindowThumbnailService {
         }
         let token = generation
         let task = Task { [weak self] () -> CGImage? in
-            guard let self, !Task.isCancelled,
-                  let window = await self.shareableWindow(for: windowID), !Task.isCancelled else { return nil }
-            return await self.capture(window: window, width: targetWidth)
+            guard let self, !Task.isCancelled else { return nil }
+            if let window = await self.shareableWindow(for: windowID), !Task.isCancelled {
+                return await self.capture(window: window, width: targetWidth)
+            }
+            guard !Task.isCancelled else { return nil }
+            return await self.captureByWindowID(windowID, width: targetWidth)
         }
         inFlight[key] = task
         let image = await task.value
@@ -142,16 +145,19 @@ actor WindowThumbnailService {
     // MARK: - Enumeration
 
     private func shareableWindow(for windowID: CGWindowID) async -> SCWindow? {
-        if let cached = shareableWindows[windowID],
-           ProcessInfo.processInfo.systemUptime - shareableRefreshedAt < shareableLifetime {
+        if let cached = shareableWindows[windowID], isShareableFresh {
             return cached
         }
-        await refreshShareableWindows()
-        if let window = shareableWindows[windowID] { return window }
-        // The window may have appeared since the last enumeration — e.g. a dialog that opened while
-        // the preview was already on screen.
+        // A window that is missing from a *fresh* snapshot is one ScreenCaptureKit will not offer —
+        // a minimised window, or one on another Space — so enumerating again would answer the same
+        // thing twice. That matters now that such a window is the ordinary case rather than a race:
+        // the enumeration is the most expensive call in this file and every card would pay it.
         await refreshShareableWindows()
         return shareableWindows[windowID]
+    }
+
+    private var isShareableFresh: Bool {
+        ProcessInfo.processInfo.systemUptime - shareableRefreshedAt < shareableLifetime
     }
 
     private func refreshShareableWindows() async {
@@ -238,6 +244,55 @@ actor WindowThumbnailService {
             }
             return nil
         }
+    }
+
+    // MARK: - Fallback capture
+
+    /// Pixels for a window ScreenCaptureKit has no `SCWindow` for: a minimised one, or one on a
+    /// Space that is not showing.
+    ///
+    /// It is the same thumbnail — through the same cache, the same in-flight task, the same
+    /// permission gate and the same trimmed pixel width — rather than a second pipeline. Only the
+    /// capture call differs, because that is the only part `SCShareableContent` cannot serve.
+    private func captureByWindowID(_ windowID: CGWindowID, width: Int) -> CGImage? {
+        let started = ProcessInfo.processInfo.systemUptime
+        guard let fullSize = PrivateWindowServerAPI.shared.captureImage(windowID: windowID) else {
+            DiagnosticLogService.record(level: .error, category: "windowManagement", action: "thumbnailUnavailable", fields: [
+                "reasonCode": "windowServerCaptureUnavailable", "windowID": String(windowID)
+            ])
+            return nil
+        }
+        // The WindowServer always answers full size — a 1280pt-wide window is 2560 pixels — so the
+        // thumbnail is scaled down here, by the same aspect rule the ScreenCaptureKit path asks its
+        // configuration for.
+        let height = Self.pixelHeight(
+            for: CGSize(width: fullSize.width, height: fullSize.height), width: width
+        )
+        guard let image = Self.resized(fullSize, to: CGSize(width: width, height: height)) else { return nil }
+        DiagnosticLogService.record(category: "windowManagement", action: "thumbnailCaptured", fields: [
+            "source": "windowServer", "width": String(image.width), "height": String(image.height),
+            "durationMS": String(format: "%.1f", (ProcessInfo.processInfo.systemUptime - started) * 1000)
+        ])
+        return image
+    }
+
+    /// Scales a full-size frame down to the thumbnail size, keeping its own aspect.
+    static func resized(_ image: CGImage, to size: CGSize) -> CGImage? {
+        let width = Int(size.width.rounded())
+        let height = Int(size.height.rounded())
+        guard width > 0, height > 0 else { return nil }
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+        ) else { return nil }
+        context.interpolationQuality = .medium
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()
     }
 
     // MARK: - Sizing
