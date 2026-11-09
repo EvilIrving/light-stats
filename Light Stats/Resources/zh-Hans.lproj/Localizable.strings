@@ -521,9 +521,7 @@
 "window.action.closeWindow" = "关闭窗口";
 "window.action.quitApplication" = "退出应用";
 "settings.snap.defaultLayoutName" = "布局 %ld";
-"settings.snap.exclusions.restricted" = "遵循内置清单";
-"settings.snap.exclusions.restrictedHint" = "自动跳过媒体播放器、游戏、远程桌面及全屏窗口。";
-"settings.snap.exclusions.hint" = "被排除的 App 仍可使用快捷键，但其窗口不会被移动。";
+"settings.snap.exclusions.hint" = "内置的受限 App 列表始终生效，这里只添加你自己的排除项。被排除的 App 仍可使用快捷键，但其窗口不会被移动。";
 "settings.snap.exclusions.title" = "排除的 App";
 "settings.snap.exclusions.addRecommended" = "添加推荐清单";
 "settings.snap.exclusions.empty" = "尚未排除任何 App。";

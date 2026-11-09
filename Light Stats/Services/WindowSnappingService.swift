@@ -276,8 +276,7 @@ nonisolated final class WindowSnappingService: @unchecked Sendable {
         let configuration = currentConfiguration()
         return SnapWindowEligibility.rejection(
             for: candidate(for: window, processID: processID),
-            userExclusions: configuration.exclusionSet,
-            honorsRestrictedList: configuration.honorsRestrictedApps
+            userExclusions: configuration.exclusionSet
         )
     }
 

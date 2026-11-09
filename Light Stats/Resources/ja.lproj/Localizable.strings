@@ -521,9 +521,7 @@
 "window.action.closeWindow" = "ウインドウを閉じる";
 "window.action.quitApplication" = "アプリを終了";
 "settings.snap.defaultLayoutName" = "レイアウト %ld";
-"settings.snap.exclusions.restricted" = "内蔵の除外リストを使う";
-"settings.snap.exclusions.restrictedHint" = "メディア再生アプリ、ゲーム、リモートデスクトップ、フルスクリーンウインドウは自動的にスキップします。";
-"settings.snap.exclusions.hint" = "除外したアプリでもショートカットは使えますが、ウインドウは動きません。";
+"settings.snap.exclusions.hint" = "内蔵の制限リストは常に適用されます。ここでは自分で追加した除外項目だけを管理します。除外したアプリでもショートカットは使えますが、ウインドウは動きません。";
 "settings.snap.exclusions.title" = "除外するアプリ";
 "settings.snap.exclusions.addRecommended" = "推奨リストを追加";
 "settings.snap.exclusions.empty" = "除外したアプリはありません。";

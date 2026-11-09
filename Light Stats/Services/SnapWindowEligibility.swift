@@ -96,6 +96,8 @@ nonisolated enum SnapWindowEligibility {
         "com.google.android.studio"
     ]
 
+    /// Preview surfaces may *list* a window the snap engine refuses to move, so this is the one
+    /// caller that skips the built-in restricted list.
     static func isPreviewable(_ candidate: SnapWindowCandidate, userExclusions: Set<String>) -> Bool {
         var visibleCandidate = candidate
         visibleCandidate.isMinimized = false
@@ -105,9 +107,22 @@ nonisolated enum SnapWindowEligibility {
 
     /// Why this window may not be snapped, or `nil` when it may.
     ///
+    /// The built-in restricted list always applies — those are apps that break when a third party
+    /// moves their windows, so there is nothing to switch back on — and the user's own exclusions
+    /// are layered on top of it.
+    ///
     /// The reason strings are stable codes, not prose: they end up in the diagnostic journal and
     /// are what makes a "why did nothing happen" report answerable.
     static func rejection(
+        for candidate: SnapWindowCandidate,
+        userExclusions: Set<String>
+    ) -> String? {
+        rejection(for: candidate, userExclusions: userExclusions, honorsRestrictedList: true)
+    }
+
+    /// The three layers with the built-in list kept as a parameter, because `isPreviewable` is the
+    /// only surface that draws a restricted app's window without ever moving it.
+    private static func rejection(
         for candidate: SnapWindowCandidate,
         userExclusions: Set<String>,
         honorsRestrictedList: Bool
@@ -178,14 +193,20 @@ nonisolated enum SnapWindowEligibility {
 
     static func isEligible(
         _ candidate: SnapWindowCandidate,
-        userExclusions: Set<String> = [],
-        honorsRestrictedList: Bool = true
+        userExclusions: Set<String> = []
     ) -> Bool {
-        rejection(for: candidate, userExclusions: userExclusions, honorsRestrictedList: honorsRestrictedList) == nil
+        rejection(for: candidate, userExclusions: userExclusions) == nil
     }
 
-    /// The recommended list plus the hardwired set, for the Settings button.
+    /// The recommended list for the Settings button, minus everything the built-in restricted list
+    /// already blocks.
+    ///
+    /// The built-in list always applies, so writing a blocked identifier into the user's own
+    /// exclusions would add a row that changes nothing and whose removal would change nothing either.
+    /// Everything it covers is dropped — prefix matches included, since `com.google.android.studio`
+    /// is blocked by `restrictedBundlePrefixes` and not by an exact entry — which leaves only the
+    /// recommendations the user gains something by adding.
     static var recommendedExclusionSet: Set<String> {
-        Set(recommendedExclusions).union(restrictedBundleIdentifiers)
+        Set(recommendedExclusions.filter { !isRestricted($0) })
     }
 }

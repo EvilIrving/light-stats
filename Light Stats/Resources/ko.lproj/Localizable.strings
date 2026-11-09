@@ -521,9 +521,7 @@
 "window.action.closeWindow" = "윈도우 닫기";
 "window.action.quitApplication" = "앱 종료";
 "settings.snap.defaultLayoutName" = "레이아웃 %ld";
-"settings.snap.exclusions.restricted" = "내장 제외 목록 사용";
-"settings.snap.exclusions.restrictedHint" = "미디어 재생 앱, 게임, 원격 데스크톱 및 전체 화면 윈도우는 자동으로 건너뜁니다.";
-"settings.snap.exclusions.hint" = "제외한 앱도 단축키는 쓸 수 있지만 창은 움직이지 않습니다.";
+"settings.snap.exclusions.hint" = "내장 제한 목록은 항상 적용되며, 여기서는 직접 추가한 제외 항목만 관리합니다. 제외한 앱도 단축키는 쓸 수 있지만 창은 움직이지 않습니다.";
 "settings.snap.exclusions.title" = "제외할 앱";
 "settings.snap.exclusions.addRecommended" = "권장 목록 추가";
 "settings.snap.exclusions.empty" = "제외한 앱이 없습니다.";

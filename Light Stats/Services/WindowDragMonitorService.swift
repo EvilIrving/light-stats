@@ -490,7 +490,7 @@ nonisolated final class WindowDragMonitorService: WindowDragMonitoring, @uncheck
                 isFullScreen: isFullScreen == true
             )
             if let reason = SnapWindowEligibility.rejection(
-                for: candidate, userExclusions: configuration.exclusionSet, honorsRestrictedList: configuration.honorsRestrictedApps
+                for: candidate, userExclusions: configuration.exclusionSet
             ) {
                 self.stateLock.lock()
                 if self.generation == token, self.dragState.downPoint != nil {

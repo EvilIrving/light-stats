@@ -39,13 +39,40 @@ final class SnapConfigurationTests: XCTestCase {
         XCTAssertEqual(decoded.zones, SnapZoneConfiguration.default)
         XCTAssertEqual(decoded.island, SnapIslandConfiguration.default)
         XCTAssertTrue(decoded.showsPreview)
-        XCTAssertTrue(decoded.honorsRestrictedApps)
         XCTAssertFalse(decoded.shortcuts.isEmpty)
         XCTAssertEqual(decoded.islandPalette, .neutral)
         XCTAssertFalse(decoded.prefersNativeTiling,
                        "The system's commands are only used when macOS owns the gesture")
         XCTAssertTrue(decoded.isDockClickCollapseEnabled,
                        "A new behaviour arrives switched on rather than silently missing from an upgrade")
+    }
+
+    /// The built-in restricted list stopped being a preference: a stored `false` from a build that
+    /// had the switch decodes without complaint, and the list still applies — which is the behaviour
+    /// the switch used to control.
+    func testAStoredHonorsRestrictedAppsKeyNoLongerDisablesTheBuiltInList() throws {
+        let legacy = #"{"honorsRestrictedApps":false}"#
+        let decoded = try XCTUnwrap(SnapConfiguration(json: legacy))
+
+        XCTAssertNil(decoded.json.range(of: "honorsRestrictedApps"),
+                     "The dropped preference is never written back")
+
+        let restrictedBundle = try XCTUnwrap(SnapWindowEligibility.restrictedBundleIdentifiers.first)
+        let window = SnapWindowCandidate(
+            role: "AXWindow",
+            subrole: "AXStandardWindow",
+            title: "Player",
+            bundleIdentifier: restrictedBundle,
+            executableName: "Player",
+            frame: CGRect(x: 0, y: 0, width: 800, height: 600),
+            isMinimized: false,
+            isFullScreen: false
+        )
+        XCTAssertEqual(
+            SnapWindowEligibility.rejection(for: window, userExclusions: decoded.exclusionSet),
+            "restricted-app",
+            "A stored false cannot switch the built-in list off; the list is not a preference"
+        )
     }
 
     func testTheOwnerRoundTrips() throws {

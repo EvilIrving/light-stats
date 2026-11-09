@@ -10,9 +10,10 @@ import SwiftUI
 ///
 /// Two tiers, and the distinction matters. The built-in `restricted` list is short and contains
 /// only apps that genuinely break when a third party moves their windows — media players, games,
-/// remote desktops. Chrome, Firefox, Finder, Preview, and every Electron chat client sit in the same
-/// category, but those are windows people snap constantly; shipping that as a default would
-/// make the feature look broken rather than careful. So it is offered here as one button.
+/// remote desktops. It always applies and has no switch. Chrome, Firefox, Finder, Preview, and every
+/// Electron chat client sit in the same category, but those are windows people snap constantly;
+/// shipping that as a default would make the feature look broken rather than careful. So that list
+/// is offered here as one button, and this page edits only what the user adds.
 struct SnapExclusionSettingsSection: View {
 
     @Environment(\.theme) private var theme
@@ -22,15 +23,6 @@ struct SnapExclusionSettingsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SettingsGroup {
-                SettingsRow(
-                    "settings.snap.exclusions.restricted".localized,
-                    subtitle: "settings.snap.exclusions.restrictedHint".localized
-                ) {
-                    SettingsToggle(isOn: $settings.windowSnap.honorsRestrictedApps)
-                }
-            }
-
             list
 
             Text("settings.snap.exclusions.hint".localized)

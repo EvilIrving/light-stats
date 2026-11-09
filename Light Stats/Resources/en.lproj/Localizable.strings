@@ -519,9 +519,7 @@
 "window.action.closeWindow" = "Close Window";
 "window.action.quitApplication" = "Quit App";
 "settings.snap.defaultLayoutName" = "Layout %ld";
-"settings.snap.exclusions.restricted" = "Respect the Built-in List";
-"settings.snap.exclusions.restrictedHint" = "Automatically skip windows of media players, games, remote desktops, and fullscreen apps.";
-"settings.snap.exclusions.hint" = "Excluded apps keep their shortcuts, but their windows are never moved.";
+"settings.snap.exclusions.hint" = "The built-in restricted list always applies; this page only adds your own exclusions. Excluded apps keep their shortcuts, but their windows are never moved.";
 "settings.snap.exclusions.title" = "Excluded Apps";
 "settings.snap.exclusions.addRecommended" = "Add Recommended";
 "settings.snap.exclusions.empty" = "No apps excluded.";

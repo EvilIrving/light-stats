@@ -153,7 +153,7 @@ final class SnapInteractionTests: XCTestCase {
         )
         XCTAssertTrue(SnapWindowEligibility.isPreviewable(candidate, userExclusions: []),
                       "A window that cannot be resized can still be selected in the switcher")
-        XCTAssertFalse(SnapWindowEligibility.isEligible(candidate, userExclusions: [], honorsRestrictedList: true))
+        XCTAssertFalse(SnapWindowEligibility.isEligible(candidate, userExclusions: []))
         XCTAssertFalse(SnapWindowEligibility.isPreviewable(candidate, userExclusions: ["com.jetbrains.idea"]))
     }
 

@@ -24,9 +24,10 @@ struct SnapConfiguration: Hashable, Sendable {
     ///
     /// Not a settings toggle — always on for product builds after `withProductFixedPreferences()`.
     var showsPreview: Bool
-    /// Honour the built-in list of apps whose windows must not be touched.
-    var honorsRestrictedApps: Bool
     /// Bundle identifiers the user excluded by hand.
+    ///
+    /// Only the user's own additions live here: the built-in list of apps whose windows must not be
+    /// touched always applies and is not a preference.
     var exclusions: [String]
     /// Global shortcuts. Empty means the user deleted them all, which is a valid choice.
     var shortcuts: [SnapShortcut]
@@ -63,7 +64,6 @@ struct SnapConfiguration: Hashable, Sendable {
         zones: .default,
         island: .default,
         showsPreview: true,
-        honorsRestrictedApps: true,
         exclusions: [],
         shortcuts: defaultShortcuts,
         customLayouts: [],
@@ -242,7 +242,7 @@ extension SnapConfiguration {
 extension SnapConfiguration: Codable {
 
     private enum CodingKeys: String, CodingKey {
-        case edgeOwner, zones, island, showsPreview, honorsRestrictedApps, exclusions
+        case edgeOwner, zones, island, showsPreview, exclusions
         case shortcuts, customLayouts, savedPlacements, islandLayoutIDs, islandPalette
         case isDockPreviewEnabled, isCommandTabPlusEnabled, isWindowThumbnailsEnabled, switcherMode
         case isDockClickCollapseEnabled
@@ -259,7 +259,6 @@ extension SnapConfiguration: Codable {
         try container.encode(zones, forKey: .zones)
         try container.encode(island, forKey: .island)
         try container.encode(showsPreview, forKey: .showsPreview)
-        try container.encode(honorsRestrictedApps, forKey: .honorsRestrictedApps)
         try container.encode(exclusions, forKey: .exclusions)
         try container.encode(shortcuts, forKey: .shortcuts)
         try container.encode(customLayouts, forKey: .customLayouts)
@@ -281,7 +280,6 @@ extension SnapConfiguration: Codable {
             zones: try container.decodeIfPresent(SnapZoneConfiguration.self, forKey: .zones) ?? .default,
             island: try container.decodeIfPresent(SnapIslandConfiguration.self, forKey: .island) ?? .default,
             showsPreview: try container.decodeIfPresent(Bool.self, forKey: .showsPreview) ?? true,
-            honorsRestrictedApps: try container.decodeIfPresent(Bool.self, forKey: .honorsRestrictedApps) ?? true,
             exclusions: try container.decodeIfPresent([String].self, forKey: .exclusions) ?? [],
             shortcuts: try container.decodeIfPresent([SnapShortcut].self, forKey: .shortcuts) ?? Self.defaultShortcuts,
             customLayouts: try container.decodeIfPresent([SnapLayout].self, forKey: .customLayouts) ?? [],

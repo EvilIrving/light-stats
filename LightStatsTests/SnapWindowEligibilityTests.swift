@@ -38,14 +38,9 @@ final class SnapWindowEligibilityTests: XCTestCase {
 
     private func rejection(
         _ candidate: SnapWindowCandidate,
-        exclusions: Set<String> = [],
-        honorsRestrictedList: Bool = true
+        exclusions: Set<String> = []
     ) -> String? {
-        SnapWindowEligibility.rejection(
-            for: candidate,
-            userExclusions: exclusions,
-            honorsRestrictedList: honorsRestrictedList
-        )
+        SnapWindowEligibility.rejection(for: candidate, userExclusions: exclusions)
     }
 
     // MARK: - Layer 1: is it a window at all
@@ -106,17 +101,28 @@ final class SnapWindowEligibilityTests: XCTestCase {
         )
     }
 
-    func testTheRestrictedListCanBeTurnedOff() {
-        XCTAssertNil(rejection(candidate(bundle: "org.videolan.vlc"), honorsRestrictedList: false))
-        // The user's own list is never negotiable.
+    /// The built-in list is not a switch — the settings page only adds the user's own exclusions —
+    /// so nothing in the app can make a media player snap-able.
+    func testTheRestrictedListAlwaysApplies() {
+        XCTAssertEqual(rejection(candidate(bundle: "org.videolan.vlc")), "restricted-app")
         XCTAssertEqual(
-            rejection(
-                candidate(bundle: "org.videolan.vlc"),
-                exclusions: ["org.videolan.vlc"],
-                honorsRestrictedList: false
-            ),
-            "excluded-app"
+            rejection(candidate(bundle: "org.videolan.vlc"), exclusions: ["com.example.other"]),
+            "restricted-app",
+            "A user list that does not mention the app cannot loosen the built-in one"
         )
+        // An app in both lists reports the built-in reason, since that check comes first.
+        XCTAssertEqual(
+            rejection(candidate(bundle: "org.videolan.vlc"), exclusions: ["org.videolan.vlc"]),
+            "restricted-app"
+        )
+    }
+
+    /// A preview surface lists a restricted app's window and never moves it, which is why the one
+    /// internal path that skips the built-in list has to keep skipping it.
+    func testARestrictedAppWindowStaysPreviewable() {
+        let restricted = candidate(bundle: "com.valvesoftware.steam")
+        XCTAssertEqual(rejection(restricted), "restricted-app")
+        XCTAssertTrue(SnapWindowEligibility.isPreviewable(restricted, userExclusions: []))
     }
 
     // MARK: - Layer 3: geometry and title heuristics
@@ -165,11 +171,23 @@ final class SnapWindowEligibilityTests: XCTestCase {
 
     // MARK: - Recommended list
 
-    func testRecommendedListIncludesTheRestrictedSet() {
+    /// The built-in restricted list always applies, so the button must not write an identity it
+    /// already blocks into the user's list: that row would change nothing, and deleting it would
+    /// change nothing either. Both ways the built-in list matches count — the exact entries and the
+    /// prefixes, which is why Android Studio must not survive on the strength of not being listed.
+    func testRecommendedListExcludesWhatTheBuiltInListAlreadyBlocks() {
         let recommended = SnapWindowEligibility.recommendedExclusionSet
-        for bundle in SnapWindowEligibility.restrictedBundleIdentifiers {
-            XCTAssertTrue(recommended.contains(bundle), bundle)
+        let alreadyBlocked = SnapWindowEligibility.restrictedBundleIdentifiers
+        XCTAssertTrue(
+            recommended.isDisjoint(with: alreadyBlocked),
+            "the button added identifiers the built-in list already blocks: \(recommended.intersection(alreadyBlocked))"
+        )
+        for bundle in recommended {
+            for prefix in SnapWindowEligibility.restrictedBundlePrefixes where bundle.hasPrefix(prefix) {
+                XCTFail("\(bundle) is already blocked by the built-in prefix \(prefix)")
+            }
         }
+        XCTAssertFalse(recommended.contains("com.google.android.studio"))
         XCTAssertTrue(recommended.contains("com.google.Chrome"))
     }
 }
