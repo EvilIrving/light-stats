@@ -71,7 +71,10 @@ Light Stats/
 │   ├── AppGroup.swift
 │   ├── StatusBarNetworkColorStyle.swift # traffic up/down pair kept; status-bar path gated off
 │   ├── MetricTrends.swift           # Per-metric rising/falling/steady trend
-│   └── ReleaseInfo.swift            # SemanticVersion + GitHub Release JSON
+│   ├── ReleaseInfo.swift            # SemanticVersion + GitHub Release JSON
+│   ├── PermissionPane.swift         # A Privacy pane: deep link, name key, Settings owner names
+│   ├── PermissionGuideDockSide.swift # Which side of the Settings window the guide card rests on
+│   └── PermissionGuideFlight.swift  # The guide card's two endpoints + duration (sampling is in Services)
 ├── Services/                        # System data collection; no View/ViewModel imports
 │   ├── PowerService.swift           # IOKit battery + SMC sensors
 │   ├── DiagnosticLogService.swift   # Always-on structured fault journal (schema v3)
@@ -177,6 +180,13 @@ Light Stats/
 │   ├── FinderMenuFileService.swift  # New file, templates, copy/move
 │   ├── FinderMenuSystemService.swift # Hide items, reveal hidden files
 │   ├── FinderMenuTerminalService.swift # Open in terminal / configured app
+│   ├── PermissionGuideGeometry.swift # Pure flight sampling + dock placement for the guide card
+│   ├── SystemSettingsWindowTracker.swift # CGWindowList: find + follow the System Settings window
+│   ├── AppBundleDropSource.swift    # Which bundle the guide's drag may hand over
+│   ├── TCCGrantWatcher.swift        # The guide's poll clock; decisions are values
+│   ├── TCCGrantSignal.swift         # What one poll noticed, before the final grant read
+│   ├── TCCGrantResult.swift         # granted | finishedInSettings | timedOut, and the resolve table
+│   ├── TCCGrantWatchState.swift     # Pure "has the user finished in Settings?" hysteresis
 │   ├── DisplayControl/              # Opt-in DDC hardware brightness (Apple Silicon)
 │   └── AIUsage/                     # Shared AI-usage fetch helpers
 │       ├── UsageProviding.swift     # Compile-time provider protocol
@@ -207,6 +217,8 @@ Light Stats/
 │   ├── DisplayControlManager.swift  # Opt-in brightness lifecycle
 │   ├── PerformanceRecordingManager.swift # 48h product-resource session
 │   ├── LicenseManager.swift         # License state: validate stored code, activate/deactivate
+│   ├── PermissionGuideCenter.swift  # Drag-to-grant guide: pane → flight → dock → watch the grant
+│   ├── PermissionGuideCardState.swift # What the guide card draws, mutated by the flight
 │   └── UpdateManager.swift          # Update UI state machine
 ├── Views/                           # SwiftUI panels/settings; AppKit for menu bar
 │   ├── StatusBar/StatusBarView.swift
@@ -242,7 +254,11 @@ Light Stats/
 │   ├── Settings/FinderMenuTemplatesSection.swift
 │   ├── Settings/ActivationSection.swift
 │   ├── Theme/                           # ThemeDefinition + Background Host/Router/Scenes
-│   ├── Permission/PermissionAlertCenter.swift  # Themed AX permission panel (borderless)
+│   ├── Permission/
+│   │   ├── PermissionAlertCenter.swift    # Themed AX permission panel (borderless)
+│   │   ├── PermissionGuideCardView.swift  # The guide card: sentence, arrow, draggable icon
+│   │   ├── PermissionGuideWindow.swift    # Non-activating panel flown by frame sampling
+│   │   └── DragAppIconView.swift          # NSDraggingSource handing over exactly one file URL
 │   ├── About/AboutView.swift
 │   ├── WindowPreview/               # Shared by the Dock preview and ⌘Tab
 │   │   ├── PreviewOverlayWindow.swift     # NSPanel that may overlap the Dock/menu bar
@@ -678,7 +694,8 @@ final class SettingsManager: ObservableObject {
 
 - `SystemMonitor` owns the sampling loop. It calls Services, assembles a `SystemSnapshot`.
 - `SettingsManager` is the single source of truth for all user preferences.
-- `@MainActor` on any ViewModel that manages UI windows (`CleaningModeViewModel`, `UpdateManager`).
+- `@MainActor` on any ViewModel that manages UI windows (`CleaningModeViewModel`, `UpdateManager`,
+  `PermissionGuideCenter`).
 - `AppMemoryManager` is `ObservableObject` (predates `@Observable`; uses `@Published` observers for process-list mutations).
 
 ### Views
@@ -694,8 +711,9 @@ Views receive ViewModels via `@Environment` or `@ObservedObject`. They never ins
 Services directly — `Views → ViewModels → Services`.
 
 SwiftUI for panels and settings. AppKit (`NSViewRepresentable`, `NSHostingView`) for the
-menu bar status item. `CleaningModeOverlayController` is the only View-layer class that
-owns `NSWindow` instances (a bridge, not a ViewModel).
+menu bar status item. `CleaningModeOverlayController` and `SnapIslandController` are the only
+View-layer classes that own `NSWindow` instances (bridges, not view models); the permission
+guide's panel is owned one layer up, by the `PermissionGuideCenter` view model.
 
 **The app is a menu-bar citizen only while it has no real window.** `LSUIElement = YES` is static,
 so without a runtime switch nothing of ours could ever be reached from ⌘Tab, shown in the Dock, or
@@ -710,7 +728,10 @@ is why their preferences window behaves like a preferences window.
 
 Two View-layer classes own windows, and both are bridges rather than view models:
 `CleaningModeOverlayController` (per-screen full-screen overlays) and `SnapIslandController` (the
-layout island's `NSPanel` plus its animation driver). `WindowSnapPreviewService` also owns a window
+layout island's `NSPanel` plus its animation driver). `PermissionGuideCenter` is the one view
+model that owns a window of its own: `PermissionGuideWindow` is a borderless non-activating
+`NSPanel` flown by frame sampling, because the card must sit beside System Settings without
+taking activation away from the drag it is asking for. `WindowSnapPreviewService` also owns a window
 but stays in Services, because `TitlebarGestureService` and `WindowDragMonitorService` drive it
 directly and Services may not import Views. Views may call the stateless `nonisolated` geometry and
 policy enums (`SnapIslandLayout`, `SnapGridGeometry`, `SnapWindowEligibility`,
@@ -1270,6 +1291,28 @@ Suites:
   input normalization, unknown-feature tolerance, payload-version guard.
 - `LicenseManagerTests` — license state semantics: gift-period installs receive permanent Pro;
   after the paid-release switch, only new installs are locked, while prior gifts persist and invalid codes are rejected.
+- `PermissionGuideFlightTests` / `PermissionGuideDockTests` — the drag-to-grant card's numbers: the
+ease-in-out meeting at the midpoint, the underdamped arrival overshooting then landing exactly on
+the target, the arc clearing the chord, the corner radius and the shadow at both ends, and the dock
+rule that decides which side of the Settings window the card takes — including that it never covers
+that window whenever any side is free, because the card is mouse-opaque and drawn above it.
+- `PermissionPaneTests` — the two Privacy panes as values: the `?Privacy_…` deep links Apple keeps
+stable while renaming the titles, distinct name keys for the card's sentence, the raw value a launch
+argument round-trips through, and both Settings owner names (the pre-Ventura shell included).
+- `PermissionGrantResolutionTests` — the `(signal, final read)` table: a readable grant is granted
+whichever signal looked, a finished sheet with an unreadable grant is `finishedInSettings` (Screen
+Recording's cached preflight), and nothing concluding is a timeout rather than a refusal.
+- `TCCGrantWatchStateTests` — the hysteresis that keeps unrelated window churn from ending the
+guide: one dip is not a dismissal, a dip that holds is, a dip that recovers restarts the streak, the
+privacy sheet appearing raises the peak it later falls from, and the app-return latch arms only on a
+false → true transition.
+- `SystemSettingsWindowTrackerTests` — which window the card docks beside: the largest layer-0
+Settings window, matched by process identifier before localized owner name, with the menu-bar extra
+and the tooltip excluded, and sub-point jitter counting as stable while a window still resizing does
+not.
+- `AppBundleDropSourceTests` — which bundle the drag may hand over, against a temporary directory:
+symlinks resolved before the `/AppTranslocation/` test, a non-`.app` and a missing bundle refused,
+because both failures are invisible at the drop and only show up as a grant that never arrives.
 - `LightStatsSmokeTests` — model sentinels + formatter sanity.
 
 ## What this app is not

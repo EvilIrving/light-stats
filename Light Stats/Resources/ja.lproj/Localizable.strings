@@ -270,6 +270,22 @@
 "cleaning.permission.message" = "キーボードをロックするにはアクセシビリティ権限が必要です。システム設定で許可してから再試行してください。";
 "cleaning.permission.openSettings" = "システム設定を開く";
 
+// MARK: - Permission Guide
+"permission.guide.pane.accessibility" = "アクセシビリティ";
+"permission.guide.pane.screenRecording" = "画面収録";
+"permission.guide.instruction.above" = "%@ を上のリストにドラッグして%@を許可";
+"permission.guide.instruction.below" = "%@ を下のリストにドラッグして%@を許可";
+"permission.guide.instruction.beside" = "%@ を右のリストにドラッグして%@を許可";
+"permission.guide.instruction.besideLeft" = "%@ を左のリストにドラッグして%@を許可";
+"permission.guide.back" = "戻る";
+"permission.guide.granted" = "%@を許可しました";
+"permission.guide.notGranted" = "%@の権限はまだ許可されていません。アプリをリストにドラッグして許可してください。";
+"permission.guide.relaunchRequired" = "許可した場合は、Light Stats を再起動すると開始できます。";
+"permission.guide.bundleUnavailable" = "Light Stats をアプリケーションフォルダに移動してから、もう一度ドラッグしてください。";
+"permission.guide.dragIcon" = "Light Stats のアイコンをリストにドラッグ";
+"permission.guide.replay" = "権限ガイドを再生";
+
+
 // MARK: - Input Devices
 "settings.inputDevices" = "入力デバイス";
 "settings.findMouse" = "ポインタをハイライト";

@@ -20,10 +20,6 @@ nonisolated enum ScreenRecordingPermission {
 
     private static let log = AppLogger(category: "ScreenRecordingPermission")
 
-    /// 系统设置 → 隐私与安全性 → 屏幕录制。
-    static let settingsURLString =
-        "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
-
     /// 当前进程是否已获授权。纯检查，不弹任何窗口。
     static var isGranted: Bool {
         CGPreflightScreenCaptureAccess()
@@ -59,16 +55,6 @@ nonisolated enum ScreenRecordingPermission {
     }
 
     private static let requestLog = ScreenRecordingRequestLog()
-
-    /// 跳转系统设置的屏幕录制页。
-    @MainActor
-    static func openSettings() {
-        guard let url = URL(string: settingsURLString) else {
-            log.error("Failed to build Screen Recording settings URL")
-            return
-        }
-        NSWorkspace.shared.open(url)
-    }
 }
 
 /// 一次进程生命周期内的授权流程标记。

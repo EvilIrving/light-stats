@@ -87,6 +87,8 @@ struct WindowManagementDetail: View {
 struct SnapPermissionNotice: View {
 
     @Environment(\.theme) private var theme
+    /// Filled in by the button below: the guide's flight starts where the user clicked.
+    @State private var anchorFrame: CGRect = .zero
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -103,9 +105,13 @@ struct SnapPermissionNotice: View {
             }
             Spacer(minLength: 8)
             Button("cleaning.permission.openSettings".localized) {
-                AccessibilityPermission.openSettings()
+                PermissionGuideCenter.shared.present(
+                    pane: .accessibility,
+                    anchor: anchorFrame.isEmpty ? nil : anchorFrame
+                )
             }
             .controlSize(.small)
+            .permissionGuideAnchor { anchorFrame = $0 }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

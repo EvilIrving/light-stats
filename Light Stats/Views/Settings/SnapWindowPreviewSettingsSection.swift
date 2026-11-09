@@ -19,6 +19,8 @@ struct SnapWindowPreviewSettingsSection: View {
     @ObservedObject var settings: SettingsManager
 
     @State private var authorization: ScreenRecordingAuthorization = .denied
+    /// Filled in by the notice's button: the guide's flight starts where the user clicked.
+    @State private var guideAnchor: CGRect = .zero
 
     var body: some View {
         if SnapWindowPreviewPolicy.hasAvailableSurface {
@@ -135,10 +137,13 @@ struct SnapWindowPreviewSettingsSection: View {
                 .controlSize(.small)
             }
             Button("cleaning.permission.openSettings".localized) {
-                ScreenRecordingPermission.markRequested()
-                ScreenRecordingPermission.openSettings()
+                PermissionGuideCenter.shared.present(
+                    pane: .screenRecording,
+                    anchor: guideAnchor.isEmpty ? nil : guideAnchor
+                )
             }
             .controlSize(.small)
+            .permissionGuideAnchor { guideAnchor = $0 }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

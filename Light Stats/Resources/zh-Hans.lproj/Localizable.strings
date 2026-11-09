@@ -270,6 +270,22 @@
 "cleaning.permission.message" = "锁定键盘需要辅助功能权限。请前往系统设置开启后重试。";
 "cleaning.permission.openSettings" = "打开系统设置";
 
+// MARK: - Permission Guide
+"permission.guide.pane.accessibility" = "辅助功能";
+"permission.guide.pane.screenRecording" = "屏幕录制";
+"permission.guide.instruction.above" = "把 %@ 拖到上面的列表里，即可允许%@";
+"permission.guide.instruction.below" = "把 %@ 拖到下面的列表里，即可允许%@";
+"permission.guide.instruction.beside" = "把 %@ 拖到右侧的列表里，即可允许%@";
+"permission.guide.instruction.besideLeft" = "把 %@ 拖到左侧的列表里，即可允许%@";
+"permission.guide.back" = "返回";
+"permission.guide.granted" = "已获得%@权限";
+"permission.guide.notGranted" = "还没有获得%@权限。把 App 拖进列表即可允许。";
+"permission.guide.relaunchRequired" = "如果已经允许，重启 Light Stats 即可开始。";
+"permission.guide.bundleUnavailable" = "请先把 Light Stats 移到「应用程序」，再拖一次。";
+"permission.guide.dragIcon" = "把 Light Stats 图标拖进列表";
+"permission.guide.replay" = "重放权限引导";
+
+
 // MARK: - Input Devices
 "settings.inputDevices" = "输入设备";
 "settings.findMouse" = "快速定位光标";

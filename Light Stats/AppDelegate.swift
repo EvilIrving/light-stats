@@ -132,6 +132,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         // 启动即发布一次本地化标题，确保扩展冷启动就能读到当前语言的菜单文案。
         FinderMenuHostService.shared.publishLabels()
 
+        // 权限引导的开发重放：只有命令行带 `--permission-guide-demo` 时才触发，正式界面不暴露。
+        // 锚点用闭包传，因为此刻状态栏按钮还没有窗口，而飞行动画要从用户点下去的位置起飞。
+        PermissionGuideCenter.shared.presentReplayIfRequested { [weak self] in self?.statusItemScreenRect }
+
         // 回到前台时复查权限：用户可能刚授权，开关开着但 tap 尚未建起来。
         NotificationCenter.default.addObserver(
             self,
@@ -230,6 +234,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     // MARK: - Panel Setup
+
+    /// The monitor menu-bar item's rectangle in Cocoa screen points.
+    ///
+    /// The permission guide starts its flight from wherever the user clicked, and this item is one
+    /// of those places. Computed the same way the popover's own anchor is, from the button's window
+    /// rather than from arithmetic against the menu bar.
+    private var statusItemScreenRect: CGRect? {
+        guard let button = statusItem?.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
 
     private func setupPanel() {
         let canvasSize = PopoverContentView.canvasSize

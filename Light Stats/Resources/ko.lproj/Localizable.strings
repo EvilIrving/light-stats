@@ -270,6 +270,22 @@
 "cleaning.permission.message" = "키보드를 잠그려면 손쉬운 사용 권한이 필요합니다. 시스템 설정에서 허용한 후 다시 시도하세요.";
 "cleaning.permission.openSettings" = "시스템 설정 열기";
 
+// MARK: - Permission Guide
+"permission.guide.pane.accessibility" = "손쉬운 사용";
+"permission.guide.pane.screenRecording" = "화면 기록";
+"permission.guide.instruction.above" = "%@을(를) 위 목록으로 드래그하여 %@을(를) 허용하세요";
+"permission.guide.instruction.below" = "%@을(를) 아래 목록으로 드래그하여 %@을(를) 허용하세요";
+"permission.guide.instruction.beside" = "%@을(를) 오른쪽 목록으로 드래그하여 %@을(를) 허용하세요";
+"permission.guide.instruction.besideLeft" = "%@을(를) 왼쪽 목록으로 드래그하여 %@을(를) 허용하세요";
+"permission.guide.back" = "뒤로";
+"permission.guide.granted" = "%@ 권한이 허용되었습니다";
+"permission.guide.notGranted" = "%@ 권한이 아직 허용되지 않았습니다. 앱을 목록으로 드래그하여 허용하세요.";
+"permission.guide.relaunchRequired" = "허용했다면 Light Stats를 재시작하면 시작됩니다.";
+"permission.guide.bundleUnavailable" = "Light Stats를 응용 프로그램 폴더로 옮긴 후 다시 드래그하세요.";
+"permission.guide.dragIcon" = "Light Stats 아이콘을 목록으로 드래그";
+"permission.guide.replay" = "권한 안내 다시 보기";
+
+
 // MARK: - Input Devices
 "settings.inputDevices" = "입력 장치";
 "settings.findMouse" = "포인터 위치 찾기";

@@ -13,6 +13,11 @@ struct GeneralDetail: View {
     @ObservedObject var updateManager: UpdateManager
     let exportDiagnosticReport: () -> Void
 
+    #if DEBUG
+    /// Developer-only: where the replayed permission guide flies from.
+    @State private var guideAnchor: CGRect = .zero
+    #endif
+
     var body: some View {
         SettingsDetailScaffold("settings.general".localized) {
             if themeBackground == .systemGlass {
@@ -35,6 +40,31 @@ struct GeneralDetail: View {
     private var themeBackground: BackgroundSceneID {
         ThemeDefinition.definition(for: settings.appTheme).background
     }
+
+    #if DEBUG
+    /// Replays the drag-to-grant guide.
+    ///
+    /// Debug builds only, and only here: the real entry points exist while a permission is missing,
+    /// so on a machine that has already granted it the flow can never be looked at again. It replays
+    /// through the watcher-free entry point for the same reason — the live path would read the
+    /// existing grant on its first poll and dismiss the card a tenth of a second after it lands.
+    private var guideReplayRow: some View {
+        SettingsRow("permission.guide.replay".localized) {
+            Button {
+                PermissionGuideCenter.shared.presentReplay(
+                    pane: .accessibility,
+                    anchor: guideAnchor.isEmpty ? nil : guideAnchor
+                )
+            } label: {
+                Image(systemName: "play.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("permission.guide.replay".localized)
+            .accessibilityLabel("permission.guide.replay".localized)
+            .permissionGuideAnchor { guideAnchor = $0 }
+        }
+    }
+    #endif
 
     /// 左侧配置列：主题 → 应用 → 软件更新，与右侧背景预览并排，填满预览高度、避免光影动态下方留白。
     private var sectionsColumn: some View {
@@ -65,6 +95,10 @@ struct GeneralDetail: View {
                     }
                     rowDivider()
                     PerformanceRecordingSettingsRow()
+                    #if DEBUG
+                    rowDivider()
+                    guideReplayRow
+                    #endif
                 }
             }
             SettingsSection("settings.update.section".localized) {
