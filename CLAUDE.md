@@ -9,6 +9,43 @@ composite health score. Compact status item + detailed popover panel. Optional e
 
 macOS 14+ · Swift 5.9+ · SwiftUI + AppKit · `LSUIElement = YES`
 
+---
+
+## 核心工程支柱与研发红线 (Engineering Invariants)
+
+1. **项目定位与业务红线 (Invariants)**：
+   - 菜单栏系统监控与状态仪表盘（`LSUIElement = YES`）+ 浮层详情面板；绝非 Activity Monitor 替代品，非全能窗口管理器（无复杂脚本/规则历史）。
+   - 仅支持 Apple Silicon（`ARCHS = arm64`，零 x86 回退；私有 DDC 显示控制为 ARM 专用）。
+   - 界面无冗余装饰：仪表数据直接渲染在表面上，严禁重新引入 Bento 式嵌套卡片板；无 Metal/CoreGraphics 复杂图表。
+   - 屏幕捕捉安全：仅在用户主动开启窗口缩略图预览时按需拉取，严格维持 4 秒内存 TTL 缓存，绝不落地磁盘或网络传输。
+2. **架构分层与 Layout**：
+   - 单向依赖铁律：`Views → ViewModels → Services → Models`（`Utilities` 无状态，可在任意处导入）。
+   - `Models`：纯 Sendable 结构体，无业务逻辑、无框架 import，严禁持有 View 或 Service。
+   - `Services`：按并发场景分为 Shape A（纯计算/非隔离快速系统调用）、Shape B（actor 缓存与网络请求）、Shape C（@MainActor 生命周期服务，负责 CGEventTap / AX 启停）。
+   - `ViewModels`：@MainActor 可观察状态中枢。
+   - 独立插件架构：`FinderMenu/`（共享模型与 IPC）与 `FinderMenuExtension/`（FinderSync 插件）。
+3. **真实系统底层与硬件约束**：
+   - 内存采集：通过 `proc_pidinfo` 提取原生 Memory Footprint（`anonymous - purgeable + wired + compressed`），绝对禁止以 RSS 代替。
+   - IOKit 与 SMC：电池功率、温度与风扇传感器；当 SMC 缺失风扇键（`noFanKeys`）时自动隐藏风扇界面；转速统一由 rpm 换算为 rps。
+   - AX 与事件监听：所有 Accessibility 操作由单一串行队列 `AXCommandQueue` 序列化；键盘清洁锁与滚轮方向反转采用 `CGEventTap`，提供确定性 start()/stop() 析构。
+   - DDC 亮度调节：通过私有 IOKit/DisplayServices 帧缓冲通信直接操作显示器硬件。
+4. **验证与构建命令**：
+   - 本地生产测试：`./script/local-run.sh`（直接构建并签名安装到 `/Applications`，维持与正式版完全一致的 TCC 权限上下文，避免重复弹窗）。
+   - 单元测试：`./script/test.sh`（**必须通过该脚本运行测试，禁止裸跑 xcodebuild test**，防止 pkd 将 DerivedData 中的 `FinderMenuExtension.appex` 重复注册导致 Finder 插件冲突）。
+   - 生产打包：`./script/build.sh`（生成发布用 DMG、Developer ID 签名、公证与 Staple）。
+5. **字段联动与发布规范**：
+   - 版本号机制：由 Git Tag 驱动（`release.yml` 解析 `vX.Y.Z` 传递给 `MARKETING_VERSION`）；`project.pbxproj` 中的 `1.0.2` 是裸跑 xcodebuild 的保底兜底值，不得随意篡改。
+   - 本地开发版本号：格式必须为 `<lastTag>-dev.<commitsAhead>`，绝不可写死 `1.0.0-dev`（低于 pbxproj 1.0.2 会被 pkd / LaunchServices 错误降级忽略）。
+   - R2 发布渠道：`latest-stable.json` / `latest-beta.json` 指向 immutable 缓存的 `Light-Stats-<version>.dmg`。
+   - 本地化：中、英、日、韩四国语言在新增配置或文案时必须同步补充。
+6. **历史踩坑与故障归因分类**：
+   - `Finder 菜单插件注册冲突`：直接裸跑 xcodebuild test 导致 DerivedData 中的插件被系统注册。处置：使用 `./script/test.sh` 自动注销清理，或使用 `pluginkit -r` 移除旧插件。
+   - `权限指引悬浮卡片贴合偏移`：通过 `SystemSettingsWindowTracker` 按 PID 优先于本地化窗口名精确定位系统设置。
+   - `窗口吸附回弹与帧尺寸钳制`：某些 App 自身对窗口最小尺寸有硬限制，`WindowSnapHistory` 具备自适应容错。
+   - `AppTranslocation 拖拽失效`：在拖拽授权判断前，必须先将软链接完整解析为物理路径。
+
+---
+
 ## Layout
 
 ```
