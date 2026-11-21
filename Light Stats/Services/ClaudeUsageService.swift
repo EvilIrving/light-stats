@@ -184,7 +184,7 @@ enum ClaudeUsageService: UsageProviding {
                 // CLI PTY (which reads the CLI's own fresh credentials). Sending the
                 // known-expired token to the Messages API would only 401 again.
                 return try await recoverFromExpiredToken(previousToken: token)
-            case .endpointNotFound, .decoding, .network:
+            case .endpointNotFound, .decoding, .network, .keychainAccessDenied:
                 // 2. Endpoint moved / response shape changed: read rate-limit headers.
                 do {
                     return try await fetchUsageFromHeaders(token: token)

@@ -141,7 +141,8 @@ Light Stats/
 │   ├── WarpUsageService.swift       # GraphQL request-limit credits
 │   ├── TraeUsageService.swift       # Trae CN credit pool
 │   ├── OpenCodeGoUsageService.swift # OpenCode Go zen usage API
-│   ├── CursorUsageService.swift     # Cursor.app state.vscdb + usage-summary
+│   ├── CursorUsageService.swift     # Cursor dashboard RPC (GetCurrentPeriodUsage)
+│   ├── CursorSafeStorage.swift      # Electron safeStorage decrypt for the Cursor session
 │   ├── KimiUsageService.swift       # Kimi Code /coding/v1/usages (weekly + 5h)
 │   ├── QoderUsageService.swift      # qoder.com/.cn big-model credits (session cookie)
 │   ├── MiMoUsageService.swift       # Xiaomi MiMo console balance + Token Plan
@@ -1179,9 +1180,14 @@ Suites:
   double-free on macOS 14.x; the production singleton never deallocates, so this is test-only.)
 - `AIUsageParsingTests` — Claude/Codex response parsers against sanitized JSON fixtures
 - `AIUsageNewProviderParsingTests` — DeepSeek / Grok / z.ai / MiniMax / Moonshot / OpenRouter / Warp / Trae / Kimi / Qoder / MiMo fixtures
-  in `LightStatsTests/Fixtures/` (valid / partial / malformed). This is the P4 regression net;
-  the parse seams (`ClaudeUsageService.parseUsageJSON`, `CodexUsageService.parseUsageJSON`)
-  are `internal` so `@testable` can reach them.
+  in `LightStatsTests/Fixtures/` (valid / partial / malformed), plus Cursor's two dashboard bodies:
+  a unified account's single weekly window, a legacy account's total-next-to-two-bags month, and the
+  plan body being absent. This is the P4 regression net; the parse seams are `internal` so
+  `@testable` can reach them.
+- `CursorSafeStorageTests` — the `cursor-safe-storage:v1:` envelope round-trips with a fictional
+  password (no Cursor, no keychain), a wrong password yields no token, another version or a plaintext
+  value is refused before any password is asked for, and decrypted bytes that are not a JWT are dropped
+  rather than sent.
 - `AntigravityUsageTests` — the `agy` Keychain grant (`go-keyring-base64:` decode, foreign blob,
   missing access token, empty refresh token) and the quota summary collapsing two model groups
   into the panel's 5h / 7d rows, including that the more consumed group wins and a window kind

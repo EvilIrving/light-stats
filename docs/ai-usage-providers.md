@@ -272,7 +272,7 @@ Origin: https://www.trae.cn
 
 | Provider | 认证 | 说明 |
 |---|---|---|
-| **Cursor** | IDE 本地数据库（`state.vscdb`，`ideDatabase`） | 用户量极大；cookie 路径被否决，未采用 |
+| **Cursor** | IDE 本地数据库（`state.vscdb`，`ideDatabase`）+ Keychain 里的 safeStorage key | 用户量极大；cookie 路径被否决，未采用；3.27 起 token 是 Electron safeStorage 密文 |
 | **OpenCode Go** | usage API + 本地 SQLite | **Go 版有 API 路径**，比 cookie 版好做；普通 OpenCode 是 cookie |
 | **Qwen Cloud / 阿里 Coding Plan** | web cookie 或 API key | 国产里量最大的之一，**先确认有没有 API key 路径** |
 | **Qoder CN** | cookie | 原「智能编码助手通义灵码」，2026-05-20 官方改名，是同一个产品。扩展装机 270 万，国内最大 |

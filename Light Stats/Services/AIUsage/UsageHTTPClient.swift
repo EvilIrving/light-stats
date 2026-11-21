@@ -49,4 +49,8 @@ enum UsageHTTPClient {
         }
         return try await send(request)
     }
+
+    static func post(_ request: URLRequest) async throws -> Data {
+        try await send(request)
+    }
 }

@@ -223,19 +223,43 @@ final class AIUsageNewProviderParsingTests: XCTestCase {
         XCTAssertNil(snapshot.windows[0].resetsAt)
     }
 
-    func testCursorSummaryUsesDashboardPercentNotCentsRatio() throws {
-        let snapshot = try CursorUsageService.parseSummaryJSON(fixture("cursor_usage_summary.json"))
-        XCTAssertEqual(snapshot.windows.map(\.label), [UsageWindowLabel.usage.key, "API"])
-        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 33.22, accuracy: 0.001)
-        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 0, accuracy: 0.001)
+    func testCursorMonthlyPlanKeepsTotalAndBothModelBags() throws {
+        let snapshot = try CursorUsageService.parsePeriodUsage(
+            fixture("cursor_period_usage.json"),
+            planInfo: fixture("cursor_plan_info.json")
+        )
+        XCTAssertEqual(snapshot.windows.map(\.label), [UsageWindowLabel.usage.key, "Cursor", "API"])
+        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 30.2, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[1].usedPercent ?? -1, 33.22, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[2].usedPercent ?? -1, 0, accuracy: 0.001)
         XCTAssertNotNil(snapshot.windows[0].resetsAt)
         XCTAssertNil(snapshot.balance)
     }
 
-    func testCursorCookieHeaderUsesUserIDFromJWT() throws {
-        let jwt = "aaa.eyJzdWIiOiJhdXRoMHx1c2VyX2FiYyIsImV4cCI6NDEwMjQ0NDgwMH0.sig"
-        let cookie = try CursorUsageService.cookieHeader(for: jwt)
-        XCTAssertEqual(cookie, "WorkosCursorSessionToken=user_abc%3A%3A\(jwt)")
+    // A unified account meters one weekly allowance: the panel shows one bar, not a
+    // total next to two monthly bags the account does not have.
+    func testCursorUnifiedPlanReportsSingleWeeklyWindow() throws {
+        let weeklyUsage = Data("""
+        {"billingCycleEnd": "1700000000000", "planUsage": {"totalPercentUsed": 42.5}}
+        """.utf8)
+        let snapshot = try CursorUsageService.parsePeriodUsage(
+            weeklyUsage,
+            planInfo: fixture("cursor_unified_plan_info.json")
+        )
+        XCTAssertEqual(snapshot.windows.count, 1)
+        XCTAssertEqual(snapshot.windows[0].label, UsageWindowLabel.usage.key)
+        XCTAssertEqual(snapshot.windows[0].usedPercent ?? -1, 42.5, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[0].resetsAt?.timeIntervalSince1970 ?? 0, 1_790_734_313, accuracy: 0.5)
+    }
+
+    // The plan body is best effort: its absence must still show the month's numbers.
+    func testCursorMissingPlanInfoFallsBackToMonthlyBags() throws {
+        let snapshot = try CursorUsageService.parsePeriodUsage(
+            fixture("cursor_period_usage.json"),
+            planInfo: nil
+        )
+        XCTAssertEqual(snapshot.windows.count, 3)
+        XCTAssertEqual(snapshot.windows.first?.label, UsageWindowLabel.usage.key)
     }
 
     func testCursorDecodesUTF16LEBlob() {

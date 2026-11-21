@@ -190,6 +190,7 @@
 "aiUsage.mimo.tokenHint" = "ブラウザの Cookie ヘッダーを貼り付け（userId を含む）";
 "aiUsage.credentialsMissing.app" = "先に %@ を開いてログインしてください";
 "aiUsage.tokenExpired.app" = "%@ のセッションが切れました。再ログインしてください";
+"aiUsage.keychainAccessDenied" = "キーチェーンで Cursor のログイン情報へのアクセスを許可してください";
 "aiUsage.token" = "API token";
 "aiUsage.token.hint" = "使用量の取得にのみ使用。送信しません。";
 "aiUsage.group.local" = "ローカルログイン";

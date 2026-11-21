@@ -190,6 +190,7 @@
 "aiUsage.mimo.tokenHint" = "브라우저 Cookie 헤더를 붙여넣기 (userId 포함)";
 "aiUsage.credentialsMissing.app" = "먼저 %@에 로그인해 주세요";
 "aiUsage.tokenExpired.app" = "%@ 세션이 만료되었습니다. 다시 로그인하세요";
+"aiUsage.keychainAccessDenied" = "키체인에서 Cursor 로그인 정보 접근을 허용해 주세요";
 "aiUsage.token" = "API token";
 "aiUsage.token.hint" = "사용량 조회에만 쓰이며 업로드되지 않습니다.";
 "aiUsage.group.local" = "로컬 로그인";

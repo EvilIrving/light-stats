@@ -234,6 +234,7 @@ private extension AIUsageError {
         case .network: return "network"
         case .decoding: return "decoding"
         case .endpointNotFound: return "endpointNotFound"
+        case .keychainAccessDenied: return "keychainAccessDenied"
         }
     }
 }

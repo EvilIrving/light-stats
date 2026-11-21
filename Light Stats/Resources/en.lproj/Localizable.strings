@@ -188,6 +188,7 @@
 "aiUsage.mimo.tokenHint" = "Paste the browser Cookie header (with userId)";
 "aiUsage.credentialsMissing.app" = "Open %@ and sign in first";
 "aiUsage.tokenExpired.app" = "%@ session expired — sign in again";
+"aiUsage.keychainAccessDenied" = "Allow Keychain access to read Cursor's login";
 "aiUsage.token" = "API token";
 "aiUsage.token.hint" = "Used only to read usage. Never uploaded.";
 "aiUsage.group.local" = "This Mac";

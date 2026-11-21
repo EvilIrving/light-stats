@@ -190,6 +190,7 @@
 "aiUsage.mimo.tokenHint" = "粘贴浏览器 Cookie 请求头（含 userId）";
 "aiUsage.credentialsMissing.app" = "先打开 %@ 并登录";
 "aiUsage.tokenExpired.app" = "%@ 会话已过期，请重新登录";
+"aiUsage.keychainAccessDenied" = "请在钥匙串里允许读取 Cursor 的登录信息";
 "aiUsage.token" = "API token";
 "aiUsage.token.hint" = "只用于读取用量，不会上传";
 "aiUsage.group.local" = "本机登录";

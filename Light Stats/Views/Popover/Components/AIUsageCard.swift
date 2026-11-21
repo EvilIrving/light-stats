@@ -271,6 +271,8 @@ struct AIProviderCompactRow: View {
                 return "aiUsage.credentialsMissing.token".localized
             case .network, .decoding, .endpointNotFound:
                 return "aiUsage.fetchFailed".localized
+            case .keychainAccessDenied:
+                return "aiUsage.keychainAccessDenied".localized
             }
         }
         if catalogRow?.credential == .ideDatabase {
@@ -282,6 +284,8 @@ struct AIProviderCompactRow: View {
                 return "aiUsage.credentialsMissing.app".localized(app)
             case .network, .decoding, .endpointNotFound:
                 return "aiUsage.fetchFailed".localized
+            case .keychainAccessDenied:
+                return "aiUsage.keychainAccessDenied".localized
             }
         }
         let cli = catalogRow?.cliName ?? provider.rawValue
@@ -290,6 +294,8 @@ struct AIProviderCompactRow: View {
             return "aiUsage.tokenExpired".localized(cli)
         case .credentialsMissing:
             return "aiUsage.credentialsMissing".localized(cli)
+        case .keychainAccessDenied:
+            return "aiUsage.keychainAccessDenied".localized
         case .network, .decoding, .endpointNotFound:
             return "aiUsage.fetchFailed".localized
         }

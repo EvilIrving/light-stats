@@ -2,8 +2,23 @@
 //  CursorUsageService.swift
 //  Light Stats
 //
-//  Reads Cursor.app's VS Code-style state.vscdb (cursorAuth/accessToken) and
-//  calls cursor.com/api/usage-summary. No browser cookies.
+//  Reads Cursor.app's own session from its VS Code-style `state.vscdb` and asks
+//  Cursor's dashboard for the current period usage. Two measured facts shape
+//  this file:
+//
+//  1. The session moved. `cursorAuth/accessToken` is no longer a plaintext JWT:
+//     since Cursor 3.27 it is `cursor-safe-storage:v1:` plus ciphertext keyed by
+//     `Cursor Safe Storage` in the login keychain (`CursorSafeStorage`).
+//  2. The endpoint moved with it. The web page's `/api/usage-summary` is driven
+//     by the `WorkosCursorSessionToken` cookie, which is built from the JWT's
+//     `sub` claim — a plaintext-only arrangement. The dashboard's own RPC takes
+//     the token as a bearer and returns the same numbers, so the app's
+//     credential is all that is needed and no cookie is built.
+//
+//  `GetCurrentPeriodUsage` reports totals; `GetPlanInfo` says which allowance the
+//  account is metered on. A unified plan reports one weekly included allowance
+//  (a single meter). An older plan reports separate Cursor-Models and
+//  Other-Models bags against a monthly billing cycle.
 //
 
 import Foundation
@@ -12,61 +27,158 @@ import SQLite3
 enum CursorUsageService: UsageProviding {
     static var id: AIProvider { .cursor }
 
-    private static let summaryURL = URL(string: "https://cursor.com/api/usage-summary")!
+    private static let log = AppLogger(category: "CursorUsage")
+
+    private static let dashboardURL = URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/")!
+    private static let periodUsageMethod = "GetCurrentPeriodUsage"
+    private static let planInfoMethod = "GetPlanInfo"
     private static let tokenKey = "cursorAuth/accessToken"
 
+    private static let credentialCache = CursorCredentialCache()
+
+    // MARK: - Fetch
+
     static func fetch() async throws -> ProviderUsageSnapshot {
-        let token = try readAccessToken()
-        try ensureUsable(token)
-        let cookie = try cookieHeader(for: token)
-        let data = try await UsageHTTPClient.get(
-            url: summaryURL,
-            headers: [
-                "Accept": "application/json",
-                "Cookie": cookie,
-                "User-Agent": "Light Stats"
-            ]
-        )
-        return try parseSummaryJSON(data)
+        let token = try accessToken()
+        async let periodUsage = fetchPeriodUsage(token: token)
+        async let planInfo = fetchPlanInfo(token: token)
+        return try parsePeriodUsage(try await periodUsage, planInfo: await planInfo)
     }
 
-    static func parseSummaryJSON(_ data: Data) throws -> ProviderUsageSnapshot {
-        let summary: Summary
+    /// Drops the decrypted token so the next fetch re-reads the database and, if
+    /// the value is still ciphertext, the keychain. Called on manual retry.
+    static func resetCredentialCache() {
+        credentialCache.invalidate()
+    }
+
+    private static func fetchPeriodUsage(token: String) async throws -> Data {
+        try await UsageHTTPClient.post(dashboardRequest(periodUsageMethod, token: token))
+    }
+
+    /// Best effort: without it the account is read as a monthly one, which is what
+    /// every plan before the unified allowance was.
+    private static func fetchPlanInfo(token: String) async -> Data? {
+        try? await UsageHTTPClient.post(dashboardRequest(planInfoMethod, token: token))
+    }
+
+    /// A Connect call: an empty JSON message, and the protocol version header the
+    /// server requires next to the bearer token.
+    private static func dashboardRequest(_ method: String, token: String) -> URLRequest {
+        var request = URLRequest(
+            url: dashboardURL.appendingPathComponent(method),
+            timeoutInterval: UsageHTTPClient.defaultTimeout
+        )
+        request.httpMethod = "POST"
+        request.httpBody = Data("{}".utf8)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
+        request.setValue("Light Stats", forHTTPHeaderField: "User-Agent")
+        return request
+    }
+
+    // MARK: - Parsing
+
+    /// Turns the two dashboard bodies into the panel's windows.
+    static func parsePeriodUsage(
+        _ periodUsage: Data,
+        planInfo: Data?,
+        fetchedAt: Date = Date()
+    ) throws -> ProviderUsageSnapshot {
+        let usage: PeriodUsage
         do {
-            summary = try JSONDecoder().decode(Summary.self, from: data)
+            usage = try JSONDecoder().decode(PeriodUsage.self, from: periodUsage)
         } catch {
             throw AIUsageError.decoding
         }
-        let plan = summary.individualUsage?.plan
-        var windows: [UsageWindow] = []
-        let reset = parseISO8601(summary.billingCycleEnd)
-        // Cursor's page shows two categories: Cursor Models (auto) and Other Models (api).
-        // totalPercentUsed is a combined metric Cursor does not surface — use auto as primary.
-        if let auto = plan?.autoPercentUsed {
-            windows.append(UsageWindow(label: .usage, usedPercent: clamp(auto), resetsAt: reset))
-        } else if let used = plan?.used, let limit = plan?.limit, limit > 0 {
-            windows.append(UsageWindow(
+        guard let plan = usage.planUsage, plan.hasReading else { throw AIUsageError.decoding }
+        let info = planInfo.flatMap { try? JSONDecoder().decode(PlanInfo.self, from: $0) }
+        let period = info?.planInfo?.includedUsagePeriod
+        let billingCycleEnd = usage.billingCycleEnd?.date ?? info?.planInfo?.billingCycleEnd?.date
+
+        let windows: [UsageWindow]
+        if info?.isMerged == true || period == .weekly {
+            guard let total = plan.totalPercentUsed else { throw AIUsageError.decoding }
+            windows = [UsageWindow(
                 label: .usage,
-                usedPercent: clamp(Double(used) / Double(limit) * 100),
-                resetsAt: reset
-            ))
+                usedPercent: clamp(total),
+                resetsAt: info?.planInfo?.includedUsageResetsAt?.date ?? billingCycleEnd
+            )]
+        } else {
+            windows = [
+                plan.totalPercentUsed.map {
+                    UsageWindow(label: .usage, usedPercent: clamp($0), resetsAt: billingCycleEnd)
+                },
+                plan.autoPercentUsed.map {
+                    UsageWindow(label: cursorModelsLabel, usedPercent: clamp($0), resetsAt: billingCycleEnd)
+                },
+                plan.apiPercentUsed.map {
+                    UsageWindow(label: otherModelsLabel, usedPercent: clamp($0), resetsAt: billingCycleEnd)
+                }
+            ].compactMap { $0 }
         }
-        if let api = plan?.apiPercentUsed {
-            windows.append(UsageWindow(label: "API", usedPercent: clamp(api), resetsAt: reset))
+        guard !windows.isEmpty else { throw AIUsageError.decoding }
+        return ProviderUsageSnapshot(provider: .cursor, windows: windows, fetchedAt: fetchedAt)
+    }
+
+    /// Cursor's own names for the two monthly bags, as its dashboard shows them.
+    private static let cursorModelsLabel = "Cursor"
+    private static let otherModelsLabel = "API"
+
+    // MARK: - Credential
+
+    /// The session as Cursor stored it: a plaintext JWT from a build before 3.27,
+    /// or `cursor-safe-storage:v1:` ciphertext from every build since.
+    private static func accessToken() throws -> String {
+        let stored = try readStoredToken()
+        if !CursorSafeStorage.isEncrypted(stored) {
+            try ensureUsable(stored)
+            return stored
         }
-        if let onDemand = summary.individualUsage?.onDemand,
-           onDemand.enabled == true,
-           let used = onDemand.used,
-           let limit = onDemand.limit,
-           limit > 0 {
-            windows.append(UsageWindow(
-                label: .overage,
-                usedPercent: clamp(Double(used) / Double(limit) * 100),
-                resetsAt: reset
-            ))
+        if let cached = credentialCache.token(for: stored) { return cached }
+        let token = try decrypt(stored)
+        try ensureUsable(token)
+        credentialCache.store(token, for: stored)
+        return token
+    }
+
+    /// Checks the format before asking the keychain for anything: a value this
+    /// build cannot decrypt is not worth a system dialog.
+    private static func decrypt(_ stored: String) throws -> String {
+        guard let ciphertext = CursorSafeStorage.ciphertext(of: stored) else {
+            log.error("Cursor session has an unsupported safeStorage format")
+            throw AIUsageError.decoding
         }
-        if windows.isEmpty { throw AIUsageError.decoding }
-        return ProviderUsageSnapshot(provider: .cursor, windows: windows, fetchedAt: Date())
+        // A refusal is remembered for the session: otherwise every refresh would put
+        // the same dialog back in front of the user. Only a manual retry re-asks.
+        guard !credentialCache.accessRefused else { throw AIUsageError.keychainAccessDenied }
+        switch CursorSafeStorage.keychainPasswords() {
+        case .passwords(let passwords):
+            for password in passwords {
+                if let token = CursorSafeStorage.accessToken(decrypting: ciphertext, password: password) {
+                    return token
+                }
+            }
+            log.error("Cursor session did not decrypt with any of \(passwords.count) safeStorage keys")
+            throw AIUsageError.decoding
+        case .denied:
+            log.notice("Cursor safeStorage key was refused in the keychain")
+            credentialCache.refuseAccess()
+            throw AIUsageError.keychainAccessDenied
+        case .unavailable(let status):
+            // The status is the only thing that separates "Cursor never wrote this"
+            // from "we looked in the wrong keychain", and OSLog redacts the message.
+            log.error("Cursor safeStorage key is not readable (OSStatus \(status))")
+            DiagnosticLogService.recordProbe(
+                component: "CursorSafeStorage",
+                operation: "keychainPassword",
+                status: .unavailable,
+                reasonCode: "osStatus\(status)",
+                source: "Security/SecItemCopyMatching"
+            )
+            throw AIUsageError.credentialsMissing
+        }
     }
 
     static func decodeSQLiteValue(_ data: Data, type: Int32) -> String? {
@@ -88,18 +200,13 @@ enum CursorUsageService: UsageProviding {
         return nil
     }
 
-    static func cookieHeader(for jwt: String) throws -> String {
-        let userID = try userID(from: jwt)
-        return "WorkosCursorSessionToken=\(userID)%3A%3A\(jwt)"
-    }
-
     static func databaseURL(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {
         home.appendingPathComponent(
             "Library/Application Support/Cursor/User/globalStorage/state.vscdb"
         )
     }
 
-    private static func readAccessToken() throws -> String {
+    private static func readStoredToken() throws -> String {
         let url = databaseURL()
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw AIUsageError.credentialsMissing
@@ -173,16 +280,6 @@ enum CursorUsageService: UsageProviding {
         }
     }
 
-    private static func userID(from jwt: String) throws -> String {
-        let payload = try jwtPayload(jwt)
-        guard let subject = payload["sub"] as? String,
-              let userID = subject.split(separator: "|", omittingEmptySubsequences: true).last.map(String.init),
-              !userID.isEmpty else {
-            throw AIUsageError.decoding
-        }
-        return userID
-    }
-
     private static func jwtPayload(_ jwt: String) throws -> [String: Any] {
         let parts = jwt.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count >= 2 else { throw AIUsageError.decoding }
@@ -208,36 +305,133 @@ enum CursorUsageService: UsageProviding {
         min(100, max(0, value))
     }
 
-    private static func parseISO8601(_ raw: String?) -> Date? {
-        guard let raw else { return nil }
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: raw) { return date }
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter.date(from: raw)
+    // MARK: - Response shapes
+
+    private struct PeriodUsage: Decodable {
+        let billingCycleEnd: Milliseconds?
+        let planUsage: PlanUsage?
     }
 
-    private struct Summary: Decodable {
-        let billingCycleEnd: String?
-        let individualUsage: Individual?
+    private struct PlanUsage: Decodable {
+        let totalPercentUsed: Double?
+        let autoPercentUsed: Double?
+        let apiPercentUsed: Double?
+
+        var hasReading: Bool {
+            totalPercentUsed != nil || autoPercentUsed != nil || apiPercentUsed != nil
+        }
     }
 
-    private struct Individual: Decodable {
-        let plan: Plan?
-        let onDemand: OnDemand?
+    private struct PlanInfo: Decodable {
+        let isMerged: Bool?
+        let planInfo: Plan?
     }
 
     private struct Plan: Decodable {
-        let used: Int?
-        let limit: Int?
-        let autoPercentUsed: Double?
-        let apiPercentUsed: Double?
-        let totalPercentUsed: Double?
+        let includedUsagePeriod: IncludedUsagePeriod?
+        let includedUsageResetsAt: Milliseconds?
+        let billingCycleEnd: Milliseconds?
     }
 
-    private struct OnDemand: Decodable {
-        let enabled: Bool?
-        let used: Int?
-        let limit: Int?
+    /// The dashboard sends the enum as its name or its number, depending on the
+    /// build; unspecified is a monthly cycle.
+    private enum IncludedUsagePeriod: Decodable {
+        case monthly
+        case weekly
+
+        init(from decoder: Decoder) throws {
+            let value = try decoder.singleValueContainer()
+            if let number = try? value.decode(Int.self) {
+                switch number {
+                case 2: self = .weekly
+                case 0, 1: self = .monthly
+                default: throw DecodingError.dataCorruptedError(
+                    in: value,
+                    debugDescription: "Unknown included-usage period"
+                )
+                }
+                return
+            }
+            switch try value.decode(String.self) {
+            case "INCLUDED_USAGE_PERIOD_WEEKLY": self = .weekly
+            case "INCLUDED_USAGE_PERIOD_MONTHLY", "INCLUDED_USAGE_PERIOD_UNSPECIFIED": self = .monthly
+            default: throw DecodingError.dataCorruptedError(
+                in: value,
+                debugDescription: "Unknown included-usage period"
+            )
+            }
+        }
+    }
+
+    /// Epoch milliseconds, which the dashboard sends as a string on some builds and
+    /// as a number on others.
+    private struct Milliseconds: Decodable {
+        let value: Int64
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let number = try? container.decode(Int64.self) {
+                value = number
+                return
+            }
+            guard let number = Int64(try container.decode(String.self)) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Not an epoch millisecond value"
+                )
+            }
+            value = number
+        }
+
+        var date: Date? {
+            guard value > 0 else { return nil }
+            return Date(timeIntervalSince1970: TimeInterval(value) / 1000)
+        }
+    }
+}
+
+// MARK: - Credential cache
+
+/// The decrypted token, keyed by the ciphertext it came from. A poll after the
+/// first keychain grant costs nothing, and a user who answered "Allow" instead of
+/// "Always Allow" is not asked again on every refresh. A new sign-in changes the
+/// stored value and therefore misses the cache.
+nonisolated private final class CursorCredentialCache: @unchecked Sendable {
+    private let lock = NSLock()
+    private var entry: (stored: String, token: String)?
+    private var refused = false
+
+    func token(for stored: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let entry, entry.stored == stored else { return nil }
+        return entry.token
+    }
+
+    func store(_ token: String, for stored: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        entry = (stored, token)
+        refused = false
+    }
+
+    /// Whether the user turned down the keychain prompt in this session.
+    var accessRefused: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return refused
+    }
+
+    func refuseAccess() {
+        lock.lock()
+        defer { lock.unlock() }
+        refused = true
+    }
+
+    func invalidate() {
+        lock.lock()
+        defer { lock.unlock() }
+        entry = nil
+        refused = false
     }
 }

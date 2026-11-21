@@ -12,4 +12,7 @@ enum AIUsageError: Error, Equatable {
     case decoding
     /// OAuth usage endpoint returned 404 — endpoint may have moved or been disabled.
     case endpointNotFound
+    /// The session is stored encrypted and the user refused the keychain prompt
+    /// that unlocks it.
+    case keychainAccessDenied
 }

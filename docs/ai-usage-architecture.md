@@ -934,7 +934,7 @@ Claude CLI 的 `Claude Code-credentials` **不动**。
 |---|---|---|
 | Claude / Codex / Gemini | 现有 | 已有 |
 | Grok | `~/.grok/auth.json`，OIDC scope 的 `key` | Grok PR |
-| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | 未实现；`ideDatabase` 预留 |
+| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`（值需 Keychain 解密） | 已实现；`ideDatabase` |
 
 ### 诊断导出
 
@@ -978,9 +978,17 @@ Claude CLI 的 `Claude Code-credentials` **不动**。
 - 可选、非必须：`~/.claude/settings.json` 的 `env.ANTHROPIC_AUTH_TOKEN` 仅当用户还没手贴 token。手贴优先。
 - Swift 重写，不嵌 CodexBar `zai.js`。
 
-### Cursor（后续；架构预留的是 `CredentialSource`，不是过早的 enum case）
+### Cursor（2026-11-21 重做：3.27 起凭据加密，端点换成 dashboard RPC）
 
-不是 cookie。`docs/ai-usage-providers.md` B 档过时。路径：`state.vscdb` 的 `cursorAuth/accessToken`，再 `GET cursor.com/api/usage-summary`。不需要 FDA。`AIProvider.cursor` 与 registry 行同一 PR 才加，以免 `testRegistryCoversEveryAIProvider` 先红。本仓库未检查 Cursor 文件是否仍用该 key；该 PR 的合入门禁包含确认。
+凭据仍是 `state.vscdb` 的 `cursorAuth/accessToken`，但自 3.27 起这个值是 `cursor-safe-storage:v1:` + Electron safeStorage 密文，不是明文 JWT。解密参数是 Chromium 的 macOS `v10` 格式：key = PBKDF2-HMAC-SHA1（salt `saltysalt`，1003 轮）对 Keychain 通用密码派生，AES-128-CBC，IV 为 16 个空格。明文 JWT 只在 3.27 之前的版本里。
+
+Keychain 条目的实际坐标（本机 3.31.15 实测）：`service = "Cursor Safe Storage"`、`account = "Cursor Key"`（Electron 的 `<product> Key` 命名）。开源实现（uzzy、UsageRings）都把 account 写死成 `Cursor`，在这台机器上 `errSecItemNotFound`——所以查询只按 service，账号不进查询，多个同名条目逐个试。
+
+端点随之更换。`GET cursor.com/api/usage-summary` 靠 `WorkosCursorSessionToken=<sub>::<jwt>` cookie 认证，必须能读明文 JWT 的 `sub`；dashboard 自己的 Connect RPC 直接吃 Bearer：`POST api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage`（空 JSON body、`Connect-Protocol-Version: 1`）给 `billingCycleEnd` 与 `planUsage{total,auto,api}PercentUsed`，`GetPlanInfo` 给 `planInfo{includedUsagePeriod,includedUsageResetsAt}`。统一套餐（`isMerged` 或周周期）只有一个周窗口，老套餐是月度双池（Cursor Models / Other Models）。
+
+不需要 FDA，不读浏览器 cookie，不读 refresh token，也不写回 Keychain。Keychain 只在值确实是密文时读一次，结果按密文缓存；用户点「始终允许」后不再弹框，拒绝则报 `keychainAccessDenied`。
+
+格式、key 名与 RPC 由三个独立开源实现（uzzy、UsageRings、codenotch）交叉核对；本机 `state.vscdb` 的值形状（前缀、base64 解码后以 `v10` 开头、剩余长度为 16 的整数倍）已核对，加解密 round-trip 有单测。Keychain 解密本身未在本机实跑——那需要用户授权框，所以「凭据能解出 token」这一条只有开源实现的实测支撑。
 
 ### 之后的家
 
